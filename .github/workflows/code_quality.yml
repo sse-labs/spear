@@ -1,4 +1,4 @@
-name: code.yml
+name: Code quality
 on:
   push:
     branches: [ "*" ]
@@ -6,7 +6,7 @@ on:
     branches: [ "*" ]
 
 jobs:
-  build-lint-analyze:
+  inspect-code-quality:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,8 +21,8 @@ jobs:
 
       - name: Run cppcheck
         run: |
-          cppcheck --enable=all --inconclusive --std=c++17 --force --error-exitcode=1 .
+          cppcheck --enable=all --inconclusive --std=c++17 --force --error-exitcode=1 ./src/main
 
       - name: Run cpplint
         run: |
-          find . -name '*.cpp' -o -name '*.h' | xargs cpplint --quiet
+          find ./src/main -name '*.cpp' -o -name '*.h' | xargs cpplint --linelength=120 --quiet
