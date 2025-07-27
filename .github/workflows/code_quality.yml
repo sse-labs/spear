@@ -21,7 +21,7 @@ jobs:
 
       - name: Run cppcheck
         run: |
-          cppcheck --enable=all --inconclusive --std=c++17 --force --disable=missingIncludeSystem --error-exitcode=1 ./src/main
+          cppcheck --enable=all --inconclusive --std=c++17 --force  --suppress=missingInclude --suppress=missingIncludeSystem --error-exitcode=1 ./src/main
 
       - name: Run cpplint
         run: |
