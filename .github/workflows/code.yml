@@ -1,0 +1,28 @@
+name: code.yml
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-lint-analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake make g++ cppcheck python3-pip
+          pip3 install cpplint
+
+      - name: Run cppcheck
+        run: |
+          cppcheck --enable=all --inconclusive --std=c++17 --force --error-exitcode=1 .
+
+      - name: Run cpplint
+        run: |
+          find . -name '*.cpp' -o -name '*.h' | xargs cpplint --quiet
