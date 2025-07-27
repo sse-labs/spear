@@ -378,7 +378,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         auto &functionAnalysisManager = MAM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 
         //If a model was provided
-        if( this->energyJson.contains("Division") && this->energyJson.contains("Memory") ){
+        if( this->energyJson.contains("add") && this->energyJson.contains("urem") ){
             //Get the functions from the module
             auto funcList = &module.getFunctionList();
             FunctionTree * functionTree;
@@ -449,7 +449,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
 
         }else{
-            llvm::errs() << "Please provide an energyfile with -m <path to the energy.json>" << "\n";
+            llvm::errs() << "Please provide valid an energyfile" << "\n";
         }
     }
 

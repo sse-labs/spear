@@ -77,19 +77,19 @@ std::string InstructionCategory::toString(InstructionCategory::Category category
     //Check the elements of the category and return a string representing the category
     switch (category) {
         case Category::MEMORY:
-            categoryString = "Memory";
+            categoryString = "memory";
             break;
         case Category::PROGRAMFLOW:
-            categoryString = "Programflow";
+            categoryString = "programflow";
             break;
         case Category::DIVISION:
-            categoryString = "Division";
+            categoryString = "division";
             break;
         case Category::CALL:
-            categoryString = "Call";
+            categoryString = "call";
             break;
         case Category::OTHER:
-            categoryString = "Other";
+            categoryString = "add";
             break;
     }
 

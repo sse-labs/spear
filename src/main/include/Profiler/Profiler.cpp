@@ -22,11 +22,15 @@ std::map<std::string, double> Profiler::profile() {
     auto codemap = *this->profileCode;
     std::map<std::string, double> results;
 
-    results["call"] = measureFile(codemap.at("call"));
+    for (const auto& [key, value] : codemap) {
+        results[key] = measureFile(value);
+    }
+
+    /*results["call"] = measureFile(codemap.at("call"));
     results["memory"] = measureFile(codemap.at("memory"));
     results["programflow"] = measureFile(codemap.at("programflow"));
     results["division"] = measureFile(codemap.at("division"));
-    results["others"] = measureFile(codemap.at("others"));
+    results["others"] = measureFile(codemap.at("others"));*/
 
     return results;
 }
