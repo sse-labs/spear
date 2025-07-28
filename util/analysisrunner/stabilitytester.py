@@ -16,8 +16,6 @@ group = [
     "call",
     "cast",
     "div_f",
-    "memoryread",
-    "memorywrite",
     "mul",
     "mul_f",
     "programflow",
@@ -26,7 +24,6 @@ group = [
     "shl",
     "shr",
     "srem",
-    "stdbinary",
     "sub",
     "sub_f",
     "udiv",
@@ -135,9 +132,7 @@ def write_result_to_file():
 
 
 def main(spearpath, profilepath):
-    iterations = range(0, 5000, 100)
-
-    time.sleep(60)
+    iterations = range(1, 100 , 33)
 
     for its in iterations:
         abspahts = {"profile": os.path.abspath(profilepath), "savedir": os.path.abspath("./stability")}
@@ -146,7 +141,7 @@ def main(spearpath, profilepath):
         if not isExist:
             os.makedirs(abspahts["savedir"])
 
-        command = "sudo {} profile --iterations {} --model {} --savelocation {}".format(spearpath, its, abspahts["profile"], abspahts["savedir"])
+        command = "sudo {} profile --iterations {} --model {} --savelocation {}".format(spearpath, 10000, abspahts["profile"], abspahts["savedir"])
         print(command)
         outputstream = os.popen(command)
         output = outputstream.read()
