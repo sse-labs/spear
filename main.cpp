@@ -32,7 +32,7 @@ void runProfileRoutine(CLIOptions opts){
     for (const auto& entry : std::filesystem::directory_iterator(compiledPath + "/")) {
         if (entry.is_regular_file()) {
             std::string filename = entry.path().filename().string();
-            std::cout << filename << std::endl;
+            //std::cout << filename << std::endl;
             filenames.push_back(entry.path().filename().string()); // only the file name, not full path
         }
     }

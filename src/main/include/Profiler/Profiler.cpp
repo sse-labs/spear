@@ -8,6 +8,8 @@
 #include <sys/wait.h>
 #include <cassert>
 #include <ctime>
+#include <iostream>
+
 #include "chrono"
 #include "../JSON-Handler/JSONHandler.h"
 
@@ -22,8 +24,11 @@ std::map<std::string, double> Profiler::profile() {
     auto codemap = *this->profileCode;
     std::map<std::string, double> results;
 
+
+
     for (const auto& [key, value] : codemap) {
-        results[key] = measureFile(value);
+        double measuredEnergy = measureFile(value);
+        results[key] = measuredEnergy;
     }
 
     /*results["call"] = measureFile(codemap.at("call"));
