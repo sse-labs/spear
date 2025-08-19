@@ -42,7 +42,27 @@ std::map<std::string, double> Profiler::profile() {
         }
     }
 
+    std::vector<double> flatMeasurements;
+    for (const auto& [key, value] : results) {
+        flatMeasurements.push_back(value);
+    }
+
     double epsilon = 1e-6;
+
+    // Find the minimum value
+    double min_val = *std::min_element(flatMeasurements.begin(), flatMeasurements.end());
+
+    // Find the median
+    std::nth_element(flatMeasurements.begin(),
+                     flatMeasurements.begin() + flatMeasurements.size() / 2,
+                     flatMeasurements.end());
+    double median_val = flatMeasurements[flatMeasurements.size() / 2];
+
+    // Clip the median so it does not exceed min value
+    double common_error = std::min(median_val, min_val - epsilon);
+
+
+
     double mean_over_all_entries = sum / results.size();
     double min = std::numeric_limits<double>::max();
 
@@ -50,7 +70,7 @@ std::map<std::string, double> Profiler::profile() {
         min = std::min(min, value);
 
     for (const auto& [key, value] : results) {
-        results[key] = value - mean_over_all_entries + epsilon;
+        results[key] = value - common_error;
     }
 
     /*results["call"] = measureFile(codemap.at("call"));

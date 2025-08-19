@@ -13,23 +13,36 @@ group = [
     "_cachewarmer",
     "add",
     "add_f",
+    "and",
     "call",
-    "cast",
     "div_f",
+    "eq",
     "mul",
     "mul_f",
-    "programflow",
+    "ne",
+    "or",
     "rem_f",
     "sdiv",
+    "select",
+    "sext",
+    "sge",
+    "sgt",
     "shl",
     "shr",
+    "sle",
+    "slt",
     "srem",
     "sub",
     "sub_f",
     "udiv",
-    "urem"
+    "uge",
+    "ugt",
+    "ule",
+    "ult",
+    "urem",
+    "xor",
+    "zext"
 ]
-
 
 def plot():
     tpllist = {gro: [] for gro in group}
@@ -132,7 +145,7 @@ def write_result_to_file():
 
 
 def main(spearpath, profilepath):
-    iterations = range(1, 100 , 33)
+    iterations = range(1, 100 , 1)
 
     for its in iterations:
         abspahts = {"profile": os.path.abspath(profilepath), "savedir": os.path.abspath("./stability")}
