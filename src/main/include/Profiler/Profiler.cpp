@@ -92,6 +92,15 @@ std::vector<double> Profiler::measureFile(const std::string& file) const {
     double accumulatedEnergy = 0.0;
     cpu_set_t cpuMask;
 
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    CPU_SET(0, &set);
+
+    if (sched_setaffinity(0, sizeof(set), &set) == -1) {
+        perror("sched_setaffinity");
+        exit(1);
+    }
+
     for (int i = 0; i < this->repetitions; i++){
         double diff = 0;
         pid_t childProcessId = fork();

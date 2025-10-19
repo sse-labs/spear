@@ -45,3 +45,6 @@ util/analysisrunner/stability
 build/
 
 .vscode/
+.venv/
+util/measure_program/old/
+util/measure_program/results/*/
