@@ -19,8 +19,16 @@ public:
      */
     Profiler(int iterations) : iterations(iterations) {}
 
-    virtual JSON
+    /**
+     * Profiles the respective component.
+     * @return Returns a mapping between value => energy
+     */
+    virtual std::map<std::string, double> profile() = 0;
 
+    /**
+     * Default descructor
+     */
+    virtual ~Profiler() = default;
 };
 
 
