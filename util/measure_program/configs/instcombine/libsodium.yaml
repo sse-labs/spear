@@ -1,0 +1,8 @@
+programs:
+  - executeable: /home/max/Documents/repos/llvm-energy/examples/optimizations/instcombine/combine/testprog_default
+    args: []
+    input: ""
+
+  - executeable: /home/max/Documents/repos/llvm-energy/examples/optimizations/instcombine/combine/testprog_energy
+    args: []
+    input: ""

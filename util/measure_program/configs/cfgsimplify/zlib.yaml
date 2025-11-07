@@ -1,0 +1,8 @@
+programs:
+  - executeable: /home/max/Documents/repos/llvm-energy/examples/optimizations/cfgsimplify/zlib/testprog_default
+    args: []
+    input: ""
+
+  - executeable: /home/max/Documents/repos/llvm-energy/examples/optimizations/cfgsimplify/zlib/testprog_energy
+    args: []
+    input: ""
