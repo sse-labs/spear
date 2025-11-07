@@ -1,8 +1,0 @@
-programs:
-  - executeable: /home/max/Documents/repos/llvm-energy/examples/optimizations/o1/zlib/testprog_o1
-    args: []
-    input: ""
-
-  - executeable: /home/max/Documents/repos/llvm-energy/examples/optimizations/o1/zlib/testprog_o1_eng
-    args: []
-    input: ""

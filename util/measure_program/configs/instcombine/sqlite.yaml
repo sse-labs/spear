@@ -1,8 +1,0 @@
-programs:
-  - executeable: /home/max/Documents/repos/llvm-energy/examples/optimizations/combine/sqlite/default
-    args: []
-    input: ./args/perf_test.sql
-
-  - executeable: /home/max/Documents/repos/llvm-energy/examples/optimizations/combine/sqlite/energy
-    args: []
-    input: ./args/perf_test.sql

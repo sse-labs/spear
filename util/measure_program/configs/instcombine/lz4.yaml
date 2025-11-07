@@ -1,8 +1,0 @@
-programs:
-  - executeable: /home/max/Documents/repos/llvm-energy/examples/optimizations/combine/lz4/default
-    args: ["-f", "-9", "./args/random_text.txt", "./args/random_text.txt.lz4"]
-    input: ""
-
-  - executeable: /home/max/Documents/repos/llvm-energy/examples/optimizations/combine/lz4/energy
-    args: ["-f", "-9", "./args/random_text.txt", "./args/random_text.txt.lz4"]
-    input: ""
