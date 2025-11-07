@@ -18,29 +18,43 @@
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Scalar/LoopRotation.h"
 
+#include <filesystem>
+
 #include "src/main/include/CLIHandler/CLIHandler.h"
 
 
 void runProfileRoutine(CLIOptions opts){
     //Get the parameters from the arguments
     int rep = opts.repeatAmount;
-
     std::string compiledPath = opts.codePath;
 
+    std::vector<std::string> filenames;
+    for (const auto& entry : std::filesystem::directory_iterator(compiledPath + "/")) {
+        if (entry.is_regular_file()) {
+            std::string filename = entry.path().filename().string();
+            //std::cout << filename << std::endl;
+            filenames.push_back(entry.path().filename().string()); // only the file name, not full path
+        }
+    }
+
     std::map<std::string, std::string> profileCode;
-    profileCode["call"] = compiledPath + "/" + "call";
+    /*profileCode["call"] = compiledPath + "/" + "call";
     profileCode["memory"] = compiledPath + "/" + "memoryread";
     profileCode["programflow"] = compiledPath + "/" + "programflow";
     profileCode["division"] = compiledPath + "/" + "division";
-    profileCode["others"] = compiledPath + "/" + "stdbinary";
+    profileCode["others"] = compiledPath + "/" + "stdbinary";*/
 
-    std::cout << profileCode["call"] << " -> " << std::filesystem::exists(profileCode["call"])  << std::endl;
+    for (const std::string& filename : filenames) {
+        profileCode[filename] = compiledPath + "/" + filename;
+    }
+
+    /*std::cout << profileCode["call"] << " -> " << std::filesystem::exists(profileCode["call"])  << std::endl;
     std::cout << profileCode["memory"] << " -> " << std::filesystem::exists(profileCode["memory"]) << std::endl;
     std::cout << profileCode["programflow"] << " -> " << std::filesystem::exists(profileCode["programflow"]) << std::endl;
     std::cout << profileCode["division"] << " -> " << std::filesystem::exists(profileCode["division"]) << std::endl;
-    std::cout << profileCode["others"] << " -> " << std::filesystem::exists(profileCode["others"]) << std::endl;
+    std::cout << profileCode["others"] << " -> " << std::filesystem::exists(profileCode["others"]) << std::endl;*/
 
-    if(std::filesystem::exists(profileCode["call"]) && std::filesystem::exists(profileCode["memory"]) && std::filesystem::exists(profileCode["programflow"]) && std::filesystem::exists(profileCode["division"]) && std::filesystem::exists(profileCode["others"])){
+    if(true){
 
         std::cout << "Starting the profile..." << std::endl;
 
@@ -68,13 +82,12 @@ void runProfileRoutine(CLIOptions opts){
             };
 
             //Group the vector format of the results
-            std::map<std::string, double> data = {
-                    {InstructionCategory::toString(InstructionCategory::Category::CALL),        result.at("call")},
-                    {InstructionCategory::toString(InstructionCategory::Category::MEMORY),     result.at("memory")},
-                    {InstructionCategory::toString(InstructionCategory::Category::PROGRAMFLOW), result.at("programflow")},
-                    {InstructionCategory::toString(InstructionCategory::Category::DIVISION),    result.at("division")},
-                    {InstructionCategory::toString(InstructionCategory::Category::OTHER),       result.at("others")},
-            };
+            std::map<std::string, double> data = {};
+
+            for (const auto& [key, value] : result) {
+                data[key] = value;
+            }
+
             //Pass the grouped values to the csv handler, so it can be written to a file
             //CSVHandler::writeCSV("benchmarkresult.csv", ',' , data);
             char *outputpath = new char[255];

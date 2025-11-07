@@ -77,7 +77,9 @@ class Profiler {
          * @param file String to the file that needs to be benchmarked
          * @return The used energy
          */
-        double measureFile(const std::string& file) const;
+        std::vector<double> measureFile(const std::string& file) const;
+
+        std::vector<double> movingAverage(const std::vector<double>& data, int windowSize);
 };
 
 

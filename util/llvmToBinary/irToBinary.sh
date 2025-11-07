@@ -18,10 +18,10 @@ function compileFile() {
   echo "Generating the bytcodefile $filename.bc"
   llvm-as "$path/$filename.ll" -o "$path/compiled/$filename.bc"
   echo "Generating the objectfile $filename.o"
-  llc -O0 -filetype=obj "$path/compiled/$filename.bc"
+  llc -O0 --dwarf64 -filetype=obj "$path/compiled/$filename.bc"
   echo "Generating the binary $path/compiled/$filename"
 
-  clang++ -O0 -no-pie "$path/compiled/$filename.o" -o "$path/compiled/$filename"
+  clang++ -O0 -g "$path/compiled/$filename.o" -o "$path/compiled/$filename"
 
   rm "$path/compiled/$filename.bc"
   rm "$path/compiled/$filename.o"
