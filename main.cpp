@@ -1,9 +1,9 @@
 #include <cstring>
-#include "src/main/include/Profiler/Profiler.h"
-#include "src/main/include/LLVM-Handler/LLVMHandler.h"
-#include "src/main/include/LLVM-Handler/InstructionCategory.h"
-#include "src/main/include/JSON-Handler/JSONHandler.h"
-#include "src/main/passes/energy/energy.cpp"
+#include "Profiler.h"
+#include "LLVMHandler.h"
+#include "InstructionCategory.h"
+#include "JSONHandler.h"
+#include "energy.cpp"
 
 #include "iostream"
 #include "filesystem"
@@ -20,7 +20,7 @@
 
 #include <filesystem>
 
-#include "src/main/include/CLIHandler/CLIHandler.h"
+#include "CLIHandler.h"
 
 
 void runProfileRoutine(CLIOptions opts){
