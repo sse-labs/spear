@@ -1,5 +1,5 @@
 #include <cstring>
-#include "Profiler.h"
+#include "src/spear/profilers/Profiler.h"
 #include "LLVMHandler.h"
 #include "InstructionCategory.h"
 #include "JSONHandler.h"

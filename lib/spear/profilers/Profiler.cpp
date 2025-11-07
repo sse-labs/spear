@@ -1,6 +1,6 @@
 
 #include <mutex>
-#include "Profiler.h"
+#include "../../../src/spear/profilers/Profiler.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
