@@ -6,7 +6,7 @@
 
 #include "RegisterReader.h"
 
-std::map<std::string, double> CPUProfiler::profile() {
+json CPUProfiler::profile() {
     std::map<std::string, std::vector<double>> measurements;
     std::map<std::string, double> results;
 

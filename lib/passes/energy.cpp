@@ -7,7 +7,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 //#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "LLVMHandler.h"
-#include "JSONHandler.h"
+#include "ProfileHandler.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -57,7 +57,9 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     explicit Energy(const std::string& filename, Mode mode, Format format, Strategy strategy, int loopbound, DeepCalls deepCalls, std::string forFunction){
         if( llvm::sys::fs::exists( filename ) && !llvm::sys::fs::is_directory( filename ) ){
             //Create a JSONHandler object and read in the energypath
-            this->energyJson = JSONHandler::read(filename)["profile"];
+            ProfileHandler phandler;
+            phandler.read(filename);
+            this->energyJson = phandler.getProfile()["profile"];
 
             this->mode = mode;
             this->format = format;
@@ -75,7 +77,9 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     Energy(){
         if( llvm::sys::fs::exists( energyModelPath ) && !llvm::sys::fs::is_directory( energyModelPath ) ){
             //Create a JSONHandler object and read in the energypath
-            this->energyJson = JSONHandler::read(energyModelPath.c_str())["profile"];
+            ProfileHandler phandler;
+            phandler.read(energyModelPath.c_str());
+            this->energyJson = phandler.getProfile()["profile"];
             this->mode = CLIOptions::strToMode(modeParameter.c_str());
             this->format = CLIOptions::strToFormat(formatParameter.c_str());
             this->strategy = CLIOptions::strToStrategy(analysisStrategyParameter.c_str());

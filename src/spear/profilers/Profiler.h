@@ -7,10 +7,11 @@
 #include "nlohmann/json.hpp"
 #include <map>
 
+using json = nlohmann::json;
+
 /**
  * Simple class to profile the llvm-code and output the data in an appropriate format
  */
-template<typename T>
 class Profiler {
 public:
     const int iterations;
@@ -30,7 +31,7 @@ public:
      * Profiles the respective component.
      * @return Returns a mapping between value => energy
      */
-    virtual std::map<std::string, T> profile() = 0;
+    virtual json profile() = 0;
 
     /**
      * Default descructor
