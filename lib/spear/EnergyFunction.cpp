@@ -2,7 +2,7 @@
 
 
 #include "EnergyFunction.h"
-#include "../ProgramGraph/ProgramGraph.h"
+#include "ProgramGraph.h"
 
 
 //Constructor of the EnergyFunction class

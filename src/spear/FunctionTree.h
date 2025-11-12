@@ -4,7 +4,7 @@
 
 
 #include <llvm/IR/Function.h>
-#include "../LLVM-Handler/InstructionCategory.h"
+#include "InstructionCategory.h"
 
 /**
  * Class representing the call-structure of a function as tree

@@ -1,0 +1,62 @@
+
+
+#ifndef SPEAR_CPUPROFILER_H
+#define SPEAR_CPUPROFILER_H
+
+#include "Profiler.h"
+
+/**
+ * Component to profile the systems CPU using the profiler architecture
+ */
+class CPUProfiler : public Profiler {
+public:
+    /**
+     * Creates a new Profiler object using the given iterations.
+     * Additionally, parses the given profile code directory to creat the mapping
+     * @param iterations Number of times the measurement should be repeated
+     * @param codePath Path the profile programs are stored
+     */
+    CPUProfiler(const int iterations, const std::string &codePath) : Profiler(iterations) {
+        std::vector<std::string> filenames;
+        for (const auto& entry : std::filesystem::directory_iterator(codePath + "/")) {
+            if (entry.is_regular_file()) {
+                std::string filename = entry.path().filename().string();
+                filenames.push_back(entry.path().filename().string()); // only the file name, not full path
+            }
+        }
+
+        for (const std::string& filename : filenames) {
+            _profileCode[filename] = codePath + "/" + filename;
+        }
+    }
+
+    /**
+     * Profiles the system and gathers information about the energy usage of the CPU components
+     * @return Returns profile as JSON object
+     */
+    json profile() override;
+
+private:
+    /**
+     * Mapping of instruction names to profile program paths
+     */
+    std::map<std::string, std::string> _profileCode;
+
+    /**
+     * Measure a given file for its energy usage using the amounts of repetitions specific in the object
+     * @param file Path the file is stored at
+     * @return Returns vector containing all recorded measurement values
+     */
+    std::vector<double> _measureFile(const std::string& file) const;
+
+    /**
+     * Calculates a moving average on the given data with the specified window
+     * @param data Raw data the average will be calculated on
+     * @param windowSize Size of the window
+     * @return Vector containing the moving averages of the raw data
+     */
+    std::vector<double> _movingAverage(const std::vector<double>& data, int windowSize);
+};
+
+
+#endif //SPEAR_CPUPROFILER_H

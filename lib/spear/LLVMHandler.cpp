@@ -2,7 +2,7 @@
 #include "LLVMHandler.h"
 #include "InstructionCategory.h"
 #include <cmath>
-#include "../ProgramGraph/ProgramGraph.h"
+#include "ProgramGraph.h"
 
 
 #include <utility>

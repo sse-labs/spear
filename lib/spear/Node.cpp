@@ -1,5 +1,5 @@
 #include "ProgramGraph.h"
-#include "../LLVM-Handler/DeMangler.h"
+#include "DeMangler.h"
 
 //Create a Node by setting the parent property with the given ProgramGraph
 Node::Node(ProgramGraph *parent, AnalysisStrategy::Strategy strategy) {

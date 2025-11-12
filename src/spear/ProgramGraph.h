@@ -6,9 +6,9 @@
 #include <vector>
 #include <llvm/Analysis/RegionInfo.h>
 #include "llvm/IR/BasicBlock.h"
-#include "../LoopTree/LoopTree.h"
+#include "LoopTree.h"
 #include <cfloat>
-#include "../AnalysisStrategy/AnalysisStrategy.h"
+#include "AnalysisStrategy.h"
 #include "./Color.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugInfoMetadata.h"

@@ -1,9 +1,9 @@
 #include <cstring>
-#include "src/main/include/Profiler/Profiler.h"
-#include "src/main/include/LLVM-Handler/LLVMHandler.h"
-#include "src/main/include/LLVM-Handler/InstructionCategory.h"
-#include "src/main/include/JSON-Handler/JSONHandler.h"
-#include "src/main/passes/energy/energy.cpp"
+#include "src/spear/profilers/Profiler.h"
+#include "LLVMHandler.h"
+#include "InstructionCategory.h"
+#include "ProfileHandler.h"
+#include "energy.cpp"
 
 #include "iostream"
 #include "filesystem"
@@ -18,9 +18,9 @@
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Scalar/LoopRotation.h"
 
-#include <filesystem>
-
-#include "src/main/include/CLIHandler/CLIHandler.h"
+#include "CLIHandler.h"
+#include "profilers/CPUProfiler.h"
+#include "profilers/MetaProfiler.h"
 
 
 void runProfileRoutine(CLIOptions opts){
@@ -28,80 +28,32 @@ void runProfileRoutine(CLIOptions opts){
     int rep = opts.repeatAmount;
     std::string compiledPath = opts.codePath;
 
-    std::vector<std::string> filenames;
-    for (const auto& entry : std::filesystem::directory_iterator(compiledPath + "/")) {
-        if (entry.is_regular_file()) {
-            std::string filename = entry.path().filename().string();
-            //std::cout << filename << std::endl;
-            filenames.push_back(entry.path().filename().string()); // only the file name, not full path
-        }
-    }
+    std::cout << "Starting the profile..." << std::endl;
 
-    std::map<std::string, std::string> profileCode;
-    /*profileCode["call"] = compiledPath + "/" + "call";
-    profileCode["memory"] = compiledPath + "/" + "memoryread";
-    profileCode["programflow"] = compiledPath + "/" + "programflow";
-    profileCode["division"] = compiledPath + "/" + "division";
-    profileCode["others"] = compiledPath + "/" + "stdbinary";*/
+    CPUProfiler cpuprofiler = CPUProfiler(rep, compiledPath);
+    MetaProfiler metaprofiler = MetaProfiler(rep);
 
-    for (const std::string& filename : filenames) {
-        profileCode[filename] = compiledPath + "/" + filename;
-    }
+    json metaResult = metaprofiler.profile();
 
-    /*std::cout << profileCode["call"] << " -> " << std::filesystem::exists(profileCode["call"])  << std::endl;
-    std::cout << profileCode["memory"] << " -> " << std::filesystem::exists(profileCode["memory"]) << std::endl;
-    std::cout << profileCode["programflow"] << " -> " << std::filesystem::exists(profileCode["programflow"]) << std::endl;
-    std::cout << profileCode["division"] << " -> " << std::filesystem::exists(profileCode["division"]) << std::endl;
-    std::cout << profileCode["others"] << " -> " << std::filesystem::exists(profileCode["others"]) << std::endl;*/
+    metaResult["start"] = metaprofiler.startTime();
+    //Launch the benchmarking
+    try{
+        json cpuResult = cpuprofiler.profile();
+        metaResult["end"] = metaprofiler.stopTime();
 
-    if(true){
+        char *outputpath = new char[255];
+        sprintf(outputpath, "%s/profile.json", opts.saveLocation.c_str());
+        std::cout << "Writing " << outputpath << "\n";
+        //ProfileHandler::write(outputpath, metaResult, starttimestream.str(), endtimestream.str(), std::to_string(rep), cpuResult);
 
-        std::cout << "Starting the profile..." << std::endl;
+        ProfileHandler phandler;
+        phandler.setOrCreate("meta", metaResult);
+        phandler.setOrCreate("cpu", cpuResult);
+        phandler.write(outputpath);
 
-        Profiler profiler = Profiler(rep, &profileCode);
-
-        //Start the time measurement
-        auto start = std::chrono::system_clock::now();
-        //Launch the benchmarking
-        try{
-            std::map<std::string, double> result = profiler.profile();
-            //Stop the time measurement
-            auto end = std::chrono::system_clock::now();
-            //Calculate the elapsed time by substracting the two timestamps
-            std::chrono::duration<double> timerun = end - start;
-
-            std::stringstream starttimestream;
-            std::stringstream endtimestream;
-            starttimestream << start.time_since_epoch().count();
-            endtimestream << end.time_since_epoch().count();
-
-            std::map<std::string, std::string> cpu = {
-                    {"name", Profiler::getCPUName()},
-                    {"architecture", Profiler::getArchitecture()},
-                    {"cores", Profiler::getNumberOfCores()}
-            };
-
-            //Group the vector format of the results
-            std::map<std::string, double> data = {};
-
-            for (const auto& [key, value] : result) {
-                data[key] = value;
-            }
-
-            //Pass the grouped values to the csv handler, so it can be written to a file
-            //CSVHandler::writeCSV("benchmarkresult.csv", ',' , data);
-            char *outputpath = new char[255];
-            sprintf(outputpath, "%s/profile.json", opts.saveLocation.c_str());
-            std::cout << "Writing " << outputpath << "\n";
-            JSONHandler::write(outputpath, cpu, starttimestream.str(), endtimestream.str(), std::to_string(profiler.repetitions),  data, Profiler::getUnit());
-
-            std::cout << "Profiling finished!" << std::endl;
-            std::cout << "Elapsed Time: " << timerun.count() << "s" << std::endl;
-        }catch(std::invalid_argument &ia){
-            std::cerr << "Execution of profile code failed..." << "\n";
-        }
-    }else{
-        std::cerr << "The given path to the profile does not contain a /src/compiled folder!" << "\n";
+        std::cout << "Profiling finished!" << std::endl;
+    }catch(std::invalid_argument &ia){
+        std::cerr << "Execution of profile code failed..." << "\n";
     }
 
 
