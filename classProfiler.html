@@ -71,86 +71,132 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classProfiler-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">Profiler Class Reference</div></div>
+  <div class="headertitle"><div class="title">Profiler Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div></div>
 </div><!--header-->
 <div class="contents">
 
 <p><code>#include &lt;<a class="el" href="Profiler_8h_source.html">Profiler.h</a>&gt;</code></p>
+<div class="dynheader">
+Inheritance diagram for Profiler:</div>
+<div class="dyncontent">
+ <div class="center">
+  <img src="classProfiler.png" usemap="#Profiler_map" alt=""/>
+  <map id="Profiler_map" name="Profiler_map">
+<area href="classCPUProfiler.html" alt="CPUProfiler" shape="rect" coords="0,56,91,80"/>
+<area href="classDRAMProfiler.html" alt="DRAMProfiler" shape="rect" coords="101,56,192,80"/>
+<area href="classMetaProfiler.html" alt="MetaProfiler" shape="rect" coords="202,56,293,80"/>
+  </map>
+</div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a9b9cb84a298e9eb9c8f5d9a824264985" id="r_a9b9cb84a298e9eb9c8f5d9a824264985"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#a9b9cb84a298e9eb9c8f5d9a824264985">Profiler</a> (int rep, std::map&lt; std::string, std::string &gt; *profileCode)</td></tr>
-<tr class="separator:a9b9cb84a298e9eb9c8f5d9a824264985"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af59ebc3f4d8f4663dd07a3ff0364ff1e" id="r_af59ebc3f4d8f4663dd07a3ff0364ff1e"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#af59ebc3f4d8f4663dd07a3ff0364ff1e">profile</a> ()</td></tr>
-<tr class="separator:af59ebc3f4d8f4663dd07a3ff0364ff1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
-Static Public Member Functions</h2></td></tr>
-<tr class="memitem:aeb796e77e3034dee9df7d6d67adbbe17" id="r_aeb796e77e3034dee9df7d6d67adbbe17"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#aeb796e77e3034dee9df7d6d67adbbe17">getCPUName</a> ()</td></tr>
-<tr class="separator:aeb796e77e3034dee9df7d6d67adbbe17"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abb7aeb64555dfcefb179636d3aa3e169" id="r_abb7aeb64555dfcefb179636d3aa3e169"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#abb7aeb64555dfcefb179636d3aa3e169">getArchitecture</a> ()</td></tr>
-<tr class="separator:abb7aeb64555dfcefb179636d3aa3e169"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aae754688b5604ee3011af28458554047" id="r_aae754688b5604ee3011af28458554047"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#aae754688b5604ee3011af28458554047">getNumberOfCores</a> ()</td></tr>
-<tr class="separator:aae754688b5604ee3011af28458554047"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5a56a727c6d2d319de8fc2cda6404d65" id="r_a5a56a727c6d2d319de8fc2cda6404d65"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#a5a56a727c6d2d319de8fc2cda6404d65">getUnit</a> ()</td></tr>
-<tr class="separator:a5a56a727c6d2d319de8fc2cda6404d65"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8852b94d4f7c36186ae1b863b57ec406" id="r_a8852b94d4f7c36186ae1b863b57ec406"><td class="memItemLeft" align="right" valign="top">static double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#a8852b94d4f7c36186ae1b863b57ec406">measureProgram</a> (const std::string &amp;file, long <a class="el" href="classProfiler.html#a2daf73634ad81f8b48294d4839a5182b">repetitions</a>)</td></tr>
-<tr class="separator:a8852b94d4f7c36186ae1b863b57ec406"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa8ae68fc06962a7e5dcdad1fee8172ca" id="r_aa8ae68fc06962a7e5dcdad1fee8172ca"><td class="memItemLeft" align="right" valign="top">static double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#aa8ae68fc06962a7e5dcdad1fee8172ca">timeProgram</a> (const std::string &amp;file, long <a class="el" href="classProfiler.html#a2daf73634ad81f8b48294d4839a5182b">repetitions</a>)</td></tr>
-<tr class="separator:aa8ae68fc06962a7e5dcdad1fee8172ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a727f8df21257238e177df7e335db121e" id="r_a727f8df21257238e177df7e335db121e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#a727f8df21257238e177df7e335db121e">Profiler</a> (int iterations)</td></tr>
+<tr class="separator:a727f8df21257238e177df7e335db121e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a675ebc9207b9aeace1d967c085abeacf" id="r_a675ebc9207b9aeace1d967c085abeacf"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#a675ebc9207b9aeace1d967c085abeacf">Profiler</a> ()</td></tr>
+<tr class="separator:a675ebc9207b9aeace1d967c085abeacf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af50d7dfce1868917936dec58632a0284" id="r_af50d7dfce1868917936dec58632a0284"><td class="memItemLeft" align="right" valign="top">virtual json&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#af50d7dfce1868917936dec58632a0284">profile</a> ()=0</td></tr>
+<tr class="separator:af50d7dfce1868917936dec58632a0284"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6ee27bbefdab9be91f0ab004a456c7c5" id="r_a6ee27bbefdab9be91f0ab004a456c7c5"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#a6ee27bbefdab9be91f0ab004a456c7c5">~Profiler</a> ()=default</td></tr>
+<tr class="separator:a6ee27bbefdab9be91f0ab004a456c7c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a2daf73634ad81f8b48294d4839a5182b" id="r_a2daf73634ad81f8b48294d4839a5182b"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#a2daf73634ad81f8b48294d4839a5182b">repetitions</a></td></tr>
-<tr class="separator:a2daf73634ad81f8b48294d4839a5182b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae62528da7787d1195749bbe070739c1d" id="r_ae62528da7787d1195749bbe070739c1d"><td class="memItemLeft" align="right" valign="top"><a id="ae62528da7787d1195749bbe070739c1d" name="ae62528da7787d1195749bbe070739c1d"></a>
-std::map&lt; std::string, std::string &gt; *&#160;</td><td class="memItemRight" valign="bottom"><b>profileCode</b></td></tr>
-<tr class="separator:ae62528da7787d1195749bbe070739c1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a384c4de98679733e2de79721e3f72b39" id="r_a384c4de98679733e2de79721e3f72b39"><td class="memItemLeft" align="right" valign="top"><a id="a384c4de98679733e2de79721e3f72b39" name="a384c4de98679733e2de79721e3f72b39"></a>
+const int&#160;</td><td class="memItemRight" valign="bottom"><b>iterations</b></td></tr>
+<tr class="separator:a384c4de98679733e2de79721e3f72b39"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Simple class to profile the llvm-code and output the data in an appropriate format </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a9b9cb84a298e9eb9c8f5d9a824264985" name="a9b9cb84a298e9eb9c8f5d9a824264985"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9b9cb84a298e9eb9c8f5d9a824264985">&#9670;&#160;</a></span>Profiler()</h2>
+<a id="a727f8df21257238e177df7e335db121e" name="a727f8df21257238e177df7e335db121e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a727f8df21257238e177df7e335db121e">&#9670;&#160;</a></span>Profiler() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">Profiler::Profiler </td>
           <td>(</td>
           <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>rep</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramname"><em>iterations</em></td><td>)</td>
           <td></td>
-          <td class="paramtype">std::map&lt; std::string, std::string &gt; *&#160;</td>
-          <td class="paramname"><em>profileCode</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">explicit</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
-<p>Creates a <a class="el" href="classProfiler.html">Profiler</a> object and sets the iterations and repetitions property according to the parameters @constructor </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Constructor </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">it</td><td>Iterations for the average </td></tr>
-    <tr><td class="paramname">rep</td><td>Times a program will be executed repeatedly </td></tr>
+    <tr><td class="paramname">iterations</td><td></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="a675ebc9207b9aeace1d967c085abeacf" name="a675ebc9207b9aeace1d967c085abeacf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a675ebc9207b9aeace1d967c085abeacf">&#9670;&#160;</a></span>Profiler() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">Profiler::Profiler </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">explicit</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Constructor </p>
+
+</div>
+</div>
+<a id="a6ee27bbefdab9be91f0ab004a456c7c5" name="a6ee27bbefdab9be91f0ab004a456c7c5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6ee27bbefdab9be91f0ab004a456c7c5">&#9670;&#160;</a></span>~Profiler()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual Profiler::~Profiler </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span><span class="mlabel">default</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Default descructor </p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="abb7aeb64555dfcefb179636d3aa3e169" name="abb7aeb64555dfcefb179636d3aa3e169"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abb7aeb64555dfcefb179636d3aa3e169">&#9670;&#160;</a></span>getArchitecture()</h2>
+<a id="af50d7dfce1868917936dec58632a0284" name="af50d7dfce1868917936dec58632a0284"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af50d7dfce1868917936dec58632a0284">&#9670;&#160;</a></span>profile()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -159,7 +205,7 @@ std::map&lt; std::string, std::string &gt; *&#160;</td><td class="memItemRight" 
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::string Profiler::getArchitecture </td>
+          <td class="memname">virtual json Profiler::profile </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -167,217 +213,18 @@ std::map&lt; std::string, std::string &gt; *&#160;</td><td class="memItemRight" 
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the name of the architecture used by the cpu </p><dl class="section return"><dt>Returns</dt><dd>string representation of the cpu architecture </dd></dl>
+<p>Profiles the respective component. </p><dl class="section return"><dt>Returns</dt><dd>Returns a mapping between value =&gt; energy </dd></dl>
+
+<p>Implemented in <a class="el" href="classDRAMProfiler.html#a6f5497ffd9b6dee2417f57000072f272">DRAMProfiler</a>, <a class="el" href="classCPUProfiler.html#ac6db47ff8d35ee789ed3703c96b14097">CPUProfiler</a>, and <a class="el" href="classMetaProfiler.html#a9bf3701e464313e7d4fa9c5f99ba4a69">MetaProfiler</a>.</p>
 
 </div>
 </div>
-<a id="aeb796e77e3034dee9df7d6d67adbbe17" name="aeb796e77e3034dee9df7d6d67adbbe17"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aeb796e77e3034dee9df7d6d67adbbe17">&#9670;&#160;</a></span>getCPUName()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string Profiler::getCPUName </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Get the name of the cpu used by the system </p><dl class="section return"><dt>Returns</dt><dd>string representation of the cpu name </dd></dl>
-
-</div>
-</div>
-<a id="aae754688b5604ee3011af28458554047" name="aae754688b5604ee3011af28458554047"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aae754688b5604ee3011af28458554047">&#9670;&#160;</a></span>getNumberOfCores()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string Profiler::getNumberOfCores </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Get the number of cpu cores </p><dl class="section return"><dt>Returns</dt><dd>string representation of the number of cpu cores </dd></dl>
-
-</div>
-</div>
-<a id="a5a56a727c6d2d319de8fc2cda6404d65" name="a5a56a727c6d2d319de8fc2cda6404d65"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5a56a727c6d2d319de8fc2cda6404d65">&#9670;&#160;</a></span>getUnit()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string Profiler::getUnit </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Get the energy unit of the system </p><dl class="section return"><dt>Returns</dt><dd>string representation of energy unit of the system </dd></dl>
-
-</div>
-</div>
-<a id="a8852b94d4f7c36186ae1b863b57ec406" name="a8852b94d4f7c36186ae1b863b57ec406"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8852b94d4f7c36186ae1b863b57ec406">&#9670;&#160;</a></span>measureProgram()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">double Profiler::measureProgram </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>file</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">long&#160;</td>
-          <td class="paramname"><em>repetitions</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Calculate the energy used by the given program and average it </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">file</td><td>path to the program to profile </td></tr>
-    <tr><td class="paramname">repetitions</td><td>repetitions used to average the energy used by the program </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>energy value of the given program </dd></dl>
-
-</div>
-</div>
-<a id="af59ebc3f4d8f4663dd07a3ff0364ff1e" name="af59ebc3f4d8f4663dd07a3ff0364ff1e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af59ebc3f4d8f4663dd07a3ff0364ff1e">&#9670;&#160;</a></span>profile()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::map&lt; std::string, double &gt; Profiler::profile </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Runs the profile and returns the values for the benchmarked files </p>
-
-</div>
-</div>
-<a id="aa8ae68fc06962a7e5dcdad1fee8172ca" name="aa8ae68fc06962a7e5dcdad1fee8172ca"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa8ae68fc06962a7e5dcdad1fee8172ca">&#9670;&#160;</a></span>timeProgram()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">double Profiler::timeProgram </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>file</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">long&#160;</td>
-          <td class="paramname"><em>repetitions</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Calculate the time used by the given program </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">file</td><td>path to the program </td></tr>
-    <tr><td class="paramname">repetitions</td><td>repetitions used to average the energy used by the program </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>time used by the given function as double </dd></dl>
-
-</div>
-</div>
-<h2 class="groupheader">Member Data Documentation</h2>
-<a id="a2daf73634ad81f8b48294d4839a5182b" name="a2daf73634ad81f8b48294d4839a5182b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2daf73634ad81f8b48294d4839a5182b">&#9670;&#160;</a></span>repetitions</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">long Profiler::repetitions</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Times a single program will be executed </p>
-
-</div>
-</div>
-<hr/>The documentation for this class was generated from the following files:<ul>
-<li>src/main/include/Profiler/<a class="el" href="Profiler_8h_source.html">Profiler.h</a></li>
-<li>src/main/include/Profiler/<b>Profiler.cpp</b></li>
+<hr/>The documentation for this class was generated from the following file:<ul>
+<li>src/spear/profilers/<a class="el" href="Profiler_8h_source.html">Profiler.h</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['jsonhandler_0',['JSONHandler',['../classJSONHandler.html#a8fb7b9d53805c97b3516130beaca0536',1,'JSONHandler']]]
+  ['metaprofiler_0',['MetaProfiler',['../classMetaProfiler.html#a74e3e1e2dd423b066b17eb9c753642d7',1,'MetaProfiler']]]
 ];

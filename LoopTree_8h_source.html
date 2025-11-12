@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Bachelorarbeit: src/main/include/LoopTree/LoopTree.h Source File</title>
+<title>Bachelorarbeit: src/spear/LoopTree.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -74,7 +74,7 @@ $(document).ready(function() { init_codefold(0); });
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="dir_5eb159725f84c66aafd839904a4acdd0.html">main</a></li><li class="navelem"><a class="el" href="dir_df3bee86fdbfb464c3a94507855b0bdc.html">include</a></li><li class="navelem"><a class="el" href="dir_dffe5f1dad3cadde6ca0ca30a5f22cd3.html">LoopTree</a></li>  </ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="dir_189bf167a35dda66fb4ff564f7494f75.html">spear</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -87,7 +87,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &lt;cmath&gt;</span></div>
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;llvm/Analysis/LoopInfo.h&gt;</span></div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &quot;../LLVM-Handler/LLVMHandler.h&quot;</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &quot;LLVMHandler.h&quot;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">class </span><a class="code hl_class" href="classLLVMHandler.html">LLVMHandler</a>;</div>
@@ -105,16 +105,16 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno"><a class="line" href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">   40</a></span>    <span class="keywordtype">long</span> <a class="code hl_variable" href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">iterations</a>;</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <a class="code hl_class" href="classLoopTree.html">LoopTree</a>(llvm::Loop *main, <span class="keyword">const</span> std::vector&lt;llvm::Loop *&gt;&amp; subloops, <a class="code hl_class" href="classLLVMHandler.html">LLVMHandler</a> *<a class="code hl_variable" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">handler</a>, llvm::ScalarEvolution *scalarEvolution);</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno"><a class="line" href="classLoopTree.html#a45a0862b4849d3302b8a5d5b99e7a0f8">   48</a></span>    <a class="code hl_function" href="classLoopTree.html#a45a0862b4849d3302b8a5d5b99e7a0f8">LoopTree</a>(llvm::Loop *main, <span class="keyword">const</span> std::vector&lt;llvm::Loop *&gt;&amp; subloops, <a class="code hl_class" href="classLLVMHandler.html">LLVMHandler</a> *<a class="code hl_variable" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">handler</a>, llvm::ScalarEvolution *scalarEvolution);</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">printPreOrder</a>();</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno"><a class="line" href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">   53</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">printPreOrder</a>();</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keywordtype">long</span> getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution) <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    std::vector&lt;llvm::BasicBlock *&gt; <a class="code hl_function" href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">getLatches</a>();</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno"><a class="line" href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">   61</a></span>    std::vector&lt;llvm::BasicBlock *&gt; <a class="code hl_function" href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">getLatches</a>();</div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span> </div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <a class="code hl_function" href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">~LoopTree</a>();</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno"><a class="line" href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">   67</a></span>    <a class="code hl_function" href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">~LoopTree</a>();</div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span> </div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span><span class="keyword">private</span>:</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
@@ -131,11 +131,12 @@ $(document).ready(function() { init_codefold(0); });
 <div class="ttc" id="aclassLoopTree_html"><div class="ttname"><a href="classLoopTree.html">LoopTree</a></div><div class="ttdef"><b>Definition</b> LoopTree.h:15</div></div>
 <div class="ttc" id="aclassLoopTree_html_a032808e139ad8b36c3eaa909dedb930a"><div class="ttname"><a href="classLoopTree.html#a032808e139ad8b36c3eaa909dedb930a">LoopTree::subTrees</a></div><div class="ttdeci">std::vector&lt; LoopTree * &gt; subTrees</div><div class="ttdef"><b>Definition</b> LoopTree.h:25</div></div>
 <div class="ttc" id="aclassLoopTree_html_a15b900fb894985bdc881842d75bd5f9a"><div class="ttname"><a href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">LoopTree::handler</a></div><div class="ttdeci">LLVMHandler * handler</div><div class="ttdef"><b>Definition</b> LoopTree.h:35</div></div>
+<div class="ttc" id="aclassLoopTree_html_a45a0862b4849d3302b8a5d5b99e7a0f8"><div class="ttname"><a href="classLoopTree.html#a45a0862b4849d3302b8a5d5b99e7a0f8">LoopTree::LoopTree</a></div><div class="ttdeci">LoopTree(llvm::Loop *main, const std::vector&lt; llvm::Loop * &gt; &amp;subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution)</div></div>
 <div class="ttc" id="aclassLoopTree_html_a47c9acc4afdca8d22884c12aa8a2db29"><div class="ttname"><a href="classLoopTree.html#a47c9acc4afdca8d22884c12aa8a2db29">LoopTree::mainloop</a></div><div class="ttdeci">llvm::Loop * mainloop</div><div class="ttdef"><b>Definition</b> LoopTree.h:20</div></div>
-<div class="ttc" id="aclassLoopTree_html_a5bbe89a53070d2ca8c76a1cccdd221fa"><div class="ttname"><a href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">LoopTree::getLatches</a></div><div class="ttdeci">std::vector&lt; llvm::BasicBlock * &gt; getLatches()</div><div class="ttdef"><b>Definition</b> LoopTree.cpp:128</div></div>
+<div class="ttc" id="aclassLoopTree_html_a5bbe89a53070d2ca8c76a1cccdd221fa"><div class="ttname"><a href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">LoopTree::getLatches</a></div><div class="ttdeci">std::vector&lt; llvm::BasicBlock * &gt; getLatches()</div></div>
 <div class="ttc" id="aclassLoopTree_html_a659874a23317ce521464fae13c332050"><div class="ttname"><a href="classLoopTree.html#a659874a23317ce521464fae13c332050">LoopTree::blocks</a></div><div class="ttdeci">std::vector&lt; llvm::BasicBlock * &gt; blocks</div><div class="ttdef"><b>Definition</b> LoopTree.h:30</div></div>
-<div class="ttc" id="aclassLoopTree_html_ac7a3306c81d41d6cea849992f3fec9ce"><div class="ttname"><a href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">LoopTree::~LoopTree</a></div><div class="ttdeci">~LoopTree()</div><div class="ttdef"><b>Definition</b> LoopTree.cpp:150</div></div>
-<div class="ttc" id="aclassLoopTree_html_ad97586e2ef41e7fa8f720ee920b3db34"><div class="ttname"><a href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">LoopTree::printPreOrder</a></div><div class="ttdeci">void printPreOrder()</div><div class="ttdef"><b>Definition</b> LoopTree.cpp:105</div></div>
+<div class="ttc" id="aclassLoopTree_html_ac7a3306c81d41d6cea849992f3fec9ce"><div class="ttname"><a href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">LoopTree::~LoopTree</a></div><div class="ttdeci">~LoopTree()</div></div>
+<div class="ttc" id="aclassLoopTree_html_ad97586e2ef41e7fa8f720ee920b3db34"><div class="ttname"><a href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">LoopTree::printPreOrder</a></div><div class="ttdeci">void printPreOrder()</div></div>
 <div class="ttc" id="aclassLoopTree_html_afe460225dfb3ad4c58468bd4a1293682"><div class="ttname"><a href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">LoopTree::iterations</a></div><div class="ttdeci">long iterations</div><div class="ttdef"><b>Definition</b> LoopTree.h:40</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

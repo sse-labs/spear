@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Bachelorarbeit: src/main/include/LLVM-Handler/InstructionCategory.h Source File</title>
+<title>Bachelorarbeit: src/spear/InstructionCategory.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -74,7 +74,7 @@ $(document).ready(function() { init_codefold(0); });
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="dir_5eb159725f84c66aafd839904a4acdd0.html">main</a></li><li class="navelem"><a class="el" href="dir_df3bee86fdbfb464c3a94507855b0bdc.html">include</a></li><li class="navelem"><a class="el" href="dir_92667c27ba9fc4742bde5ac07c54d1c0.html">LLVM-Handler</a></li>  </ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="dir_189bf167a35dda66fb4ff564f7494f75.html">spear</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -97,8 +97,8 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno"><a class="line" href="classInstructionCategory.html">   16</a></span><span class="keyword">class </span><a class="code hl_class" href="classInstructionCategory.html">InstructionCategory</a> {</div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    <span class="keyword">public</span>:</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="classInstructionCategory.html#a14ad4cf371fe24802f27ecea612e7cb6">   21</a></span>        <span class="keyword">enum</span> <a class="code hl_enumeration" href="classInstructionCategory.html#a14ad4cf371fe24802f27ecea612e7cb6">Category</a> { MEMORY, PROGRAMFLOW, DIVISION, CALL, OTHER };</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>        <span class="keyword">static</span> <a class="code hl_enumeration" href="classInstructionCategory.html#a14ad4cf371fe24802f27ecea612e7cb6">Category</a> <a class="code hl_function" href="classInstructionCategory.html#a186de65cac60f25541ff34085dbdb158">getCategory</a>( llvm::Instruction &amp;Instruction );</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>        <span class="keyword">static</span> std::string <a class="code hl_function" href="classInstructionCategory.html#a057f079222bee2c118ec344f5e7e7601">toString</a>( <a class="code hl_enumeration" href="classInstructionCategory.html#a14ad4cf371fe24802f27ecea612e7cb6">Category</a> category );</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno"><a class="line" href="classInstructionCategory.html#abbdc1337646e110d8e2956409b03e8f7">   27</a></span>        <span class="keyword">static</span> <a class="code hl_enumeration" href="classInstructionCategory.html#a14ad4cf371fe24802f27ecea612e7cb6">Category</a> <a class="code hl_function" href="classInstructionCategory.html#abbdc1337646e110d8e2956409b03e8f7">getCategory</a>( llvm::Instruction &amp;Instruction );</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="classInstructionCategory.html#a150f821c6e7ca11595051b73b677c9cd">   33</a></span>        <span class="keyword">static</span> std::string <a class="code hl_function" href="classInstructionCategory.html#a150f821c6e7ca11595051b73b677c9cd">toString</a>( <a class="code hl_enumeration" href="classInstructionCategory.html#a14ad4cf371fe24802f27ecea612e7cb6">Category</a> category );</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>        <span class="comment">//Checks if the given instruction is a call instruction</span></div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>        <span class="keyword">static</span> <span class="keywordtype">bool</span> isCallInstruction( llvm::Instruction &amp;Instruction );</div>
@@ -119,9 +119,9 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span><span class="preprocessor">#endif </span><span class="comment">//BA_INSTRUCTIONCATEGORY_H</span></div>
 <div class="ttc" id="aclassInstructionCategory_html"><div class="ttname"><a href="classInstructionCategory.html">InstructionCategory</a></div><div class="ttdef"><b>Definition</b> InstructionCategory.h:16</div></div>
-<div class="ttc" id="aclassInstructionCategory_html_a057f079222bee2c118ec344f5e7e7601"><div class="ttname"><a href="classInstructionCategory.html#a057f079222bee2c118ec344f5e7e7601">InstructionCategory::toString</a></div><div class="ttdeci">static std::string toString(Category category)</div><div class="ttdef"><b>Definition</b> InstructionCategory.cpp:73</div></div>
 <div class="ttc" id="aclassInstructionCategory_html_a14ad4cf371fe24802f27ecea612e7cb6"><div class="ttname"><a href="classInstructionCategory.html#a14ad4cf371fe24802f27ecea612e7cb6">InstructionCategory::Category</a></div><div class="ttdeci">Category</div><div class="ttdef"><b>Definition</b> InstructionCategory.h:21</div></div>
-<div class="ttc" id="aclassInstructionCategory_html_a186de65cac60f25541ff34085dbdb158"><div class="ttname"><a href="classInstructionCategory.html#a186de65cac60f25541ff34085dbdb158">InstructionCategory::getCategory</a></div><div class="ttdeci">static Category getCategory(llvm::Instruction &amp;Instruction)</div><div class="ttdef"><b>Definition</b> InstructionCategory.cpp:54</div></div>
+<div class="ttc" id="aclassInstructionCategory_html_a150f821c6e7ca11595051b73b677c9cd"><div class="ttname"><a href="classInstructionCategory.html#a150f821c6e7ca11595051b73b677c9cd">InstructionCategory::toString</a></div><div class="ttdeci">static std::string toString(Category category)</div></div>
+<div class="ttc" id="aclassInstructionCategory_html_abbdc1337646e110d8e2956409b03e8f7"><div class="ttname"><a href="classInstructionCategory.html#abbdc1337646e110d8e2956409b03e8f7">InstructionCategory::getCategory</a></div><div class="ttdeci">static Category getCategory(llvm::Instruction &amp;Instruction)</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

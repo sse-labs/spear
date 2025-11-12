@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['mainloop_0',['mainloop',['../classLoopTree.html#a47c9acc4afdca8d22884c12aa8a2db29',1,'LoopTree']]],
-  ['measureprogram_1',['measureProgram',['../classProfiler.html#a8852b94d4f7c36186ae1b863b57ec406',1,'Profiler']]],
-  ['mode_2',['mode',['../classCLIOptions.html#ab65b0e082ceb99ecc49eb429d2f9e841',1,'CLIOptions']]]
+  ['name_0',['name',['../classFunctionTree.html#ad2dbd903ea3c8e056f002b998ebb7eae',1,'FunctionTree']]],
+  ['node_1',['node',['../classNode.html',1,'Node'],['../classNode.html#aa79cde413bbce1ac50cdad17bb9567da',1,'Node::Node()']]],
+  ['nodes_2',['nodes',['../classProgramGraph.html#ac8b6e895ca357755320fe3b5097b4109',1,'ProgramGraph']]]
 ];

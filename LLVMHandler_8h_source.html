@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Bachelorarbeit: src/main/include/LLVM-Handler/LLVMHandler.h Source File</title>
+<title>Bachelorarbeit: src/spear/LLVMHandler.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -74,7 +74,7 @@ $(document).ready(function() { init_codefold(0); });
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="dir_5eb159725f84c66aafd839904a4acdd0.html">main</a></li><li class="navelem"><a class="el" href="dir_df3bee86fdbfb464c3a94507855b0bdc.html">include</a></li><li class="navelem"><a class="el" href="dir_92667c27ba9fc4742bde5ac07c54d1c0.html">LLVM-Handler</a></li>  </ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="dir_189bf167a35dda66fb4ff564f7494f75.html">spear</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -110,9 +110,9 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>        <span class="keywordtype">bool</span> useCallAnalysis;</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>        <span class="keyword">explicit</span> <a class="code hl_class" href="classLLVMHandler.html">LLVMHandler</a>( json energyModel, <span class="keywordtype">int</span> <a class="code hl_variable" href="classLLVMHandler.html#ad013cd1f31a0ed8edaeb3863654bd8cd">valueIfIndeterminable</a>, <span class="keywordtype">bool</span> useCallAnalysis, <a class="code hl_class" href="classEnergyFunction.html">EnergyFunction</a> pool[], <span class="keywordtype">int</span> poolSize );</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="classLLVMHandler.html#abc36c7facc34793b6636f7bd61bcc477">   37</a></span>        <span class="keyword">explicit</span> <a class="code hl_function" href="classLLVMHandler.html#abc36c7facc34793b6636f7bd61bcc477">LLVMHandler</a>( json energyModel, <span class="keywordtype">int</span> <a class="code hl_variable" href="classLLVMHandler.html#ad013cd1f31a0ed8edaeb3863654bd8cd">valueIfIndeterminable</a>, <span class="keywordtype">bool</span> useCallAnalysis, <a class="code hl_class" href="classEnergyFunction.html">EnergyFunction</a> pool[], <span class="keywordtype">int</span> poolSize );</div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>        <span class="keywordtype">double</span> <a class="code hl_function" href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">getNodeSum</a>(<a class="code hl_class" href="classNode.html">Node</a> *node);</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno"><a class="line" href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">   44</a></span>        <span class="keywordtype">double</span> <a class="code hl_function" href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">getNodeSum</a>(<a class="code hl_class" href="classNode.html">Node</a> *node);</div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>         <span class="keywordtype">int</span> efficient;</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>         <span class="keywordtype">int</span> inefficient;</div>
@@ -129,7 +129,8 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span><span class="preprocessor">#endif </span><span class="comment">//BA_LLVMHANDLER_H</span></div>
 <div class="ttc" id="aclassEnergyFunction_html"><div class="ttname"><a href="classEnergyFunction.html">EnergyFunction</a></div><div class="ttdef"><b>Definition</b> EnergyFunction.h:12</div></div>
 <div class="ttc" id="aclassLLVMHandler_html"><div class="ttname"><a href="classLLVMHandler.html">LLVMHandler</a></div><div class="ttdef"><b>Definition</b> LLVMHandler.h:25</div></div>
-<div class="ttc" id="aclassLLVMHandler_html_a01a198ecdfee6b3e833715de3877107f"><div class="ttname"><a href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">LLVMHandler::getNodeSum</a></div><div class="ttdeci">double getNodeSum(Node *node)</div><div class="ttdef"><b>Definition</b> LLVMHandler.cpp:22</div></div>
+<div class="ttc" id="aclassLLVMHandler_html_a01a198ecdfee6b3e833715de3877107f"><div class="ttname"><a href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">LLVMHandler::getNodeSum</a></div><div class="ttdeci">double getNodeSum(Node *node)</div></div>
+<div class="ttc" id="aclassLLVMHandler_html_abc36c7facc34793b6636f7bd61bcc477"><div class="ttname"><a href="classLLVMHandler.html#abc36c7facc34793b6636f7bd61bcc477">LLVMHandler::LLVMHandler</a></div><div class="ttdeci">LLVMHandler(json energyModel, int valueIfIndeterminable, bool useCallAnalysis, EnergyFunction pool[], int poolSize)</div></div>
 <div class="ttc" id="aclassLLVMHandler_html_ad013cd1f31a0ed8edaeb3863654bd8cd"><div class="ttname"><a href="classLLVMHandler.html#ad013cd1f31a0ed8edaeb3863654bd8cd">LLVMHandler::valueIfIndeterminable</a></div><div class="ttdeci">int valueIfIndeterminable</div><div class="ttdef"><b>Definition</b> LLVMHandler.h:52</div></div>
 <div class="ttc" id="aclassNode_html"><div class="ttname"><a href="classNode.html">Node</a></div><div class="ttdef"><b>Definition</b> ProgramGraph.h:53</div></div>
 </div><!-- fragment --></div><!-- contents -->

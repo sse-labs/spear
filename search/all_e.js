@@ -1,16 +1,12 @@
 var searchData=
 [
-  ['parent_0',['parent',['../classNode.html#a06d203029b4fd6f499b2879a7fda03a4',1,'Node']]],
-  ['parsecli_1',['parseCLI',['../classCLIHandler.html#a37a6031baaf18ffbb5cb12d46e55ae7a',1,'CLIHandler']]],
-  ['powercapreader_2',['powercapreader',['../classPowercapReader.html',1,'PowercapReader'],['../classPowercapReader.html#a415424eaa546b2b86202ba6b06fe2a3c',1,'PowercapReader::PowercapReader()']]],
-  ['printdotrepresentation_3',['printDotRepresentation',['../classProgramGraph.html#afbe3107b10cdec049c59c5c5c804ca87',1,'ProgramGraph']]],
-  ['printedges_4',['printEdges',['../classProgramGraph.html#a9e653f7294600e06d970989638aa3d59',1,'ProgramGraph']]],
-  ['printnodes_5',['printNodes',['../classProgramGraph.html#a31499bd68418b43bda45e0d76799744b',1,'ProgramGraph']]],
-  ['printpreorder_6',['printpreorder',['../classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34',1,'LoopTree::printPreOrder()'],['../classFunctionTree.html#ad338d9921dc8a5f50788079eb8c4b508',1,'FunctionTree::printPreorder()']]],
-  ['profile_7',['profile',['../classProfiler.html#af59ebc3f4d8f4663dd07a3ff0364ff1e',1,'Profiler']]],
-  ['profileoptions_8',['ProfileOptions',['../classProfileOptions.html',1,'']]],
-  ['profilepath_9',['profilePath',['../classCLIOptions.html#acdcf71d0a1c2150391c1385ed73b6084',1,'CLIOptions']]],
-  ['profiler_10',['profiler',['../classProfiler.html',1,'Profiler'],['../classProfiler.html#a9b9cb84a298e9eb9c8f5d9a824264985',1,'Profiler::Profiler()']]],
-  ['programgraph_11',['ProgramGraph',['../classProgramGraph.html',1,'']]],
-  ['programpath_12',['programPath',['../classCLIOptions.html#a9b236845bceb70c730e0f3397fe90cbe',1,'CLIOptions']]]
+  ['read_0',['read',['../classProfileHandler.html#a2af31ac8536f4415244d87dbcd9daf89',1,'ProfileHandler']]],
+  ['readmultiplier_1',['readMultiplier',['../classRegisterReader.html#a119b1f2fa4619881dd10e704650c1ca3',1,'RegisterReader']]],
+  ['red_2',['red',['../classColor.html#a66cc90002e84ded9053aa91c9678f8e6',1,'Color']]],
+  ['registerreader_3',['registerreader',['../classRegisterReader.html',1,'RegisterReader'],['../classRegisterReader.html#ae6c04ca1a23d22c2dcd5adcde62d6189',1,'RegisterReader::RegisterReader()']]],
+  ['removeloopedgesfromsubgraphs_4',['removeLoopEdgesFromSubGraphs',['../classLoopNode.html#ae2c48a161e3fca624295b9c608c6e560',1,'LoopNode']]],
+  ['removenode_5',['removeNode',['../classProgramGraph.html#a3d7172355f93bc903a9a3f6bdf215451',1,'ProgramGraph']]],
+  ['removeorphanededges_6',['removeOrphanedEdges',['../classProgramGraph.html#afc10742190eb8fa0610e975032d71491',1,'ProgramGraph']]],
+  ['repeatamount_7',['repeatAmount',['../classCLIOptions.html#af5437b11c7ee1c45fa4f1ac2a56f2a52',1,'CLIOptions']]],
+  ['replacenodeswithloopnode_8',['replaceNodesWithLoopNode',['../classProgramGraph.html#a2463f6a911a85ed865ad09c26dc5c3a6',1,'ProgramGraph']]]
 ];
