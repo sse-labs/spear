@@ -30,26 +30,28 @@ double LLVMHandler::getNodeSum(Node *node){
         auto &instruction = node->instructions[i].inst;
         auto name = instruction->getOpcodeName();
 
-        //Categorize the current instruction
-        InstructionCategory::Category category = InstructionCategory::getCategory(*instruction);
+        double energy = 0.0;
+        if (this->energyValues.contains(name)) {
+            energy = this->energyValues[name];
+        }
+
 
         //Get the energy from the JSON energy values by referencing the category
         double instructionValue = 0.00;
-        if(category == InstructionCategory::Category::CALL && useCallAnalysis){
-            double testval = InstructionCategory::getCalledFunctionEnergy(*instruction, this->funcmap);
+        if(llvm::isa<llvm::CallBase>(instruction) && useCallAnalysis){
             double calledValue = InstructionCategory::getCalledFunctionEnergy(*instruction, this->funcmap);
-            instructionValue = this->energyValues[InstructionCategory::toString(category)].get<double>();
+            instructionValue = energy;
 
             instructionValue += calledValue;
         }else{
-            instructionValue = this->energyValues[InstructionCategory::toString(category)].get<double>();
+            instructionValue = energy;
         }
 
         // We catch the energy value of phi nodes here as they are a feature of llvm
         // Their energy usage can not be translated directly to the energy usage of the source code
         // Therefore we make the energy usage zero
         if(llvm::isa<llvm::PHINode>(instruction)){
-            instructionValue = 0;
+            instructionValue = 0.0;
         }
 
         node->instructions[i].energy = instructionValue;

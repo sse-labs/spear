@@ -34,6 +34,7 @@ LoopNode* LoopNode::construct(LoopTree *loopTree, ProgramGraph *parent, Analysis
     auto *loopNode = new LoopNode(loopTree, parent, strategy);
     ProgramGraph *programGraph = new ProgramGraph();
 
+
     //End-condition
     if(loopNode->isLeafNode()){
         //Create a ProgramGraph from this LoopTrees mainloop

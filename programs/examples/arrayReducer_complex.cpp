@@ -34,7 +34,9 @@ int main(){
         sum += a1 + a2 + a3 + a4;
     }
 
+    long ssum = sumArray(searchroom, length);
     std::cout << "Sum of array: " << sum << "\n";
+    std::cout << "Sum of array method call: " << ssum << "\n";
 
     return 0;
 }

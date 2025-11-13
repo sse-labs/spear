@@ -22,6 +22,10 @@
 #include "profilers/CPUProfiler.h"
 #include "profilers/MetaProfiler.h"
 
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Scalar/IndVarSimplify.h"
+#include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
+
 
 void runProfileRoutine(CLIOptions opts){
     //Get the parameters from the arguments
@@ -90,11 +94,17 @@ void runAnalysisRoutine(CLIOptions opts){
     //loop-simplify
     functionPassManager.addPass(llvm::LoopSimplifyPass());
 
+    functionPassManager.addPass(llvm::LCSSAPass());
+
+    llvm::LoopPassManager LPM;
+    LPM.addPass(llvm::IndVarSimplifyPass());  // new-PM version, works fine
+    functionPassManager.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+
     //loop-rotate
     functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::LoopRotatePass()));
     modulePassManager.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(functionPassManager)));
 
-
+    functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::IndVarSimplifyPass()));
 
     modulePassManager.addPass(Energy(opts.profilePath, opts.mode, opts.format, opts.strategy, opts.loopBound, opts.deepCalls, opts.forFunction));
     modulePassManager.run(*module_up, moduleAnalysisManager);

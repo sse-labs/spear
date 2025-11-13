@@ -59,7 +59,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             //Create a JSONHandler object and read in the energypath
             ProfileHandler phandler;
             phandler.read(filename);
-            this->energyJson = phandler.getProfile()["profile"];
+            this->energyJson = phandler.getProfile()["cpu"];
 
             this->mode = mode;
             this->format = format;
@@ -350,8 +350,9 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 //Get the loop, the iterator points to
                 auto topLoop= *liiter;
 
+                llvm::errs() << energyFunc->name << "\n";
                 //Construct the LoopTree from the Information of the current top-level loop
-                LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, &scalarEvolution);
+                LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, &scalarEvolution, &loopAnalysis);
 
                 //Construct a LoopNode for the current loop
                 LoopNode *loopNode = LoopNode::construct(LT, pGraph, analysisStrategy);
