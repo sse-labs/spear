@@ -10,6 +10,8 @@ LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, 
     this->mainloop = main;
     this->handler = handler;
 
+    this->boundvars = {};
+
     this->LI = li;
 
     //Iterate over the given Subloops
@@ -62,40 +64,45 @@ std::vector<llvm::BasicBlock *> LoopTree::calcBlocks(){
     }
 }
 
-// Recursively extract all source Values (variables) from a SCEV expression
-void printSourceVariablesFromSCEV(const llvm::SCEV *Expr,
-                                  llvm::ScalarEvolution &SE,
-                                  llvm::PHINode *IndVar) {
+std::vector<const llvm::Value *> LoopTree::getSourceVariablesFromSCEV(const llvm::SCEV *Expr,
+                                                                      llvm::ScalarEvolution &SE,
+                                                                      llvm::PHINode *IndVar) const {
+    std::vector<const llvm::Value *> Vars;
+
     if (auto *Unknown = llvm::dyn_cast<llvm::SCEVUnknown>(Expr)) {
         const llvm::Value *V = Unknown->getValue();
         // Skip the induction variable itself
         if (V != IndVar) {
-            llvm::errs() << "    Loop bound variable: ";
-            if (V->hasName())
-                llvm::errs() << V->getName() << "\n";
-            else
-                llvm::errs() << "<unnamed>\n";
+            Vars.push_back(V);
         }
-        return;
+        return Vars;
     }
 
     // Recursively explore operands for composite SCEVs
     if (auto *NA = llvm::dyn_cast<llvm::SCEVNAryExpr>(Expr)) {
-        for (const llvm::SCEV *Op : NA->operands())
-            printSourceVariablesFromSCEV(Op, SE, IndVar);
+        for (const llvm::SCEV *Op : NA->operands()) {
+            auto SubVars = getSourceVariablesFromSCEV(Op, SE, IndVar);
+            Vars.insert(Vars.end(), SubVars.begin(), SubVars.end());
+        }
     } else if (auto *Cast = llvm::dyn_cast<llvm::SCEVCastExpr>(Expr)) {
-        printSourceVariablesFromSCEV(Cast->getOperand(), SE, IndVar);
+        auto SubVars = getSourceVariablesFromSCEV(Cast->getOperand(), SE, IndVar);
+        Vars.insert(Vars.end(), SubVars.begin(), SubVars.end());
     } else if (auto *UDiv = llvm::dyn_cast<llvm::SCEVUDivExpr>(Expr)) {
-        printSourceVariablesFromSCEV(UDiv->getLHS(), SE, IndVar);
-        printSourceVariablesFromSCEV(UDiv->getRHS(), SE, IndVar);
+        auto LHSVars = getSourceVariablesFromSCEV(UDiv->getLHS(), SE, IndVar);
+        auto RHSVars = getSourceVariablesFromSCEV(UDiv->getRHS(), SE, IndVar);
+        Vars.insert(Vars.end(), LHSVars.begin(), LHSVars.end());
+        Vars.insert(Vars.end(), RHSVars.begin(), RHSVars.end());
     } else if (auto *AddRec = llvm::dyn_cast<llvm::SCEVAddRecExpr>(Expr)) {
-        // Recurse on start and step using SE
-        printSourceVariablesFromSCEV(AddRec->getStart(), SE, IndVar);
-        printSourceVariablesFromSCEV(AddRec->getStepRecurrence(SE), SE, IndVar);
+        auto StartVars = getSourceVariablesFromSCEV(AddRec->getStart(), SE, IndVar);
+        auto StepVars = getSourceVariablesFromSCEV(AddRec->getStepRecurrence(SE), SE, IndVar);
+        Vars.insert(Vars.end(), StartVars.begin(), StartVars.end());
+        Vars.insert(Vars.end(), StepVars.begin(), StepVars.end());
     }
+
+    return Vars;
 }
 
-long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution) const{
+long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution){
     //Get the Latch instruction responsible for containing the compare instruction
     //Init the boundValue with a default value if we are not comparing with a natural number
     long boundValue = this->handler->valueIfIndeterminable;
@@ -114,7 +121,7 @@ long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalar
     llvm::errs() << "  Induction variable: " << IndVar->getName() << "\n";
 
     // Get the backedge taken count
-    const llvm::SCEV *ExitCount = scalarEvolution->getBackedgeTakenCount(L);
+    const llvm::SCEV *ExitCount = scalarEvolution->getBackedgeTakenCount(loop);
 
     if (!llvm::isa<llvm::SCEVCouldNotCompute>(ExitCount)) {
         if (auto *AR = llvm::dyn_cast<llvm::SCEVAddRecExpr>(ExitCount)) {
@@ -128,7 +135,7 @@ long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalar
     }
 
     // Approximate loop bound
-    const llvm::SCEV *BECount = scalarEvolution->getExitCount(L, L->getLoopLatch());
+    const llvm::SCEV *BECount = scalarEvolution->getExitCount(loop, loop->getLoopLatch());
     if (!llvm::isa<llvm::SCEVCouldNotCompute>(BECount)) {
         const llvm::SCEV *Bound = scalarEvolution->getAddExpr(
             scalarEvolution->getUnknown(IndVar),
@@ -136,7 +143,16 @@ long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalar
         );
         llvm::errs() << "  Approximated loop bound: " << *Bound << "\n";
 
-        printSourceVariablesFromSCEV(Bound, *scalarEvolution, IndVar);
+        auto boundVars = this->getSourceVariablesFromSCEV(Bound, *scalarEvolution, IndVar);
+        if (!boundVars.empty()) {
+            for (auto bv : boundVars) {
+                llvm::errs() << "  Bound variable: " << *bv << "\n";
+            }
+
+            this->boundvars = boundVars;
+        }else {
+            llvm::errs() << "  Bound variable: not found"  << "\n";
+        }
     }
 
     /*for (auto *L : *this->LI) {

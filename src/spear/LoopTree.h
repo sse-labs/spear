@@ -4,6 +4,8 @@
 #include <vector>
 #include <cmath>
 #include <llvm/Analysis/LoopInfo.h>
+#include <llvm/Analysis/ScalarEvolution.h>
+
 #include "LLVMHandler.h"
 
 
@@ -41,6 +43,8 @@ public:
      */
     long iterations;
 
+    std::vector<const llvm::Value *> boundvars;
+
     /**
      * Constructor building the recursive datastructure
      * @param main The loop from which the tree should be builded
@@ -54,7 +58,7 @@ public:
      */
     void printPreOrder();
 
-    long getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution) const;
+    long getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution);
 
     /**
      * Gets the Latches of the LoopTree
@@ -81,6 +85,8 @@ private:
      * @return Returns true if the current LoopTree is a leaf, false otherwise
      */
     bool isLeaf() const;
+
+    std::vector<const llvm::Value *> getSourceVariablesFromSCEV(const llvm::SCEV *Expr, llvm::ScalarEvolution &SE, llvm::PHINode *IndVar) const;
 
 };
 
