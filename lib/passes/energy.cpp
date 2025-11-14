@@ -122,7 +122,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 json functionObject = json::object();
                 functionObject["name"] = fName;
-                functionObject["nM"] = llvm::itaniumDemangle(fName.c_str());
+                functionObject["nM"] = DeMangler::demangle(fName);
                 functionObject["energy"] = energyFunction->energy;
                 functionObject["numberOfBasicBlocks"] = energyFunction->func->size();
                 functionObject["numberOfInstructions"] = energyFunction->func->getInstructionCount();
