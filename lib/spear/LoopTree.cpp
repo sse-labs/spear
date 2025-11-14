@@ -6,18 +6,16 @@
 #include <llvm/IR/IntrinsicInst.h>
 
 
-LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution, llvm::LoopInfo *li){
+LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution){
     this->mainloop = main;
     this->handler = handler;
 
     this->boundvars = {};
 
-    this->LI = li;
-
     //Iterate over the given Subloops
     for (auto subLoop : subloops) {
         //For each subloop create a new LoopTree with parameters regarding this subloop
-        auto *subLoopTree = new LoopTree(subLoop, subLoop->getSubLoops(), this->handler, scalarEvolution, li);
+        auto *subLoopTree = new LoopTree(subLoop, subLoop->getSubLoops(), this->handler, scalarEvolution);
 
         //Add the subtree to the vector of subgraphs
         this->subTrees.push_back(subLoopTree);

@@ -16,8 +16,6 @@ class LLVMHandler;
  */
 class LoopTree {
 public:
-    llvm::LoopInfo *LI;
-
     /**
      * Member to store the loop from which the treenode extends to the subgraphs containing the subloops
      */
@@ -51,7 +49,7 @@ public:
      * @param subloops The loops contained in the mainloop
      * @param handler A LLVMHandler to handle calculations on the LLVM IR
      */
-    LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution, llvm::LoopInfo *li);
+    LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution);
 
     /**
      * Prints this node in preorder

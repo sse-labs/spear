@@ -352,7 +352,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 llvm::errs() << energyFunc->name << "\n";
                 //Construct the LoopTree from the Information of the current top-level loop
-                LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, &scalarEvolution, &loopAnalysis);
+                LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, &scalarEvolution);
 
                 //Construct a LoopNode for the current loop
                 LoopNode *loopNode = LoopNode::construct(LT, pGraph, analysisStrategy);
