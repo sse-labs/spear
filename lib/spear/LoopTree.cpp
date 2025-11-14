@@ -12,6 +12,12 @@ LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, 
 
     this->boundvars = {};
 
+    this->findBoundVars(scalarEvolution);
+
+    for (auto bv : this->boundvars) {
+        llvm::errs() << "  Bound variable: " << *bv << "\n";
+    }
+
     //Iterate over the given Subloops
     for (auto subLoop : subloops) {
         //For each subloop create a new LoopTree with parameters regarding this subloop
@@ -100,134 +106,36 @@ std::vector<const llvm::Value *> LoopTree::getSourceVariablesFromSCEV(const llvm
     return Vars;
 }
 
+void LoopTree::findBoundVars(llvm::ScalarEvolution *scalarEvolution) {
+    llvm::errs() << "Loop " << this->mainloop->getName() << "\n";
+
+    // Get the induction variable using SCEV
+    llvm::PHINode *IndVar = this->mainloop->getInductionVariable(*scalarEvolution);
+    if (!IndVar) {
+        return;
+    }
+
+    // Approximate loop bound
+    const llvm::SCEV *BECount = scalarEvolution->getExitCount(this->mainloop, this->mainloop->getLoopLatch());
+    if (!llvm::isa<llvm::SCEVCouldNotCompute>(BECount)) {
+        const llvm::SCEV *Bound = scalarEvolution->getAddExpr(
+            scalarEvolution->getUnknown(IndVar),
+            scalarEvolution->getAddExpr(BECount, scalarEvolution->getOne(IndVar->getType()))
+        );
+
+        auto boundVars = this->getSourceVariablesFromSCEV(Bound, *scalarEvolution, IndVar);
+        if (!boundVars.empty()) {
+            this->boundvars = boundVars;
+        }
+    }
+}
+
 long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution){
     //Get the Latch instruction responsible for containing the compare instruction
     //Init the boundValue with a default value if we are not comparing with a natural number
     long boundValue = this->handler->valueIfIndeterminable;
     auto loopBound = loop->getBounds(*scalarEvolution);
     //Assume the number to compare with is the second argument of the instruction
-
-    llvm::errs() << "Loop " << loop->getName() << "\n";
-
-    // Get the induction variable using SCEV
-    llvm::PHINode *IndVar = loop->getInductionVariable(*scalarEvolution);
-    if (!IndVar) {
-        return boundValue;
-    }
-
-
-    llvm::errs() << "  Induction variable: " << IndVar->getName() << "\n";
-
-    // Get the backedge taken count
-    const llvm::SCEV *ExitCount = scalarEvolution->getBackedgeTakenCount(loop);
-
-    if (!llvm::isa<llvm::SCEVCouldNotCompute>(ExitCount)) {
-        if (auto *AR = llvm::dyn_cast<llvm::SCEVAddRecExpr>(ExitCount)) {
-            const llvm::SCEV *Start = AR->getStart();
-            const llvm::SCEV *Step  = AR->getStepRecurrence(*scalarEvolution);
-            llvm::errs() << "  Start value: " << *Start << "\n";
-            llvm::errs() << "  Step value: " << *Step << "\n";
-        } else {
-            llvm::errs() << "  Exit count: " << *ExitCount << "\n";
-        }
-    }
-
-    // Approximate loop bound
-    const llvm::SCEV *BECount = scalarEvolution->getExitCount(loop, loop->getLoopLatch());
-    if (!llvm::isa<llvm::SCEVCouldNotCompute>(BECount)) {
-        const llvm::SCEV *Bound = scalarEvolution->getAddExpr(
-            scalarEvolution->getUnknown(IndVar),
-            scalarEvolution->getAddExpr(BECount, scalarEvolution->getOne(IndVar->getType()))
-        );
-        llvm::errs() << "  Approximated loop bound: " << *Bound << "\n";
-
-        auto boundVars = this->getSourceVariablesFromSCEV(Bound, *scalarEvolution, IndVar);
-        if (!boundVars.empty()) {
-            for (auto bv : boundVars) {
-                llvm::errs() << "  Bound variable: " << *bv << "\n";
-            }
-
-            this->boundvars = boundVars;
-        }else {
-            llvm::errs() << "  Bound variable: not found"  << "\n";
-        }
-    }
-
-    /*for (auto *L : *this->LI) {
-        llvm::PHINode *IndVar = L->getCanonicalInductionVariable();
-        llvm::Value *Candidate = nullptr;
-
-        if (IndVar)
-            Candidate = IndVar;
-        else {
-            // Fallback: look for affine PHI nodes manually
-            for (auto &I : *L->getHeader()) {
-                if (auto *PN = llvm::dyn_cast<llvm::PHINode>(&I)) {
-                    const llvm::SCEV *S = scalarEvolution->getSCEV(PN);
-                    if (const llvm::SCEVAddRecExpr *AR =
-                            llvm::dyn_cast<llvm::SCEVAddRecExpr>(S)) {
-                        if (AR->isAffine()) {
-                            Candidate = PN;
-                            break;
-                        }
-                            }
-                }
-            }
-        }
-
-        if (!Candidate)
-            continue;
-
-        // Print IR-level name
-        llvm::errs() << "Loop induction variable IR name: "
-                     << Candidate->getName() << "\n";
-
-        // Try to find corresponding source-level variable via debug info
-        auto *F = L->getHeader()->getParent();
-        for (auto &BB : *F) {
-            for (auto &I : BB) {
-                if (auto *DbgVal = llvm::dyn_cast<llvm::DbgValueInst>(&I)) {
-                    if (DbgVal->getValue() == Candidate) {
-                        if (auto *Var = DbgVal->getVariable()) {
-                            llvm::errs() << " → Source variable name: "
-                                         << Var->getName() << "\n";
-                        }
-                    }
-                } else if (auto *DbgDecl = llvm::dyn_cast<llvm::DbgDeclareInst>(&I)) {
-                    if (DbgDecl->getAddress() == Candidate) {
-                        if (auto *Var = DbgDecl->getVariable()) {
-                            llvm::errs() << " → Source variable name: "
-                                         << Var->getName() << "\n";
-                        }
-                    }
-                }
-            }
-        }
-
-
-        llvm::BasicBlock *Header = L->getHeader();
-
-        for (auto &I : *Header) {
-            if (auto *BI = llvm::BranchInst::dyn_cast(&I)) {
-                if (BI->isConditional()) {
-                    if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(BI->getCondition())) {
-                        llvm::Value *LHS = ICmp->getOperand(0);
-                        llvm::Value *RHS = ICmp->getOperand(1);
-
-                        llvm::ConstantInt *Bound = llvm::dyn_cast<llvm::ConstantInt>(RHS);
-                        if (!Bound)
-                            Bound = llvm::dyn_cast<llvm::ConstantInt>(LHS);
-
-                        if (Bound) {
-                            llvm::errs() << "Loop bound: " << *Bound << "\n";
-                            llvm::errs() << "Induction variable: "
-                                         << (Bound == LHS ? *RHS : *LHS) << "\n";
-                        }
-                    }
-                }
-            }
-        }
-    }*/
 
     if(loopBound.has_value()){
         auto &endValueObj = loopBound->getFinalIVValue();

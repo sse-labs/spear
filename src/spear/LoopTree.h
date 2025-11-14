@@ -84,8 +84,22 @@ private:
      */
     bool isLeaf() const;
 
+
+    /**
+     * Takes a scalar evolution expression and tries to deduce the source name of the referenced variable
+     * @param Expr Expression found by scalar evolution
+     * @param SE Scalar evolution analysis
+     * @param IndVar Induction variable of the loop
+     * @return Returns a vector of llvm value pointers that refer to the source variable of the loop bound
+     */
     std::vector<const llvm::Value *> getSourceVariablesFromSCEV(const llvm::SCEV *Expr, llvm::ScalarEvolution &SE, llvm::PHINode *IndVar) const;
 
+    /**
+     * Parses the main loop of the looptree and uses the scalar evolution analysis to deduce the source name of the
+     * loop bound variable
+     * @param scalarEvolution
+     */
+    void findBoundVars(llvm::ScalarEvolution *scalarEvolution);
 };
 
 
