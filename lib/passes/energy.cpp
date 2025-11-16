@@ -17,6 +17,8 @@
 #include <nlohmann/json.hpp>
 #include <cxxabi.h>
 
+#include "PhasarHandler.h"
+
 using json = nlohmann::json;
 
 
@@ -319,7 +321,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      * @param analysisStrategy The strategy to analyze the function with
      * @return Returns the calculated ProgramGraph
      */
-    static void constructProgramRepresentation(ProgramGraph* pGraph, EnergyFunction *energyFunc, LLVMHandler *handler, llvm::FunctionAnalysisManager *FAM, AnalysisStrategy::Strategy analysisStrategy){
+    static void constructProgramRepresentation(ProgramGraph* pGraph, EnergyFunction *energyFunc, LLVMHandler *handler, llvm::FunctionAnalysisManager *FAM, AnalysisStrategy::Strategy analysisStrategy, PhasarHandler *phasar_handler){
         auto* domtree = new llvm::DominatorTree();
         llvm::Function* function = energyFunc->func;
 
@@ -341,6 +343,17 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         //Get the vector of Top-Level loops present in the program
         auto loops = loopAnalysis.getTopLevelLoops();
 
+        auto IDEresult = phasar_handler->queryBoundVars(function);
+
+        if (!IDEresult.empty()) {
+            llvm::outs() << "================= "<< function->getName() <<" ================\n";
+            for (auto r : IDEresult) {
+                llvm::outs() << "(" << r.first << ", " << r.second.second << ")";
+            }
+            llvm::outs() << "\n";
+            llvm::outs() << "====================================================\n";
+        }
+
         //We need to distinguish if the function contains loops
         if(!loops.empty()){
             //If the function contains loops
@@ -352,7 +365,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 llvm::errs() << energyFunc->name << "\n";
                 //Construct the LoopTree from the Information of the current top-level loop
-                LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, &scalarEvolution);
+                LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, &scalarEvolution, &IDEresult);
 
                 //Construct a LoopNode for the current loop
                 LoopNode *loopNode = LoopNode::construct(LT, pGraph, analysisStrategy);
@@ -386,6 +399,9 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         if( this->energyJson.contains("add") && this->energyJson.contains("urem") ){
             //Get the functions from the module
             auto funcList = &module.getFunctionList();
+            PhasarHandler phasar_handler(&module);
+            phasar_handler.runAnalysis();
+
             FunctionTree * functionTree;
 
             //Construct the functionTrees to the functions of the module
@@ -429,7 +445,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 //Check if the current function is external. Analysis of external functions, that only were declared, will result in an infinite loop
                 if (!function->isDeclarationForLinker()) {
                     //Calculate the energy
-                    constructProgramRepresentation(funcPool[i].programGraph, &funcPool[i], &handler, &functionAnalysisManager, analysisStrategy);
+                    constructProgramRepresentation(funcPool[i].programGraph, &funcPool[i], &handler, &functionAnalysisManager, analysisStrategy, &phasar_handler);
                     // Calculate the maximal amount of energy of the programgraph
                 }else{
                     funcPool[i].programGraph = nullptr;

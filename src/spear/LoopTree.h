@@ -5,6 +5,7 @@
 #include <cmath>
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/Analysis/ScalarEvolution.h>
+#include <phasar/PhasarLLVM/DataFlow/IfdsIde/Problems/IDELinearConstantAnalysis.h>
 
 #include "LLVMHandler.h"
 
@@ -49,7 +50,13 @@ public:
      * @param subloops The loops contained in the mainloop
      * @param handler A LLVMHandler to handle calculations on the LLVM IR
      */
-    LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution);
+    LoopTree(
+        llvm::Loop *main,
+        const std::vector<llvm::Loop *>& subloops,
+        LLVMHandler *handler,
+        llvm::ScalarEvolution *scalarEvolution,
+        std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> *variablemapping
+    );
 
     /**
      * Prints this node in preorder
@@ -100,6 +107,8 @@ private:
      * @param scalarEvolution
      */
     void findBoundVars(llvm::ScalarEvolution *scalarEvolution);
+
+    std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> *_variablemapping;
 };
 
 

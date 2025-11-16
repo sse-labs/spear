@@ -6,13 +6,15 @@
 #include <llvm/IR/IntrinsicInst.h>
 
 
-LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution){
+LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution, std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> *variablemapping){
     this->mainloop = main;
     this->handler = handler;
 
     this->boundvars = {};
 
     this->findBoundVars(scalarEvolution);
+
+    this->_variablemapping = variablemapping;
 
     for (auto bv : this->boundvars) {
         llvm::errs() << "  Bound variable: " << *bv << "\n";
@@ -21,7 +23,7 @@ LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, 
     //Iterate over the given Subloops
     for (auto subLoop : subloops) {
         //For each subloop create a new LoopTree with parameters regarding this subloop
-        auto *subLoopTree = new LoopTree(subLoop, subLoop->getSubLoops(), this->handler, scalarEvolution);
+        auto *subLoopTree = new LoopTree(subLoop, subLoop->getSubLoops(), this->handler, scalarEvolution, variablemapping);
 
         //Add the subtree to the vector of subgraphs
         this->subTrees.push_back(subLoopTree);
@@ -137,6 +139,16 @@ long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalar
     auto loopBound = loop->getBounds(*scalarEvolution);
     //Assume the number to compare with is the second argument of the instruction
 
+    for (auto bound : this->boundvars) {
+        auto candidate = this->_variablemapping->at(bound->getName().str());
+
+        llvm::errs() << " \t(" << bound->getName().str() << " -> " << candidate.second << ") " << "\n";
+        // Return the found bound...
+        return candidate.second.assertGetValue();
+    }
+
+
+
     if(loopBound.has_value()){
         auto &endValueObj = loopBound->getFinalIVValue();
         auto &startValueObj = loopBound->getInitialIVValue();
@@ -167,6 +179,19 @@ long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalar
             }
         }
     }
+
+    llvm::PHINode *IndVar = this->mainloop->getInductionVariable(*scalarEvolution);
+    if (IndVar) {
+        const llvm::SCEV *BECount = scalarEvolution->getExitCount(this->mainloop, this->mainloop->getLoopLatch());
+
+        if (auto *C = llvm::dyn_cast<llvm::SCEVConstant>(BECount)) {
+            uint64_t tripCount = C->getValue()->getZExtValue();
+            boundValue = (long) tripCount;
+        }
+
+    }
+
+    llvm::errs() << " \t(" << "Constant = " << boundValue << ")" << "\n";
 
     return boundValue;
 }
