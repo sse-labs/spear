@@ -109,6 +109,11 @@ private:
     void findBoundVars(llvm::ScalarEvolution *scalarEvolution);
 
     std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> *_variablemapping;
+
+
+    bool isLoopConditionStrict(llvm::Loop *loop);
+
+    long calculateIterations(long start, long end, long step, llvm::Loop::LoopBounds::Direction direction);
 };
 
 

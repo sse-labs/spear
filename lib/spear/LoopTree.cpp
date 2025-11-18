@@ -110,6 +110,10 @@ std::vector<const llvm::Value *> LoopTree::getSourceVariablesFromSCEV(const llvm
 
 void LoopTree::findBoundVars(llvm::ScalarEvolution *scalarEvolution) {
     llvm::errs() << "Loop " << this->mainloop->getName() << "\n";
+    auto *LoopCount = scalarEvolution->getBackedgeTakenCount(this->mainloop);
+    if (LoopCount) {
+        llvm::outs() << "Loop count: " << *LoopCount << "\n";
+    }
 
     // Get the induction variable using SCEV
     llvm::PHINode *IndVar = this->mainloop->getInductionVariable(*scalarEvolution);
@@ -132,6 +136,39 @@ void LoopTree::findBoundVars(llvm::ScalarEvolution *scalarEvolution) {
     }
 }
 
+bool LoopTree::isLoopConditionStrict(llvm::Loop *loop) {
+    auto *header = loop->getHeader();
+    for (auto *pred : llvm::predecessors(header)) {
+        for (auto &inst : *pred) {
+            if (auto *brInst = llvm::dyn_cast<llvm::BranchInst>(&inst)) {
+                if (brInst->isConditional()) {
+                    // Hier können Sie die Bedingung analysieren
+                    // Prüfen auf Vergleichsoperationen
+                    // Beispiel:
+                    if (auto *cmp = llvm::dyn_cast<llvm::ICmpInst>(brInst->getCondition())) {
+                        auto predicate = cmp->getPredicate();
+                        return llvm::ICmpInst::isLT(predicate) || llvm::ICmpInst::isGT(predicate);
+                    }
+                }
+            }
+        }
+    }
+    return false; // Standardwert, wenn keine strenge Bedingung gefunden wird
+}
+
+long LoopTree::calculateIterations(long start, long end, long step, llvm::Loop::LoopBounds::Direction direction) {
+    double numberOfRepetitions = -255;
+
+    if(direction == llvm::Loop::LoopBounds::Direction::Decreasing){
+        numberOfRepetitions = ceil((double) start / (double) std::abs(end) - (double)end);
+    }else if(direction == llvm::Loop::LoopBounds::Direction::Increasing){
+        numberOfRepetitions = ceil((double) end / (double) std::abs(step) - (double)start);
+    }
+
+    return (long) numberOfRepetitions;
+
+}
+
 long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution){
     //Get the Latch instruction responsible for containing the compare instruction
     //Init the boundValue with a default value if we are not comparing with a natural number
@@ -142,12 +179,33 @@ long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalar
     for (auto bound : this->boundvars) {
         auto candidate = this->_variablemapping->at(bound->getName().str());
 
-        llvm::errs() << " \t(" << bound->getName().str() << " -> " << candidate.second << ") " << "\n";
+        llvm::errs() << " \tPHSR:(" << bound->getName().str() << " -> " << candidate.second << ") " << "\n";
+
+        long endValue = candidate.second.assertGetValue();
+
+        if(loopBound.has_value()){
+            auto &startValueObj = loopBound->getInitialIVValue();
+            auto stepValueObj = loopBound->getStepValue();
+            auto direction = loopBound->getDirection();
+
+            long startValue;
+            long stepValue;
+
+            auto* constantIntStart = llvm::dyn_cast<llvm::ConstantInt>(&startValueObj);
+            auto* constantIntStep = llvm::dyn_cast<llvm::ConstantInt>(stepValueObj);
+
+            if (constantIntStart && constantIntStep ) {
+                startValue = constantIntStart->getSExtValue();
+                stepValue = constantIntStep->getSExtValue();
+
+                boundValue = this->calculateIterations(startValue, endValue, stepValue, direction);
+                llvm::errs() << " \tPHSR:(" << "Calculated iterations" << " -> " << boundValue << ") " << "\n";
+            }
+        }
+
         // Return the found bound...
-        return candidate.second.assertGetValue();
+        return boundValue;
     }
-
-
 
     if(loopBound.has_value()){
         auto &endValueObj = loopBound->getFinalIVValue();
@@ -180,13 +238,15 @@ long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalar
         }
     }
 
-    llvm::PHINode *IndVar = this->mainloop->getInductionVariable(*scalarEvolution);
+    llvm::PHINode *IndVar = loop->getInductionVariable(*scalarEvolution);
     if (IndVar) {
-        const llvm::SCEV *BECount = scalarEvolution->getExitCount(this->mainloop, this->mainloop->getLoopLatch());
+        const llvm::SCEV *BECount = scalarEvolution->getExitCount(loop, loop->getLoopLatch());
 
         if (auto *C = llvm::dyn_cast<llvm::SCEVConstant>(BECount)) {
             uint64_t tripCount = C->getValue()->getZExtValue();
             boundValue = (long) tripCount;
+
+            // We also need to calculate the actual iteration count here
         }
 
     }
