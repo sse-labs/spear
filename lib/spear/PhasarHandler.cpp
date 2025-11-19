@@ -27,7 +27,7 @@ void PhasarHandler::runAnalysis() {
 }
 
 void PhasarHandler::dumpState() {
-    this->_analysisResult->dumpResults(this->_HA->getICFG());
+    //this->_analysisResult->dumpResults(this->_HA->getICFG());
 }
 
 std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> PhasarHandler::queryBoundVars(llvm::Function * func) {

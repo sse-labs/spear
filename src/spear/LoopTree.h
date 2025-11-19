@@ -108,12 +108,30 @@ private:
      */
     void findBoundVars(llvm::ScalarEvolution *scalarEvolution);
 
+    /**
+     * Phasar variable mapping
+     * Maps variable source name to constant value
+     */
     std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> *_variablemapping;
 
-
-    bool isLoopConditionStrict(llvm::Loop *loop);
-
+    /**
+     * Calculates the actual amount of iterations a loop runs with the given loop parameters
+     * @param start Start value of the loop
+     * @param end End value of the loop
+     * @param step Steps performed with each iteration
+     * @param direction Loop direction either increasing or decreasing
+     * @return Returns the amount of repetitions the loop runs
+     */
     long calculateIterations(long start, long end, long step, llvm::Loop::LoopBounds::Direction direction);
+
+    /**
+     * Calculates the loop iterations from a given loop bound
+     * @param loopBound loop bound used to calculate loop parameters
+     * @param endValue Predefined ending value. If no ending value is given, we will deduce the bound of the loop using
+     * the given loopbound
+     * @return Returns a loop bound
+     */
+    long iterationsFromLoopBound(llvm::Optional<llvm::Loop::LoopBounds> *loopBound, long endValue = -1 );
 };
 
 

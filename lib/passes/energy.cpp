@@ -345,14 +345,14 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
         auto IDEresult = phasar_handler->queryBoundVars(function);
 
-        if (!IDEresult.empty()) {
+        /*if (!IDEresult.empty()) {
             llvm::outs() << "================= "<< function->getName() <<" ================\n";
             for (auto r : IDEresult) {
                 llvm::outs() << "(" << r.first << ", " << r.second.second << ")";
             }
             llvm::outs() << "\n";
             llvm::outs() << "====================================================\n";
-        }
+        }*/
 
         //We need to distinguish if the function contains loops
         if(!loops.empty()){
