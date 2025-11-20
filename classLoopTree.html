@@ -81,13 +81,13 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a45a0862b4849d3302b8a5d5b99e7a0f8" id="r_a45a0862b4849d3302b8a5d5b99e7a0f8"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#a45a0862b4849d3302b8a5d5b99e7a0f8">LoopTree</a> (llvm::Loop *main, const std::vector&lt; llvm::Loop * &gt; &amp;subloops, <a class="el" href="classLLVMHandler.html">LLVMHandler</a> *<a class="el" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">handler</a>, llvm::ScalarEvolution *scalarEvolution)</td></tr>
-<tr class="separator:a45a0862b4849d3302b8a5d5b99e7a0f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d7c4ff00d14caa2313e146c3ee0ba8d" id="r_a0d7c4ff00d14caa2313e146c3ee0ba8d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#a0d7c4ff00d14caa2313e146c3ee0ba8d">LoopTree</a> (llvm::Loop *main, const std::vector&lt; llvm::Loop * &gt; &amp;subloops, <a class="el" href="classLLVMHandler.html">LLVMHandler</a> *<a class="el" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">handler</a>, llvm::ScalarEvolution *scalarEvolution, std::map&lt; std::string, std::map&lt; std::string, std::pair&lt; const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t &gt; &gt; &gt; *variablemapping)</td></tr>
+<tr class="separator:a0d7c4ff00d14caa2313e146c3ee0ba8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad97586e2ef41e7fa8f720ee920b3db34" id="r_ad97586e2ef41e7fa8f720ee920b3db34"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">printPreOrder</a> ()</td></tr>
 <tr class="separator:ad97586e2ef41e7fa8f720ee920b3db34"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad795370d824dbb2b4d5ec878e6a9878f" id="r_ad795370d824dbb2b4d5ec878e6a9878f"><td class="memItemLeft" align="right" valign="top"><a id="ad795370d824dbb2b4d5ec878e6a9878f" name="ad795370d824dbb2b4d5ec878e6a9878f"></a>
-long&#160;</td><td class="memItemRight" valign="bottom"><b>getLoopUpperBound</b> (llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution) const</td></tr>
-<tr class="separator:ad795370d824dbb2b4d5ec878e6a9878f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd7f378b1b1700b8079f8f4253e31feb" id="r_afd7f378b1b1700b8079f8f4253e31feb"><td class="memItemLeft" align="right" valign="top"><a id="afd7f378b1b1700b8079f8f4253e31feb" name="afd7f378b1b1700b8079f8f4253e31feb"></a>
+long&#160;</td><td class="memItemRight" valign="bottom"><b>getLoopUpperBound</b> (llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution)</td></tr>
+<tr class="separator:afd7f378b1b1700b8079f8f4253e31feb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5bbe89a53070d2ca8c76a1cccdd221fa" id="r_a5bbe89a53070d2ca8c76a1cccdd221fa"><td class="memItemLeft" align="right" valign="top">std::vector&lt; llvm::BasicBlock * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">getLatches</a> ()</td></tr>
 <tr class="separator:a5bbe89a53070d2ca8c76a1cccdd221fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac7a3306c81d41d6cea849992f3fec9ce" id="r_ac7a3306c81d41d6cea849992f3fec9ce"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">~LoopTree</a> ()</td></tr>
@@ -105,12 +105,15 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a15b900fb894985bdc881842d75bd5f9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afe460225dfb3ad4c58468bd4a1293682" id="r_afe460225dfb3ad4c58468bd4a1293682"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">iterations</a></td></tr>
 <tr class="separator:afe460225dfb3ad4c58468bd4a1293682"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aac01a15ce0d1848d3101b691f9ff6923" id="r_aac01a15ce0d1848d3101b691f9ff6923"><td class="memItemLeft" align="right" valign="top"><a id="aac01a15ce0d1848d3101b691f9ff6923" name="aac01a15ce0d1848d3101b691f9ff6923"></a>
+std::vector&lt; const llvm::Value * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>boundvars</b></td></tr>
+<tr class="separator:aac01a15ce0d1848d3101b691f9ff6923"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classLoopTree.html">LoopTree</a> - A recursive datastructure to handle encapsulated loops </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a45a0862b4849d3302b8a5d5b99e7a0f8" name="a45a0862b4849d3302b8a5d5b99e7a0f8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a45a0862b4849d3302b8a5d5b99e7a0f8">&#9670;&#160;</a></span>LoopTree()</h2>
+<a id="a0d7c4ff00d14caa2313e146c3ee0ba8d" name="a0d7c4ff00d14caa2313e146c3ee0ba8d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0d7c4ff00d14caa2313e146c3ee0ba8d">&#9670;&#160;</a></span>LoopTree()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -137,7 +140,13 @@ Public Attributes</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">llvm::ScalarEvolution *&#160;</td>
-          <td class="paramname"><em>scalarEvolution</em>&#160;</td>
+          <td class="paramname"><em>scalarEvolution</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::map&lt; std::string, std::map&lt; std::string, std::pair&lt; const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t &gt; &gt; &gt; *&#160;</td>
+          <td class="paramname"><em>variablemapping</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
