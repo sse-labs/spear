@@ -5,8 +5,10 @@
 #ifndef SPEAR_PHASARHANDLER_H
 #define SPEAR_PHASARHANDLER_H
 #include <string>
+#include <memory>
+#include <map>
+#include <vector>
 #include <phasar.h>
-
 
 class PhasarHandler {
 public:
@@ -16,10 +18,20 @@ public:
     llvm::Module *module;
 
     /**
-     * Main constructor
-     * @param mod
+     * Get the singleton instance
+     * @param mod Optional, only used on first call
      */
-    PhasarHandler(llvm::Module *mod);
+    static PhasarHandler& getInstance(llvm::Module *mod = nullptr) {
+        static PhasarHandler instance(mod);
+        return instance;
+    }
+
+    /**
+     * Deleted copy constructor and assignment operator
+     * to prevent copying
+     */
+    PhasarHandler(const PhasarHandler&) = delete;
+    PhasarHandler& operator=(const PhasarHandler&) = delete;
 
     /**
      * Executes the predefined Phasar Analysis
@@ -32,14 +44,21 @@ public:
     **/
     std::map<
         std::string,
-        std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>
+        std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
     > queryBoundVars(llvm::Function * func);
 
     /**
      * Debug function to dump the analysis results
      */
     void dumpState();
+
 private:
+    /**
+     * Private constructor
+     * @param mod
+     */
+    explicit PhasarHandler(llvm::Module *mod);
+
     /**
      * Results extracted from phasar
      */

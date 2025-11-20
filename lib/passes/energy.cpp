@@ -16,6 +16,8 @@
 
 #include <nlohmann/json.hpp>
 #include <cxxabi.h>
+#include <llvm/Transforms/Scalar/IndVarSimplify.h>
+#include <llvm/Transforms/Utils/Mem2Reg.h>
 
 #include "PhasarHandler.h"
 
@@ -26,7 +28,9 @@ using json = nlohmann::json;
 #include "FunctionTree.h"
 #include "EnergyFunction.h"
 #include "CLIOptions.h"
-
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include "llvm/Transforms/Scalar/IndVarSimplify.h"
 
 llvm::cl::opt<std::string> energyModelPath("profile", llvm::cl::desc("Energymodel as JSON"), llvm::cl::value_desc("filepath to .json file"));
 llvm::cl::opt<std::string> modeParameter("mode", llvm::cl::desc("Mode the analysis runs on"), llvm::cl::value_desc("Please choose out of the options program/function"));
@@ -321,7 +325,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      * @param analysisStrategy The strategy to analyze the function with
      * @return Returns the calculated ProgramGraph
      */
-    static void constructProgramRepresentation(ProgramGraph* pGraph, EnergyFunction *energyFunc, LLVMHandler *handler, llvm::FunctionAnalysisManager *FAM, AnalysisStrategy::Strategy analysisStrategy, PhasarHandler *phasar_handler){
+    static void constructProgramRepresentation(ProgramGraph* pGraph, EnergyFunction *energyFunc, LLVMHandler *handler, llvm::FunctionAnalysisManager *FAM, AnalysisStrategy::Strategy analysisStrategy){
         auto* domtree = new llvm::DominatorTree();
         llvm::Function* function = energyFunc->func;
 
@@ -329,7 +333,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
         auto &loopAnalysis = FAM->getResult<llvm::LoopAnalysis>(*function);
         auto &scalarEvolution = FAM->getResult<llvm::ScalarEvolutionAnalysis>(*function);
-
 
         //Init a vector of references to BasicBlocks for all BBs in the function
         std::vector<llvm::BasicBlock *> functionBlocks;
@@ -343,16 +346,19 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         //Get the vector of Top-Level loops present in the program
         auto loops = loopAnalysis.getTopLevelLoops();
 
-        auto IDEresult = phasar_handler->queryBoundVars(function);
+        auto IDEresult = PhasarHandler::getInstance().queryBoundVars(function);
 
         /*if (!IDEresult.empty()) {
             llvm::outs() << "================= "<< function->getName() <<" ================\n";
-            for (auto r : IDEresult) {
-                llvm::outs() << "(" << r.first << ", " << r.second.second << ")";
+            for (const auto& r : IDEresult) {
+                llvm::outs() << r.first << ":\n";
+                for (auto p : r.second) {
+                    llvm::outs() << "\t" << p.first << " -> " << ": " << p.second.second << "\n";
+                }
             }
             llvm::outs() << "\n";
             llvm::outs() << "====================================================\n";
-        }*/
+        }*/;
 
         //We need to distinguish if the function contains loops
         if(!loops.empty()){
@@ -398,9 +404,31 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         //If a model was provided
         if( this->energyJson.contains("add") && this->energyJson.contains("urem") ){
             //Get the functions from the module
+
+
+
+            //PhasarHandler phasar_handler(&module);
+            PhasarHandler::getInstance(&module).runAnalysis();
+
+            //mem2reg
+
+            /**
+             * Execute the mem2reg pass late to allow phasar to infer more variables.
+             * We need to execute the pass however, as scalarevolution depends somewhat on these results.
+             */
+
+            llvm::FunctionPassManager FPM;
+            FPM.addPass(llvm::PromotePass());
+
+            llvm::ModulePassManager MPM;
+            MPM.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(FPM)));
+
+            std::unique_ptr<llvm::Module> phasarmodule = llvm::CloneModule(module);
+            MPM.run(module, MAM);
+
+
+
             auto funcList = &module.getFunctionList();
-            PhasarHandler phasar_handler(&module);
-            phasar_handler.runAnalysis();
 
             FunctionTree * functionTree;
 
@@ -445,7 +473,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 //Check if the current function is external. Analysis of external functions, that only were declared, will result in an infinite loop
                 if (!function->isDeclarationForLinker()) {
                     //Calculate the energy
-                    constructProgramRepresentation(funcPool[i].programGraph, &funcPool[i], &handler, &functionAnalysisManager, analysisStrategy, &phasar_handler);
+                    constructProgramRepresentation(funcPool[i].programGraph, &funcPool[i], &handler, &functionAnalysisManager, analysisStrategy);
                     // Calculate the maximal amount of energy of the programgraph
                 }else{
                     funcPool[i].programGraph = nullptr;

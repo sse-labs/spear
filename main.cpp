@@ -89,6 +89,11 @@ void runAnalysisRoutine(CLIOptions opts){
     //instname
     functionPassManager.addPass(llvm::InstructionNamerPass());
     //mem2reg
+
+    /**
+     * Disabled to allow phasar to infer more variables
+     */
+
     functionPassManager.addPass(llvm::PromotePass());
 
     //loop-simplify

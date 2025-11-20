@@ -6,7 +6,7 @@
 #include <llvm/IR/IntrinsicInst.h>
 
 
-LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution, std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> *variablemapping){
+LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution, std::map<std::string, std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>> *variablemapping){
     this->mainloop = main;
     this->handler = handler;
 
@@ -159,95 +159,123 @@ long LoopTree::iterationsFromLoopBound(llvm::Optional<llvm::Loop::LoopBounds> *l
         long stepValue = -1;
         long endValue = -1;
 
-        auto* constantIntEnd = llvm::dyn_cast<llvm::ConstantInt>(&endValueObj);
+        auto* constantIntEnd   = llvm::dyn_cast<llvm::ConstantInt>(&endValueObj);
         auto* constantIntStart = llvm::dyn_cast<llvm::ConstantInt>(&startValueObj);
-        auto* constantIntStep = llvm::dyn_cast<llvm::ConstantInt>(stepValueObj);
+        auto* constantIntStep  = llvm::dyn_cast<llvm::ConstantInt>(stepValueObj);
 
-        if (constantIntStart && constantIntStep && (constantIntEnd || ev != -1) ) {
-            endValue = -1;
+        // Must have constant start + step
+        // End may be constant OR replaced by ev when end is NOT constant
+        if (constantIntStart && constantIntStep && (constantIntEnd || ev != -1)) {
 
+            // Use constant end if valid
             if (constantIntEnd) {
                 endValue = constantIntEnd->getSExtValue();
-            }
-
-            startValue = constantIntStart->getSExtValue();
-            stepValue = constantIntStep->getSExtValue();
-
-            if (ev != -1) {
+            } else {
                 endValue = ev;
             }
 
+            startValue = constantIntStart->getSExtValue();
+            stepValue  = constantIntStep->getSExtValue();
+
             boundValue = this->calculateIterations(startValue, endValue, stepValue, direction);
-            // llvm::errs() << " \t\t(" << "Calculated iterations" << " -> " << boundValue << ") " << "\n";
+        }
+    }else {
+        if (ev != -1) {
+            boundValue = ev;
         }
     }
 
     return boundValue;
 }
 
-long LoopTree::getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution){
-    //Get the Latch instruction responsible for containing the compare instruction
-    //Init the boundValue with a default value if we are not comparing with a natural number
+
+long LoopTree::getLoopUpperBound(llvm::Loop *loop,
+                                 llvm::ScalarEvolution *scalarEvolution) {
     long boundValue = this->handler->valueIfIndeterminable;
+
+    // --- 1. Get loop bound from ScalarEvolution if available --------------------
     auto loopBound = loop->getBounds(*scalarEvolution);
-    //Assume the number to compare with is the second argument of the instruction
 
-    for (auto bound : this->boundvars) {
-        /**
-         * TODO:
-         * Not sure if this is the right way to deduce the mapping of variables to values.
-         * As we gather the values at the end of each function, we cannot gurantee that this is always the point
-         * of interest when viewing loops.
-         */
-        auto candidate = this->_variablemapping->at(bound->getName().str());
-        long endValue = candidate.second.assertGetValue();
+    // --- 2. Identify the block whose terminator performs the compare -----------
+    llvm::BasicBlock *latch = loop->getLoopLatch();
+    llvm::BasicBlock *exiting = loop->getExitingBlock();
 
-        llvm::errs() << " \t\tPHSR:(" << bound->getName().str() << " -> " << candidate.second << ") " << "\n";
-
-        boundValue = iterationsFromLoopBound(&loopBound, endValue);
-        llvm::errs() << " \t\tPHSR:(" << "Bound value" << " -> " << boundValue << ") " << "\n";
-
-        if (boundValue == -1) {
-            const llvm::SCEV *tripCount = scalarEvolution->getBackedgeTakenCount(loop);
-
-            if (const llvm::SCEVConstant *c = llvm::dyn_cast<llvm::SCEVConstant>(tripCount)) {
-                llvm::errs() << "\t\t trip count = " << c->getValue()->getSExtValue();
-            } else if (llvm::isa<llvm::SCEVAddRecExpr>(tripCount) || llvm::isa<llvm::SCEVUnknown>(tripCount) || llvm::isa<llvm::SCEVAddExpr>(tripCount) || llvm::isa<llvm::SCEVMulExpr>(tripCount)) {
-                llvm::errs() << "\t\t trip count (symbolic) = ";
-                tripCount->print(llvm::errs());
-            } else {
-                llvm::errs() << "\t\t unknown trip count";
-            }
-            boundValue = this->handler->valueIfIndeterminable;
-
-            llvm::errs() << " => Fallback bound " << boundValue << "\n";
-        }
-
+    llvm::BasicBlock *bb = latch ? latch : exiting;
+    if (!bb) {
+        llvm::errs() << "Loop has no latch or exiting block\n";
         return boundValue;
     }
 
-    boundValue = iterationsFromLoopBound(&loopBound);
-    llvm::errs() << " \tLI:(" << "Bound value" << " -> " << boundValue << ") " << "\n";
+    std::string bbName = bb->hasName()
+       ? bb->getName().str()
+       : "<unnamed_bb_" + std::to_string(reinterpret_cast<uintptr_t>(bb)) + ">";
 
-    if (boundValue == -1) {
-        const llvm::SCEV *tripCount = scalarEvolution->getBackedgeTakenCount(loop);
-
-        if (const llvm::SCEVConstant *c = llvm::dyn_cast<llvm::SCEVConstant>(tripCount)) {
-            llvm::errs() << "\t\t trip count = " << c->getValue()->getSExtValue();
-        } else if (llvm::isa<llvm::SCEVAddRecExpr>(tripCount) || llvm::isa<llvm::SCEVUnknown>(tripCount) || llvm::isa<llvm::SCEVAddExpr>(tripCount) || llvm::isa<llvm::SCEVMulExpr>(tripCount)) {
-            llvm::errs() << "\t\t trip count (symbolic) = ";
-            tripCount->print(llvm::errs());
-        } else {
-            llvm::errs() << "\t\t unknown trip count";
+    // --- 3. Find the icmp in the chosen block ----------------------------------
+    llvm::ICmpInst *icmp = nullptr;
+    for (llvm::Instruction &inst : *bb) {
+        if (auto *c = llvm::dyn_cast<llvm::ICmpInst>(&inst)) {
+            icmp = c;
+            break;
         }
-        boundValue = this->handler->valueIfIndeterminable;
-
-        llvm::errs() << " => Fallback bound " << boundValue << "\n";
     }
 
+    if (!icmp) {
+        llvm::errs() << "No compare instruction found in loop control block " << bbName << "\n";
+        return boundValue;
+    }
+
+    // --- 4. Extract the RHS compare operand (usually the upper bound) -----------
+    llvm::Value *rhs = icmp->getOperand(1);
+
+    std::string varName = rhs->hasName()
+        ? rhs->getName().str()
+        : "<unnamed_" + std::to_string(reinterpret_cast<uintptr_t>(rhs)) + ">";
+
+    // --- 5. Lookup Phasar analysis *by block* to get correct value --------------
+    long endValue = this->handler->valueIfIndeterminable;
+
+    try {
+        auto &blockMap = this->_variablemapping->at(bbName);
+
+        if (blockMap.count(varName)) {
+            auto &entry = blockMap[varName];
+            endValue = entry.second.assertGetValue();
+
+            llvm::errs() << "\tPHSR:("
+                         << varName << " -> " << endValue
+                         << ") in block " << bbName << "\n";
+        } else {
+            llvm::errs() << "\tNo entry for " << varName
+                         << " in block map for " << bbName << "\n";
+        }
+    } catch (...) {
+        llvm::errs() << "\tBlock " << bbName << " not found in variable mapping\n";
+    }
+
+    // --- 6. Compute numeric iterations from loopBound + Phasar endValue ---------
+    boundValue = iterationsFromLoopBound(&loopBound, endValue);
+
+    if (boundValue != -1) {
+        llvm::errs() << "\t\tComputed loop bound = " << boundValue << "\n";
+        return boundValue;
+    }
+
+    // --- 7. Fallback: use ScalarEvolution trip count ----------------------------
+    const llvm::SCEV *tripCount = scalarEvolution->getBackedgeTakenCount(loop);
+
+    if (auto *c = llvm::dyn_cast<llvm::SCEVConstant>(tripCount)) {
+        boundValue = c->getValue()->getSExtValue();
+        llvm::errs() << "\tTrip count = " << boundValue << "\n";
+    } else {
+        llvm::errs() << "\tTrip count symbolic = ";
+        tripCount->print(llvm::errs());
+        llvm::errs() << "\n";
+        boundValue = this->handler->valueIfIndeterminable;
+    }
 
     return boundValue;
 }
+
 
 bool LoopTree::isLeaf() const {
     return this->subTrees.empty();

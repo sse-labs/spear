@@ -27,33 +27,52 @@ void PhasarHandler::runAnalysis() {
 }
 
 void PhasarHandler::dumpState() {
-    //this->_analysisResult->dumpResults(this->_HA->getICFG());
+    this->_analysisResult->dumpResults(this->_HA->getICFG());
 }
 
-std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> PhasarHandler::queryBoundVars(llvm::Function * func) {
-    std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> resultMap;
+std::map<
+    std::string,
+    std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
+>
+PhasarHandler::queryBoundVars(llvm::Function *func) {
+
+    //this->_analysisResult->dumpResults(this->_HA->getICFG());
+
+    using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
+
+    // Result:  BB_name -> { var_name -> (Value*, domain_val) }
+    std::map<std::string, std::map<std::string, std::pair<const llvm::Value*, DomainVal>>> resultMap;
 
     for (const llvm::BasicBlock &BB : func->getBasicBlockList()) {
+
+        std::string bbName = BB.hasName()
+            ? BB.getName().str()
+            : "<unnamed_bb_" + std::to_string(reinterpret_cast<uintptr_t>(&BB)) + ">";
+
+        // Ensure block entry exists
+        auto &bbEntry = resultMap[bbName];
+
         for (const llvm::Instruction &inst : BB) {
 
             if (this->_analysisResult->containsNode(&inst)) {
+
                 psr::LLVMAnalysisDomainDefault::d_t b = nullptr;
                 auto res = this->_analysisResult->resultsAtInLLVMSSA(&inst, b);
 
                 for (const auto &resElement : res) {
                     const llvm::Value *val = resElement.first;
-                    const auto &domainValue = resElement.second;
+                    const DomainVal &domainValue = resElement.second;
 
                     std::string key = val->hasName()
                         ? val->getName().str()
                         : "<unnamed_" + std::to_string(reinterpret_cast<uintptr_t>(val)) + ">";
 
-                    resultMap[key] = std::make_pair(val, domainValue);
+                    bbEntry[key] = std::make_pair(val, domainValue);
                 }
             }
         }
     }
 
-
     return resultMap;
 }
+

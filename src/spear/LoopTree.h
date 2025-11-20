@@ -55,7 +55,10 @@ public:
         const std::vector<llvm::Loop *>& subloops,
         LLVMHandler *handler,
         llvm::ScalarEvolution *scalarEvolution,
-        std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> *variablemapping
+        std::map<
+        std::string,
+        std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
+        > *variablemapping
     );
 
     /**
@@ -112,7 +115,10 @@ private:
      * Phasar variable mapping
      * Maps variable source name to constant value
      */
-    std::map<std::string, std::pair<const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t>> *_variablemapping;
+    std::map<
+        std::string,
+        std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
+    > *_variablemapping;
 
     /**
      * Calculates the actual amount of iterations a loop runs with the given loop parameters
