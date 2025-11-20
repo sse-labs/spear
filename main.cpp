@@ -22,6 +22,11 @@
 #include "profilers/CPUProfiler.h"
 #include "profilers/MetaProfiler.h"
 
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Scalar/IndVarSimplify.h"
+#include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
+#include "src/spear/PhasarResultRegistry.h"
+
 
 void runProfileRoutine(CLIOptions opts){
     //Get the parameters from the arguments
@@ -85,16 +90,34 @@ void runAnalysisRoutine(CLIOptions opts){
     //instname
     functionPassManager.addPass(llvm::InstructionNamerPass());
     //mem2reg
+
+    /**
+     * Disabled to allow phasar to infer more variables
+    */
+
+
+
     functionPassManager.addPass(llvm::PromotePass());
 
     //loop-simplify
     functionPassManager.addPass(llvm::LoopSimplifyPass());
 
+    functionPassManager.addPass(llvm::LCSSAPass());
+
     //loop-rotate
     functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::LoopRotatePass()));
     modulePassManager.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(functionPassManager)));
 
+    functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::IndVarSimplifyPass()));
 
+    PhasarHandlerPass PH;
+    PH.runOnModule(*module_up);   // <-- THIS executes the whole PhASAR solver
+
+    // Store results for later use
+    auto MainFn = module_up->getFunction("main");
+    auto PhasarResults = PH.queryBoundVars(MainFn);
+
+    PhasarResultRegistry::get().store(PhasarResults);
 
     modulePassManager.addPass(Energy(opts.profilePath, opts.mode, opts.format, opts.strategy, opts.loopBound, opts.deepCalls, opts.forFunction));
     modulePassManager.run(*module_up, moduleAnalysisManager);
