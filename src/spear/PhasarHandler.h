@@ -1,84 +1,73 @@
 //
-// Created by max on 11/14/25.
+// PhasarHandler - LLVM new-pass-manager compatible PhASAR pass
 //
 
 #ifndef SPEAR_PHASARHANDLER_H
 #define SPEAR_PHASARHANDLER_H
-#include <string>
-#include <memory>
+
 #include <map>
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
-#include <phasar.h>
 
-class PhasarHandler {
+#include <phasar.h> // whatever umbrella header you already use
+
+#include <llvm/IR/PassManager.h>
+
+namespace llvm {
+class Module;
+class Function;
+class Value;
+class Instruction;
+} // namespace llvm
+
+/// A ModulePass that runs PhASAR's IDELinearConstantAnalysis and provides
+/// a helper to query the resulting lattice values for each basic block.
+///
+/// This is written for the LLVM "new" pass manager (PassBuilder).
+class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
 public:
-    /**
-     * Module of the parsed input program
-     */
-    llvm::Module *module;
+  using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
 
-    /**
-     * Get the singleton instance
-     * @param mod Optional, only used on first call
-     */
-    static PhasarHandler& getInstance(llvm::Module *mod = nullptr) {
-        static PhasarHandler instance(mod);
-        return instance;
-    }
+  /// Result:  BB_name -> { var_name -> (Value*, domain_val) }
+  using BoundVarMap =
+      std::map<std::string,
+               std::map<std::string,
+                        std::pair<const llvm::Value *, DomainVal>>>;
 
-    /**
-     * Deleted copy constructor and assignment operator
-     * to prevent copying
-     */
-    PhasarHandler(const PhasarHandler&) = delete;
-    PhasarHandler& operator=(const PhasarHandler&) = delete;
+  PhasarHandlerPass();
 
-    /**
-     * Executes the predefined Phasar Analysis
-     */
-    void runAnalysis();
+  /// New pass manager entry point
+  llvm::PreservedAnalyses run(llvm::Module &M,
+                              llvm::ModuleAnalysisManager &AM);
 
-    /**
-     * Queries a given function and tries to any contained bound variables
-     * @param func Function to be analysed
-    **/
-    std::map<
-        std::string,
-        std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
-    > queryBoundVars(llvm::Function * func);
+  /// Debug helper: dump full PhASAR results
+  void dumpState() const;
 
-    /**
-     * Debug function to dump the analysis results
-     */
-    void dumpState();
+  void runOnModule(llvm::Module &M);
+
+  /// Query all "bound variables" in a function, grouped per basic block.
+  /// Requires that `run()` (and hence `runAnalysis()`) has been executed.
+  BoundVarMap queryBoundVars(llvm::Function *Func) const;
 
 private:
-    /**
-     * Private constructor
-     * @param mod
-     */
-    explicit PhasarHandler(llvm::Module *mod);
+  /// Backing module – only valid during/after `run()`.
+  llvm::Module *mod;
 
-    /**
-     * Results extracted from phasar
-     */
-    std::unique_ptr<
-        psr::OwningSolverResults<
-            const llvm::Instruction *,
-            const llvm::Value *,
-            psr::LatticeDomain<long>
-        >
-    > _analysisResult;
+  /// PhASAR helper analyses
+  std::unique_ptr<psr::HelperAnalyses> HA;
 
-    /**
-     * Phasar HelperAnalyses object
-     */
-    std::unique_ptr<psr::HelperAnalyses> _HA;
+  /// Solver results: PhASAR’s IDE solver result wrapper.
+  std::unique_ptr<psr::OwningSolverResults<
+      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<long>>>
+      AnalysisResult;
 
-    /**
-     * Function entrypoints
-    **/
-    std::vector<std::string> _entrypoints;
+  /// Function entrypoints
+  std::vector<std::string> Entrypoints;
+
+  /// Internal: construct analysis problem and run PhASAR solver.
+  void runAnalysis();
 };
 
-#endif //SPEAR_PHASARHANDLER_H
+#endif // SPEAR_PHASARHANDLER_H

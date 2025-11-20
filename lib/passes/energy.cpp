@@ -31,6 +31,7 @@ using json = nlohmann::json;
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
+#include "PhasarResultRegistry.h"
 
 llvm::cl::opt<std::string> energyModelPath("profile", llvm::cl::desc("Energymodel as JSON"), llvm::cl::value_desc("filepath to .json file"));
 llvm::cl::opt<std::string> modeParameter("mode", llvm::cl::desc("Mode the analysis runs on"), llvm::cl::value_desc("Please choose out of the options program/function"));
@@ -346,7 +347,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         //Get the vector of Top-Level loops present in the program
         auto loops = loopAnalysis.getTopLevelLoops();
 
-        auto IDEresult = PhasarHandler::getInstance().queryBoundVars(function);
+        auto IDEresult = PhasarResultRegistry::get().getResults();
 
         /*if (!IDEresult.empty()) {
             llvm::outs() << "================= "<< function->getName() <<" ================\n";
@@ -358,7 +359,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             }
             llvm::outs() << "\n";
             llvm::outs() << "====================================================\n";
-        }*/;
+        };*/
 
         //We need to distinguish if the function contains loops
         if(!loops.empty()){
@@ -408,7 +409,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
 
             //PhasarHandler phasar_handler(&module);
-            PhasarHandler::getInstance(&module).runAnalysis();
+            //PhasarHandler::getInstance(&module).runAnalysis();
 
             //mem2reg
 
@@ -417,16 +418,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
              * We need to execute the pass however, as scalarevolution depends somewhat on these results.
              */
 
-            llvm::FunctionPassManager FPM;
-            FPM.addPass(llvm::PromotePass());
-
-            llvm::ModulePassManager MPM;
-            MPM.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(FPM)));
-
-            std::unique_ptr<llvm::Module> phasarmodule = llvm::CloneModule(module);
-            MPM.run(module, MAM);
-
-
 
             auto funcList = &module.getFunctionList();
 
@@ -434,6 +425,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             //Construct the functionTrees to the functions of the module
             for(auto &function : *funcList){
+                //function.print(llvm::outs());
+
                 auto name = function.getName();
                 if(name == "main"){
                     auto mainFunctionTree = FunctionTree::construct(&function);

@@ -25,6 +25,7 @@
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
+#include "src/spear/PhasarResultRegistry.h"
 
 
 void runProfileRoutine(CLIOptions opts){
@@ -92,7 +93,9 @@ void runAnalysisRoutine(CLIOptions opts){
 
     /**
      * Disabled to allow phasar to infer more variables
-     */
+    */
+
+
 
     functionPassManager.addPass(llvm::PromotePass());
 
@@ -101,15 +104,20 @@ void runAnalysisRoutine(CLIOptions opts){
 
     functionPassManager.addPass(llvm::LCSSAPass());
 
-    llvm::LoopPassManager LPM;
-    LPM.addPass(llvm::IndVarSimplifyPass());  // new-PM version, works fine
-    functionPassManager.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
-
     //loop-rotate
     functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::LoopRotatePass()));
     modulePassManager.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(functionPassManager)));
 
     functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::IndVarSimplifyPass()));
+
+    PhasarHandlerPass PH;
+    PH.runOnModule(*module_up);   // <-- THIS executes the whole PhASAR solver
+
+    // Store results for later use
+    auto MainFn = module_up->getFunction("main");
+    auto PhasarResults = PH.queryBoundVars(MainFn);
+
+    PhasarResultRegistry::get().store(PhasarResults);
 
     modulePassManager.addPass(Energy(opts.profilePath, opts.mode, opts.format, opts.strategy, opts.loopBound, opts.deepCalls, opts.forFunction));
     modulePassManager.run(*module_up, moduleAnalysisManager);

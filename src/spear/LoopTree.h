@@ -44,6 +44,9 @@ public:
 
     std::vector<const llvm::Value *> boundvars;
 
+    //const llvm::Value * boundvar;
+
+
     /**
      * Constructor building the recursive datastructure
      * @param main The loop from which the tree should be builded

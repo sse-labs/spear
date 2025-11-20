@@ -1,78 +1,113 @@
 #include "PhasarHandler.h"
 
-#include <vector>
-#include <llvm/IRReader/IRReader.h>
-#include <llvm/Support/SourceMgr.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/Module.h>
 
-PhasarHandler::PhasarHandler(llvm::Module *mod) {
-    this->_entrypoints = {std::string("main")};
-    //psr::HelperAnalyses HA(filename, EntryPoints);
-    psr::HelperAnalyses HA(mod, this->_entrypoints);
-    this->_HA = std::make_unique<psr::HelperAnalyses>(mod, this->_entrypoints);
-    this->module = mod;
-    this->_analysisResult = nullptr;
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Passes/PassPlugin.h>
+
+using namespace llvm;
+
+PhasarHandlerPass::PhasarHandlerPass()
+    : mod(nullptr),
+      HA(nullptr),
+      AnalysisResult(nullptr),
+      Entrypoints({std::string("main")}) {}
+
+PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
+  // Store module and build PhASAR helper.
+  mod = &M;
+  HA = std::make_unique<psr::HelperAnalyses>(&M, Entrypoints);
+  AnalysisResult.reset();
+
+  // Actually run the IDELinearConstantAnalysis
+  runAnalysis();
+
+  // If this pass only computes information and doesn't modify the IR, we can
+  // conservatively say everything is preserved.
+  return PreservedAnalyses::all();
 }
 
-void PhasarHandler::runAnalysis() {
-    if (this->_HA->getProjectIRDB().getFunctionDefinition("main")) {
-        auto M = psr::createAnalysisProblem<psr::IDELinearConstantAnalysis>(*this->_HA, this->_entrypoints);
-        // Alternative way of solving an IFDS/IDEProblem:
-        auto result = psr::solveIDEProblem(M, this->_HA->getICFG());
-        this->_analysisResult = std::make_unique<psr::OwningSolverResults<
-            const llvm::Instruction *,
-            const llvm::Value *,
-            psr::LatticeDomain<long>
-        >>(result);
+void PhasarHandlerPass::runOnModule(llvm::Module &M) {
+  // Create a dummy module analysis manager so the regular run() entry point works
+  llvm::ModuleAnalysisManager DummyAM;
+  run(M, DummyAM);
+}
+
+
+void PhasarHandlerPass::runAnalysis() {
+  if (!HA)
+    return;
+
+  // Ensure we actually have a 'main' entry point
+  if (!HA->getProjectIRDB().getFunctionDefinition("main"))
+    return;
+
+  // Build the analysis problem and solve it
+  auto Problem = psr::createAnalysisProblem<psr::IDELinearConstantAnalysis>(
+      *HA, Entrypoints);
+
+  // Alternative way of solving an IFDS/IDEProblem:
+  auto Result = psr::solveIDEProblem(Problem, HA->getICFG());
+
+  //Result.dumpResults(HA->getICFG(), llvm::outs());
+
+  AnalysisResult = std::make_unique<psr::OwningSolverResults<
+      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<long>>>(
+      Result);
+}
+
+void PhasarHandlerPass::dumpState() const {
+  if (AnalysisResult && HA) {
+    AnalysisResult->dumpResults(HA->getICFG());
+  }
+}
+
+PhasarHandlerPass::BoundVarMap
+PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
+  BoundVarMap ResultMap;
+
+  if (!AnalysisResult || !Func)
+    return ResultMap;
+
+  using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
+
+  // Result:  BB_name -> { var_name -> (Value*, domain_val) }
+  for (const llvm::BasicBlock &BB : Func->getBasicBlockList()) {
+    std::string BBName = BB.hasName()
+                             ? BB.getName().str()
+                             : "<unnamed_bb_" +
+                                   std::to_string(
+                                       reinterpret_cast<uintptr_t>(&BB)) +
+                                   ">";
+
+    // Ensure block entry exists
+    auto &BBEntry = ResultMap[BBName];
+
+    for (const llvm::Instruction &Inst : BB) {
+      if (!AnalysisResult->containsNode(&Inst))
+        continue;
+
+      psr::LLVMAnalysisDomainDefault::d_t Bottom = nullptr;
+      auto Res = AnalysisResult->resultsAtInLLVMSSA(&Inst, Bottom);
+
+      for (const auto &ResElement : Res) {
+        const llvm::Value *Val = ResElement.first;
+        const DomainVal &DomVal = ResElement.second;
+
+        std::string Key = Val->hasName()
+                              ? Val->getName().str()
+                              : "<unnamed_" +
+                                    std::to_string(
+                                        reinterpret_cast<uintptr_t>(Val)) +
+                                    ">";
+
+        BBEntry[Key] = std::make_pair(Val, DomVal);
+      }
     }
+  }
+
+  return ResultMap;
 }
-
-void PhasarHandler::dumpState() {
-    this->_analysisResult->dumpResults(this->_HA->getICFG());
-}
-
-std::map<
-    std::string,
-    std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
->
-PhasarHandler::queryBoundVars(llvm::Function *func) {
-
-    //this->_analysisResult->dumpResults(this->_HA->getICFG());
-
-    using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
-
-    // Result:  BB_name -> { var_name -> (Value*, domain_val) }
-    std::map<std::string, std::map<std::string, std::pair<const llvm::Value*, DomainVal>>> resultMap;
-
-    for (const llvm::BasicBlock &BB : func->getBasicBlockList()) {
-
-        std::string bbName = BB.hasName()
-            ? BB.getName().str()
-            : "<unnamed_bb_" + std::to_string(reinterpret_cast<uintptr_t>(&BB)) + ">";
-
-        // Ensure block entry exists
-        auto &bbEntry = resultMap[bbName];
-
-        for (const llvm::Instruction &inst : BB) {
-
-            if (this->_analysisResult->containsNode(&inst)) {
-
-                psr::LLVMAnalysisDomainDefault::d_t b = nullptr;
-                auto res = this->_analysisResult->resultsAtInLLVMSSA(&inst, b);
-
-                for (const auto &resElement : res) {
-                    const llvm::Value *val = resElement.first;
-                    const DomainVal &domainValue = resElement.second;
-
-                    std::string key = val->hasName()
-                        ? val->getName().str()
-                        : "<unnamed_" + std::to_string(reinterpret_cast<uintptr_t>(val)) + ">";
-
-                    bbEntry[key] = std::make_pair(val, domainValue);
-                }
-            }
-        }
-    }
-
-    return resultMap;
-}
-
