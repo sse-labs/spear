@@ -48,3 +48,5 @@ build/
 .venv/
 util/measure_program/old/
 util/measure_program/results/*/
+
+profile/*
