@@ -55,7 +55,7 @@ void PhasarHandlerPass::runAnalysis() {
   //Result.dumpResults(HA->getICFG(), llvm::outs());
 
   AnalysisResult = std::make_unique<psr::OwningSolverResults<
-      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<long>>>(
+      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<int64_t>>>(
       Result);
 }
 

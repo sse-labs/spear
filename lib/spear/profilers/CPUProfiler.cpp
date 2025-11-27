@@ -94,6 +94,7 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, long runt
     std::vector<double> results;
     results.reserve(this->iterations * NUM_CORES);
 
+    #ifdef __linux__
     RegisterReader powReader(0);
 
     // Shared memory for initial energy values of each child
@@ -190,6 +191,7 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, long runt
 
         it++;   // manually increment because we used continue above
     }
+    #endif
 
     return results;
 }

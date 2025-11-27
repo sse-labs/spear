@@ -1,4 +1,5 @@
 #include "ProgramGraph.h"
+#include <sstream>
 
 //Creates a LoopNode with the given LoopTree and ProgramGraph
 LoopNode::LoopNode(LoopTree *loopTree, ProgramGraph *parent, AnalysisStrategy::Strategy strategy) : Node(parent, strategy) {

@@ -50,8 +50,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     int loopbound;
     bool deepCallsEnabled;
     std::string forFunction;
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_start;
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_end;
+    std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_start;
+    std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_end;
 
     /**
      * Constructor to run, when called from a method
