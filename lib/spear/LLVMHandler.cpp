@@ -31,10 +31,23 @@ double LLVMHandler::getNodeSum(Node *node){
         auto name = instruction->getOpcodeName();
 
         double energy = 0.0;
-        if (this->energyValues.contains(name)) {
-            energy = this->energyValues[name];
-        }
 
+        if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(instruction)) {
+            llvm::ICmpInst::Predicate Pred = ICmp->getPredicate();
+
+            llvm::StringRef PredStr = llvm::ICmpInst::getPredicateName(Pred);
+
+            std::string icmpname = "icmp " + PredStr.str();
+            if (this->energyValues.contains(icmpname)) {
+                energy = this->energyValues[icmpname];
+            }
+        } else {
+            if (this->energyValues.contains(name)) {
+                energy = this->energyValues[name];
+            }else {
+                std::cout << "No value for " << name << std::endl;
+            }
+        }
 
         //Get the energy from the JSON energy values by referencing the category
         double instructionValue = 0.00;

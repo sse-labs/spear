@@ -10,6 +10,7 @@ class Instruction:
     is_complex: bool
     cpx_exec_block: str
     cpx_header_block: str
+    cpx_pretext: str
     cpx_footer_block: str
     cpx_use_counter: bool
 
@@ -24,12 +25,13 @@ class Instruction:
 
 
     @classmethod
-    def complex_instruction(cls, opcode: str,  executionblock: str, header: str, footer: str, preceed_with_counter: bool = False):
+    def complex_instruction(cls, opcode: str,  executionblock: str, header: str, footer: str, pretext: str = "", preceed_with_counter: bool = False):
         inst = cls(opcode, "", [])
         inst.is_complex = True
         inst.cpx_exec_block = executionblock
         inst.cpx_header_block = header
         inst.cpx_footer_block = footer
+        inst.cpx_pretext = pretext
         inst.cpx_use_counter = preceed_with_counter
         return inst
 

@@ -114,6 +114,8 @@ class Generator:
                     f.write('define i32 @main() #0 {\n')
                     f.write('entry:\n')
 
+                    f.write(inst.cpx_pretext)
+
                     for i in range(0, self.repetitions + 1):
                         block = inst.cpx_exec_block
                         if inst.cpx_use_counter:
