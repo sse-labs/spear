@@ -115,6 +115,8 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
     //Calculate the adjacent nodes of this node
     auto adjacentNodes = this->getAdjacentNodes();
 
+    llvm::BasicBlock *bToTake = nullptr;
+
     const llvm::Instruction *TI = this->block->getTerminator();
     if (TI) {
         const auto *BI = llvm::dyn_cast<llvm::BranchInst>(TI);
@@ -125,7 +127,6 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
         if (isAnIf && adjacentNodes.size() == 2) {
             auto IDEresult = PhasarResultRegistry::get().getResults();
             auto resultsAtBlock = IDEresult[this->block->getName().str()];
-            llvm::BasicBlock *bToTake = nullptr;
 
             llvm::Value *cond = BI->getCondition();
             llvm::outs() << this->block->getName().str() << ":\n";
@@ -168,20 +169,40 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
 
                         lconstval->print(llvm::outs());
                         llvm::outs() << "\n";
-                        llvm::outs() << rvarname << "(" << *rval << ")" "\n";
-                        // Convert the value to constantint so we can evaluate it...
-                        llvm::ConstantInt *CI = llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), *rval, true);
 
                         if (rval != nullptr) {
-                            auto res = this->evalICMP(ICmp, lconstval, RCI);
+                            llvm::outs() << rvarname << "(" << *rval << ")" "\n";
+                            // Convert the value to constantint so we can evaluate it...
+                            llvm::LLVMContext lc;
+                            llvm::ConstantInt *alternativeRCI = llvm::ConstantInt::get(llvm::Type::getInt64Ty(lc), *rval->getValueOrNull(), true);
+
+                            auto res = this->evalICMP(ICmp, lconstval, alternativeRCI);
                             bToTake = this->getPathName(BI, res);
+
+                            llvm::outs() << "\t\t Branch name to take => " << bToTake->getName().str() << "\n";
                         }
                     }
-
-
                 }else {
                     if (auto *RCI = llvm::dyn_cast<llvm::ConstantInt>(rhs)) {
                         llvm::outs() << "\tLHS not, RHS constant" << "\n";
+                        auto rconstval = llvm::dyn_cast<llvm::ConstantInt>(rhs);
+                        std::string lvarname = this->getSourceVarName(lhs, ICmp);
+                        auto lval = this->findDeducedValue(&resultsAtBlock, lvarname);
+
+                        rconstval->print(llvm::outs());
+                        llvm::outs() << "\n";
+
+                        if (lval != nullptr) {
+                            llvm::outs() << lvarname << "(" << *lval << ")" "\n";
+                            // Convert the value to constantint so we can evaluate it...
+                            llvm::LLVMContext lc;
+                            llvm::ConstantInt *alternativeRCI = llvm::ConstantInt::get(llvm::Type::getInt64Ty(lc), *lval->getValueOrNull(), true);
+
+                            auto res = this->evalICMP(ICmp, rconstval, alternativeRCI);
+                            bToTake = this->getPathName(BI, res);
+
+                            llvm::outs() << "\t\t Branch name to take => " << bToTake->getName().str() << "\n";
+                        }
                     }else {
                         llvm::outs() << "\tBoth variable" << "\n";
                     }
@@ -197,88 +218,98 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
         }
     }
 
-    //If there are adjacent nodes...
-    if(!adjacentNodes.empty()){
-        //Find the smallest energy-value-path of all the adjacent nodes
-        //Init the minimal pathvalue
-        auto compare = 0.00;
+    if (bToTake != nullptr) {
+        // We deduced the next block that will be taken
+        auto nToLookAt = std::find_if(adjacentNodes.begin(), adjacentNodes.end(), [bToTake](Node *n) {
+            return n->block->getName() == bToTake->getName();
+        });
 
-        switch (this->strategy) {
-            case AnalysisStrategy::WORSTCASE :
-                 compare = DBL_MIN;
+        if (nToLookAt != adjacentNodes.end()) {
+            Node * actualNode = *nToLookAt;
+            llvm::outs() << "\t\t Adjacent node found..." << "\n";
+            double actualNodeEnergy = actualNode->getNodeEnergy(handler);
+            sum += actualNodeEnergy;
+        }
+    }else {
+        // We could not find the next path
 
-                //Iterate over the adjacent nodes
-                for(auto node : adjacentNodes){
-                    //Calculate the sum of the node
-                    if(!node->isExceptionFollowUp()){
+        //If there are adjacent nodes...
+        if(!adjacentNodes.empty()){
+            //Find the smallest energy-value-path of all the adjacent nodes
+            //Init the minimal pathvalue
+            auto compare = 0.00;
+
+            switch (this->strategy) {
+                case AnalysisStrategy::WORSTCASE :
+                     compare = DBL_MIN;
+
+                    //Iterate over the adjacent nodes
+                    for(auto node : adjacentNodes){
+                        //Calculate the sum of the node
+                        if(!node->isExceptionFollowUp()){
+                            double locsum = node->getNodeEnergy(handler);
+
+                            //Set the minimal energy value if the calculated energy is smaller than the current minimum
+                            if (locsum > compare){
+                                compare = locsum;
+                            }
+                        }
+                    }
+
+                    sum += compare;
+                    break;
+                case AnalysisStrategy::BESTCASE :
+                    compare = DBL_MAX;
+
+                    //Iterate over the adjacent nodes
+                    for(auto node : adjacentNodes){
+                        //Calculate the sum of the node
                         double locsum = node->getNodeEnergy(handler);
 
                         //Set the minimal energy value if the calculated energy is smaller than the current minimum
-                        if (locsum > compare){
-                            compare = locsum;
+                        if(!node->isExceptionFollowUp()){
+                            if (locsum < compare){
+                                compare = locsum;
+                            }
                         }
                     }
-                }
 
-                sum += compare;
-                break;
-            case AnalysisStrategy::BESTCASE :
-                compare = DBL_MAX;
+                    sum += compare;
+                    break;
+                case AnalysisStrategy::AVERAGECASE :
+                    double locsum = 0.00;
 
-                //Iterate over the adjacent nodes
-                for(auto node : adjacentNodes){
-                    //Calculate the sum of the node
-                    double locsum = node->getNodeEnergy(handler);
+                    if(adjacentNodes.size() > 1){
+                        double leftSum = adjacentNodes[0]->getNodeEnergy(handler);
+                        double rightSum = adjacentNodes[1]->getNodeEnergy(handler);
 
-                    //Set the minimal energy value if the calculated energy is smaller than the current minimum
-                    if(!node->isExceptionFollowUp()){
-                        if (locsum < compare){
-                            compare = locsum;
-                        }
-                    }
-                }
+                        if(handler->inefficient <= handler->efficient){
+                            if(adjacentNodes[0]->isExceptionFollowUp()){
+                                locsum += rightSum;
+                            }else if(adjacentNodes[1]->isExceptionFollowUp()){
+                                locsum += leftSum;
+                            }else{
+                                locsum += std::max(leftSum, rightSum);
+                                handler->inefficient++;
+                            }
 
-                sum += compare;
-                break;
-            case AnalysisStrategy::AVERAGECASE :
-                double locsum = 0.00;
-
-                if(adjacentNodes.size() > 1){
-                    double leftSum = adjacentNodes[0]->getNodeEnergy(handler);
-                    double rightSum = adjacentNodes[1]->getNodeEnergy(handler);
-
-                    if(handler->inefficient <= handler->efficient){
-                        if(adjacentNodes[0]->isExceptionFollowUp()){
-                            locsum += rightSum;
-                        }else if(adjacentNodes[1]->isExceptionFollowUp()){
-                            locsum += leftSum;
                         }else{
-                            locsum += std::max(leftSum, rightSum);
-                            handler->inefficient++;
+                            if(adjacentNodes[0]->isExceptionFollowUp()){
+                                locsum += rightSum;
+                            }else if(adjacentNodes[1]->isExceptionFollowUp()){
+                                locsum += leftSum;
+                            }else{
+                                locsum += std::min(leftSum, rightSum);
+                                handler->efficient++;
+                            }
                         }
-
                     }else{
-                        if(adjacentNodes[0]->isExceptionFollowUp()){
-                            locsum += rightSum;
-                        }else if(adjacentNodes[1]->isExceptionFollowUp()){
-                            locsum += leftSum;
-                        }else{
-                            locsum += std::min(leftSum, rightSum);
-                            handler->efficient++;
-                        }
+                        locsum = adjacentNodes[0]->getNodeEnergy(handler);
                     }
-                }else{
-                    locsum = adjacentNodes[0]->getNodeEnergy(handler);
-                }
+                    sum += locsum;
 
-/*                srand(time(nullptr));
-                int randomIndex = rand() % adjacentNodes.size();
-                double locsum = adjacentNodes[randomIndex]->getNodeEnergy(handler);
-                compare = locsum;
-                sum += compare;*/
-                sum += locsum;
-
-                break;
+                    break;
+            }
         }
     }
 
