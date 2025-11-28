@@ -1,5 +1,9 @@
 #include "ProgramGraph.h"
 #include "DeMangler.h"
+#include "PhasarHandler.h"
+#include "PhasarResultRegistry.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Instructions.h"
 
 //Create a Node by setting the parent property with the given ProgramGraph
 Node::Node(ProgramGraph *parent, AnalysisStrategy::Strategy strategy) {
@@ -17,13 +21,181 @@ std::string Node::toString() {
     return output;
 }
 
+std::string Node::getSourceVarName(llvm::Value *V, llvm::Instruction *Ctx) {
+    if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(V)) {
+        return std::to_string(CI->getSExtValue());
+    }
+
+    if (auto *CF = llvm::dyn_cast<llvm::ConstantFP>(V)) {
+        llvm::SmallString<16> Str;
+        CF->getValueAPF().toString(Str);
+        return Str.str().str();
+    }
+
+    llvm::Function *F = Ctx->getFunction();
+
+    for (auto &BB : *F) {
+        for (auto &I : BB) {
+
+            if (auto *DbgVal = llvm::dyn_cast<llvm::DbgValueInst>(&I)) {
+                if (DbgVal->getValue() == V) {
+                    return DbgVal->getVariable()->getName().str();
+                }
+            }
+
+            if (auto *DbgDecl = llvm::dyn_cast<llvm::DbgDeclareInst>(&I)) {
+                if (DbgDecl->getAddress() == V) {
+                    return DbgDecl->getVariable()->getName().str();
+                }
+            }
+        }
+    }
+
+    if (V->hasName())
+        return V->getName().str();
+
+    return "<unknown>";
+}
+
+bool Node::evalICMP(llvm::ICmpInst *ICmp, llvm::ConstantInt *left, llvm::ConstantInt *right) {
+    using P = llvm::CmpInst::Predicate;
+
+
+    llvm::APSInt LV(left->getValue());
+    llvm::APSInt RV(right->getValue());
+
+    // Signedness depends on predicate
+    bool isSigned = llvm::CmpInst::isSigned(ICmp->getPredicate());
+    LV.setIsSigned(isSigned);
+    RV.setIsSigned(isSigned);
+
+    switch (ICmp->getPredicate()) {
+        case P::ICMP_EQ:  return LV == RV;
+        case P::ICMP_NE:  return LV != RV;
+        case P::ICMP_SGT: return LV >  RV;
+        case P::ICMP_SGE: return LV >= RV;
+        case P::ICMP_SLT: return LV <  RV;
+        case P::ICMP_SLE: return LV <= RV;
+        case P::ICMP_UGT: return LV.ugt(RV);
+        case P::ICMP_UGE: return LV.uge(RV);
+        case P::ICMP_ULT: return LV.ult(RV);
+        case P::ICMP_ULE: return LV.ule(RV);
+        default:
+            llvm_unreachable("Invalid ICMP predicate");
+    }
+}
+
+llvm::BasicBlock* Node::getPathName(const llvm::BranchInst *br, bool conditionalresult) {
+    llvm::BasicBlock *trueBB  = br->getSuccessor(0);
+    llvm::BasicBlock *falseBB = br->getSuccessor(1);
+
+    if (conditionalresult) {
+        return trueBB;
+    }
+
+    return falseBB;
+}
+
+const DomainVal* Node::findDeducedValue(BoundVarMap *resultsAtBlock, std::string varname) {
+    for (auto &[key, value] : *resultsAtBlock) {
+        if (key == varname) {
+            return &value.second;
+        }
+    }
+
+    return nullptr;
+}
+
 //Calculate the energy of this Node. Is capable of dealing with if-conditions
 double Node::getNodeEnergy(LLVMHandler *handler) {
+    auto context = llvm::LLVMContext();
     //Init the result of the calculation
     double sum = 0.0;
 
     //Calculate the adjacent nodes of this node
     auto adjacentNodes = this->getAdjacentNodes();
+
+    const llvm::Instruction *TI = this->block->getTerminator();
+    if (TI) {
+        const auto *BI = llvm::dyn_cast<llvm::BranchInst>(TI);
+        bool isAnIf = BI && BI->isConditional();
+        /*llvm::outs() << "Block " << this->block->getName().str() << " if: " << isAnIf << "\n";
+        llvm::outs() << "\t Adjacent => " << adjacentNodes.size() << "\n";*/
+
+        if (isAnIf && adjacentNodes.size() == 2) {
+            auto IDEresult = PhasarResultRegistry::get().getResults();
+            auto resultsAtBlock = IDEresult[this->block->getName().str()];
+            llvm::BasicBlock *bToTake = nullptr;
+
+            llvm::Value *cond = BI->getCondition();
+            llvm::outs() << this->block->getName().str() << ":\n";
+            llvm::outs() << "\t Block " << this->block->getName().str() << " if: " << isAnIf << "\n";
+            llvm::outs() << "\t Adjacent => " << adjacentNodes.size() << "\n";
+            llvm::outs() << "\t Conditional => " << BI->isConditional() << "\n";
+            TI->print(llvm::outs());
+            llvm::outs() << "\n";
+            llvm::outs() << "\t Condition: ";
+            cond->print(llvm::outs());
+            llvm::outs() << "\n";
+
+            if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(cond)) {
+                llvm::Value *lhs = ICmp->getOperand(0);
+                llvm::Value *rhs = ICmp->getOperand(1);
+
+                llvm::outs() << "\t\t lhs => ";
+                lhs->print(llvm::outs());
+                llvm::outs() << "\n";
+                //llvm::outs() << "(" << this->getSourceVarName(lhs, ICmp) << ")";
+                llvm::outs() << "\n";
+                llvm::outs() << "\t\t rhs => ";
+                rhs->print(llvm::outs());
+                llvm::outs() << "\n";
+                //llvm::outs() << "(" << this->getSourceVarName(rhs, ICmp) << ")";
+
+                if (auto *LCI = llvm::dyn_cast<llvm::ConstantInt>(lhs)) {
+                    if (auto *RCI = llvm::dyn_cast<llvm::ConstantInt>(rhs)) {
+                        llvm::outs() << "\tBoth constants" << "\n";
+
+                        auto res = this->evalICMP(ICmp, LCI, RCI);
+                        bToTake = this->getPathName(BI, res);
+
+                        llvm::outs() << "\t\t Branch name to take => " << bToTake->getName().str() << "\n";
+                    }else {
+                        llvm::outs() << "\tLHS constant, RHS not" << "\n";
+                        auto lconstval = llvm::dyn_cast<llvm::ConstantInt>(lhs);
+                        std::string rvarname = this->getSourceVarName(rhs, ICmp);
+                        auto rval = this->findDeducedValue(&resultsAtBlock, rvarname);
+
+                        lconstval->print(llvm::outs());
+                        llvm::outs() << "\n";
+                        llvm::outs() << rvarname << "(" << *rval << ")" "\n";
+                        // Convert the value to constantint so we can evaluate it...
+                        llvm::ConstantInt *CI = llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), *rval, true);
+
+                        if (rval != nullptr) {
+                            auto res = this->evalICMP(ICmp, lconstval, RCI);
+                            bToTake = this->getPathName(BI, res);
+                        }
+                    }
+
+
+                }else {
+                    if (auto *RCI = llvm::dyn_cast<llvm::ConstantInt>(rhs)) {
+                        llvm::outs() << "\tLHS not, RHS constant" << "\n";
+                    }else {
+                        llvm::outs() << "\tBoth variable" << "\n";
+                    }
+                }
+            }
+
+            llvm::outs() << "\n";
+
+            /*auto resultsAtBlock = IDEresult[this->block->getName().str()];
+            for (auto& [ent, entval] : resultsAtBlock) {
+                llvm::outs() << "\t\t" << ent << " |-> " << entval.second << "\n";
+            }*/
+        }
+    }
 
     //If there are adjacent nodes...
     if(!adjacentNodes.empty()){

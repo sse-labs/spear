@@ -13,7 +13,10 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
+using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
 
+using BoundVarMap =
+    std::map<std::string, std::pair<const llvm::Value *, DomainVal>>;
 
 
 //Pre-declaration of the ProgramGraph Class
@@ -97,6 +100,14 @@ class Node {
         virtual bool isExceptionFollowUp();
 
         virtual json getJsonRepresentation();
+
+        std::string getSourceVarName(llvm::Value *V, llvm::Instruction *Ctx);
+
+        bool evalICMP(llvm::ICmpInst *ICmp, llvm::ConstantInt *left, llvm::ConstantInt *right);
+
+        llvm::BasicBlock* getPathName(const llvm::BranchInst *br, bool conditionalresult);
+
+        const DomainVal* findDeducedValue(BoundVarMap *resultsAtBlock, std::string varname);
 
 protected:
     /**
