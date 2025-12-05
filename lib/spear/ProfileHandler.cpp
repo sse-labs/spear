@@ -15,8 +15,6 @@ void ProfileHandler::read(const std::string& filename) {
     //Move the data from the stream to our initialized JSON::Value object
     data = json::parse(fileStream);
 
-    std::cout << data << "\n";
-
     _profile = data;
 }
 

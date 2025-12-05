@@ -11,6 +11,7 @@ option(USE_EXTERNAL_JSON "Use external JSON lib" OFF)
 # ===== PLEASE EDIT WITH CAUTION =====
 
 find_package(LLVM REQUIRED CONFIG)
+find_package(phasar REQUIRED)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -58,6 +59,7 @@ target_link_libraries(SpearLib
     PRIVATE
         LLVM
         nlohmann_json
+        phasar
 )
 
 target_include_directories(SpearLib
@@ -76,6 +78,7 @@ target_link_libraries(spear
         SpearLib
         LLVM
         nlohmann_json
+        phasar
 )
 
 enable_testing()

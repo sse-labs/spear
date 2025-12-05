@@ -16,6 +16,10 @@
 
 #include <nlohmann/json.hpp>
 #include <cxxabi.h>
+#include <llvm/Transforms/Scalar/IndVarSimplify.h>
+#include <llvm/Transforms/Utils/Mem2Reg.h>
+
+#include "PhasarHandler.h"
 
 using json = nlohmann::json;
 
@@ -24,7 +28,10 @@ using json = nlohmann::json;
 #include "FunctionTree.h"
 #include "EnergyFunction.h"
 #include "CLIOptions.h"
-
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include "llvm/Transforms/Scalar/IndVarSimplify.h"
+#include "PhasarResultRegistry.h"
 
 llvm::cl::opt<std::string> energyModelPath("profile", llvm::cl::desc("Energymodel as JSON"), llvm::cl::value_desc("filepath to .json file"));
 llvm::cl::opt<std::string> modeParameter("mode", llvm::cl::desc("Mode the analysis runs on"), llvm::cl::value_desc("Please choose out of the options program/function"));
@@ -43,8 +50,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     int loopbound;
     bool deepCallsEnabled;
     std::string forFunction;
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_start;
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_end;
+    std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_start;
+    std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_end;
 
     /**
      * Constructor to run, when called from a method
@@ -65,7 +72,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             this->format = format;
             this->strategy = strategy;
             this->loopbound = loopbound;
-            this->stopwatch_start = std::chrono::high_resolution_clock::now();
+            this->stopwatch_start = std::chrono::steady_clock::now();
             this->deepCallsEnabled = (deepCalls == DeepCalls::ENABLED);
             this->forFunction = std::move(forFunction);
         }
@@ -99,7 +106,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             }
 
 
-            this->stopwatch_start = std::chrono::high_resolution_clock::now();
+            this->stopwatch_start = std::chrono::steady_clock::now();
         }
     }
 
@@ -122,7 +129,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 json functionObject = json::object();
                 functionObject["name"] = fName;
-                functionObject["nM"] = llvm::itaniumDemangle(fName.c_str());
+                functionObject["nM"] = DeMangler::demangle(fName);
                 functionObject["energy"] = energyFunction->energy;
                 functionObject["numberOfBasicBlocks"] = energyFunction->func->size();
                 functionObject["numberOfInstructions"] = energyFunction->func->getInstructionCount();
@@ -328,7 +335,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         auto &loopAnalysis = FAM->getResult<llvm::LoopAnalysis>(*function);
         auto &scalarEvolution = FAM->getResult<llvm::ScalarEvolutionAnalysis>(*function);
 
-
         //Init a vector of references to BasicBlocks for all BBs in the function
         std::vector<llvm::BasicBlock *> functionBlocks;
         for(auto &blocks : *function){
@@ -341,6 +347,20 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         //Get the vector of Top-Level loops present in the program
         auto loops = loopAnalysis.getTopLevelLoops();
 
+        auto IDEresult = PhasarResultRegistry::get().getResults();
+
+        /*if (!IDEresult.empty()) {
+            llvm::outs() << "================= "<< function->getName() <<" ================\n";
+            for (const auto& r : IDEresult) {
+                llvm::outs() << r.first << ":\n";
+                for (auto p : r.second) {
+                    llvm::outs() << "\t" << p.first << " -> " << ": " << p.second.second << "\n";
+                }
+            }
+            llvm::outs() << "\n";
+            llvm::outs() << "====================================================\n";
+        };*/
+
         //We need to distinguish if the function contains loops
         if(!loops.empty()){
             //If the function contains loops
@@ -352,7 +372,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 llvm::errs() << energyFunc->name << "\n";
                 //Construct the LoopTree from the Information of the current top-level loop
-                LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, &scalarEvolution);
+                LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, &scalarEvolution, &IDEresult);
 
                 //Construct a LoopNode for the current loop
                 LoopNode *loopNode = LoopNode::construct(LT, pGraph, analysisStrategy);
@@ -385,11 +405,28 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         //If a model was provided
         if( this->energyJson.contains("add") && this->energyJson.contains("urem") ){
             //Get the functions from the module
+
+
+
+            //PhasarHandler phasar_handler(&module);
+            //PhasarHandler::getInstance(&module).runAnalysis();
+
+            //mem2reg
+
+            /**
+             * Execute the mem2reg pass late to allow phasar to infer more variables.
+             * We need to execute the pass however, as scalarevolution depends somewhat on these results.
+             */
+
+
             auto funcList = &module.getFunctionList();
+
             FunctionTree * functionTree;
 
             //Construct the functionTrees to the functions of the module
             for(auto &function : *funcList){
+                //function.print(llvm::outs());
+
                 auto name = function.getName();
                 if(name == "main"){
                     auto mainFunctionTree = FunctionTree::construct(&function);
@@ -436,7 +473,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 }
             }
 
-            this->stopwatch_end = std::chrono::high_resolution_clock::now();
+            this->stopwatch_end = std::chrono::steady_clock::now();
             std::chrono::duration<double, std::milli> ms_double = this->stopwatch_end - this->stopwatch_start;
 
             double duration = ms_double.count()/1000;
