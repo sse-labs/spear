@@ -44,8 +44,6 @@ double LLVMHandler::getNodeSum(Node *node){
         } else {
             if (this->energyValues.contains(name)) {
                 energy = this->energyValues[name];
-            }else {
-                std::cout << "No value for " << name << std::endl;
             }
         }
 
