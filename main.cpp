@@ -25,6 +25,7 @@
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
+#include "profilers/DRAMProfiler.h"
 #include "src/spear/PhasarResultRegistry.h"
 
 
@@ -36,6 +37,7 @@ void runProfileRoutine(CLIOptions opts){
     std::cout << "Starting the profile..." << std::endl;
 
     CPUProfiler cpuprofiler = CPUProfiler(rep, compiledPath);
+    DRAMProfiler dramprofiler = DRAMProfiler(rep, compiledPath);
     MetaProfiler metaprofiler = MetaProfiler(rep);
 
     json metaResult = metaprofiler.profile();
@@ -44,6 +46,7 @@ void runProfileRoutine(CLIOptions opts){
     //Launch the benchmarking
     try{
         json cpuResult = cpuprofiler.profile();
+        json dramResult = dramprofiler.profile();
         metaResult["end"] = metaprofiler.stopTime();
 
         char *outputpath = new char[255];
@@ -54,6 +57,7 @@ void runProfileRoutine(CLIOptions opts){
         ProfileHandler phandler;
         phandler.setOrCreate("meta", metaResult);
         phandler.setOrCreate("cpu", cpuResult);
+        phandler.setOrCreate("dram", dramResult);
         phandler.write(outputpath);
 
         std::cout << "Profiling finished!" << std::endl;

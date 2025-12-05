@@ -1,4 +1,4 @@
-#include "profilers/CPUProfiler.h"
+#include "profilers/DRAMProfiler.h"
 
 #include <iostream>
 #include <sys/wait.h>
@@ -7,7 +7,7 @@
 #include "RAPLReader.h"
 #include "RegisterReader.h"
 
-json CPUProfiler::profile() {
+json DRAMProfiler::profile() {
     std::map<std::string, std::vector<double>> measurements;
     std::map<std::string, double> results;
 
@@ -35,7 +35,7 @@ json CPUProfiler::profile() {
 }
 
 
-std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data, int windowSize) {
+std::vector<double> DRAMProfiler::_movingAverage(const std::vector<double>& data, int windowSize) {
     std::vector<double> result;
 
     if (windowSize <= 0 || data.size() < windowSize) {
@@ -54,7 +54,7 @@ std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data,
     return result;
 }
 
-std::vector<double> CPUProfiler::_measureFile(const std::string& file) const {
+std::vector<double> DRAMProfiler::_measureFile(const std::string& file) const {
     const int NUM_CORES = 12;
 
     std::vector<double> results;
@@ -161,7 +161,7 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file) const {
 }
 
 
-double CPUProfiler::huberMean(const std::vector<double>& data, double delta, int maxIterations, double tolerance) {
+double DRAMProfiler::huberMean(const std::vector<double>& data, double delta, int maxIterations, double tolerance) {
     if (data.empty())
         return std::numeric_limits<double>::quiet_NaN();
 
@@ -200,7 +200,7 @@ double CPUProfiler::huberMean(const std::vector<double>& data, double delta, int
 }
 
 
-double CPUProfiler::standard_deviation(const std::vector<double>& v) {
+double DRAMProfiler::standard_deviation(const std::vector<double>& v) {
     if (v.size() < 2) return 0.0;
 
     double mean = std::accumulate(v.begin(), v.end(), 0.0) / v.size();

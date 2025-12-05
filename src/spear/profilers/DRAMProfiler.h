@@ -1,24 +1,13 @@
 
-
-#ifndef SPEAR_CPUPROFILER_H
-#define SPEAR_CPUPROFILER_H
-
+#ifndef SPEAR_DRAMPROFILER_H
+#define SPEAR_DRAMPROFILER_H
 #include "Profiler.h"
 
-/**
- * Component to profile the systems CPU using the profiler architecture
- */
-class CPUProfiler : public Profiler {
+class DRAMProfiler : public Profiler {
 public:
-    /**
-     * Creates a new Profiler object using the given iterations.
-     * Additionally, parses the given profile code directory to creat the mapping
-     * @param iterations Number of times the measurement should be repeated
-     * @param codePath Path the profile programs are stored
-     */
-    CPUProfiler(const int iterations, const std::string &codePath) : Profiler(iterations) {
+    DRAMProfiler(int iterations, const std::string &codePath): Profiler(iterations) {
         std::vector<std::string> filenames;
-        std::string base = "/cpu/compiled/";
+        std::string base = "/dram/compiled/";
 
         for (const auto& entry : std::filesystem::directory_iterator(codePath + base)) {
             if (entry.is_regular_file()) {
@@ -31,11 +20,6 @@ public:
             _profileCode[filename] = codePath + base + filename;
         }
     }
-
-    /**
-     * Profiles the system and gathers information about the energy usage of the CPU components
-     * @return Returns profile as JSON object
-     */
     json profile() override;
 
 private:
@@ -64,4 +48,4 @@ private:
     double standard_deviation(const std::vector<double>& v);
 };
 
-#endif //SPEAR_CPUPROFILER_H
+#endif //SPEAR_DRAMPROFILER_H
