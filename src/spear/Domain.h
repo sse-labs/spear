@@ -4,10 +4,10 @@
 
 class Domain {
 public:
-    uint16_t address;
+    int address;
 };
 
 constexpr Domain CPU_DOMAIN{0x639};
-constexpr Domain DRAM_DOMAIN{0x640};
+constexpr Domain DRAM_DOMAIN{0x619};
 
 #endif //SPEAR_DOMAIN_H

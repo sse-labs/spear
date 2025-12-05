@@ -70,7 +70,8 @@ std::vector<double> DRAMProfiler::_measureFile(const std::string& file) const {
 
     char* args[] = { const_cast<char*>(file.c_str()), nullptr };
 
-    long iters = this->iterations;
+    long iters = this->iterations/100;
+    std::cout << "Benchmarking DRAM on " << iters << " iterations." << std::endl;
 
     // Pin parent to a dedicated core (optional)
     cpu_set_t parentMask;
@@ -82,7 +83,6 @@ std::vector<double> DRAMProfiler::_measureFile(const std::string& file) const {
     }
 
     for (long it = 0; it < iters; /* manual increment inside */) {
-
         pid_t pids[NUM_CORES];
         bool validIteration = true;    // assume good; flip to false on invalid diff
 
@@ -104,7 +104,7 @@ std::vector<double> DRAMProfiler::_measureFile(const std::string& file) const {
                 }
 
                 // Record initial energy
-                sharedEnergyBefore[core] = RaplReader::readEnergy(CPU_DOMAIN);
+                sharedEnergyBefore[core] = RaplReader::readEnergy(DRAM_DOMAIN);
 
                 // Execute the target program
                 if (execv(file.c_str(), args) == -1) {
@@ -129,13 +129,16 @@ std::vector<double> DRAMProfiler::_measureFile(const std::string& file) const {
         for (int core = 0; core < NUM_CORES; core++) {
             waitpid(pids[core], nullptr, 0);
 
-            double after = RaplReader::readEnergy(CPU_DOMAIN);
+            double after = RaplReader::readEnergy(DRAM_DOMAIN);
             double before = sharedEnergyBefore[core];
             double diff = after - before;
 
             if (diff <= 0) {
                 validIteration = false;   // mark iteration invalid
             }
+
+            std::cout << after << " - " << before << std::endl;
+            std::cout << diff << std::endl;
 
             iterationResults[core] = diff / NUM_CORES;
         }
