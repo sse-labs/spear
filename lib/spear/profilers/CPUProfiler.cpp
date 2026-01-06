@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include "profilers/SchedGatedEnergy.h"
 
 #include "RegisterReader.h"
 
@@ -89,109 +90,83 @@ std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data,
 }
 
 std::vector<double> CPUProfiler::_measureFile(const std::string& file, long runtime) const {
-    const int NUM_CORES = 12;
-
     std::vector<double> results;
-    results.reserve(this->iterations * NUM_CORES);
+    results.reserve((runtime != -1) ? runtime : this->iterations);
 
-    #ifdef __linux__
-    RegisterReader powReader(0);
-
-    // Shared memory for initial energy values of each child
-    double* sharedEnergyBefore = (double*) mmap(nullptr,
-                                                NUM_CORES * sizeof(double),
-                                                PROT_READ | PROT_WRITE,
-                                                MAP_SHARED | MAP_ANONYMOUS,
-                                                -1, 0);
-
-    char* args[] = { const_cast<char*>(file.c_str()), nullptr };
-
+#ifdef __linux__
     long iters = (runtime != -1) ? runtime : this->iterations;
 
-    // Pin parent to a dedicated core (optional)
-    cpu_set_t parentMask;
-    CPU_ZERO(&parentMask);
-    CPU_SET(1, &parentMask);
-    if (sched_setaffinity(0, sizeof(parentMask), &parentMask) == -1) {
-        perror("sched_setaffinity (parent)");
-        exit(1);
+    // Pin parent to a different CPU than the child (optional but helps)
+    {
+        cpu_set_t pm;
+        CPU_ZERO(&pm);
+        CPU_SET(1, &pm);
+        (void)sched_setaffinity(0, sizeof(pm), &pm);
     }
 
-    for (long it = 0; it < iters; /* manual increment inside */) {
-
-        pid_t pids[NUM_CORES];
-        bool validIteration = true;    // assume good; flip to false on invalid diff
-
-        // ----------------------------------------------------
-        // 1. Launch 12 processes: one on each core
-        // ----------------------------------------------------
-        for (int core = 0; core < NUM_CORES; core++) {
-            pid_t pid = fork();
-
-            if (pid == 0) {
-                // -------- Child code --------
-                cpu_set_t mask;
-                CPU_ZERO(&mask);
-                CPU_SET(core, &mask);
-
-                if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
-                    perror("sched_setaffinity (child)");
-                    exit(1);
-                }
-
-                // Record initial energy
-                sharedEnergyBefore[core] = powReader.getEnergy();
-
-                // Execute the target program
-                if (execv(file.c_str(), args) == -1) {
-                    perror("execv");
-                    exit(1);
-                }
-
-            } else if (pid > 0) {
-                pids[core] = pid;
-            } else {
-                perror("fork");
-                exit(1);
-            }
+    for (long it = 0; it < iters; /*manual inc*/) {
+        pid_t pid = fork();
+        if (pid == -1) {
+            std::fprintf(stderr, "fork failed: %s\n", std::strerror(errno));
+            break;
         }
 
-        // Temporary buffer for this iteration
-        double iterationResults[NUM_CORES];
-
-        // ----------------------------------------------------
-        // 2. Parent waits for 12 children and verifies energy diffs
-        // ----------------------------------------------------
-        for (int core = 0; core < NUM_CORES; core++) {
-            waitpid(pids[core], nullptr, 0);
-
-            double after = powReader.getEnergy();
-            double before = sharedEnergyBefore[core];
-            double diff = after - before;
-
-            if (diff <= 0) {
-                validIteration = false;   // mark iteration invalid
+        if (pid == 0) {
+            // Child: pin to a chosen CPU (e.g., CPU 0)
+            cpu_set_t cm;
+            CPU_ZERO(&cm);
+            CPU_SET(0, &cm);
+            if (sched_setaffinity(0, sizeof(cm), &cm) == -1) {
+                std::perror("sched_setaffinity(child)");
+                _exit(1);
             }
 
-            iterationResults[core] = diff / NUM_CORES;
+            char* args[] = { const_cast<char*>(file.c_str()), nullptr };
+            execv(file.c_str(), args);
+            std::perror("execv");
+            _exit(1);
         }
 
-        // ----------------------------------------------------
-        // 3. Check if iteration was valid
-        // ----------------------------------------------------
-        if (!validIteration) {
-            // Discard and repeat this same iteration index
+        // Parent: start gated-energy tracer for this child PID
+        SchedGatedEnergy gate;
+        if (!gate.start(static_cast<uint32_t>(pid))) {
+            // If tracer fails, kill child and abort this iteration
+            kill(pid, SIGKILL);
+            waitpid(pid, nullptr, 0);
             continue;
         }
 
-        // Otherwise, commit results and increment iteration counter
-        for (int core = 0; core < NUM_CORES; core++) {
-            results.push_back(iterationResults[core]);
+        // Poll until child exits
+        int status = 0;
+        while (true) {
+            // Poll events frequently to gate segments precisely
+            gate.poll(5);
+
+            pid_t w = waitpid(pid, &status, WNOHANG);
+            if (w == -1) {
+                std::fprintf(stderr, "waitpid failed: %s\n", std::strerror(errno));
+                kill(pid, SIGKILL);
+                waitpid(pid, nullptr, 0);
+                break;
+            }
+            if (w == pid) break;
         }
 
-        it++;   // manually increment because we used continue above
+        // Drain a little to catch last switch_out; then finalize
+        for (int k = 0; k < 10; ++k) gate.poll(1);
+
+        const double gated_energy = gate.stop_and_get_energy();
+
+        // Basic validity check
+        if (gated_energy <= 0.0) {
+            // discard and repeat iteration index
+            continue;
+        }
+
+        results.push_back(gated_energy);
+        it++;
     }
-    #endif
+#endif
 
     return results;
 }
