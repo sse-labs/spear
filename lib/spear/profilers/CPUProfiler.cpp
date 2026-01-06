@@ -7,12 +7,19 @@
 
 #include "RegisterReader.h"
 
+#define PROGRAMITERATIONS 100000
+
 json CPUProfiler::profile() {
     std::map<std::string, std::vector<double>> measurements;
     std::map<std::string, double> results;
 
     for (const auto& [key, value] : _profileCode) {
         std::vector<double> measuredEnergy = this->_measureFile(value);
+
+        for(int i=0; i < measuredEnergy.size(); i++) {
+            measuredEnergy[i] = measuredEnergy[i]/PROGRAMITERATIONS;
+        }
+
         measurements[key] = measuredEnergy;
     }
 
@@ -58,12 +65,14 @@ json CPUProfiler::profile() {
 
     for (const auto& [key, value] : measurements) {
         double sd = standard_deviation(value);
-        results[key] = huberMean(value, 1.345 * sd, 100, 6.103515625e-05);
+        //results[key] = huberMean(value, 1.345 * sd, 100, 6.103515625e-05);
+        results[key] = std::accumulate(value.begin(), value.end(), 0.0) / value.size();
     }
 
     double noiseval = results["_noise"];
     for (const auto& [key, value] : measurements) {
-        results[key] = results[key] - noiseval;
+        //results[key] = results[key] - noiseval;
+        results[key] = results[key];
     }
 
     return results;
@@ -112,14 +121,14 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, long runt
         }
 
         if (pid == 0) {
-            // Child: pin to a chosen CPU (e.g., CPU 0)
+            // Child: pin to CPU 0 (optional)
             cpu_set_t cm;
             CPU_ZERO(&cm);
             CPU_SET(0, &cm);
-            if (sched_setaffinity(0, sizeof(cm), &cm) == -1) {
-                std::perror("sched_setaffinity(child)");
-                _exit(1);
-            }
+            (void)sched_setaffinity(0, sizeof(cm), &cm);
+
+            // IMPORTANT: stop here so parent can attach tracer before we run
+            raise(SIGSTOP);
 
             char* args[] = { const_cast<char*>(file.c_str()), nullptr };
             execv(file.c_str(), args);
@@ -127,20 +136,35 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, long runt
             _exit(1);
         }
 
-        // Parent: start gated-energy tracer for this child PID
-        SchedGatedEnergy gate;
-        if (!gate.start(static_cast<uint32_t>(pid))) {
-            // If tracer fails, kill child and abort this iteration
+        // Parent: wait until child is stopped
+        int status = 0;
+        if (waitpid(pid, &status, WUNTRACED) == -1) {
+            std::fprintf(stderr, "waitpid(WUNTRACED) failed: %s\n", std::strerror(errno));
+            kill(pid, SIGKILL);
+            waitpid(pid, nullptr, 0);
+            continue;
+        }
+        if (!WIFSTOPPED(status)) {
+            std::fprintf(stderr, "child did not stop as expected\n");
             kill(pid, SIGKILL);
             waitpid(pid, nullptr, 0);
             continue;
         }
 
-        // Poll until child exits
-        int status = 0;
+        // Start gated tracer now (guaranteed before child runs)
+        SchedGatedEnergy gate;
+        if (!gate.start(static_cast<uint32_t>(pid))) {
+            kill(pid, SIGKILL);
+            waitpid(pid, nullptr, 0);
+            continue;
+        }
+
+        // Resume child
+        kill(pid, SIGCONT);
+
+        // Now poll until child exits
         while (true) {
-            // Poll events frequently to gate segments precisely
-            gate.poll(5);
+            gate.poll(1);
 
             pid_t w = waitpid(pid, &status, WNOHANG);
             if (w == -1) {
@@ -152,14 +176,12 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, long runt
             if (w == pid) break;
         }
 
-        // Drain a little to catch last switch_out; then finalize
+        // Drain a little and finalize
         for (int k = 0; k < 10; ++k) gate.poll(1);
 
         const double gated_energy = gate.stop_and_get_energy();
-
-        // Basic validity check
         if (gated_energy <= 0.0) {
-            // discard and repeat iteration index
+            // discard and repeat
             continue;
         }
 

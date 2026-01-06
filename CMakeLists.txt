@@ -10,7 +10,7 @@ option(USE_EXTERNAL_JSON "Use external JSON lib" OFF)
 # ========= LLVM DANGER ZONE =========
 # ===== PLEASE EDIT WITH CAUTION =====
 
-find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM 17 REQUIRED CONFIG)
 find_package(phasar REQUIRED)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")

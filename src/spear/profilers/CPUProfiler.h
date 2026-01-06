@@ -18,7 +18,7 @@ public:
      */
     CPUProfiler(const int iterations, const std::string &codePath) : Profiler(iterations) {
         std::vector<std::string> filenames;
-        for (const auto& entry : std::filesystem::directory_iterator(codePath + "/")) {
+        for (const auto& entry : std::filesystem::directory_iterator(codePath + "/cpu/compiled/")) {
             if (entry.is_regular_file()) {
                 std::string filename = entry.path().filename().string();
                 filenames.push_back(entry.path().filename().string()); // only the file name, not full path
@@ -26,7 +26,7 @@ public:
         }
 
         for (const std::string& filename : filenames) {
-            _profileCode[filename] = codePath + "/" + filename;
+            _profileCode[filename] = codePath + "/cpu/compiled/" + filename;
         }
     }
 

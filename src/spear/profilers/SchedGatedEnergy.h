@@ -30,6 +30,8 @@ class SchedGatedEnergy {
 public:
     SchedGatedEnergy() = default;
 
+    RegisterReader powReader {0};
+
     bool start(uint32_t target_pid) {
         target_pid_ = target_pid;
         running_ = false;
@@ -78,7 +80,6 @@ public:
         // If the target is currently running and we never saw a switch_out before stopping,
         // close the segment now.
         if (running_) {
-            RegisterReader powReader(0);
             const double endE = powReader.getEnergy();
             energy_sum_ += (endE - start_energy_);
             running_ = false;
@@ -132,13 +133,17 @@ private:
 
         if (e->type == 3) { // switch_in
             if (!running_) {
+                //std::fprintf(stderr, "SWITCHIN\n");
                 start_energy_ = powReader.getEnergy();
                 running_ = true;
             }
         } else if (e->type == 2) { // switch_out
             if (running_) {
+                //std::fprintf(stderr, "SWITCHOUT\n");
                 const double endE = powReader.getEnergy();
-                energy_sum_ += (endE - start_energy_);
+                double delta = (endE - start_energy_);
+                energy_sum_ += delta;
+
                 running_ = false;
             }
         }
