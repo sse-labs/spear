@@ -6,6 +6,9 @@
 
 #include "RegisterReader.h"
 
+#define PROGRAMITERATIONS 100000
+
+
 json CPUProfiler::profile() {
     std::map<std::string, std::vector<double>> measurements;
     std::map<std::string, double> results;
@@ -62,7 +65,7 @@ json CPUProfiler::profile() {
 
     double noiseval = results["_noise"];
     for (const auto& [key, value] : measurements) {
-        results[key] = results[key] - noiseval;
+        results[key] = results[key]/PROGRAMITERATIONS;
     }
 
     return results;

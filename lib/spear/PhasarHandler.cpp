@@ -75,7 +75,7 @@ PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
   using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
 
   // Result:  BB_name -> { var_name -> (Value*, domain_val) }
-  for (const llvm::BasicBlock &BB : Func->getBasicBlockList()) {
+  for (const llvm::BasicBlock &BB : *Func) {
     std::string BBName = BB.hasName()
                              ? BB.getName().str()
                              : "<unnamed_bb_" +
