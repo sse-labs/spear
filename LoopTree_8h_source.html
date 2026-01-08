@@ -89,85 +89,86 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;llvm/Analysis/LoopInfo.h&gt;</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;llvm/Analysis/ScalarEvolution.h&gt;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;phasar/PhasarLLVM/DataFlow/IfdsIde/Problems/IDELinearConstantAnalysis.h&gt;</span></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &quot;LLVMHandler.h&quot;</span></div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;optional&gt;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#include &quot;LLVMHandler.h&quot;</span></div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="keyword">class </span><a class="code hl_class" href="classLLVMHandler.html">LLVMHandler</a>;</div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
-<div class="foldopen" id="foldopen00018" data-start="{" data-end="};">
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno"><a class="line" href="classLoopTree.html">   18</a></span><span class="keyword">class </span><a class="code hl_class" href="classLoopTree.html">LoopTree</a> {</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno"><a class="line" href="classLoopTree.html#a47c9acc4afdca8d22884c12aa8a2db29">   23</a></span>    llvm::Loop * <a class="code hl_variable" href="classLoopTree.html#a47c9acc4afdca8d22884c12aa8a2db29">mainloop</a>;</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno"><a class="line" href="classLoopTree.html#a032808e139ad8b36c3eaa909dedb930a">   28</a></span>    std::vector&lt;LoopTree *&gt; <a class="code hl_variable" href="classLoopTree.html#a032808e139ad8b36c3eaa909dedb930a">subTrees</a>;</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="classLoopTree.html#a659874a23317ce521464fae13c332050">   33</a></span>    std::vector&lt;llvm::BasicBlock *&gt; <a class="code hl_variable" href="classLoopTree.html#a659874a23317ce521464fae13c332050">blocks</a>;</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno"><a class="line" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">   38</a></span>    <a class="code hl_class" href="classLLVMHandler.html">LLVMHandler</a>* <a class="code hl_variable" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">handler</a>;</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno"><a class="line" href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">   43</a></span>    <span class="keywordtype">long</span> <a class="code hl_variable" href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">iterations</a>;</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span> </div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    std::vector&lt;const llvm::Value *&gt; boundvars;</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="comment">//const llvm::Value * boundvar;</span></div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="keyword">class </span><a class="code hl_class" href="classLLVMHandler.html">LLVMHandler</a>;</div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
+<div class="foldopen" id="foldopen00019" data-start="{" data-end="};">
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno"><a class="line" href="classLoopTree.html">   19</a></span><span class="keyword">class </span><a class="code hl_class" href="classLoopTree.html">LoopTree</a> {</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno"><a class="line" href="classLoopTree.html#a47c9acc4afdca8d22884c12aa8a2db29">   24</a></span>    llvm::Loop * <a class="code hl_variable" href="classLoopTree.html#a47c9acc4afdca8d22884c12aa8a2db29">mainloop</a>;</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span> </div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno"><a class="line" href="classLoopTree.html#a032808e139ad8b36c3eaa909dedb930a">   29</a></span>    std::vector&lt;LoopTree *&gt; <a class="code hl_variable" href="classLoopTree.html#a032808e139ad8b36c3eaa909dedb930a">subTrees</a>;</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno"><a class="line" href="classLoopTree.html#a659874a23317ce521464fae13c332050">   34</a></span>    std::vector&lt;llvm::BasicBlock *&gt; <a class="code hl_variable" href="classLoopTree.html#a659874a23317ce521464fae13c332050">blocks</a>;</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">   39</a></span>    <a class="code hl_class" href="classLLVMHandler.html">LLVMHandler</a>* <a class="code hl_variable" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">handler</a>;</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno"><a class="line" href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">   44</a></span>    <span class="keywordtype">long</span> <a class="code hl_variable" href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">iterations</a>;</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    std::vector&lt;const llvm::Value *&gt; boundvars;</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="comment">//const llvm::Value * boundvar;</span></div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno"><a class="line" href="classLoopTree.html#a0d7c4ff00d14caa2313e146c3ee0ba8d">   56</a></span>    <a class="code hl_function" href="classLoopTree.html#a0d7c4ff00d14caa2313e146c3ee0ba8d">LoopTree</a>(</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        llvm::Loop *main,</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        <span class="keyword">const</span> std::vector&lt;llvm::Loop *&gt;&amp; subloops,</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        <a class="code hl_class" href="classLLVMHandler.html">LLVMHandler</a> *<a class="code hl_variable" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">handler</a>,</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        llvm::ScalarEvolution *scalarEvolution,</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>        std::map&lt;</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>        std::string,</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>        std::map&lt;std::string, std::pair&lt;const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t&gt;&gt;</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>        &gt; *variablemapping</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    );</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span> </div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno"><a class="line" href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">   70</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">printPreOrder</a>();</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keywordtype">long</span> getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution);</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span> </div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno"><a class="line" href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">   78</a></span>    std::vector&lt;llvm::BasicBlock *&gt; <a class="code hl_function" href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">getLatches</a>();</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno"><a class="line" href="classLoopTree.html#a0d7c4ff00d14caa2313e146c3ee0ba8d">   57</a></span>    <a class="code hl_function" href="classLoopTree.html#a0d7c4ff00d14caa2313e146c3ee0ba8d">LoopTree</a>(</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        llvm::Loop *main,</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        <span class="keyword">const</span> std::vector&lt;llvm::Loop *&gt;&amp; subloops,</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        <a class="code hl_class" href="classLLVMHandler.html">LLVMHandler</a> *<a class="code hl_variable" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">handler</a>,</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>        llvm::ScalarEvolution *scalarEvolution,</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>        std::map&lt;</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>        std::string,</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>        std::map&lt;std::string, std::pair&lt;const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t&gt;&gt;</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>        &gt; *variablemapping</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    );</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span> </div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno"><a class="line" href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">   71</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">printPreOrder</a>();</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span> </div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="keywordtype">long</span> getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution);</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span> </div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno"><a class="line" href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">   79</a></span>    std::vector&lt;llvm::BasicBlock *&gt; <a class="code hl_function" href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">getLatches</a>();</div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno"><a class="line" href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">   84</a></span>    <a class="code hl_function" href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">~LoopTree</a>();</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span> </div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span> </div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    std::vector&lt;llvm::BasicBlock *&gt; calcBlocks();</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span> </div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    <span class="keywordtype">bool</span> isLeaf() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span> </div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span> </div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno"><a class="line" href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">   85</a></span>    <a class="code hl_function" href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">~LoopTree</a>();</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span> </div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span> </div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    std::vector&lt;llvm::BasicBlock *&gt; calcBlocks();</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span> </div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    <span class="keywordtype">bool</span> isLeaf() <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span> </div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    std::vector&lt;const llvm::Value *&gt; getSourceVariablesFromSCEV(<span class="keyword">const</span> llvm::SCEV *Expr, llvm::ScalarEvolution &amp;SE, llvm::PHINode *IndVar) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span> </div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    <span class="keywordtype">void</span> findBoundVars(llvm::ScalarEvolution *scalarEvolution);</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span> </div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    std::map&lt;</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        std::string,</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        std::map&lt;std::string, std::pair&lt;const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t&gt;&gt;</div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    &gt; *_variablemapping;</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span> </div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>    <span class="keywordtype">long</span> calculateIterations(<span class="keywordtype">long</span> start, <span class="keywordtype">long</span> end, <span class="keywordtype">long</span> step, llvm::Loop::LoopBounds::Direction direction);</div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span> </div>
-<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>    <span class="keywordtype">long</span> iterationsFromLoopBound(llvm::Optional&lt;llvm::Loop::LoopBounds&gt; *loopBound, <span class="keywordtype">long</span> endValue = -1 );</div>
-<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>};</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span> </div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    std::vector&lt;const llvm::Value *&gt; getSourceVariablesFromSCEV(<span class="keyword">const</span> llvm::SCEV *Expr, llvm::ScalarEvolution &amp;SE, llvm::PHINode *IndVar) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span> </div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    <span class="keywordtype">void</span> findBoundVars(llvm::ScalarEvolution *scalarEvolution);</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    std::map&lt;</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        std::string,</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>        std::map&lt;std::string, std::pair&lt;const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t&gt;&gt;</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    &gt; *_variablemapping;</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span> </div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    <span class="keywordtype">long</span> calculateIterations(<span class="keywordtype">long</span> start, <span class="keywordtype">long</span> end, <span class="keywordtype">long</span> step, llvm::Loop::LoopBounds::Direction direction);</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span> </div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>    <span class="keywordtype">long</span> iterationsFromLoopBound(std::optional&lt;llvm::Loop::LoopBounds&gt; *loopBound, <span class="keywordtype">long</span> endValue = -1 );</div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>};</div>
 </div>
-<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span> </div>
 <div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span> </div>
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span><span class="preprocessor">#endif </span><span class="comment">//BA_LOOPTREE_H</span></div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span> </div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span><span class="preprocessor">#endif </span><span class="comment">//BA_LOOPTREE_H</span></div>
 <div class="ttc" id="aclassLLVMHandler_html"><div class="ttname"><a href="classLLVMHandler.html">LLVMHandler</a></div><div class="ttdef"><b>Definition</b> LLVMHandler.h:25</div></div>
-<div class="ttc" id="aclassLoopTree_html"><div class="ttname"><a href="classLoopTree.html">LoopTree</a></div><div class="ttdef"><b>Definition</b> LoopTree.h:18</div></div>
-<div class="ttc" id="aclassLoopTree_html_a032808e139ad8b36c3eaa909dedb930a"><div class="ttname"><a href="classLoopTree.html#a032808e139ad8b36c3eaa909dedb930a">LoopTree::subTrees</a></div><div class="ttdeci">std::vector&lt; LoopTree * &gt; subTrees</div><div class="ttdef"><b>Definition</b> LoopTree.h:28</div></div>
+<div class="ttc" id="aclassLoopTree_html"><div class="ttname"><a href="classLoopTree.html">LoopTree</a></div><div class="ttdef"><b>Definition</b> LoopTree.h:19</div></div>
+<div class="ttc" id="aclassLoopTree_html_a032808e139ad8b36c3eaa909dedb930a"><div class="ttname"><a href="classLoopTree.html#a032808e139ad8b36c3eaa909dedb930a">LoopTree::subTrees</a></div><div class="ttdeci">std::vector&lt; LoopTree * &gt; subTrees</div><div class="ttdef"><b>Definition</b> LoopTree.h:29</div></div>
 <div class="ttc" id="aclassLoopTree_html_a0d7c4ff00d14caa2313e146c3ee0ba8d"><div class="ttname"><a href="classLoopTree.html#a0d7c4ff00d14caa2313e146c3ee0ba8d">LoopTree::LoopTree</a></div><div class="ttdeci">LoopTree(llvm::Loop *main, const std::vector&lt; llvm::Loop * &gt; &amp;subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution, std::map&lt; std::string, std::map&lt; std::string, std::pair&lt; const llvm::Value *, psr::IDELinearConstantAnalysisDomain::l_t &gt; &gt; &gt; *variablemapping)</div></div>
-<div class="ttc" id="aclassLoopTree_html_a15b900fb894985bdc881842d75bd5f9a"><div class="ttname"><a href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">LoopTree::handler</a></div><div class="ttdeci">LLVMHandler * handler</div><div class="ttdef"><b>Definition</b> LoopTree.h:38</div></div>
-<div class="ttc" id="aclassLoopTree_html_a47c9acc4afdca8d22884c12aa8a2db29"><div class="ttname"><a href="classLoopTree.html#a47c9acc4afdca8d22884c12aa8a2db29">LoopTree::mainloop</a></div><div class="ttdeci">llvm::Loop * mainloop</div><div class="ttdef"><b>Definition</b> LoopTree.h:23</div></div>
+<div class="ttc" id="aclassLoopTree_html_a15b900fb894985bdc881842d75bd5f9a"><div class="ttname"><a href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">LoopTree::handler</a></div><div class="ttdeci">LLVMHandler * handler</div><div class="ttdef"><b>Definition</b> LoopTree.h:39</div></div>
+<div class="ttc" id="aclassLoopTree_html_a47c9acc4afdca8d22884c12aa8a2db29"><div class="ttname"><a href="classLoopTree.html#a47c9acc4afdca8d22884c12aa8a2db29">LoopTree::mainloop</a></div><div class="ttdeci">llvm::Loop * mainloop</div><div class="ttdef"><b>Definition</b> LoopTree.h:24</div></div>
 <div class="ttc" id="aclassLoopTree_html_a5bbe89a53070d2ca8c76a1cccdd221fa"><div class="ttname"><a href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">LoopTree::getLatches</a></div><div class="ttdeci">std::vector&lt; llvm::BasicBlock * &gt; getLatches()</div></div>
-<div class="ttc" id="aclassLoopTree_html_a659874a23317ce521464fae13c332050"><div class="ttname"><a href="classLoopTree.html#a659874a23317ce521464fae13c332050">LoopTree::blocks</a></div><div class="ttdeci">std::vector&lt; llvm::BasicBlock * &gt; blocks</div><div class="ttdef"><b>Definition</b> LoopTree.h:33</div></div>
+<div class="ttc" id="aclassLoopTree_html_a659874a23317ce521464fae13c332050"><div class="ttname"><a href="classLoopTree.html#a659874a23317ce521464fae13c332050">LoopTree::blocks</a></div><div class="ttdeci">std::vector&lt; llvm::BasicBlock * &gt; blocks</div><div class="ttdef"><b>Definition</b> LoopTree.h:34</div></div>
 <div class="ttc" id="aclassLoopTree_html_ac7a3306c81d41d6cea849992f3fec9ce"><div class="ttname"><a href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">LoopTree::~LoopTree</a></div><div class="ttdeci">~LoopTree()</div></div>
 <div class="ttc" id="aclassLoopTree_html_ad97586e2ef41e7fa8f720ee920b3db34"><div class="ttname"><a href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">LoopTree::printPreOrder</a></div><div class="ttdeci">void printPreOrder()</div></div>
-<div class="ttc" id="aclassLoopTree_html_afe460225dfb3ad4c58468bd4a1293682"><div class="ttname"><a href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">LoopTree::iterations</a></div><div class="ttdeci">long iterations</div><div class="ttdef"><b>Definition</b> LoopTree.h:43</div></div>
+<div class="ttc" id="aclassLoopTree_html_afe460225dfb3ad4c58468bd4a1293682"><div class="ttname"><a href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">LoopTree::iterations</a></div><div class="ttdeci">long iterations</div><div class="ttdef"><b>Definition</b> LoopTree.h:44</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

@@ -106,6 +106,18 @@ virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>isExceptionFo
 <tr class="memitem:ac5a0cdb771d58458c0a54a58372a5646" id="r_ac5a0cdb771d58458c0a54a58372a5646"><td class="memItemLeft" align="right" valign="top"><a id="ac5a0cdb771d58458c0a54a58372a5646" name="ac5a0cdb771d58458c0a54a58372a5646"></a>
 virtual json&#160;</td><td class="memItemRight" valign="bottom"><b>getJsonRepresentation</b> ()</td></tr>
 <tr class="separator:ac5a0cdb771d58458c0a54a58372a5646"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8cc4f9b7bab091e91de2fde98ef7e937" id="r_a8cc4f9b7bab091e91de2fde98ef7e937"><td class="memItemLeft" align="right" valign="top"><a id="a8cc4f9b7bab091e91de2fde98ef7e937" name="a8cc4f9b7bab091e91de2fde98ef7e937"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>getSourceVarName</b> (llvm::Value *V, llvm::Instruction *Ctx)</td></tr>
+<tr class="separator:a8cc4f9b7bab091e91de2fde98ef7e937"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4fe8fb80c4e16bc1c40b0305a1bde0cb" id="r_a4fe8fb80c4e16bc1c40b0305a1bde0cb"><td class="memItemLeft" align="right" valign="top"><a id="a4fe8fb80c4e16bc1c40b0305a1bde0cb" name="a4fe8fb80c4e16bc1c40b0305a1bde0cb"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>evalICMP</b> (llvm::ICmpInst *ICmp, llvm::ConstantInt *left, llvm::ConstantInt *right)</td></tr>
+<tr class="separator:a4fe8fb80c4e16bc1c40b0305a1bde0cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad2a2b08ce397868383bdfefa2321f7a9" id="r_ad2a2b08ce397868383bdfefa2321f7a9"><td class="memItemLeft" align="right" valign="top"><a id="ad2a2b08ce397868383bdfefa2321f7a9" name="ad2a2b08ce397868383bdfefa2321f7a9"></a>
+llvm::BasicBlock *&#160;</td><td class="memItemRight" valign="bottom"><b>getPathName</b> (const llvm::BranchInst *br, bool conditionalresult)</td></tr>
+<tr class="separator:ad2a2b08ce397868383bdfefa2321f7a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7ffbf25c00a53f72d2573c91e53c9d29" id="r_a7ffbf25c00a53f72d2573c91e53c9d29"><td class="memItemLeft" align="right" valign="top"><a id="a7ffbf25c00a53f72d2573c91e53c9d29" name="a7ffbf25c00a53f72d2573c91e53c9d29"></a>
+const DomainVal *&#160;</td><td class="memItemRight" valign="bottom"><b>findDeducedValue</b> (BoundVarMap *resultsAtBlock, std::string varname)</td></tr>
+<tr class="separator:a7ffbf25c00a53f72d2573c91e53c9d29"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
