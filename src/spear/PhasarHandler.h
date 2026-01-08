@@ -60,7 +60,7 @@ private:
 
   /// Solver results: PhASAR’s IDE solver result wrapper.
   std::unique_ptr<psr::OwningSolverResults<
-      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<long>>>
+      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<int64_t>>>
       AnalysisResult;
 
   /// Function entrypoints

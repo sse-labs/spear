@@ -3,6 +3,7 @@
 
 #include "RegisterReader.h"
 #include <chrono>
+#include <sstream>
 
 json MetaProfiler::profile() {
     json metainformation;

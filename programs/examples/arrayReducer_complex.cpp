@@ -25,6 +25,10 @@ int main(){
 
     long sum = 0;
 
+    if (length != 9000) {
+        sum = 9;
+    }
+
     for(int i=0; i < length; i = i + 4){
         int a1 = searchroom[i];
         int a2 = searchroom[i+1];
@@ -32,6 +36,10 @@ int main(){
         int a4 = searchroom[i+3];
 
         sum += a1 + a2 + a3 + a4;
+    }
+
+    if (sum <= 30000) {
+        sum = 9;
     }
 
     long ssum = sumArray(searchroom, length);

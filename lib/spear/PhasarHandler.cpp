@@ -55,7 +55,7 @@ void PhasarHandlerPass::runAnalysis() {
   //Result.dumpResults(HA->getICFG(), llvm::outs());
 
   AnalysisResult = std::make_unique<psr::OwningSolverResults<
-      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<long>>>(
+      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<int64_t>>>(
       Result);
 }
 
@@ -75,7 +75,7 @@ PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
   using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
 
   // Result:  BB_name -> { var_name -> (Value*, domain_val) }
-  for (const llvm::BasicBlock &BB : Func->getBasicBlockList()) {
+  for (const llvm::BasicBlock &BB : *Func) {
     std::string BBName = BB.hasName()
                              ? BB.getName().str()
                              : "<unnamed_bb_" +

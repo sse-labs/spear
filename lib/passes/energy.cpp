@@ -50,8 +50,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     int loopbound;
     bool deepCallsEnabled;
     std::string forFunction;
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_start;
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_end;
+    std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_start;
+    std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<long, std::ratio<1, 1000000000>>> stopwatch_end;
 
     /**
      * Constructor to run, when called from a method
@@ -72,7 +72,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             this->format = format;
             this->strategy = strategy;
             this->loopbound = loopbound;
-            this->stopwatch_start = std::chrono::high_resolution_clock::now();
+            this->stopwatch_start = std::chrono::steady_clock::now();
             this->deepCallsEnabled = (deepCalls == DeepCalls::ENABLED);
             this->forFunction = std::move(forFunction);
         }
@@ -106,7 +106,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             }
 
 
-            this->stopwatch_start = std::chrono::high_resolution_clock::now();
+            this->stopwatch_start = std::chrono::steady_clock::now();
         }
     }
 
@@ -473,7 +473,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 }
             }
 
-            this->stopwatch_end = std::chrono::high_resolution_clock::now();
+            this->stopwatch_end = std::chrono::steady_clock::now();
             std::chrono::duration<double, std::milli> ms_double = this->stopwatch_end - this->stopwatch_start;
 
             double duration = ms_double.count()/1000;

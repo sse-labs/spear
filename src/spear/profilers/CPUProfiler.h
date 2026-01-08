@@ -18,7 +18,7 @@ public:
      */
     CPUProfiler(const int iterations, const std::string &codePath) : Profiler(iterations) {
         std::vector<std::string> filenames;
-        for (const auto& entry : std::filesystem::directory_iterator(codePath + "/")) {
+        for (const auto& entry : std::filesystem::directory_iterator(codePath + "/cpu/compiled/")) {
             if (entry.is_regular_file()) {
                 std::string filename = entry.path().filename().string();
                 filenames.push_back(entry.path().filename().string()); // only the file name, not full path
@@ -26,7 +26,7 @@ public:
         }
 
         for (const std::string& filename : filenames) {
-            _profileCode[filename] = codePath + "/" + filename;
+            _profileCode[filename] = codePath + "/cpu/compiled/" + filename;
         }
     }
 
@@ -47,7 +47,7 @@ private:
      * @param file Path the file is stored at
      * @return Returns vector containing all recorded measurement values
      */
-    std::vector<double> _measureFile(const std::string& file) const;
+    [[nodiscard]] std::vector<double> _measureFile(const std::string& file, long runtime = -1) const;
 
     /**
      * Calculates a moving average on the given data with the specified window
@@ -56,7 +56,12 @@ private:
      * @return Vector containing the moving averages of the raw data
      */
     std::vector<double> _movingAverage(const std::vector<double>& data, int windowSize);
-};
 
+    double huberMean(const std::vector<double>& data, double delta = 1.0, int maxIterations = 50, double tolerance = 1e-6);
+
+    double standard_deviation(const std::vector<double>& v);
+
+    double _measureIdle(double durationSeconds) const;
+};
 
 #endif //SPEAR_CPUPROFILER_H

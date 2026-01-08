@@ -6,6 +6,7 @@
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/Analysis/ScalarEvolution.h>
 #include <phasar/PhasarLLVM/DataFlow/IfdsIde/Problems/IDELinearConstantAnalysis.h>
+#include <optional>
 
 #include "LLVMHandler.h"
 
@@ -140,7 +141,7 @@ private:
      * the given loopbound
      * @return Returns a loop bound
      */
-    long iterationsFromLoopBound(llvm::Optional<llvm::Loop::LoopBounds> *loopBound, long endValue = -1 );
+    long iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds> *loopBound, long endValue = -1 );
 };
 
 

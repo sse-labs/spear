@@ -145,16 +145,16 @@ long LoopTree::calculateIterations(long start, long end, long step, llvm::Loop::
 
 }
 
-long LoopTree::iterationsFromLoopBound(llvm::Optional<llvm::Loop::LoopBounds> *lb, long ev) {
+long LoopTree::iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds> *lb, long ev) {
     long boundValue = -1;
 
     if (lb->has_value()) {
-        llvm::Loop::LoopBounds *loopBound = lb->getPointer();
+        llvm::Loop::LoopBounds loopBound = lb->value();
 
-        auto &endValueObj = loopBound->getFinalIVValue();
-        auto &startValueObj = loopBound->getInitialIVValue();
-        auto stepValueObj = loopBound->getStepValue();
-        auto direction = loopBound->getDirection();
+        auto &endValueObj = loopBound.getFinalIVValue();
+        auto &startValueObj = loopBound.getInitialIVValue();
+        auto stepValueObj = loopBound.getStepValue();
+        auto direction = loopBound.getDirection();
 
         long startValue = -1;
         long stepValue = -1;
