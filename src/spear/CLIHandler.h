@@ -9,6 +9,7 @@
 
 #include "CLIOptions.h"
 #include <vector>
+#include <string>
 
 /**
  * Class for dealing with CLI input
@@ -51,6 +52,14 @@ class CLIHandler {
     static std::string_view get_option(
             const std::vector<std::string_view>& arguments,
             const std::string_view& option_name);
+
+    /**
+     * Checks if the given path exists.
+     * Function is required, as filesystem is not a valid C++ header.
+     * @param path Path to check
+     * @return Returns true if the given path is accessible, false otherwise.
+     */
+    static bool exists(const std::string& path);
 };
 
 

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
 #include "LoopTree.h"
 
@@ -5,8 +9,19 @@
 #include <llvm/Analysis/ScalarEvolutionExpressions.h>
 #include <llvm/IR/IntrinsicInst.h>
 
+#include <vector>
+#include <utility>
+#include <string>
+#include <map>
 
-LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, LLVMHandler *handler, llvm::ScalarEvolution *scalarEvolution, std::map<std::string, std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>> *variablemapping){
+LoopTree::LoopTree(
+    llvm::Loop *main,
+    const std::vector<llvm::Loop *>& subloops,
+    LLVMHandler *handler,
+    llvm::ScalarEvolution *scalarEvolution,
+    std::map<std::string,
+        std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
+    > *variablemapping) {
     this->mainloop = main;
     this->handler = handler;
 
@@ -20,52 +35,57 @@ LoopTree::LoopTree(llvm::Loop *main, const std::vector<llvm::Loop *>& subloops, 
         llvm::errs() << "\t\tBound variable: " << *bv << "\n";
     }
 
-    //Iterate over the given Subloops
+    // Iterate over the given Subloops
     for (auto subLoop : subloops) {
-        //For each subloop create a new LoopTree with parameters regarding this subloop
-        auto *subLoopTree = new LoopTree(subLoop, subLoop->getSubLoops(), this->handler, scalarEvolution, variablemapping);
+        // For each subloop create a new LoopTree with parameters regarding this subloop
+        auto *subLoopTree = new LoopTree(subLoop,
+            subLoop->getSubLoops(),
+            this->handler, scalarEvolution,
+            variablemapping);
 
-        //Add the subtree to the vector of subgraphs
+        // Add the subtree to the vector of subgraphs
         this->subTrees.push_back(subLoopTree);
     }
 
-    //Calculate the basic blocks only contained in this loop, excluding all blocks present in the subgraphs
+    // Calculate the basic blocks only contained in this loop, excluding all blocks present in the subgraphs
     std::vector<llvm::BasicBlock *> calcedBlocks = calcBlocks();
     this->blocks.insert(this->blocks.end(), calcedBlocks.begin(), calcedBlocks.end());
 
-    this->iterations=0;
-    //Calculate the iterations of this loop
+    this->iterations = 0;
+    // Calculate the iterations of this loop
     this->iterations = this->getLoopUpperBound(this->mainloop, scalarEvolution);
 }
 
 
-std::vector<llvm::BasicBlock *> LoopTree::calcBlocks(){
-    //All the blocks present in the loop
+std::vector<llvm::BasicBlock *> LoopTree::calcBlocks() {
+    // All the blocks present in the loop
     std::vector<llvm::BasicBlock *> initBlocks = this->mainloop->getBlocksVector();
-    //Vector for storing the combined blocks of the subloops
+    // Vector for storing the combined blocks of the subloops
     std::vector<llvm::BasicBlock *> combined;
-    //Vector for string the calculated difference of this loop and its subloops
+    // Vector for string the calculated difference of this loop and its subloops
     std::vector<llvm::BasicBlock *> difference;
 
-    //Test the leafness of the current LoopTree
-    if( !this->isLeaf() ){
-        //If we are not in a leaf, we have to calculate the blocks of this tree by building the set-difference
-        //of all subloops and the initblocks present in this subloop
-        for(auto subloop : this->subTrees){
-            //Calculate the union of all subloops
-            combined.insert(combined.end(), subloop->mainloop->getBlocksVector().begin(), subloop->mainloop->getBlocksVector().end());
+    // Test the leafness of the current LoopTree
+    if ( !this->isLeaf() ) {
+        // If we are not in a leaf, we have to calculate the blocks of this tree by building the set-difference
+        // of all subloops and the initblocks present in this subloop
+        for (auto subloop : this->subTrees) {
+            // Calculate the union of all subloops
+            combined.insert(combined.end(),
+                subloop->mainloop->getBlocksVector().begin(),
+                subloop->mainloop->getBlocksVector().end());
         }
 
-        //Iterate over the blocks in this loop. Find the blocks that are not present in the union but in this loop
+        // Iterate over the blocks in this loop. Find the blocks that are not present in the union but in this loop
         for (auto &basicBlock : initBlocks) {
-            if(std::find(combined.begin(), combined.end(), basicBlock) == combined.end()){
+            if (std::find(combined.begin(), combined.end(), basicBlock) == combined.end()) {
                 difference.insert(difference.end(), basicBlock);
             }
         }
 
         return difference;
-    }else{
-        //If we are in a leaf, we can simply return the init blocks, as there are no subloops
+    } else {
+        // If we are in a leaf, we can simply return the init blocks, as there are no subloops
         return initBlocks;
     }
 }
@@ -100,7 +120,11 @@ std::vector<const llvm::Value *> LoopTree::getSourceVariablesFromSCEV(const llvm
         Vars.insert(Vars.end(), RHSVars.begin(), RHSVars.end());
     } else if (auto *AddRec = llvm::dyn_cast<llvm::SCEVAddRecExpr>(Expr)) {
         auto StartVars = getSourceVariablesFromSCEV(AddRec->getStart(), SE, IndVar);
-        auto StepVars = getSourceVariablesFromSCEV(AddRec->getStepRecurrence(SE), SE, IndVar);
+        auto StepVars = getSourceVariablesFromSCEV(
+            AddRec->getStepRecurrence(SE),
+            SE,
+            IndVar);
+
         Vars.insert(Vars.end(), StartVars.begin(), StartVars.end());
         Vars.insert(Vars.end(), StepVars.begin(), StepVars.end());
     }
@@ -121,32 +145,36 @@ void LoopTree::findBoundVars(llvm::ScalarEvolution *scalarEvolution) {
     if (!llvm::isa<llvm::SCEVCouldNotCompute>(BECount)) {
         const llvm::SCEV *Bound = scalarEvolution->getAddExpr(
             scalarEvolution->getUnknown(IndVar),
-            scalarEvolution->getAddExpr(BECount, scalarEvolution->getOne(IndVar->getType()))
-        );
+            scalarEvolution->getAddExpr(BECount, scalarEvolution->getOne(IndVar->getType())));
 
         auto boundVars = this->getSourceVariablesFromSCEV(Bound, *scalarEvolution, IndVar);
-        //assert(boundVars.size() <= 1);
+        // assert(boundVars.size() <= 1);
         if (!boundVars.empty()) {
             this->boundvars = boundVars;
         }
     }
 }
 
-long LoopTree::calculateIterations(long start, long end, long step, llvm::Loop::LoopBounds::Direction direction) {
+uint64_t LoopTree::calculateIterations(uint64_t start,
+    uint64_t end,
+    uint64_t step,
+    llvm::Loop::LoopBounds::Direction direction) {
     double numberOfRepetitions = -255;
 
-    if(direction == llvm::Loop::LoopBounds::Direction::Decreasing){
-        numberOfRepetitions = ceil((double) start / (double) std::abs(end) - (double)end);
-    }else if(direction == llvm::Loop::LoopBounds::Direction::Increasing){
-        numberOfRepetitions = ceil((double) end / (double) std::abs(step) - (double)start);
+    assert(end > 0);
+    assert(step > 0);
+
+    if (direction == llvm::Loop::LoopBounds::Direction::Decreasing) {
+        numberOfRepetitions = ceil(static_cast<double>(start) / static_cast<double>(end) - static_cast<double>(end));
+    } else if (direction == llvm::Loop::LoopBounds::Direction::Increasing) {
+        numberOfRepetitions = ceil(static_cast<double>(end) / static_cast<double>(step) - static_cast<double>(start));
     }
 
-    return (long) numberOfRepetitions;
-
+    return static_cast<uint64_t>(numberOfRepetitions);
 }
 
-long LoopTree::iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds> *lb, long ev) {
-    long boundValue = -1;
+uint64_t LoopTree::iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds> *lb, uint64_t ev) {
+    uint64_t boundValue = -1;
 
     if (lb->has_value()) {
         llvm::Loop::LoopBounds loopBound = lb->value();
@@ -156,9 +184,9 @@ long LoopTree::iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds> *lb
         auto stepValueObj = loopBound.getStepValue();
         auto direction = loopBound.getDirection();
 
-        long startValue = -1;
-        long stepValue = -1;
-        long endValue = -1;
+        uint64_t startValue = -1;
+        uint64_t stepValue = -1;
+        uint64_t endValue = -1;
 
         auto* constantIntEnd   = llvm::dyn_cast<llvm::ConstantInt>(&endValueObj);
         auto* constantIntStart = llvm::dyn_cast<llvm::ConstantInt>(&startValueObj);
@@ -167,7 +195,6 @@ long LoopTree::iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds> *lb
         // Must have constant start + step
         // End may be constant OR replaced by ev when end is NOT constant
         if (constantIntStart && constantIntStep && (constantIntEnd || ev != -1)) {
-
             // Use constant end if valid
             if (constantIntEnd) {
                 endValue = constantIntEnd->getSExtValue();
@@ -180,7 +207,7 @@ long LoopTree::iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds> *lb
 
             boundValue = this->calculateIterations(startValue, endValue, stepValue, direction);
         }
-    }else {
+    } else {
         if (ev != -1) {
             boundValue = ev;
         }
@@ -190,9 +217,9 @@ long LoopTree::iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds> *lb
 }
 
 
-long LoopTree::getLoopUpperBound(llvm::Loop *loop,
+uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
                                  llvm::ScalarEvolution *scalarEvolution) {
-    long boundValue = this->handler->valueIfIndeterminable;
+    uint64_t boundValue = this->handler->valueIfIndeterminable;
 
     // Query the loopbound with scalar evolution
     auto loopBound = loop->getBounds(*scalarEvolution);
@@ -221,7 +248,7 @@ long LoopTree::getLoopUpperBound(llvm::Loop *loop,
             varName = this->boundvars[0]->getName();
 
             // Query the constant from the phasar block mapping
-            long endValue = this->handler->valueIfIndeterminable;
+            uint64_t endValue = this->handler->valueIfIndeterminable;
 
             try {
                 auto &blockMap = this->_variablemapping->at(bbName);
@@ -248,7 +275,7 @@ long LoopTree::getLoopUpperBound(llvm::Loop *loop,
                 llvm::errs() << "\t\tComputed loop bound = " << boundValue << "\n";
                 return boundValue;
             }
-        }else {
+        } else {
             llvm::errs() << "\t\t =>" << "No boundvar determineable" << "\n";
         }
     }
@@ -278,7 +305,6 @@ bool LoopTree::isLeaf() const {
 }
 
 void LoopTree::printPreOrder() {
-
     if (this->isLeaf()) {
         llvm::outs() << "-------------------------------------------\n";
         llvm::outs() << this->mainloop->getName() << " (LEAF) " << "i=" << this->iterations << "\n";
@@ -286,8 +312,8 @@ void LoopTree::printPreOrder() {
         for (auto basicBlock : this->blocks) {
             basicBlock->print(llvm::outs());
         }
-    }else{
-        for (auto subLoopTree: this->subTrees) {
+    } else {
+        for (auto subLoopTree : this->subTrees) {
             subLoopTree->printPreOrder();
         }
         llvm::outs() << "-------------------------------------------\n";
@@ -296,36 +322,32 @@ void LoopTree::printPreOrder() {
         for (auto basicBlock : this->blocks) {
             basicBlock->print(llvm::outs());
         }
-
     }
 }
 
 std::vector<llvm::BasicBlock *> LoopTree::getLatches() {
-    if(this->isLeaf()){
+    if (this->isLeaf()) {
         std::vector<llvm::BasicBlock *> latches;
         latches.push_back(this->mainloop->getLoopLatch());
         return latches;
-    }else{
-        std::vector<llvm::BasicBlock *> latches;
+    }
+    std::vector<llvm::BasicBlock *> latches;
 
-        for (auto subTree : this->subTrees) {
-            std::vector<llvm::BasicBlock *> subTreeLatches = subTree->getLatches();
-            subTreeLatches.push_back(this->mainloop->getLoopLatch());
-            for(auto &latch : subTreeLatches){
-                if(std::find(latches.begin(), latches.end(), latch) == latches.end()){
-                    latches.push_back(latch);
-                }
+    for (auto subTree : this->subTrees) {
+        std::vector<llvm::BasicBlock *> subTreeLatches = subTree->getLatches();
+        subTreeLatches.push_back(this->mainloop->getLoopLatch());
+        for (auto &latch : subTreeLatches) {
+            if (std::find(latches.begin(), latches.end(), latch) == latches.end()) {
+                latches.push_back(latch);
             }
         }
-
-        return latches;
     }
+
+    return latches;
 }
 
-LoopTree::~LoopTree(){
-    for(auto loopTree : this->subTrees){
+LoopTree::~LoopTree() {
+    for (auto loopTree : this->subTrees) {
         delete loopTree;
     }
-
-
 }

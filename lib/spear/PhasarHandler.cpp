@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
+
 #include "PhasarHandler.h"
 
 #include <llvm/IR/BasicBlock.h>
@@ -8,7 +13,13 @@
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/PassPlugin.h>
 
-using namespace llvm;
+#include <utility>
+#include <string>
+#include <memory>
+
+using llvm::Module;
+using llvm::PreservedAnalyses;
+using llvm::ModuleAnalysisManager;
 
 PhasarHandlerPass::PhasarHandlerPass()
     : mod(nullptr),
@@ -32,7 +43,7 @@ PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
 
 void PhasarHandlerPass::runOnModule(llvm::Module &M) {
   // Create a dummy module analysis manager so the regular run() entry point works
-  llvm::ModuleAnalysisManager DummyAM;
+  ModuleAnalysisManager DummyAM;
   run(M, DummyAM);
 }
 
@@ -52,7 +63,7 @@ void PhasarHandlerPass::runAnalysis() {
   // Alternative way of solving an IFDS/IDEProblem:
   auto Result = psr::solveIDEProblem(Problem, HA->getICFG());
 
-  //Result.dumpResults(HA->getICFG(), llvm::outs());
+  // Result.dumpResults(HA->getICFG(), llvm::outs());
 
   AnalysisResult = std::make_unique<psr::OwningSolverResults<
       const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<int64_t>>>(

@@ -23,7 +23,7 @@ class RegisterReader {
     /**
      * Char-Array to safe the file containing all the processor register
      */
-    char* regFile = new char[15];
+    char regFile[32];
 
  public:
         /**

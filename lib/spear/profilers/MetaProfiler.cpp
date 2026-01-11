@@ -8,6 +8,9 @@
 #include "RegisterReader.h"
 #include <chrono>
 #include <sstream>
+#include <string>
+#include <vector>
+#include <cstdio>
 
 json MetaProfiler::profile() {
     json metainformation;
@@ -52,23 +55,21 @@ std::string MetaProfiler::_getCPUName() {
     resstream << result;
 
     std::vector<std::string> seglist;
-    while(std::getline(resstream, segment, ':'))
-    {
+    while (std::getline(resstream, segment, ':')) {
         seglist.push_back(segment);
     }
 
-    if(segment.length() >= 2 ){
+    if (segment.length() >= 2) {
         auto lastchar = segment[segment.length()-1];
         auto firstchar = segment[0];
 
-        if(lastchar == '\n'){
+        if (lastchar == '\n') {
             segment.erase(segment.length()-1);
         }
 
-        if(firstchar == ' '){
+        if (firstchar == ' ') {
             segment.erase(0, 1);
         }
-
     }
 
     return  segment;
@@ -110,31 +111,29 @@ std::string MetaProfiler::_readSystemFile(std::string file) {
     resstream << result;
 
     std::vector<std::string> seglist;
-    while(std::getline(resstream, segment, ':')){
+    while ( std::getline(resstream, segment, ':') ) {
         seglist.push_back(segment);
     }
 
-    if(segment.length() >=2 ){
+    if ( segment.length() >=2 ) {
         auto lastchar = segment[segment.length()-1];
         auto firstchar = segment[0];
 
-        if(lastchar == '\n'){
+        if (lastchar == '\n') {
             segment.erase(segment.length()-1);
         }
 
-        if(firstchar == ' '){
+        if (firstchar == ' ') {
             segment.erase(0, 1);
         }
-
     }
-
 
     return segment;
 }
 
 std::string MetaProfiler::_getTimeStr() {
     std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
-    long tpstr = timepoint.time_since_epoch().count();
+    uint64_t tpstr = timepoint.time_since_epoch().count();
     return std::to_string(tpstr);
 }
 

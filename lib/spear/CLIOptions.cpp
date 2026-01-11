@@ -1,8 +1,13 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
+
 #include "CLIOptions.h"
-
 #include <utility>
+#include <string>
 
-ProfileOptions::ProfileOptions(std::string codePath, int repeatAmount, std::string saveLocation){
+ProfileOptions::ProfileOptions(std::string codePath, int repeatAmount, std::string saveLocation) {
     this->codePath = std::move(codePath);
     this->repeatAmount = repeatAmount;
     this->saveLocation = std::move(saveLocation);
@@ -31,44 +36,45 @@ CLIOptions::CLIOptions() {
     this->profilePath = "";
     this->operation = Operation::UNDEFINED;
     this->mode = Mode::UNDEFINED;
-    this-> format = Format::UNDEFINED;
+    this->format = Format::UNDEFINED;
     this->strategy = Strategy::UNDEFINED;
+    this->deepCalls = DeepCalls::UNDEFINED;
     this->loopBound = -1;
     this->programPath = "";
 }
 
 Mode CLIOptions::strToMode(const std::string& str) {
-    if(str == "program"){
+    if (str == "program") {
         return Mode::PROGRAM;
-    }else if(str == "function"){
+    } else if (str == "function") {
         return Mode::FUNCTION;
-    }else if(str == "instruction"){
+    } else if (str == "instruction") {
         return Mode::INSTRUCTION;
-    }else if(str == "block"){
+    } else if (str == "block") {
         return Mode::BLOCK;
-    }else{
+    } else {
         return Mode::UNDEFINED;
     }
 }
 
 Strategy CLIOptions::strToStrategy(const std::string &str) {
-    if(str == "worst"){
+    if (str == "worst") {
         return Strategy::WORST;
-    }else if(str == "average"){
+    } else if (str == "average") {
         return Strategy::AVERAGE;
-    }else if(str == "worst"){
+    } else if (str == "worst") {
         return Strategy::WORST;
-    }else{
+    } else {
         return Strategy::UNDEFINED;
     }
 }
 
 Format CLIOptions::strToFormat(const std::string &str) {
-    if(str == "plain"){
+    if (str == "plain") {
         return Format::PLAIN;
-    }else if(str == "json"){
+    } else if (str == "json") {
         return Format::JSON;
-    }else{
+    } else {
         return Format::UNDEFINED;
     }
 }
