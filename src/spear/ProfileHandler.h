@@ -1,10 +1,13 @@
-//
-// Created by maximiliank on 18.01.23.
-//
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#ifndef BA_JSONHANDLER_H
-#define BA_JSONHANDLER_H
+#ifndef SRC_SPEAR_PROFILEHANDLER_H_
+#define SRC_SPEAR_PROFILEHANDLER_H_
 
+#include <map>
+#include <string>
 #include <variant>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -18,7 +21,7 @@ using profileMap = std::variant<
  * Class for handling the reading and writing of profiles
  */
 class ProfileHandler {
-public:
+ public:
     /**
      * Default constructor
      */
@@ -51,7 +54,8 @@ public:
      * @param mapping JSON object to be saved
      */
     void setOrCreate(std::string key, json &mapping);
-private:
+
+ private:
     /**
      * Internal profile storage as JSON object
      */
@@ -59,4 +63,4 @@ private:
 };
 
 
-#endif //BA_JSONHANDLER_H
+#endif  // SRC_SPEAR_PROFILEHANDLER_H_

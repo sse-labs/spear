@@ -1,18 +1,24 @@
-#ifndef SPEAR_METAPROFILER_H
-#define SPEAR_METAPROFILER_H
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
+#ifndef SRC_SPEAR_PROFILERS_METAPROFILER_H_
+#define SRC_SPEAR_PROFILERS_METAPROFILER_H_
+
+#include <string>
 #include "profilers/Profiler.h"
 
 /**
  * Component to gather system specific information based on the profiler architecture
  */
 class MetaProfiler : public Profiler {
-public:
+ public:
     /**
      * Generic constructor without purpose
      * @param iterations Repeated measurement iterations
      */
-    MetaProfiler(const int iterations) : Profiler(iterations) {}
+    explicit MetaProfiler(const int iterations) : Profiler(iterations) {}
 
     /**
      * Gather information about the system and return them as JSON object
@@ -31,7 +37,8 @@ public:
      * @return
      */
     std::string stopTime();
-private:
+
+ private:
     /**
      * Parse the cpuinfo file in linux and return the CPU name
      * @return String representing the CPU name
@@ -68,4 +75,4 @@ private:
      */
     static std::string _getTimeStr();
 };
-#endif //SPEAR_METAPROFILER_H
+#endif  // SRC_SPEAR_PROFILERS_METAPROFILER_H_

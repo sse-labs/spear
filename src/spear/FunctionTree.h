@@ -1,16 +1,22 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#ifndef BA_FUNCTIONTREE_H
-#define BA_FUNCTIONTREE_H
+#ifndef SRC_SPEAR_FUNCTIONTREE_H_
+#define SRC_SPEAR_FUNCTIONTREE_H_
 
 
 #include <llvm/IR/Function.h>
-#include "InstructionCategory.h"
+
+#include <string>
+#include <vector>
 
 /**
  * Class representing the call-structure of a function as tree
  */
 class FunctionTree {
-public:
+ public:
     /**
      * All called functions represented as FunctionsTrees
      */
@@ -50,15 +56,13 @@ public:
      */
     std::vector<llvm::Function *> getPreOrderVector();
 
-private:
+ private:
     /**
      * Calculate the functions called by the root-node of the tree
      * @return Returns a vector containing references to the called functions
      */
-    std::vector<llvm::Function *> getCalledFunctions() const;
-
-
+    [[nodiscard]] std::vector<llvm::Function *> getCalledFunctions() const;
 };
 
 
-#endif //BA_FUNCTIONTREE_H
+#endif  // SRC_SPEAR_FUNCTIONTREE_H_

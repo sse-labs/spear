@@ -1,15 +1,22 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
+#ifndef SRC_SPEAR_PROFILERS_CPUPROFILER_H_
+#define SRC_SPEAR_PROFILERS_CPUPROFILER_H_
 
-#ifndef SPEAR_CPUPROFILER_H
-#define SPEAR_CPUPROFILER_H
-
+#include <map>
+#include <string>
+#include <vector>
 #include "Profiler.h"
+
 
 /**
  * Component to profile the systems CPU using the profiler architecture
  */
 class CPUProfiler : public Profiler {
-public:
+ public:
     /**
      * Creates a new Profiler object using the given iterations.
      * Additionally, parses the given profile code directory to creat the mapping
@@ -21,7 +28,7 @@ public:
         for (const auto& entry : std::filesystem::directory_iterator(codePath + "/cpu/compiled/")) {
             if (entry.is_regular_file()) {
                 std::string filename = entry.path().filename().string();
-                filenames.push_back(entry.path().filename().string()); // only the file name, not full path
+                filenames.push_back(entry.path().filename().string());  // only the file name, not full path
             }
         }
 
@@ -36,7 +43,7 @@ public:
      */
     json profile() override;
 
-private:
+ private:
     /**
      * Mapping of instruction names to profile program paths
      */
@@ -47,7 +54,7 @@ private:
      * @param file Path the file is stored at
      * @return Returns vector containing all recorded measurement values
      */
-    [[nodiscard]] std::vector<double> _measureFile(const std::string& file, long runtime = -1) const;
+    [[nodiscard]] std::vector<double> _measureFile(const std::string& file, uint64_t runtime = -1) const;
 
     /**
      * Calculates a moving average on the given data with the specified window
@@ -57,11 +64,15 @@ private:
      */
     std::vector<double> _movingAverage(const std::vector<double>& data, int windowSize);
 
-    double huberMean(const std::vector<double>& data, double delta = 1.0, int maxIterations = 50, double tolerance = 1e-6);
+    double huberMean(
+        const std::vector<double>& data,
+        double delta = 1.0,
+        int maxIterations = 50,
+        double tolerance = 1e-6);
 
     double standard_deviation(const std::vector<double>& v);
 
     double _measureIdle(double durationSeconds) const;
 };
 
-#endif //SPEAR_CPUPROFILER_H
+#endif  // SRC_SPEAR_PROFILERS_CPUPROFILER_H_
