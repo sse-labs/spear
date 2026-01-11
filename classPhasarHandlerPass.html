@@ -76,8 +76,6 @@ $(function() {
   <div class="headertitle"><div class="title">PhasarHandlerPass Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
-
-<p><code>#include &lt;<a class="el" href="PhasarHandler_8h_source.html">PhasarHandler.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for PhasarHandlerPass:</div>
 <div class="dyncontent">
@@ -92,48 +90,23 @@ using&#160;</td><td class="memItemRight" valign="bottom"><b>DomainVal</b> = psr:
 <tr class="separator:a2f3c6beaf9cd7e63fe73e1b8ddc00b89"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abcf4ea02227f9f3a96f702fbb2a8389d" id="r_abcf4ea02227f9f3a96f702fbb2a8389d"><td class="memItemLeft" align="right" valign="top"><a id="abcf4ea02227f9f3a96f702fbb2a8389d" name="abcf4ea02227f9f3a96f702fbb2a8389d"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>BoundVarMap</b> = std::map&lt; std::string, std::map&lt; std::string, std::pair&lt; const llvm::Value *, DomainVal &gt; &gt; &gt;</td></tr>
-<tr class="memdesc:abcf4ea02227f9f3a96f702fbb2a8389d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result: BB_name -&gt; { var_name -&gt; (Value*, domain_val) }. <br /></td></tr>
 <tr class="separator:abcf4ea02227f9f3a96f702fbb2a8389d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a195394de4d638f0045fde17c4f7038be" id="r_a195394de4d638f0045fde17c4f7038be"><td class="memItemLeft" align="right" valign="top"><a id="a195394de4d638f0045fde17c4f7038be" name="a195394de4d638f0045fde17c4f7038be"></a>
 llvm::PreservedAnalyses&#160;</td><td class="memItemRight" valign="bottom"><b>run</b> (llvm::Module &amp;M, llvm::ModuleAnalysisManager &amp;AM)</td></tr>
-<tr class="memdesc:a195394de4d638f0045fde17c4f7038be"><td class="mdescLeft">&#160;</td><td class="mdescRight">New pass manager entry point. <br /></td></tr>
 <tr class="separator:a195394de4d638f0045fde17c4f7038be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4bd491be4930635370e1e8ab5ed34e73" id="r_a4bd491be4930635370e1e8ab5ed34e73"><td class="memItemLeft" align="right" valign="top"><a id="a4bd491be4930635370e1e8ab5ed34e73" name="a4bd491be4930635370e1e8ab5ed34e73"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>dumpState</b> () const</td></tr>
-<tr class="memdesc:a4bd491be4930635370e1e8ab5ed34e73"><td class="mdescLeft">&#160;</td><td class="mdescRight">Debug helper: dump full PhASAR results. <br /></td></tr>
 <tr class="separator:a4bd491be4930635370e1e8ab5ed34e73"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae03895a260ad2eea6a74aad422169a7d" id="r_ae03895a260ad2eea6a74aad422169a7d"><td class="memItemLeft" align="right" valign="top"><a id="ae03895a260ad2eea6a74aad422169a7d" name="ae03895a260ad2eea6a74aad422169a7d"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>runOnModule</b> (llvm::Module &amp;M)</td></tr>
 <tr class="separator:ae03895a260ad2eea6a74aad422169a7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5fdf98052cdd3df915f28b42ac32b632" id="r_a5fdf98052cdd3df915f28b42ac32b632"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classPhasarHandlerPass.html#abcf4ea02227f9f3a96f702fbb2a8389d">BoundVarMap</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#a5fdf98052cdd3df915f28b42ac32b632">queryBoundVars</a> (llvm::Function *Func) const</td></tr>
+<tr class="memitem:a5fdf98052cdd3df915f28b42ac32b632" id="r_a5fdf98052cdd3df915f28b42ac32b632"><td class="memItemLeft" align="right" valign="top"><a id="a5fdf98052cdd3df915f28b42ac32b632" name="a5fdf98052cdd3df915f28b42ac32b632"></a>
+BoundVarMap&#160;</td><td class="memItemRight" valign="bottom"><b>queryBoundVars</b> (llvm::Function *Func) const</td></tr>
 <tr class="separator:a5fdf98052cdd3df915f28b42ac32b632"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>A ModulePass that runs PhASAR's IDELinearConstantAnalysis and provides a helper to query the resulting lattice values for each basic block.</p>
-<p>This is written for the LLVM "new" pass manager (PassBuilder). </p>
-</div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a5fdf98052cdd3df915f28b42ac32b632" name="a5fdf98052cdd3df915f28b42ac32b632"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5fdf98052cdd3df915f28b42ac32b632">&#9670;&#160;</a></span>queryBoundVars()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="classPhasarHandlerPass.html#abcf4ea02227f9f3a96f702fbb2a8389d">BoundVarMap</a> PhasarHandlerPass::queryBoundVars </td>
-          <td>(</td>
-          <td class="paramtype">llvm::Function *&#160;</td>
-          <td class="paramname"><em>Func</em></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Query all "bound variables" in a function, grouped per basic block. Requires that <code><a class="el" href="classPhasarHandlerPass.html#a195394de4d638f0045fde17c4f7038be" title="New pass manager entry point.">run()</a></code> (and hence <code>runAnalysis()</code>) has been executed. </p>
-
-</div>
-</div>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>src/spear/<a class="el" href="PhasarHandler_8h_source.html">PhasarHandler.h</a></li>
 </ul>

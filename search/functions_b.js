@@ -1,11 +1,9 @@
 var searchData=
 [
-  ['read_0',['read',['../classProfileHandler.html#a2af31ac8536f4415244d87dbcd9daf89',1,'ProfileHandler']]],
-  ['readmultiplier_1',['readMultiplier',['../classRegisterReader.html#a119b1f2fa4619881dd10e704650c1ca3',1,'RegisterReader']]],
-  ['registerreader_2',['RegisterReader',['../classRegisterReader.html#ae6c04ca1a23d22c2dcd5adcde62d6189',1,'RegisterReader']]],
-  ['removeloopedgesfromsubgraphs_3',['removeLoopEdgesFromSubGraphs',['../classLoopNode.html#ae2c48a161e3fca624295b9c608c6e560',1,'LoopNode']]],
-  ['removenode_4',['removeNode',['../classProgramGraph.html#a3d7172355f93bc903a9a3f6bdf215451',1,'ProgramGraph']]],
-  ['removeorphanededges_5',['removeOrphanedEdges',['../classProgramGraph.html#afc10742190eb8fa0610e975032d71491',1,'ProgramGraph']]],
-  ['replacenodeswithloopnode_6',['replaceNodesWithLoopNode',['../classProgramGraph.html#a2463f6a911a85ed865ad09c26dc5c3a6',1,'ProgramGraph']]],
-  ['run_7',['run',['../classPhasarHandlerPass.html#a195394de4d638f0045fde17c4f7038be',1,'PhasarHandlerPass']]]
+  ['setorcreate_0',['setOrCreate',['../classProfileHandler.html#af0703d6672d08a13182ee97c48b69c40',1,'ProfileHandler']]],
+  ['starttime_1',['startTime',['../classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669',1,'MetaProfiler']]],
+  ['stoptime_2',['stopTime',['../classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e',1,'MetaProfiler']]],
+  ['strtoformat_3',['strToFormat',['../classCLIOptions.html#a7d86e768c4d52ce0dccf0783ec2eddcc',1,'CLIOptions']]],
+  ['strtomode_4',['strToMode',['../classCLIOptions.html#a3c68e58b2f5d054016f81de1658c247f',1,'CLIOptions']]],
+  ['strtostrategy_5',['strToStrategy',['../classCLIOptions.html#a66c3db55a93b60e97754b4057bd28fda',1,'CLIOptions']]]
 ];

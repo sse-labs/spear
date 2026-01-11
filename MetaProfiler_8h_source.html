@@ -81,42 +81,49 @@ $(document).ready(function() { init_codefold(0); });
   <div class="headertitle"><div class="title">MetaProfiler.h</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#ifndef SPEAR_METAPROFILER_H</span></div>
-<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#define SPEAR_METAPROFILER_H</span></div>
-<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &quot;profilers/Profiler.h&quot;</span></div>
+<div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">/*</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="comment"> * Copyright (c) 2026 Maximilian Krebs</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="comment"> * All rights reserved.</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="comment">*/</span></div>
 <div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
-<div class="foldopen" id="foldopen00009" data-start="{" data-end="};">
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno"><a class="line" href="classMetaProfiler.html">    9</a></span><span class="keyword">class </span><a class="code hl_class" href="classMetaProfiler.html">MetaProfiler</a> : <span class="keyword">public</span> <a class="code hl_class" href="classProfiler.html">Profiler</a> {</div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno"><a class="line" href="classMetaProfiler.html#a74e3e1e2dd423b066b17eb9c753642d7">   15</a></span>    <a class="code hl_function" href="classMetaProfiler.html#a74e3e1e2dd423b066b17eb9c753642d7">MetaProfiler</a>(<span class="keyword">const</span> <span class="keywordtype">int</span> iterations) : <a class="code hl_class" href="classProfiler.html">Profiler</a>(iterations) {}</div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="classMetaProfiler.html#a9bf3701e464313e7d4fa9c5f99ba4a69">   21</a></span>    json <a class="code hl_function" href="classMetaProfiler.html#a9bf3701e464313e7d4fa9c5f99ba4a69">profile</a>() <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#ifndef SRC_SPEAR_PROFILERS_METAPROFILER_H_</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#define SRC_SPEAR_PROFILERS_METAPROFILER_H_</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;string&gt;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &quot;profilers/Profiler.h&quot;</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="foldopen" id="foldopen00015" data-start="{" data-end="};">
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno"><a class="line" href="classMetaProfiler.html">   15</a></span><span class="keyword">class </span><a class="code hl_class" href="classMetaProfiler.html">MetaProfiler</a> : <span class="keyword">public</span> <a class="code hl_class" href="classProfiler.html">Profiler</a> {</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="classMetaProfiler.html#a74e3e1e2dd423b066b17eb9c753642d7">   21</a></span>    <span class="keyword">explicit</span> <a class="code hl_function" href="classMetaProfiler.html#a74e3e1e2dd423b066b17eb9c753642d7">MetaProfiler</a>(<span class="keyword">const</span> <span class="keywordtype">int</span> iterations) : <a class="code hl_class" href="classProfiler.html">Profiler</a>(iterations) {}</div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno"><a class="line" href="classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669">   27</a></span>    std::string <a class="code hl_function" href="classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669">startTime</a>();</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno"><a class="line" href="classMetaProfiler.html#a9bf3701e464313e7d4fa9c5f99ba4a69">   27</a></span>    json <a class="code hl_function" href="classMetaProfiler.html#a9bf3701e464313e7d4fa9c5f99ba4a69">profile</a>() <span class="keyword">override</span>;</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e">   33</a></span>    std::string <a class="code hl_function" href="classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e">stopTime</a>();</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keyword">static</span> std::string _getCPUName();</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669">   33</a></span>    std::string <a class="code hl_function" href="classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669">startTime</a>();</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e">   39</a></span>    std::string <a class="code hl_function" href="classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e">stopTime</a>();</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keyword">static</span> std::string _getArchitecture();</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keyword">static</span> std::string _getNumberOfCores();</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span> </div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="keyword">static</span> <span class="keywordtype">double</span> _getRaplUnit();</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keyword">static</span> std::string _readSystemFile(std::string file);</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="keyword">static</span> std::string _getTimeStr();</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>};</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> <span class="keyword">private</span>:</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keyword">static</span> std::string _getCPUName();</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keyword">static</span> std::string _getArchitecture();</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <span class="keyword">static</span> std::string _getNumberOfCores();</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="keyword">static</span> <span class="keywordtype">double</span> _getRaplUnit();</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="keyword">static</span> std::string _readSystemFile(std::string file);</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <span class="keyword">static</span> std::string _getTimeStr();</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>};</div>
 </div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span><span class="preprocessor">#endif </span><span class="comment">//SPEAR_METAPROFILER_H</span></div>
-<div class="ttc" id="aclassMetaProfiler_html"><div class="ttname"><a href="classMetaProfiler.html">MetaProfiler</a></div><div class="ttdef"><b>Definition</b> MetaProfiler.h:9</div></div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span><span class="preprocessor">#endif  </span><span class="comment">// SRC_SPEAR_PROFILERS_METAPROFILER_H_</span></div>
+<div class="ttc" id="aclassMetaProfiler_html"><div class="ttname"><a href="classMetaProfiler.html">MetaProfiler</a></div><div class="ttdef"><b>Definition</b> MetaProfiler.h:15</div></div>
 <div class="ttc" id="aclassMetaProfiler_html_a2e815749d86ee9b5f0cbec8d5db67f1e"><div class="ttname"><a href="classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e">MetaProfiler::stopTime</a></div><div class="ttdeci">std::string stopTime()</div></div>
 <div class="ttc" id="aclassMetaProfiler_html_a49aabe8bd6f2c9f58f5ddc9358afc669"><div class="ttname"><a href="classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669">MetaProfiler::startTime</a></div><div class="ttdeci">std::string startTime()</div></div>
-<div class="ttc" id="aclassMetaProfiler_html_a74e3e1e2dd423b066b17eb9c753642d7"><div class="ttname"><a href="classMetaProfiler.html#a74e3e1e2dd423b066b17eb9c753642d7">MetaProfiler::MetaProfiler</a></div><div class="ttdeci">MetaProfiler(const int iterations)</div><div class="ttdef"><b>Definition</b> MetaProfiler.h:15</div></div>
+<div class="ttc" id="aclassMetaProfiler_html_a74e3e1e2dd423b066b17eb9c753642d7"><div class="ttname"><a href="classMetaProfiler.html#a74e3e1e2dd423b066b17eb9c753642d7">MetaProfiler::MetaProfiler</a></div><div class="ttdeci">MetaProfiler(const int iterations)</div><div class="ttdef"><b>Definition</b> MetaProfiler.h:21</div></div>
 <div class="ttc" id="aclassMetaProfiler_html_a9bf3701e464313e7d4fa9c5f99ba4a69"><div class="ttname"><a href="classMetaProfiler.html#a9bf3701e464313e7d4fa9c5f99ba4a69">MetaProfiler::profile</a></div><div class="ttdeci">json profile() override</div></div>
-<div class="ttc" id="aclassProfiler_html"><div class="ttname"><a href="classProfiler.html">Profiler</a></div><div class="ttdef"><b>Definition</b> Profiler.h:15</div></div>
+<div class="ttc" id="aclassProfiler_html"><div class="ttname"><a href="classProfiler.html">Profiler</a></div><div class="ttdef"><b>Definition</b> Profiler.h:20</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

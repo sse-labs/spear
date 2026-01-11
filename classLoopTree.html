@@ -85,9 +85,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a0d7c4ff00d14caa2313e146c3ee0ba8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad97586e2ef41e7fa8f720ee920b3db34" id="r_ad97586e2ef41e7fa8f720ee920b3db34"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34">printPreOrder</a> ()</td></tr>
 <tr class="separator:ad97586e2ef41e7fa8f720ee920b3db34"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afd7f378b1b1700b8079f8f4253e31feb" id="r_afd7f378b1b1700b8079f8f4253e31feb"><td class="memItemLeft" align="right" valign="top"><a id="afd7f378b1b1700b8079f8f4253e31feb" name="afd7f378b1b1700b8079f8f4253e31feb"></a>
-long&#160;</td><td class="memItemRight" valign="bottom"><b>getLoopUpperBound</b> (llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution)</td></tr>
-<tr class="separator:afd7f378b1b1700b8079f8f4253e31feb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae7d5568d0df888a376a205f78870907a" id="r_ae7d5568d0df888a376a205f78870907a"><td class="memItemLeft" align="right" valign="top"><a id="ae7d5568d0df888a376a205f78870907a" name="ae7d5568d0df888a376a205f78870907a"></a>
+uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>getLoopUpperBound</b> (llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution)</td></tr>
+<tr class="separator:ae7d5568d0df888a376a205f78870907a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5bbe89a53070d2ca8c76a1cccdd221fa" id="r_a5bbe89a53070d2ca8c76a1cccdd221fa"><td class="memItemLeft" align="right" valign="top">std::vector&lt; llvm::BasicBlock * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa">getLatches</a> ()</td></tr>
 <tr class="separator:a5bbe89a53070d2ca8c76a1cccdd221fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac7a3306c81d41d6cea849992f3fec9ce" id="r_ac7a3306c81d41d6cea849992f3fec9ce"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce">~LoopTree</a> ()</td></tr>
@@ -103,8 +103,8 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a659874a23317ce521464fae13c332050"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a15b900fb894985bdc881842d75bd5f9a" id="r_a15b900fb894985bdc881842d75bd5f9a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classLLVMHandler.html">LLVMHandler</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a">handler</a></td></tr>
 <tr class="separator:a15b900fb894985bdc881842d75bd5f9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afe460225dfb3ad4c58468bd4a1293682" id="r_afe460225dfb3ad4c58468bd4a1293682"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#afe460225dfb3ad4c58468bd4a1293682">iterations</a></td></tr>
-<tr class="separator:afe460225dfb3ad4c58468bd4a1293682"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af4addbd8bbbc207cb1d7735a785782e4" id="r_af4addbd8bbbc207cb1d7735a785782e4"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopTree.html#af4addbd8bbbc207cb1d7735a785782e4">iterations</a></td></tr>
+<tr class="separator:af4addbd8bbbc207cb1d7735a785782e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aac01a15ce0d1848d3101b691f9ff6923" id="r_aac01a15ce0d1848d3101b691f9ff6923"><td class="memItemLeft" align="right" valign="top"><a id="aac01a15ce0d1848d3101b691f9ff6923" name="aac01a15ce0d1848d3101b691f9ff6923"></a>
 std::vector&lt; const llvm::Value * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>boundvars</b></td></tr>
 <tr class="separator:aac01a15ce0d1848d3101b691f9ff6923"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -252,14 +252,14 @@ std::vector&lt; const llvm::Value * &gt;&#160;</td><td class="memItemRight" vali
 
 </div>
 </div>
-<a id="afe460225dfb3ad4c58468bd4a1293682" name="afe460225dfb3ad4c58468bd4a1293682"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afe460225dfb3ad4c58468bd4a1293682">&#9670;&#160;</a></span>iterations</h2>
+<a id="af4addbd8bbbc207cb1d7735a785782e4" name="af4addbd8bbbc207cb1d7735a785782e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af4addbd8bbbc207cb1d7735a785782e4">&#9670;&#160;</a></span>iterations</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">long LoopTree::iterations</td>
+          <td class="memname">uint64_t LoopTree::iterations</td>
         </tr>
       </table>
 </div><div class="memdoc">

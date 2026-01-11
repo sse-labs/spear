@@ -81,38 +81,42 @@ $(document).ready(function() { init_codefold(0); });
   <div class="headertitle"><div class="title">Color.h</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#ifndef SPEAR_COLOR_H</span></div>
-<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#define SPEAR_COLOR_H</span></div>
-<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span> </div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &lt;string&gt;</span></div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span> </div>
-<div class="foldopen" id="foldopen00011" data-start="{" data-end="};">
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno"><a class="line" href="classColor.html">   11</a></span><span class="keyword">class </span><a class="code hl_class" href="classColor.html">Color</a> {</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno"><a class="line" href="classColor.html#a66cc90002e84ded9053aa91c9678f8e6">   19</a></span>    <span class="keywordtype">unsigned</span> <a class="code hl_variable" href="classColor.html#a66cc90002e84ded9053aa91c9678f8e6">red</a>;</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    <span class="keywordtype">unsigned</span> blue;</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>    <span class="keywordtype">unsigned</span> green;</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno"><a class="line" href="classColor.html#a05db4332a7f68a7ba431968131d2b92c">   30</a></span>    <a class="code hl_function" href="classColor.html#a05db4332a7f68a7ba431968131d2b92c">Color</a>(<span class="keywordtype">unsigned</span> r, <span class="keywordtype">unsigned</span> g, <span class="keywordtype">unsigned</span> b);</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno"><a class="line" href="classColor.html#aaf9a34dbdd3f0f0f76eb4bedccb8ff7a">   40</a></span>    <span class="keyword">static</span> <a class="code hl_class" href="classColor.html">Color</a> <a class="code hl_function" href="classColor.html#aaf9a34dbdd3f0f0f76eb4bedccb8ff7a">interpolate</a>(<a class="code hl_class" href="classColor.html">Color</a> a, <a class="code hl_class" href="classColor.html">Color</a> b, <span class="keywordtype">double</span> amount);</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno"><a class="line" href="classColor.html#acde7256d58dce471ba0c34252e2347cf">   48</a></span>    <span class="keyword">static</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> <a class="code hl_function" href="classColor.html#acde7256d58dce471ba0c34252e2347cf">toHexVal</a>(<a class="code hl_class" href="classColor.html">Color</a> c);</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno"><a class="line" href="classColor.html#a794c614d79c6abea51f506dfb4989616">   56</a></span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="classColor.html#a794c614d79c6abea51f506dfb4989616">toHtmlColor</a>(<a class="code hl_class" href="classColor.html">Color</a> c);</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>};</div>
+<div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">/*</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="comment"> * Copyright (c) 2026 Maximilian Krebs</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="comment"> * All rights reserved.</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="comment">*/</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#ifndef SRC_SPEAR_COLOR_H_</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#define SRC_SPEAR_COLOR_H_</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;cstdint&gt;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &lt;string&gt;</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="foldopen" id="foldopen00016" data-start="{" data-end="};">
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno"><a class="line" href="classColor.html">   16</a></span><span class="keyword">class </span><a class="code hl_class" href="classColor.html">Color</a> {</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno"><a class="line" href="classColor.html#a66cc90002e84ded9053aa91c9678f8e6">   23</a></span>    <span class="keywordtype">unsigned</span> <a class="code hl_variable" href="classColor.html#a66cc90002e84ded9053aa91c9678f8e6">red</a>;</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="keywordtype">unsigned</span> blue;</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <span class="keywordtype">unsigned</span> green;</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno"><a class="line" href="classColor.html#a05db4332a7f68a7ba431968131d2b92c">   34</a></span>    <a class="code hl_function" href="classColor.html#a05db4332a7f68a7ba431968131d2b92c">Color</a>(<span class="keywordtype">unsigned</span> r, <span class="keywordtype">unsigned</span> g, <span class="keywordtype">unsigned</span> b);</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno"><a class="line" href="classColor.html#aaf9a34dbdd3f0f0f76eb4bedccb8ff7a">   44</a></span>    <span class="keyword">static</span> <a class="code hl_class" href="classColor.html">Color</a> <a class="code hl_function" href="classColor.html#aaf9a34dbdd3f0f0f76eb4bedccb8ff7a">interpolate</a>(<a class="code hl_class" href="classColor.html">Color</a> a, <a class="code hl_class" href="classColor.html">Color</a> b, <span class="keywordtype">double</span> amount);</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno"><a class="line" href="classColor.html#a57dc88eab08a1273814222481a71aefc">   52</a></span>    <span class="keyword">static</span> uint64_t <a class="code hl_function" href="classColor.html#a57dc88eab08a1273814222481a71aefc">toHexVal</a>(<a class="code hl_class" href="classColor.html">Color</a> c);</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno"><a class="line" href="classColor.html#a794c614d79c6abea51f506dfb4989616">   60</a></span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="classColor.html#a794c614d79c6abea51f506dfb4989616">toHtmlColor</a>(<a class="code hl_class" href="classColor.html">Color</a> c);</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>};</div>
 </div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span><span class="preprocessor">#endif </span><span class="comment">//SPEAR_COLOR_H</span></div>
-<div class="ttc" id="aclassColor_html"><div class="ttname"><a href="classColor.html">Color</a></div><div class="ttdef"><b>Definition</b> Color.h:11</div></div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span> </div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span><span class="preprocessor">#endif  </span><span class="comment">// SRC_SPEAR_COLOR_H_</span></div>
+<div class="ttc" id="aclassColor_html"><div class="ttname"><a href="classColor.html">Color</a></div><div class="ttdef"><b>Definition</b> Color.h:16</div></div>
 <div class="ttc" id="aclassColor_html_a05db4332a7f68a7ba431968131d2b92c"><div class="ttname"><a href="classColor.html#a05db4332a7f68a7ba431968131d2b92c">Color::Color</a></div><div class="ttdeci">Color(unsigned r, unsigned g, unsigned b)</div></div>
-<div class="ttc" id="aclassColor_html_a66cc90002e84ded9053aa91c9678f8e6"><div class="ttname"><a href="classColor.html#a66cc90002e84ded9053aa91c9678f8e6">Color::red</a></div><div class="ttdeci">unsigned red</div><div class="ttdef"><b>Definition</b> Color.h:19</div></div>
+<div class="ttc" id="aclassColor_html_a57dc88eab08a1273814222481a71aefc"><div class="ttname"><a href="classColor.html#a57dc88eab08a1273814222481a71aefc">Color::toHexVal</a></div><div class="ttdeci">static uint64_t toHexVal(Color c)</div></div>
+<div class="ttc" id="aclassColor_html_a66cc90002e84ded9053aa91c9678f8e6"><div class="ttname"><a href="classColor.html#a66cc90002e84ded9053aa91c9678f8e6">Color::red</a></div><div class="ttdeci">unsigned red</div><div class="ttdef"><b>Definition</b> Color.h:23</div></div>
 <div class="ttc" id="aclassColor_html_a794c614d79c6abea51f506dfb4989616"><div class="ttname"><a href="classColor.html#a794c614d79c6abea51f506dfb4989616">Color::toHtmlColor</a></div><div class="ttdeci">static std::string toHtmlColor(Color c)</div></div>
 <div class="ttc" id="aclassColor_html_aaf9a34dbdd3f0f0f76eb4bedccb8ff7a"><div class="ttname"><a href="classColor.html#aaf9a34dbdd3f0f0f76eb4bedccb8ff7a">Color::interpolate</a></div><div class="ttdeci">static Color interpolate(Color a, Color b, double amount)</div></div>
-<div class="ttc" id="aclassColor_html_acde7256d58dce471ba0c34252e2347cf"><div class="ttname"><a href="classColor.html#acde7256d58dce471ba0c34252e2347cf">Color::toHexVal</a></div><div class="ttdeci">static unsigned long toHexVal(Color c)</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
