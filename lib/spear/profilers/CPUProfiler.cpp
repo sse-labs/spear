@@ -1,8 +1,18 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
+
 #include "profilers/CPUProfiler.h"
 
-#include <iostream>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <vector>
+#include <limits>
+#include <cstdio>
+#include <string>
+#include <map>
+#include <iostream>
 
 #include "RegisterReader.h"
 
@@ -20,7 +30,7 @@ json CPUProfiler::profile() {
 
     /*double sum = 0;
     for (const auto& [key, value] : measurements) {
-        //std::vector<double> filtered = _movingAverage(value, this->iterations/100);
+        // std::vector<double> filtered = _movingAverage(value, this->iterations/100);
         double mean = std::accumulate(value.begin(), value.end(), 0.0) / (double) value.size();
         results[key] = mean;
 
@@ -91,7 +101,7 @@ std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data,
     return result;
 }
 
-std::vector<double> CPUProfiler::_measureFile(const std::string& file, long runtime) const {
+std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t runtime) const {
     const int NUM_CORES = 12;
 
     std::vector<double> results;
@@ -101,15 +111,15 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, long runt
     RegisterReader powReader(0);
 
     // Shared memory for initial energy values of each child
-    double* sharedEnergyBefore = (double*) mmap(nullptr,
+    double* sharedEnergyBefore = reinterpret_cast<double*>(mmap(nullptr,
                                                 NUM_CORES * sizeof(double),
                                                 PROT_READ | PROT_WRITE,
                                                 MAP_SHARED | MAP_ANONYMOUS,
-                                                -1, 0);
+                                                -1, 0));
 
     char* args[] = { const_cast<char*>(file.c_str()), nullptr };
 
-    long iters = (runtime != -1) ? runtime : this->iterations;
+    uint64_t iters = (runtime != -1) ? runtime : this->iterations;
 
     // Pin parent to a dedicated core (optional)
     cpu_set_t parentMask;
@@ -120,8 +130,7 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, long runt
         exit(1);
     }
 
-    for (long it = 0; it < iters; /* manual increment inside */) {
-
+    for (uint64_t it = 0; it < iters; /* manual increment inside */) {
         pid_t pids[NUM_CORES];
         bool validIteration = true;    // assume good; flip to false on invalid diff
 
@@ -218,9 +227,9 @@ double CPUProfiler::huberMean(const std::vector<double>& data, double delta, int
             double abs_r = std::fabs(r);
 
             if (abs_r <= delta)
-                w = 1.0;  // full weight
+                w = 1.0;   // full weight
             else
-                w = delta / abs_r; // down-weight outliers
+                w = delta / abs_r;  // down-weight outliers
 
             numerator   += w * x;
             denominator += w;
@@ -235,7 +244,7 @@ double CPUProfiler::huberMean(const std::vector<double>& data, double delta, int
         mu = newMu;  // update estimate
     }
 
-    return mu; // return after maxIterations if not converged
+    return mu;  // return after maxIterations if not converged
 }
 
 
@@ -250,5 +259,5 @@ double CPUProfiler::standard_deviation(const std::vector<double>& v) {
             return acc + (x - mean) * (x - mean);
         });
 
-    return std::sqrt(sq_sum / (v.size() - 1)); // sample stdev
+    return std::sqrt(sq_sum / (v.size() - 1));  // sample stdev
 }

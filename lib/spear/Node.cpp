@@ -1,3 +1,13 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
+
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cfloat>
+
 #include "ProgramGraph.h"
 #include "DeMangler.h"
 #include "PhasarHandler.h"
@@ -5,19 +15,19 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
 
-//Create a Node by setting the parent property with the given ProgramGraph
-Node::Node(ProgramGraph *parent, AnalysisStrategy::Strategy strategy) {
+// Create a Node by setting the parent property with the given ProgramGraph
+Node::Node(ProgramGraph *parent, AnalysisStrategy::Strategy strategy) : block(nullptr), energy(0) {
     this->parent = parent;
     this->strategy = strategy;
 }
 
 std::string Node::toString() {
-    //Init the output-string
+    // Init the output-string
     std::string output;
 
     output.append(block->getName().str());
 
-    //Return the string
+    // Return the string
     return output;
 }
 
@@ -36,7 +46,6 @@ std::string Node::getSourceVarName(llvm::Value *V, llvm::Instruction *Ctx) {
 
     for (auto &BB : *F) {
         for (auto &I : BB) {
-
             if (auto *DbgVal = llvm::dyn_cast<llvm::DbgValueInst>(&I)) {
                 if (DbgVal->getValue() == V) {
                     return DbgVal->getVariable()->getName().str();
@@ -64,7 +73,7 @@ bool Node::evalICMP(llvm::ICmpInst *ICmp, llvm::ConstantInt *left, llvm::Constan
     llvm::APSInt LV(left->getValue());
     llvm::APSInt RV(right->getValue());
 
-    // Signedness depends on predicate
+    //  Signedness depends on predicate
     bool isSigned = llvm::CmpInst::isSigned(ICmp->getPredicate());
     LV.setIsSigned(isSigned);
     RV.setIsSigned(isSigned);
@@ -106,13 +115,13 @@ const DomainVal* Node::findDeducedValue(BoundVarMap *resultsAtBlock, std::string
     return nullptr;
 }
 
-//Calculate the energy of this Node. Is capable of dealing with if-conditions
+// Calculate the energy of this Node. Is capable of dealing with if-conditions
 double Node::getNodeEnergy(LLVMHandler *handler) {
     auto context = llvm::LLVMContext();
-    //Init the result of the calculation
+    // Init the result of the calculation
     double sum = 0.0;
 
-    //Calculate the adjacent nodes of this node
+    // Calculate the adjacent nodes of this node
     auto adjacentNodes = this->getAdjacentNodes();
 
     llvm::BasicBlock *bToTake = nullptr;
@@ -146,12 +155,12 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
                 llvm::outs() << "\t\t lhs => ";
                 lhs->print(llvm::outs());
                 llvm::outs() << "\n";
-                //llvm::outs() << "(" << this->getSourceVarName(lhs, ICmp) << ")";
+                // llvm::outs() << "(" << this->getSourceVarName(lhs, ICmp) << ")";
                 llvm::outs() << "\n";
                 llvm::outs() << "\t\t rhs => ";
                 rhs->print(llvm::outs());
                 llvm::outs() << "\n";
-                //llvm::outs() << "(" << this->getSourceVarName(rhs, ICmp) << ")";
+                // llvm::outs() << "(" << this->getSourceVarName(rhs, ICmp) << ")";
 
                 if (auto *LCI = llvm::dyn_cast<llvm::ConstantInt>(lhs)) {
                     if (auto *RCI = llvm::dyn_cast<llvm::ConstantInt>(rhs)) {
@@ -161,7 +170,7 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
                         bToTake = this->getPathName(BI, res);
 
                         llvm::outs() << "\t\t Branch name to take => " << bToTake->getName().str() << "\n";
-                    }else {
+                    } else {
                         llvm::outs() << "\tLHS constant, RHS not" << "\n";
                         auto lconstval = llvm::dyn_cast<llvm::ConstantInt>(lhs);
                         std::string rvarname = this->getSourceVarName(rhs, ICmp);
@@ -172,9 +181,12 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
 
                         if (rval != nullptr) {
                             llvm::outs() << rvarname << "(" << *rval << ")" "\n";
-                            // Convert the value to constantint so we can evaluate it...
+                            //  Convert the value to constantint so we can evaluate it...
                             llvm::LLVMContext lc;
-                            llvm::ConstantInt *alternativeRCI = llvm::ConstantInt::get(llvm::Type::getInt64Ty(lc), *rval->getValueOrNull(), true);
+                            llvm::ConstantInt *alternativeRCI = llvm::ConstantInt::get(
+                                llvm::Type::getInt64Ty(lc),
+                                *rval->getValueOrNull(),
+                                true);
 
                             auto res = this->evalICMP(ICmp, lconstval, alternativeRCI);
                             bToTake = this->getPathName(BI, res);
@@ -182,7 +194,7 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
                             llvm::outs() << "\t\t Branch name to take => " << bToTake->getName().str() << "\n";
                         }
                     }
-                }else {
+                } else {
                     if (auto *RCI = llvm::dyn_cast<llvm::ConstantInt>(rhs)) {
                         llvm::outs() << "\tLHS not, RHS constant" << "\n";
                         auto rconstval = llvm::dyn_cast<llvm::ConstantInt>(rhs);
@@ -194,16 +206,19 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
 
                         if (lval != nullptr) {
                             llvm::outs() << lvarname << "(" << *lval << ")" "\n";
-                            // Convert the value to constantint so we can evaluate it...
+                            //  Convert the value to constantint so we can evaluate it...
                             llvm::LLVMContext lc;
-                            llvm::ConstantInt *alternativeRCI = llvm::ConstantInt::get(llvm::Type::getInt64Ty(lc), *lval->getValueOrNull(), true);
+                            llvm::ConstantInt *alternativeRCI = llvm::ConstantInt::get(
+                                llvm::Type::getInt64Ty(lc),
+                                *lval->getValueOrNull(),
+                                true);
 
                             auto res = this->evalICMP(ICmp, rconstval, alternativeRCI);
                             bToTake = this->getPathName(BI, res);
 
                             llvm::outs() << "\t\t Branch name to take => " << bToTake->getName().str() << "\n";
                         }
-                    }else {
+                    } else {
                         llvm::outs() << "\tBoth variable" << "\n";
                     }
                 }
@@ -219,8 +234,11 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
     }
 
     if (bToTake != nullptr) {
-        // We deduced the next block that will be taken
-        auto nToLookAt = std::find_if(adjacentNodes.begin(), adjacentNodes.end(), [bToTake](Node *n) {
+        //  We deduced the next block that will be taken
+        auto nToLookAt = std::find_if(
+            adjacentNodes.begin(),
+            adjacentNodes.end(),
+            [bToTake](Node *n) {
             return n->block->getName() == bToTake->getName();
         });
 
@@ -230,27 +248,27 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
             double actualNodeEnergy = actualNode->getNodeEnergy(handler);
             sum += actualNodeEnergy;
         }
-    }else {
-        // We could not find the next path
+    } else {
+        //  We could not find the next path
 
-        //If there are adjacent nodes...
-        if(!adjacentNodes.empty()){
-            //Find the smallest energy-value-path of all the adjacent nodes
-            //Init the minimal pathvalue
+        // If there are adjacent nodes...
+        if (!adjacentNodes.empty()) {
+            // Find the smallest energy-value-path of all the adjacent nodes
+            // Init the minimal pathvalue
             auto compare = 0.00;
 
             switch (this->strategy) {
                 case AnalysisStrategy::WORSTCASE :
                      compare = DBL_MIN;
 
-                    //Iterate over the adjacent nodes
-                    for(auto node : adjacentNodes){
-                        //Calculate the sum of the node
-                        if(!node->isExceptionFollowUp()){
+                    // Iterate over the adjacent nodes
+                    for (auto node : adjacentNodes) {
+                        // Calculate the sum of the node
+                        if (!node->isExceptionFollowUp()) {
                             double locsum = node->getNodeEnergy(handler);
 
-                            //Set the minimal energy value if the calculated energy is smaller than the current minimum
-                            if (locsum > compare){
+                            // Set the minimal energy value if the calculated energy is smaller than the current minimum
+                            if (locsum > compare) {
                                 compare = locsum;
                             }
                         }
@@ -261,14 +279,14 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
                 case AnalysisStrategy::BESTCASE :
                     compare = DBL_MAX;
 
-                    //Iterate over the adjacent nodes
-                    for(auto node : adjacentNodes){
-                        //Calculate the sum of the node
+                    // Iterate over the adjacent nodes
+                    for (auto node : adjacentNodes) {
+                        // Calculate the sum of the node
                         double locsum = node->getNodeEnergy(handler);
 
-                        //Set the minimal energy value if the calculated energy is smaller than the current minimum
-                        if(!node->isExceptionFollowUp()){
-                            if (locsum < compare){
+                        // Set the minimal energy value if the calculated energy is smaller than the current minimum
+                        if (!node->isExceptionFollowUp()) {
+                            if (locsum < compare) {
                                 compare = locsum;
                             }
                         }
@@ -279,31 +297,31 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
                 case AnalysisStrategy::AVERAGECASE :
                     double locsum = 0.00;
 
-                    if(adjacentNodes.size() > 1){
+                    if (adjacentNodes.size() > 1) {
                         double leftSum = adjacentNodes[0]->getNodeEnergy(handler);
                         double rightSum = adjacentNodes[1]->getNodeEnergy(handler);
 
-                        if(handler->inefficient <= handler->efficient){
-                            if(adjacentNodes[0]->isExceptionFollowUp()){
+                        if (handler->inefficient <= handler->efficient) {
+                            if (adjacentNodes[0]->isExceptionFollowUp()) {
                                 locsum += rightSum;
-                            }else if(adjacentNodes[1]->isExceptionFollowUp()){
+                            } else if (adjacentNodes[1]->isExceptionFollowUp()) {
                                 locsum += leftSum;
-                            }else{
+                            } else {
                                 locsum += std::max(leftSum, rightSum);
                                 handler->inefficient++;
                             }
 
-                        }else{
-                            if(adjacentNodes[0]->isExceptionFollowUp()){
+                        } else {
+                            if (adjacentNodes[0]->isExceptionFollowUp()) {
                                 locsum += rightSum;
-                            }else if(adjacentNodes[1]->isExceptionFollowUp()){
+                            } else if (adjacentNodes[1]->isExceptionFollowUp()) {
                                 locsum += leftSum;
-                            }else{
+                            } else {
                                 locsum += std::min(leftSum, rightSum);
                                 handler->efficient++;
                             }
                         }
-                    }else{
+                    } else {
                         locsum = adjacentNodes[0]->getNodeEnergy(handler);
                     }
                     sum += locsum;
@@ -315,115 +333,115 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
 
     auto nodename = this->block->getName();
 
-    //Calculate the energy-cost of this node's basic blocks and add it to the sum
+    // Calculate the energy-cost of this node's basic blocks and add it to the sum
     double localEnergy = handler->getNodeSum(this);
     sum = sum + localEnergy;
 
     this->energy = localEnergy;
 
-    //Return the calculated energy
+    // Return the calculated energy
     return sum;
 }
 
-//Calculate the adjacent Nodes
+// Calculate the adjacent Nodes
 std::vector<Node *> Node::getAdjacentNodes() {
-    //Init the vector
+    // Init the vector
     std::vector<Node *> adjacent;
 
-    //Get the edgdes starting at this node from the parent ProgramGraph
-    for(auto edge : this->parent->findEdgesStartingAtNode(this)){
-        //Add the end of the edge to the adjacent vector
+    // Get the edgdes starting at this node from the parent ProgramGraph
+    for (auto edge : this->parent->findEdgesStartingAtNode(this)) {
+        // Add the end of the edge to the adjacent vector
         adjacent.push_back(edge->end);
     }
 
-    //Return the adjacent nodes vector
+    // Return the adjacent nodes vector
     return adjacent;
 }
 
-bool Node::isExceptionFollowUp(){
+bool Node::isExceptionFollowUp() {
     return this->block->isLandingPad();
 }
 
 double Node::getMaxEnergy() {
     double maxEng = 0.0;
 
-    //Calculate the adjacent nodes of this node
+    // Calculate the adjacent nodes of this node
     auto adjacentNodes = this->getAdjacentNodes();
 
-    //If there are adjacent nodes...
-    if(!adjacentNodes.empty()){
-        //Find the smallest energy-value-path of all the adjacent nodes
-        //Init the minimal pathvalue
+    // If there are adjacent nodes...
+    if (!adjacentNodes.empty()) {
+        // Find the smallest energy-value-path of all the adjacent nodes
+        // Init the minimal pathvalue
 
-        for(auto node : adjacentNodes){
-            //Calculate the sum of the node
-            if(!node->isExceptionFollowUp()){
+        for (auto node : adjacentNodes) {
+            // Calculate the sum of the node
+            if (!node->isExceptionFollowUp()) {
                 double locMaxEng = node->getMaxEnergy();
 
-                //Set the minimal energy value if the calculated energy is smaller than the current minimum
-                if (locMaxEng > maxEng){
+                // Set the minimal energy value if the calculated energy is smaller than the current minimum
+                if (locMaxEng > maxEng) {
                     maxEng = locMaxEng;
                 }
             }
         }
     }
 
-    //Calculate the energy-cost of this node's basic blocks and add it to the sum
+    // Calculate the energy-cost of this node's basic blocks and add it to the sum
     double localEnergy = this->energy;
-    if(localEnergy > maxEng){
+    if (localEnergy > maxEng) {
         maxEng = localEnergy;
     }
 
-    //Return the calculated energy
+    // Return the calculated energy
     return maxEng;
 }
 
 json Node::getJsonRepresentation() {
     json nodeObject = json::object();
-    if(block != nullptr){
+    if (block != nullptr) {
         nodeObject["type"] = NodeType::NODE;
         nodeObject["name"] = block->getName().str();
         nodeObject["energy"] = energy;
         nodeObject["instructions"] = json::array();
 
-        for(int k=0; k < instructions.size(); k++) {
+        for (int k=0; k < instructions.size(); k++) {
             json instructionObject = json::object();
             InstructionElement Inst = instructions[k];
 
             instructionObject["opcode"] = Inst.inst->getOpcodeName();
             instructionObject["energy"] = Inst.energy;
 
-            if(llvm::isa<llvm::CallInst>( Inst.inst ) || llvm::isa<llvm::CallBrInst>( Inst.inst )){
+            if (llvm::isa<llvm::CallInst>(Inst.inst) || llvm::isa<llvm::CallBrInst>(Inst.inst)) {
                 auto calleeInst = llvm::cast<llvm::CallInst>(Inst.inst);
-                //Get the called function
+                // Get the called function
                 auto *calledFunction = calleeInst->getCalledFunction();
-                //Add the function to the list
+                // Add the function to the list
 
-                if(calledFunction != nullptr){
+                if (calledFunction != nullptr) {
                     std::string functionName = DeMangler::demangle(calledFunction->getName().str());
                     instructionObject["calledFunction"] = calledFunction->getName().str();
-                }else{
+                } else {
                     auto operand = calleeInst->getCalledOperand();
                     auto val = operand->stripPointerCasts();
-                    if(val != nullptr){
+                    if (val != nullptr) {
                         auto ref = val->getName();
                         auto refname = ref.str();
                         instructionObject["calledFunction"] = refname;
                     }
                 }
 
-            }else if(llvm::isa<llvm::InvokeInst>( Inst.inst )){
+            } else if (llvm::isa<llvm::InvokeInst>(Inst.inst)) {
                 auto calleeInst = llvm::cast<llvm::InvokeInst>(Inst.inst);
-                //Get the called function
+                // Get the called function
                 auto *calledFunction = calleeInst->getCalledFunction();
-                //Add the function to the list
-                if(calledFunction != nullptr){
+                // Add the function to the list
+                if (calledFunction != nullptr) {
                     std::string functionName = DeMangler::demangle(calledFunction->getName().str());
                     instructionObject["calledFunction"] = calledFunction->getName().str();
-                }else{
+                } else {
                     auto operand = calleeInst->getCalledOperand();
                     auto val = operand->stripPointerCasts();
-                    if(val != nullptr){
+                    if (val != nullptr) {
                         auto ref = val->getName();
                         auto refname = ref.str();
                         instructionObject["calledFunction"] = refname;
@@ -437,9 +455,9 @@ json Node::getJsonRepresentation() {
             unsigned int col  = -1;
             std::string filename = "undefined";
 
-            // Check if the debug information is present
-            // If the instruction i.e. is inserted by the compiler no debug info is present
-            if(dbl){
+            //  Check if the debug information is present
+            //  If the instruction i.e. is inserted by the compiler no debug info is present
+            if (dbl) {
                 line = dbl.getLine();
                 col = dbl->getColumn();
                 filename = dbl->getFile()->getDirectory().str() + "/" + dbl->getFile()->getFilename().str();

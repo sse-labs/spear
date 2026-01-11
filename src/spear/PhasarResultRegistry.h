@@ -1,15 +1,17 @@
-#ifndef PHASAR_RESULT_REGISTRY_H
-#define PHASAR_RESULT_REGISTRY_H
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
+
+#ifndef SRC_SPEAR_PHASARRESULTREGISTRY_H_
+#define SRC_SPEAR_PHASARRESULTREGISTRY_H_
 
 #include <map>
-#include <string>
-#include <llvm/IR/Value.h>
-#include <llvm/IR/Function.h>
 
-#include "PhasarHandler.h" // for BoundVarMap
+#include "PhasarHandler.h"  // for BoundVarMap
 
 class PhasarResultRegistry {
-public:
+ public:
     static PhasarResultRegistry& get() {
         static PhasarResultRegistry instance;
         return instance;
@@ -19,14 +21,14 @@ public:
         this->results = results;
     }
 
-    const PhasarHandlerPass::BoundVarMap& getResults() const {
+    [[nodiscard]] const PhasarHandlerPass::BoundVarMap& getResults() const {
         return results;
     }
 
-private:
+ private:
     PhasarResultRegistry() = default;
 
     PhasarHandlerPass::BoundVarMap results;
 };
 
-#endif // PHASAR_RESULT_REGISTRY_H
+#endif  // SRC_SPEAR_PHASARRESULTREGISTRY_H_

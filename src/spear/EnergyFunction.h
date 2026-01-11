@@ -1,8 +1,15 @@
-#ifndef SPEAR_ENERGYFUNCTION_H
-#define SPEAR_ENERGYFUNCTION_H
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
+#ifndef SRC_SPEAR_ENERGYFUNCTION_H_
+#define SRC_SPEAR_ENERGYFUNCTION_H_
 
 #include <llvm/IR/Function.h>
+#include <string>
+
+// Forward declaration
 class ProgramGraph;
 
 /**
@@ -10,19 +17,19 @@ class ProgramGraph;
  * 
  */
 class EnergyFunction {
-public:
-    //Reference to the corresponding function
+ public:
+    // Reference to the corresponding function
     llvm::Function * func;
-    //The energy used by the function
+    // The energy used by the function
     double energy;
 
     std::string name;
 
     ProgramGraph* programGraph;
 
-    //Simple constructor
+    // Simple constructor
     explicit EnergyFunction();
 };
 
 
-#endif //SPEAR_ENERGYFUNCTION_H
+#endif  // SRC_SPEAR_ENERGYFUNCTION_H_

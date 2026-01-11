@@ -1,15 +1,20 @@
-#ifndef SPEAR_DEMANGLER_H
-#define SPEAR_DEMANGLER_H
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#include <string>
+#ifndef SRC_SPEAR_DEMANGLER_H_
+#define SRC_SPEAR_DEMANGLER_H_
+
 #include <llvm/Demangle/Demangle.h>
+#include <string>
 
 /**
  * Demangler class used to deal with LLVM name mangling
  * 
  */
 class DeMangler {
-public:
+ public:
     /**
      * Demangle a given mangled name
      * 
@@ -20,4 +25,4 @@ public:
 };
 
 
-#endif //SPEAR_DEMANGLER_H
+#endif  // SRC_SPEAR_DEMANGLER_H_

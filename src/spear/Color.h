@@ -1,7 +1,12 @@
-#ifndef SPEAR_COLOR_H
-#define SPEAR_COLOR_H
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
+#ifndef SRC_SPEAR_COLOR_H_
+#define SRC_SPEAR_COLOR_H_
 
+#include <cstdint>
 #include <string>
 
 /**
@@ -9,8 +14,7 @@
  * 
  */
 class Color {
-
-public:
+ public:
     /**
      * Define the rgb color channels of the color object
      * Colors are defined as value between 0 and 255
@@ -43,9 +47,9 @@ public:
      * Converts a given color to a hex value
      * 
      * @param c Color to be converted
-     * @return unsigned long hex value unsigned long 
+     * @return unsigned int64_t hex value unsigned int64_t
      */
-    static unsigned long toHexVal(Color c);
+    static uint64_t toHexVal(Color c);
 
     /**
      * Converts a given color to a html color string 
@@ -57,4 +61,4 @@ public:
 };
 
 
-#endif //SPEAR_COLOR_H
+#endif  // SRC_SPEAR_COLOR_H_

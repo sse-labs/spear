@@ -1,16 +1,21 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#ifndef BA_ANALYSISSTRATEGY_H
-#define BA_ANALYSISSTRATEGY_H
+#ifndef SRC_SPEAR_ANALYSISSTRATEGY_H_
+#define SRC_SPEAR_ANALYSISSTRATEGY_H_
 
-#endif //BA_ANALYSISSTRATEGY_H
 
 /**
  * Class for the Strategy enum.
  */
 class AnalysisStrategy {
-public:
+ public:
     /**
      * Basic Enum to distinguish the different types of analysis
      */
     enum Strategy { WORSTCASE, AVERAGECASE, BESTCASE };
 };
+
+#endif  // SRC_SPEAR_ANALYSISSTRATEGY_H_

@@ -1,28 +1,34 @@
-#include "ProgramGraph.h"
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-//Simple constructor. Set the properties to the given pointers
+#include "ProgramGraph.h"
+#include <string>
+
+// Simple constructor. Set the properties to the given pointers
 Edge::Edge(Node *start, Node *end) {
     this->start = start;
     this->end = end;
 }
 
-//Represents the Edge as string
+// Represents the Edge as string
 std::string Edge::toString() const {
-    //Init the string with an (
+    // Init the string with an (
     std::string output = "(";
 
-    //Append the start nodes string representation
+    // Append the start nodes string representation
     output.append(this->start->toString());
 
-    //Append a separator
+    // Append a separator
     output.append(" | ");
 
-    //Append the end nodes string representation
+    // Append the end nodes string representation
     output.append(this->end->toString());
 
-    //Close the parenthesis
+    // Close the parenthesis
     output.append(")");
 
-    //Return the constructed string
+    // Return the constructed string
     return output;
 }

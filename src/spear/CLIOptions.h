@@ -1,8 +1,12 @@
-#ifndef SPEAR_CLIOPTIONS_H
-#define SPEAR_CLIOPTIONS_H
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
+
+#ifndef SRC_SPEAR_CLIOPTIONS_H_
+#define SRC_SPEAR_CLIOPTIONS_H_
 
 #include <string>
-#include <utility>
 
 /**
  * Enum to handle the operations available in the application
@@ -56,7 +60,7 @@ enum class Strategy {
  * CLIOptions class to encapsulate the parsed command line arguments
  */
 class CLIOptions {
-public:
+ public:
     /**
      * Parsed amount of measurement repeats
      */
@@ -153,8 +157,7 @@ public:
  * 
  */
 class ProfileOptions : public CLIOptions{
-public:
-
+ public:
     ProfileOptions(std::string codePath,  int repeatAmount, std::string saveLocation);
 };
 
@@ -163,11 +166,10 @@ public:
  * 
  */
 class AnalysisOptions : public CLIOptions{
-public:
-
+ public:
     AnalysisOptions(std::string profilePath, Mode mode, Format format, Strategy strategy, int loopBound,
                     std::string programPath, DeepCalls deepCalls, std::string forFunction);
 };
 
 
-#endif //SPEAR_CLIOPTIONS_H
+#endif  // SRC_SPEAR_CLIOPTIONS_H_

@@ -1,14 +1,33 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
+
 #include "DeMangler.h"
 
-std::string DeMangler::demangle(std::string mangledName) {
-    size_t Size = 1;
-    char *Buf = static_cast<char *>(std::malloc(Size));
+#include <cstring>
+#include <string>
 
-    // Use the llvm itanium demangler to demangle the function name
+std::string DeMangler::demangle(std::string mangledName) {
     llvm::ItaniumPartialDemangler Mangler;
+
     if (Mangler.partialDemangle(mangledName.c_str())) {
         return mangledName;
-    }else{
-        return Mangler.getFunctionBaseName(Buf, &Size);
     }
+
+    size_t size = 0;
+    // First call: query required size (buffer can be null)
+    Mangler.getFunctionBaseName(nullptr, &size);
+
+    if (size == 0) {
+        return mangledName;  // or return "" if you prefer
+    }
+
+    std::string buf(size, '\0');
+    Mangler.getFunctionBaseName(buf.data(), &size);
+
+    // Trim to C-string length (remove trailing '\0' padding)
+    buf.resize(std::strlen(buf.c_str()));
+    return buf;
 }
+

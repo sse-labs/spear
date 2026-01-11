@@ -1,17 +1,20 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#ifndef BA_PROGRAMGRAPH_H
-#define BA_PROGRAMGRAPH_H
+#ifndef SRC_SPEAR_PROGRAMGRAPH_H_
+#define SRC_SPEAR_PROGRAMGRAPH_H_
 
 
 #include <vector>
-#include <llvm/Analysis/RegionInfo.h>
-#include "llvm/IR/BasicBlock.h"
+#include <string>
+#include <utility>
+#include <map>
 #include "LoopTree.h"
-#include <cfloat>
 #include "AnalysisStrategy.h"
-#include "./Color.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/BasicBlock.h"
+
 
 using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
 
@@ -19,7 +22,7 @@ using BoundVarMap =
     std::map<std::string, std::pair<const llvm::Value *, DomainVal>>;
 
 
-//Pre-declaration of the ProgramGraph Class
+// Pre-declaration of the ProgramGraph Class
 class ProgramGraph;
 
 
@@ -28,7 +31,7 @@ class ProgramGraph;
  * 
  */
 class InstructionElement {
-public:
+ public:
     double energy;
     llvm::Instruction* inst;
 
@@ -54,62 +57,62 @@ enum NodeType {
  * Node - A Node in the Programtree. Represents a set of BasicBlocks, which may contain if-statements but is loop-free
  */
 class Node {
-    public:
-        /**
-         * Reference to the Tree this node is contained in
-         */
-        ProgramGraph *parent;
+ public:
+    /**
+     * Reference to the Tree this node is contained in
+     */
+    ProgramGraph *parent;
 
-        /**
-         * A vector savint references to the blocks in this node
-         */
-        llvm::BasicBlock * block;
+    /**
+     * A vector savint references to the blocks in this node
+     */
+    llvm::BasicBlock * block;
 
-        double energy;
+    double energy;
 
-        /**
-         * The strategy the analysis should follow
-         */
-        AnalysisStrategy::Strategy strategy;
+    /**
+     * The strategy the analysis should follow
+     */
+    AnalysisStrategy::Strategy strategy;
 
-        std::vector<InstructionElement> instructions;
+    std::vector<InstructionElement> instructions;
 
-        /**
-         * Constructor taking the surrounding ProgramGraph
-         * @param parent
-         */
-        Node(ProgramGraph *parent, AnalysisStrategy::Strategy strategy);
+    /**
+     * Constructor taking the surrounding ProgramGraph
+     * @param parent
+     */
+    Node(ProgramGraph *parent, AnalysisStrategy::Strategy strategy);
 
-        /**
-         * Method for converting this node to string for debug output
-         * Made virtual so further node specializations can be made
-         * @return Returns this node a string
-         */
-        virtual std::string toString();
+    /**
+     * Method for converting this node to string for debug output
+     * Made virtual so further node specializations can be made
+     * @return Returns this node a string
+     */
+    virtual std::string toString();
 
-        /**
-         * Method for calculating this Nodes energy consumption based on the given LLVMHandler
-         * Made virtual, as calculation can differ for the specific node-type
-         * @param handler A Reference to a LLVMHandler for calculating the energy usage
-         * @return Returns the esitmated energy for this Node as double
-         */
-        virtual double getNodeEnergy(LLVMHandler *handler);
+    /**
+     * Method for calculating this Nodes energy consumption based on the given LLVMHandler
+     * Made virtual, as calculation can differ for the specific node-type
+     * @param handler A Reference to a LLVMHandler for calculating the energy usage
+     * @return Returns the esitmated energy for this Node as double
+     */
+    virtual double getNodeEnergy(LLVMHandler *handler);
 
-        virtual double getMaxEnergy();
+    virtual double getMaxEnergy();
 
-        virtual bool isExceptionFollowUp();
+    virtual bool isExceptionFollowUp();
 
-        virtual json getJsonRepresentation();
+    virtual json getJsonRepresentation();
 
-        std::string getSourceVarName(llvm::Value *V, llvm::Instruction *Ctx);
+    std::string getSourceVarName(llvm::Value *V, llvm::Instruction *Ctx);
 
-        bool evalICMP(llvm::ICmpInst *ICmp, llvm::ConstantInt *left, llvm::ConstantInt *right);
+    bool evalICMP(llvm::ICmpInst *ICmp, llvm::ConstantInt *left, llvm::ConstantInt *right);
 
-        llvm::BasicBlock* getPathName(const llvm::BranchInst *br, bool conditionalresult);
+    llvm::BasicBlock* getPathName(const llvm::BranchInst *br, bool conditionalresult);
 
-        const DomainVal* findDeducedValue(BoundVarMap *resultsAtBlock, std::string varname);
+    const DomainVal* findDeducedValue(BoundVarMap *resultsAtBlock, std::string varname);
 
-protected:
+ protected:
     /**
      * Calculates the adjacent Nodes extending through vertices in the parent ProgramGraph from this Node outwards
      * @return Returns a vector of references to the adjacent nodes
@@ -123,7 +126,7 @@ protected:
  * Edge - Class to represent the connection between two nodes. The connection is not directional by definition.
  */
 class Edge {
-public:
+ public:
     /**
      * Reference to the starting node of the edge
      */
@@ -145,7 +148,7 @@ public:
      * Method for converting the edge to a string representation
      * @return
      */
-    std::string toString() const;
+    [[nodiscard]] std::string toString() const;
 };
 
 
@@ -155,7 +158,7 @@ public:
  * ProgramTrees representing a recursive structure
  */
 class LoopNode : public Node {
-public:
+ public:
     /**
      * Reference to a LoopTree object storing the information of the loop represented by this LoopNode
      */
@@ -186,7 +189,7 @@ public:
      * A leaf-LoopNode does not contain any further loops
      * @return Returns true if this LoopNode does not contain any further loops. False if otherwise
      */
-    bool isLeafNode() const;
+    [[nodiscard]] bool isLeafNode() const;
 
     /**
      * Method for calculating the energy of this LoopNode. Calculates the energy with respect to all contained subloops.
@@ -228,112 +231,115 @@ public:
  * ProgramGraph -  Class to (partly) represent a program as a graph
  */
 class ProgramGraph {
-    public:
-        /**
-         * Vector containing references to the nodes contained in the graph
-         */
-        std::vector<Node *> nodes;
+ public:
+    /**
+     * Vector containing references to the nodes contained in the graph
+     */
+    std::vector<Node *> nodes;
 
-        /**
-         * Vector containing references to the edges of the graph
-         */
-        std::vector<Edge *> edges;
+    /**
+     * Vector containing references to the edges of the graph
+     */
+    std::vector<Edge *> edges;
 
-        double maxEnergy;
+    double maxEnergy;
 
-        /**
-         * Static method for creating a ProgramGraph from a given set of BasicBlocks
-         * @param blockset Vector with references to a set of basic blocks
-         * @return Returns the constructed ProgramGraph
-         */
-        static void construct(ProgramGraph* pGraph, const std::vector<llvm::BasicBlock *>& blockset, AnalysisStrategy::Strategy strategy);
+    /**
+     * Static method for creating a ProgramGraph from a given set of BasicBlocks
+     * @param blockset Vector with references to a set of basic blocks
+     * @return Returns the constructed ProgramGraph
+     */
+    static void construct(
+        ProgramGraph* pGraph,
+        const std::vector<llvm::BasicBlock *>& blockset,
+        AnalysisStrategy::Strategy strategy);
 
-        /**
-         * ProgramGraph destructor
-         */
-        ~ProgramGraph();
+    /**
+     * ProgramGraph destructor
+     */
+    ~ProgramGraph();
 
-        /**
-         * Method for printing the string representations of the contained nodes with their calculated energy
-         * @param handler A LLVMHandler used for energy calculation
-         */
-        void printNodes(LLVMHandler *handler);
+    /**
+     * Method for printing the string representations of the contained nodes with their calculated energy
+     * @param handler A LLVMHandler used for energy calculation
+     */
+    void printNodes(LLVMHandler *handler);
 
-        /**
-         * Prints the ProgramGraph in the Graphviz dot format recursivly
-         * @return Returns the string representation of the graph in the dot format
-         */
-        std::string printDotRepresentation();
+    /**
+     * Prints the ProgramGraph in the Graphviz dot format recursivly
+     * @return Returns the string representation of the graph in the dot format
+     */
+    std::string printDotRepresentation();
 
-        /**
-         * Returns a vector of pointers to the nodes of this ProgramGraph
-         * @return Vector containing pointers to the nodes of the graph
-         */
-        std::vector<Node*> getNodes();
+    /**
+     * Returns a vector of pointers to the nodes of this ProgramGraph
+     * @return Vector containing pointers to the nodes of the graph
+     */
+    std::vector<Node*> getNodes();
 
-        /**
-         * Method for printing the string representations of the graphs edges
-         */
-        void printEdges();
+    /**
+     * Method for printing the string representations of the graphs edges
+     */
+    void printEdges();
 
-        /**
-         * Method for getting the Node contained in this ProgramGraph, which holds the given BasicBlock
-         * @param basicBlock A reference to the BasicBlock to find
-         * @return A reference to the Node if it was found. Returns a null pointer otherwise.
-         */
-        Node *findBlock(llvm::BasicBlock *basicBlock);
+    /**
+     * Method for getting the Node contained in this ProgramGraph, which holds the given BasicBlock
+     * @param basicBlock A reference to the BasicBlock to find
+     * @return A reference to the Node if it was found. Returns a null pointer otherwise.
+     */
+    Node *findBlock(llvm::BasicBlock *basicBlock);
 
-        /**
-         * Calculates the edges going outwards from the given node.
-         * @param sourceNode A reference to the Node the edges are extending from
-         * @return Returns a vector of references to the edges
-         */
-        std::vector<Edge *> findEdgesStartingAtNode(Node *sourceNode);
+    /**
+     * Calculates the edges going outwards from the given node.
+     * @param sourceNode A reference to the Node the edges are extending from
+     * @return Returns a vector of references to the edges
+     */
+    std::vector<Edge *> findEdgesStartingAtNode(Node *sourceNode);
 
-        /**
-         * Removes the given Node from this ProgramTre
-         * @param nodeToRemove Reference to the Node to remove
-         */
-        void removeNode(Node *nodeToRemove);
+    /**
+     * Removes the given Node from this ProgramTre
+     * @param nodeToRemove Reference to the Node to remove
+     */
+    void removeNode(Node *nodeToRemove);
 
-        /**
-         * Method for removing all edges from the graph, which start node or end node got removed
-         */
-        void removeOrphanedEdges();
+    /**
+     * Method for removing all edges from the graph, which start node or end node got removed
+     */
+    void removeOrphanedEdges();
 
-        /**
-         * Method for replacing the nodes in the ProgramGraph contained by a loopNode.
-         * @param blocks Vector of BasicBlocks to replace by the given LoopNode
-         * @param loopNode LoopNode used for replacing
-         */
-        void replaceNodesWithLoopNode(const std::vector<llvm::BasicBlock *>& blocks, LoopNode *loopNode);
+    /**
+     * Method for replacing the nodes in the ProgramGraph contained by a loopNode.
+     * @param blocks Vector of BasicBlocks to replace by the given LoopNode
+     * @param loopNode LoopNode used for replacing
+     */
+    void replaceNodesWithLoopNode(const std::vector<llvm::BasicBlock *>& blocks, LoopNode *loopNode);
 
-        /**
-         * Method for calculating the energy of this ProgramGraph. Uses the getNodeEnergy() methods of the contained nodes
-         * @param handler LLVMHandler used to the get the values for the basic blocks
-         * @return Returns the used energy as double
-         */
-        double getEnergy(LLVMHandler *handler);
+    /**
+     * Method for calculating the energy of this ProgramGraph. Uses the getNodeEnergy() methods of the contained nodes
+     * @param handler LLVMHandler used to the get the values for the basic blocks
+     * @return Returns the used energy as double
+     */
+    double getEnergy(LLVMHandler *handler);
 
-        /**
-         * Calculates the LoopNodes contained in this ProgramGraph
-         * @return Returns a Vector of references to the contained LoopNodes.
-         */
-        std::vector<LoopNode *> getLoopNodes();
+    /**
+     * Calculates the LoopNodes contained in this ProgramGraph
+     * @return Returns a Vector of references to the contained LoopNodes.
+     */
+    std::vector<LoopNode *> getLoopNodes();
 
-        /**
-         * Calculates if the ProgramGraph contains LoopNodes
-         * @return Returns true if the ProgramGraph contains LoopNodes. False if otherwise
-         */
-        bool containsLoopNodes();
+    /**
+     * Calculates if the ProgramGraph contains LoopNodes
+     * @return Returns true if the ProgramGraph contains LoopNodes. False if otherwise
+     */
+    bool containsLoopNodes();
 
-        double findMaxEnergy();
+    double findMaxEnergy();
 
-        std::string getNodeColor(Node *node, double maxEng);
-        std::string getNodeColor(double nodeEnergy, double maxEng);
+    std::string getNodeColor(Node *node, double maxEng);
+    std::string getNodeColor(double nodeEnergy, double maxEng);
 
-        json populateJsonRepresentation(json functionObject);
+    json populateJsonRepresentation(json functionObject);
 };
 
 
-#endif //BA_PROGRAMGRAPH_H
+#endif  // SRC_SPEAR_PROGRAMGRAPH_H_

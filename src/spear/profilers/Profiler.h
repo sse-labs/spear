@@ -1,11 +1,16 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#ifndef BA_PROFILER_H
-#define BA_PROFILER_H
 
+#ifndef SRC_SPEAR_PROFILERS_PROFILER_H_
+#define SRC_SPEAR_PROFILERS_PROFILER_H_
+
+#include <map>
 #include "string"
 #include "vector"
 #include "nlohmann/json.hpp"
-#include <map>
 
 using json = nlohmann::json;
 
@@ -13,7 +18,7 @@ using json = nlohmann::json;
  * Simple class to profile the llvm-code and output the data in an appropriate format
  */
 class Profiler {
-public:
+ public:
     const int iterations;
 
     /**
@@ -40,4 +45,4 @@ public:
 };
 
 
-#endif //BA_PROFILER_H
+#endif  // SRC_SPEAR_PROFILERS_PROFILER_H_

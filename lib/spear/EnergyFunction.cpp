@@ -1,11 +1,12 @@
-
-
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
 #include "EnergyFunction.h"
 #include "ProgramGraph.h"
 
-
-//Constructor of the EnergyFunction class
+// Constructor of the EnergyFunction class
 EnergyFunction::EnergyFunction() {
     this->programGraph = new ProgramGraph();
     this->energy = 0.00;

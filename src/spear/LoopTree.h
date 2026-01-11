@@ -1,15 +1,21 @@
-#ifndef BA_LOOPTREE_H
-#define BA_LOOPTREE_H
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#include <vector>
-#include <cmath>
+#ifndef SRC_SPEAR_LOOPTREE_H_
+#define SRC_SPEAR_LOOPTREE_H_
+
+#include "LLVMHandler.h"
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/Analysis/ScalarEvolution.h>
 #include <phasar/PhasarLLVM/DataFlow/IfdsIde/Problems/IDELinearConstantAnalysis.h>
+
+#include <vector>
 #include <optional>
-
-#include "LLVMHandler.h"
-
+#include <string>
+#include <utility>
+#include <map>
 
 class LLVMHandler;
 
@@ -17,7 +23,7 @@ class LLVMHandler;
  * LoopTree - A recursive datastructure to handle encapsulated loops
  */
 class LoopTree {
-public:
+ public:
     /**
      * Member to store the loop from which the treenode extends to the subgraphs containing the subloops
      */
@@ -41,11 +47,11 @@ public:
     /**
      * The over approximated iterations of the loop contained in this node
      */
-    long iterations;
+    uint64_t iterations;
 
     std::vector<const llvm::Value *> boundvars;
 
-    //const llvm::Value * boundvar;
+    // const llvm::Value * boundvar;
 
 
     /**
@@ -62,15 +68,14 @@ public:
         std::map<
         std::string,
         std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
-        > *variablemapping
-    );
+        > *variablemapping);
 
     /**
      * Prints this node in preorder
      */
     void printPreOrder();
 
-    long getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution);
+    uint64_t getLoopUpperBound(llvm::Loop *loop, llvm::ScalarEvolution *scalarEvolution);
 
     /**
      * Gets the Latches of the LoopTree
@@ -84,8 +89,7 @@ public:
      */
     ~LoopTree();
 
-private:
-
+ private:
     /**
      * Method for calculating the difference of all blocks present in the loop and the subloops
      * @return Returns the calculated blocks as vector of pointers
@@ -106,7 +110,10 @@ private:
      * @param IndVar Induction variable of the loop
      * @return Returns a vector of llvm value pointers that refer to the source variable of the loop bound
      */
-    std::vector<const llvm::Value *> getSourceVariablesFromSCEV(const llvm::SCEV *Expr, llvm::ScalarEvolution &SE, llvm::PHINode *IndVar) const;
+    std::vector<const llvm::Value *> getSourceVariablesFromSCEV(
+        const llvm::SCEV *Expr,
+        llvm::ScalarEvolution &SE,
+        llvm::PHINode *IndVar) const;
 
     /**
      * Parses the main loop of the looptree and uses the scalar evolution analysis to deduce the source name of the
@@ -132,7 +139,11 @@ private:
      * @param direction Loop direction either increasing or decreasing
      * @return Returns the amount of repetitions the loop runs
      */
-    long calculateIterations(long start, long end, long step, llvm::Loop::LoopBounds::Direction direction);
+    uint64_t calculateIterations(
+        uint64_t start,
+        uint64_t end,
+        uint64_t step,
+        llvm::Loop::LoopBounds::Direction direction);
 
     /**
      * Calculates the loop iterations from a given loop bound
@@ -141,8 +152,8 @@ private:
      * the given loopbound
      * @return Returns a loop bound
      */
-    long iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds> *loopBound, long endValue = -1 );
+    uint64_t iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds> *loopBound, uint64_t endValue = -1);
 };
 
 
-#endif //BA_LOOPTREE_H
+#endif  // SRC_SPEAR_LOOPTREE_H_
