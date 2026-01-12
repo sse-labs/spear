@@ -3,8 +3,8 @@
  * All rights reserved.
 */
 
-#ifndef SRC_SPEAR_CPU_VENDOR_H
-#define SRC_SPEAR_CPU_VENDOR_H
+#ifndef SRC_SPEAR_CPU_VENDOR_H_
+#define SRC_SPEAR_CPU_VENDOR_H_
 
 #if !defined(CPU_VENDOR_INTEL)
 #define CPU_VENDOR_INTEL   1
@@ -35,8 +35,7 @@ defined(__znver3__) || defined(__znver4__)
     #include <cpuid.h>
 #endif
 
-static inline int cpu_vendor_runtime()
-{
+static inline int cpu_vendor_runtime() {
     unsigned int eax, ebx, ecx, edx;
     char vendor[13];
 
@@ -68,12 +67,11 @@ static inline int cpu_vendor_runtime()
 
 #else
 /* Non-x86 */
-static inline int cpu_vendor_runtime(void)
-{
+static inline int cpu_vendor_runtime(void) {
     return CPU_VENDOR_UNKNOWN;
 }
 #endif
 
 #endif /* CPU_VENDOR_UNKNOWN */
 
-#endif  // SRC_SPEAR_CPU_VENDOR_H
+#endif  // SRC_SPEAR_CPU_VENDOR_H_
