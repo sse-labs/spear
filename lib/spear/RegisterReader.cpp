@@ -14,10 +14,10 @@
 RegisterReader::RegisterReader(int core) {
     // Package -> 0x611
     // Cores -> 0x639
-#if CPU_VENDOR_INTEL
+#if CPU_VENDOR == CPU_VENDOR_INTEL
     this->energyReg = 0x639;
     this->unitReg = 0x606;
-#elif CPU_VENDOR_AMD
+#elif CPU_VENDOR == CPU_VENDOR_AMD
     this->energyReg = 0xC001029A;
     this->unitReg = 0xC0010299;
 #else
