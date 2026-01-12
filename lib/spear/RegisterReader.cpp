@@ -19,10 +19,10 @@ RegisterReader::RegisterReader(int core) {
     if (vendor == CPU_VENDOR_INTEL) {
         this->energyReg = 0x639;
         this->unitReg = 0x606;
-    }else if (vendor == CPU_VENDOR_AMD) {
+    } else if (vendor == CPU_VENDOR_AMD) {
         this->energyReg = 0xC001029A;
         this->unitReg = 0xC0010299;
-    }else {
+    } else {
         std::cerr << "UNKNOWN CPU DETECTED"
         << "\nAborting profiling..."
         << std::endl;
