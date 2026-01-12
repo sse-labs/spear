@@ -10,28 +10,31 @@
 #include "iostream"
 #include "cstdio"
 #include "cmath"
+#include "CPU_vendor.h"
 
 RegisterReader::RegisterReader(int core) {
     // Package -> 0x611
     // Cores -> 0x639
-#if CPU_VENDOR == CPU_VENDOR_INTEL
-    this->energyReg = 0x639;
-    this->unitReg = 0x606;
-#elif CPU_VENDOR == CPU_VENDOR_AMD
-    this->energyReg = 0xC001029A;
-    this->unitReg = 0xC0010299;
-#else
-    std::cerr << "UNKNOWN CPU DETECTED"
-    << "\nAborting profiling..."
-    << std::endl;
-    this->energyReg = 0;
-    this->unitReg = 0;
-    throw std::runtime_error("Unknown CPU detected");
-#endif
+    int vendor = cpu_vendor_runtime();
+    if (vendor == CPU_VENDOR_INTEL) {
+        this->energyReg = 0x639;
+        this->unitReg = 0x606;
+    }else if (vendor == CPU_VENDOR_AMD) {
+        this->energyReg = 0xC001029A;
+        this->unitReg = 0xC0010299;
+    }else {
+        std::cerr << "UNKNOWN CPU DETECTED"
+        << "\nAborting profiling..."
+        << std::endl;
+        this->energyReg = 0;
+        this->unitReg = 0;
+        throw std::runtime_error("Unknown CPU detected");
+    }
+
     snprintf(this->regFile, sizeof(this->regFile), "/dev/cpu/%d/msr", core);
 }
 
-int64_t RegisterReader::read(int registerOffset) {
+int64_t RegisterReader::read(uint64_t registerOffset) {
     int registerFileDescriptor = 0;
     uint64_t registerValueBuffer;
 
@@ -39,7 +42,8 @@ int64_t RegisterReader::read(int registerOffset) {
     registerFileDescriptor = open(this->regFile, O_RDONLY);
     // read 8 bytes from the registerfile at the offset energyReg and store the contents at the address of
     // our previously defined 64-integer regValBuffer
-    pread(registerFileDescriptor, &registerValueBuffer, 8, registerOffset);
+    auto registerOffsetSigned = static_cast<off_t>(registerOffset);
+    pread(registerFileDescriptor, &registerValueBuffer, 8, registerOffsetSigned);
 
     close(registerFileDescriptor);
 
@@ -50,7 +54,7 @@ double RegisterReader::getEnergy() {
     u_int64_t result = read(this->energyReg);
     auto mutlitplier = this->readMultiplier();
 
-    return result * mutlitplier;
+    return static_cast<double>(result) * mutlitplier;
 }
 
 double RegisterReader::readMultiplier() {
