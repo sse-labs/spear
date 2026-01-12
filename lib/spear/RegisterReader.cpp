@@ -14,8 +14,20 @@
 RegisterReader::RegisterReader(int core) {
     // Package -> 0x611
     // Cores -> 0x639
+#if CPU_VENDOR_INTEL
     this->energyReg = 0x639;
     this->unitReg = 0x606;
+#elif CPU_VENDOR_AMD
+    this->energyReg = 0xC001029A;
+    this->unitReg = 0xC0010299;
+#else
+    std::cerr << "UNKNOWN CPU DETECTED"
+    << "\nAborting profiling..."
+    << std::endl;
+    this->energyReg = 0;
+    this->unitReg = 0;
+    throw std::runtime_error("Unknown CPU detected");
+#endif
     snprintf(this->regFile, sizeof(this->regFile), "/dev/cpu/%d/msr", core);
 }
 
