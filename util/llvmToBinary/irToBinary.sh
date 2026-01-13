@@ -12,10 +12,10 @@ function compileFile() {
   echo "Compiling $path/$filename.ll down to binary..."
 
   echo "Generating bytecode: $filename.bc"
-  llvm-as-15 "$path/$filename.ll" -o "$path/compiled/$filename.bc"
+  llvm-as "$path/$filename.ll" -o "$path/compiled/$filename.bc"
 
   echo "Generating object file: $filename.o"
-  llc-15 \
+  llc \
     -O0 \
     -fast-isel \
     -regalloc=fast \
@@ -26,7 +26,7 @@ function compileFile() {
 
   echo "Generating final binary: $path/compiled/$filename"
 
-  clang++-15 \
+  clang++ \
     -O0 \
     -g \
     -fno-builtin \

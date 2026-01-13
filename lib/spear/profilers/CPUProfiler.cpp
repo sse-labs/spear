@@ -182,6 +182,7 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
             double diff = after - before;
 
             if (diff <= 0) {
+                // std::cout << "invalid measurement for " << file.c_str()  << ": diff = " << diff << std::endl;
                 validIteration = false;   // mark iteration invalid
             }
 

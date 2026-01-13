@@ -15,15 +15,15 @@ class RegisterReader {
     /**
      * The address of the register containing the energycounter
      */
-    int energyReg;
+    uint64_t energyReg;
     /**
      * The address of the register containing the unit register
      */
-    int unitReg;
+    uint64_t unitReg;
     /**
      * Char-Array to safe the file containing all the processor register
      */
-    char regFile[32];
+    char regFile[32]{};
 
  public:
         /**
@@ -48,7 +48,7 @@ class RegisterReader {
          * @param registerOffset Offset of the register in the file
          * @return Value in the register as 64-bit unsigned integer
          */
-        int64_t read(int registerOffset);
+        int64_t read(uint64_t registerOffset);
 };
 
 
