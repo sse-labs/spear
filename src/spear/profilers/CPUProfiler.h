@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <thread>
 
 #include "Profiler.h"
 using json = nlohmann::json;
@@ -60,6 +61,9 @@ class CPUProfiler : public Profiler {
         this->programiterations = metadata["repeated_executions"];
 
         this->log(std::string("repeated_executions ") + std::to_string(this->programiterations));
+
+        this->number_of_cores = std::thread::hardware_concurrency();
+        this->log(std::string("number of cores ") + std::to_string(this->number_of_cores));
     }
 
     /**
@@ -73,6 +77,11 @@ class CPUProfiler : public Profiler {
      * How many times each instruction is repeated inside each profile program.
      */
     uint64_t programiterations;
+
+    /**
+     * Number of cores available on the system.
+    */
+    unsigned int number_of_cores;
 
     /**
      * Mapping of instruction names to profile program paths
