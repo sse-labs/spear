@@ -7,5 +7,5 @@ var searchData=
   ['printpreorder_4',['printpreorder',['../classFunctionTree.html#ad338d9921dc8a5f50788079eb8c4b508',1,'FunctionTree::printPreorder()'],['../classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34',1,'LoopTree::printPreOrder()']]],
   ['profile_5',['profile',['../classDRAMProfiler.html#a6f5497ffd9b6dee2417f57000072f272',1,'DRAMProfiler::profile()'],['../classCPUProfiler.html#ac6db47ff8d35ee789ed3703c96b14097',1,'CPUProfiler::profile()'],['../classMetaProfiler.html#a9bf3701e464313e7d4fa9c5f99ba4a69',1,'MetaProfiler::profile()'],['../classProfiler.html#af50d7dfce1868917936dec58632a0284',1,'Profiler::profile()']]],
   ['profilehandler_6',['ProfileHandler',['../classProfileHandler.html#a327cc7868566e947376546ac04d77ad2',1,'ProfileHandler']]],
-  ['profiler_7',['profiler',['../classProfiler.html#a727f8df21257238e177df7e335db121e',1,'Profiler::Profiler(int iterations)'],['../classProfiler.html#a675ebc9207b9aeace1d967c085abeacf',1,'Profiler::Profiler()']]]
+  ['profiler_7',['profiler',['../classProfiler.html#a166d6773a7c9f8033fc4ef200b65251b',1,'Profiler::Profiler(int iterations, std::string tag)'],['../classProfiler.html#a675ebc9207b9aeace1d967c085abeacf',1,'Profiler::Profiler()']]]
 ];

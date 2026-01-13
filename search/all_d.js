@@ -12,7 +12,7 @@ var searchData=
   ['profilehandler_9',['profilehandler',['../classProfileHandler.html',1,'ProfileHandler'],['../classProfileHandler.html#a327cc7868566e947376546ac04d77ad2',1,'ProfileHandler::ProfileHandler()']]],
   ['profileoptions_10',['ProfileOptions',['../classProfileOptions.html',1,'']]],
   ['profilepath_11',['profilePath',['../classCLIOptions.html#acdcf71d0a1c2150391c1385ed73b6084',1,'CLIOptions']]],
-  ['profiler_12',['profiler',['../classProfiler.html',1,'Profiler'],['../classProfiler.html#a727f8df21257238e177df7e335db121e',1,'Profiler::Profiler(int iterations)'],['../classProfiler.html#a675ebc9207b9aeace1d967c085abeacf',1,'Profiler::Profiler()']]],
+  ['profiler_12',['profiler',['../classProfiler.html',1,'Profiler'],['../classProfiler.html#a166d6773a7c9f8033fc4ef200b65251b',1,'Profiler::Profiler(int iterations, std::string tag)'],['../classProfiler.html#a675ebc9207b9aeace1d967c085abeacf',1,'Profiler::Profiler()']]],
   ['programgraph_13',['ProgramGraph',['../classProgramGraph.html',1,'']]],
   ['programpath_14',['programPath',['../classCLIOptions.html#a9b236845bceb70c730e0f3397fe90cbe',1,'CLIOptions']]]
 ];
