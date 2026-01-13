@@ -104,17 +104,15 @@ std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data,
 }
 
 std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t runtime) const {
-    const int NUM_CORES = 12;
-
     std::vector<double> results;
-    results.reserve(this->iterations * NUM_CORES);
+    results.reserve(this->iterations * number_of_cores);
 
     #ifdef __linux__
     RegisterReader powReader(0);
 
     // Shared memory for initial energy values of each child
     double* sharedEnergyBefore = reinterpret_cast<double*>(mmap(nullptr,
-                                                NUM_CORES * sizeof(double),
+                                                number_of_cores * sizeof(double),
                                                 PROT_READ | PROT_WRITE,
                                                 MAP_SHARED | MAP_ANONYMOUS,
                                                 -1, 0));
@@ -133,17 +131,14 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
     }
 
     for (uint64_t it = 0; it < iters; /* manual increment inside */) {
-        pid_t pids[NUM_CORES];
-        bool validIteration = true;    // assume good; flip to false on invalid diff
+        std::vector<pid_t> pids(number_of_cores);
+        bool validIteration = true;  // assume good; flip to false on invalid diff
 
-        // ----------------------------------------------------
-        // 1. Launch 12 processes: one on each core
-        // ----------------------------------------------------
-        for (int core = 0; core < NUM_CORES; core++) {
+        // Launch processes: one on each core
+        for (int core = 0; core < number_of_cores; core++) {
             pid_t pid = fork();
 
             if (pid == 0) {
-                // -------- Child code --------
                 cpu_set_t mask;
                 CPU_ZERO(&mask);
                 CPU_SET(core, &mask);
@@ -153,15 +148,12 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
                     exit(1);
                 }
 
-                // Record initial energy
                 sharedEnergyBefore[core] = powReader.getEnergy();
 
-                // Execute the target program
                 if (execv(file.c_str(), args) == -1) {
                     perror("execv");
                     exit(1);
                 }
-
             } else if (pid > 0) {
                 pids[core] = pid;
             } else {
@@ -170,13 +162,9 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
             }
         }
 
-        // Temporary buffer for this iteration
-        double iterationResults[NUM_CORES];
+        std::vector<double> iterationResults(number_of_cores);
 
-        // ----------------------------------------------------
-        // 2. Parent waits for 12 children and verifies energy diffs
-        // ----------------------------------------------------
-        for (int core = 0; core < NUM_CORES; core++) {
+        for (int core = 0; core < number_of_cores; core++) {
             waitpid(pids[core], nullptr, 0);
 
             double after = powReader.getEnergy();
@@ -184,28 +172,23 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
             double diff = after - before;
 
             if (diff <= 0) {
-                // std::cout << "invalid measurement for " << file.c_str()  << ": diff = " << diff << std::endl;
-                validIteration = false;   // mark iteration invalid
+                validIteration = false;
             }
 
-            iterationResults[core] = diff / NUM_CORES;
+            iterationResults[core] = diff / number_of_cores;
         }
 
-        // ----------------------------------------------------
-        // 3. Check if iteration was valid
-        // ----------------------------------------------------
         if (!validIteration) {
-            // Discard and repeat this same iteration index
             continue;
         }
 
-        // Otherwise, commit results and increment iteration counter
-        for (int core = 0; core < NUM_CORES; core++) {
+        for (int core = 0; core < number_of_cores; core++) {
             results.push_back(iterationResults[core]);
         }
 
-        it++;   // manually increment because we used continue above
+        it++;
     }
+
     #endif
 
     return results;
