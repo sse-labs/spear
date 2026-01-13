@@ -18,7 +18,7 @@ class MetaProfiler : public Profiler {
      * Generic constructor without purpose
      * @param iterations Repeated measurement iterations
      */
-    explicit MetaProfiler(const int iterations) : Profiler(iterations) {}
+    explicit MetaProfiler(const int iterations) : Profiler(iterations, "META") {}
 
     /**
      * Gather information about the system and return them as JSON object

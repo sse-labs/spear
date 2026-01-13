@@ -57,6 +57,7 @@ def main():
     if reps > 0:
         gen = Generator(worklist, input_path, reps)
         gen.generate()
+        gen.create_meta_file()
     else:
         print("Repetitions must be greater than 0")
 

@@ -2,6 +2,7 @@ from typing import List
 from .instruction import Instruction
 from pathlib import Path
 from .util import Util
+import json
 
 class Generator:
     instlist: List[Instruction]
@@ -128,3 +129,14 @@ class Generator:
                     f.write(f'  {inst.cpx_footer_block}\n')
                     f.write('  ret i32 0\n')
                     f.write('}\n')
+
+    def create_meta_file(self):
+        meta = {
+            "repeated_executions": self.repetitions
+        }
+
+        json_meta = json.dumps(meta)
+        filename = Path(self.baseloc) / "meta.json"
+
+        with open(filename, "w") as f:
+            json.dump(meta, f)

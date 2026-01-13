@@ -9,8 +9,10 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "Profiler.h"
+#include <fstream>
 
+#include "Profiler.h"
+using json = nlohmann::json;
 
 /**
  * Component to profile the systems CPU using the profiler architecture
@@ -23,9 +25,15 @@ class CPUProfiler : public Profiler {
      * @param iterations Number of times the measurement should be repeated
      * @param codePath Path the profile programs are stored
      */
-    CPUProfiler(const int iterations, const std::string &codePath) : Profiler(iterations) {
+    CPUProfiler(const int iterations, const std::string &codePath) : Profiler(iterations, "CPU") {
+        this->log("Executing CPU profiler ");
+        this->log("Programs for profiling stored at " + codePath);
+
+        std::string programs_path = codePath + "/cpu/compiled/";
+        std::string meta_path = codePath + "/cpu/meta.json";
+
         std::vector<std::string> filenames;
-        for (const auto& entry : std::filesystem::directory_iterator(codePath + "/cpu/compiled/")) {
+        for (const auto& entry : std::filesystem::directory_iterator(programs_path)) {
             if (entry.is_regular_file()) {
                 std::string filename = entry.path().filename().string();
                 filenames.push_back(entry.path().filename().string());  // only the file name, not full path
@@ -33,8 +41,25 @@ class CPUProfiler : public Profiler {
         }
 
         for (const std::string& filename : filenames) {
-            _profileCode[filename] = codePath + "/cpu/compiled/" + filename;
+            _profileCode[filename] = programs_path + filename;
         }
+
+        json metadata;
+        std::ifstream fileStream(meta_path);
+        if (!fileStream) {
+            throw std::runtime_error("CPU profiler: Metadata file not found."
+                                     "Rerun the generator and make sure the path is writable!");
+        }
+
+        metadata = json::parse(fileStream);
+
+        if (!metadata.contains("repeated_executions")) {
+            throw std::runtime_error("CPU profiler: Metadata file malformed!");
+        }
+
+        this->programiterations = metadata["repeated_executions"];
+
+        this->log(std::string("repeated_executions ") + std::to_string(this->programiterations));
     }
 
     /**
@@ -44,6 +69,11 @@ class CPUProfiler : public Profiler {
     json profile() override;
 
  private:
+    /**
+     * How many times each instruction is repeated inside each profile program.
+     */
+    uint64_t programiterations;
+
     /**
      * Mapping of instruction names to profile program paths
      */
