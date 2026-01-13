@@ -7,9 +7,9 @@
 #ifndef SRC_SPEAR_PROFILERS_PROFILER_H_
 #define SRC_SPEAR_PROFILERS_PROFILER_H_
 
-#include <map>
-#include "string"
-#include "vector"
+#include <utility>
+#include <iostream>
+#include <string>
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
@@ -20,12 +20,13 @@ using json = nlohmann::json;
 class Profiler {
  public:
     const int iterations;
+    const std::string tag;
 
     /**
      * Constructor
      * @param iterations
      */
-    explicit Profiler(int iterations) : iterations(iterations) {}
+    explicit Profiler(int iterations, std::string tag) : iterations(iterations), tag(std::move(tag)) {}
 
     /**
      * Constructor
@@ -37,6 +38,10 @@ class Profiler {
      * @return Returns a mapping between value => energy
      */
     virtual json profile() = 0;
+
+    void log(std::string const & message) {
+        std::cout << "[" << this->tag << "]: " << message << std::endl;
+    }
 
     /**
      * Default descructor

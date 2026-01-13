@@ -33,8 +33,6 @@ void runProfileRoutine(CLIOptions opts) {
     int rep = opts.repeatAmount;
     std::string compiledPath = opts.codePath;
 
-    std::cout << "Starting the profile..." << std::endl;
-
     CPUProfiler cpuprofiler = CPUProfiler(rep, compiledPath);
     MetaProfiler metaprofiler = MetaProfiler(rep);
 

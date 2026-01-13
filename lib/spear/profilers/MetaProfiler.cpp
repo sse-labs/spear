@@ -13,13 +13,28 @@
 #include <cstdio>
 
 json MetaProfiler::profile() {
+    this->log("Executing Metaprofiler");
     json metainformation;
 
+    this->log("Querying Metainformation...");
+
+    std::string cpuname = _getCPUName();
+    std::string architecture = _getArchitecture();
+    std::string numberOfCores = _getNumberOfCores();
+    double raplUnit = _getRaplUnit();
+
+    this->log("CPU Name " + cpuname);
+    this->log("CPU Architecture " + architecture);
+    this->log("Number of Cores " + numberOfCores);
+    this->log("Rapl Unit " + std::to_string(raplUnit));
+    this->log("Measurement iterations " + std::to_string(iterations));
+
+
     metainformation["version"] = "2.0.0";
-    metainformation["name"] = _getCPUName();
-    metainformation["architecture"] = _getArchitecture();
-    metainformation["cores"] = _getNumberOfCores();
-    metainformation["raplunit"] = _getRaplUnit();
+    metainformation["name"] = cpuname;
+    metainformation["architecture"] = architecture;
+    metainformation["cores"] = numberOfCores;
+    metainformation["raplunit"] = raplUnit;
     metainformation["iterations"] = iterations;
 
     return metainformation;
