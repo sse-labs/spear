@@ -17,9 +17,12 @@
 #include "EnergyFunction.h"
 #include "CLIOptions.h"
 #include "PhasarResultRegistry.h"
+#include "HLAC/hlac.h"
 
 #include <nlohmann/json.hpp>
 
+#include "HLAC/hlac.h"
+#include "HLAC/hlacwrapper.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
@@ -469,10 +472,15 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             auto funcList = &module.getFunctionList();
 
             FunctionTree * functionTree = nullptr;
+            std::unique_ptr<HLAC::hlac> graph = HLAC::HLACWrapper::makeHLAC();
 
             // Construct the functionTrees to the functions of the module
             for (auto &function : *funcList) {
-                // function.print(llvm::outs());
+                //function.print(llvm::outs());
+
+                graph->makeFunction(&function);
+
+                // TODO weiter den graphen aufbauen...
 
                 auto name = function.getName();
                 if (name == "main") {
