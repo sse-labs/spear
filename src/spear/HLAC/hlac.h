@@ -1,50 +1,82 @@
-//
-// Created by max on 1/16/26.
-//
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#ifndef SPEAR_HLAC_H
-#define SPEAR_HLAC_H
-#include <vector>
+#ifndef SRC_SPEAR_HLAC_HLAC_H_
+#define SRC_SPEAR_HLAC_HLAC_H_
+
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/Analysis/LoopInfo.h>
-#include <unordered_map>
-#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instructions.h>
-#include <llvm/IR/CFG.h>
+
+#include <vector>
+#include <string>
+#include <memory>
 
 namespace HLAC {
-    class FunctionNode;
 
-    class GenericNode;
+/**
+ * Forward declarations of Function and Generic nodes
+ */
+class FunctionNode;
+class GenericNode;
 
+/**
+ * Enum to distinguish different types of feasibility that we store inside edges
+ */
 enum FEASIBILITY {
-    TOP,
-    BOT,
-    UNKNOWN
+    TOP,  // The path is feasible
+    BOT,  // The path is NOT feasible
+    UNKNOWN  // We can not tell if the path is feasible or not. ASSUME THE WORST CASE
 };
 
+/**
+ * Edge class that represents connections inside the HLAC
+ */
 class Edge {
-public:
+ public:
+    /**
+     * Source node of the edge
+     */
     GenericNode* soure = nullptr;
+    /**
+     * Destination node of the edge
+     */
     GenericNode* destination = nullptr;
 
+    /**
+     * Feasibility state of the edge
+     */
     FEASIBILITY feasibility = UNKNOWN;
 
+    /**
+     * Constructs a new edge between the two given nodes
+     * @param soure Source node of the edge
+     * @param destination Destination node of the edge
+     */
     Edge(GenericNode* soure, GenericNode* destination) : soure(soure), destination(destination) {}
 };
 
+/**
+ * Polymorphic generic node type
+ */
 class GenericNode {
-public:
-    std::vector<Edge *> incomingEdges;
-    std::vector<GenericNode *> outgoingEdges;
+ public:
+    /**
+     * Each node has a (unique) name
+     */
     std::string name;
 
+    /**
+     * Generic destructor
+     */
     virtual ~GenericNode() = default;
 };
 
 // Normal Nodes
 class Node : public GenericNode {
-public:
+ public:
     llvm::BasicBlock *block = nullptr;
 
     static std::unique_ptr<Node> makeNode(llvm::BasicBlock *basic_block);
@@ -52,7 +84,7 @@ public:
 
 // Loop Nodes
 class LoopNode : public GenericNode {
-public:
+ public:
     std::vector<std::unique_ptr<GenericNode>> Nodes;
     std::vector<std::unique_ptr<Edge>> Edges;
 
@@ -73,7 +105,7 @@ public:
 
 // Function Nodes
 class FunctionNode : public GenericNode {
-public:
+ public:
     std::vector<std::unique_ptr<GenericNode>> Nodes;
     std::vector<std::unique_ptr<Edge>> Edges;
     GenericNode *entry = nullptr;
@@ -91,25 +123,26 @@ public:
 
     FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *fam);
 
-private:
+ private:
     void constructLoopNodes(std::vector<llvm::Loop *> &loops);
 };
 
 // Call Nodes
 class CallNode : public GenericNode {
+ public:
     llvm::Function *function = nullptr;
     bool isVirtualCall = false;
 };
 
 // Complete Graph
 class hlac {
-public:
+ public:
     std::vector<std::unique_ptr<FunctionNode>> functions;
 
     void makeFunction(llvm::Function *function, llvm::FunctionAnalysisManager *fam);
 };
-}
+}  // namespace HLAC
 
 
 
-#endif //SPEAR_HLAC_H
+#endif  // SRC_SPEAR_HLAC_HLAC_H_

@@ -1,12 +1,19 @@
-//
-// Created by max on 1/16/26.
-//
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#include "HLAC/hlac.h"
-#include <unordered_map>
 #include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Dominators.h>
+
+#include <unordered_map>
+#include <utility>
+#include <memory>
+
+#include "HLAC/hlac.h"
+
+
 
 HLAC::FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *function_analysis_manager) {
     this->function = function;
@@ -26,15 +33,15 @@ HLAC::FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysi
         bb2node.reserve(function->size());
 
         // Create the nodes
-        for (auto &basic_block: *function) {
+        for (auto &basic_block : *function) {
             auto normal_node = HLAC::Node::makeNode(&basic_block);
-            HLAC::GenericNode *raw = normal_node.get();
+            GenericNode *raw = normal_node.get();
             this->Nodes.push_back(std::move(normal_node));
             bb2node.emplace(&basic_block, raw);
         }
 
         // Create the edges
-        for (auto &basic_block: *function) {
+        for (auto &basic_block : *function) {
             HLAC::GenericNode *src = bb2node.at(&basic_block);
 
             llvm::Instruction *term = basic_block.getTerminator();
@@ -69,18 +76,18 @@ HLAC::FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysi
 }
 
 void HLAC::FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
-
-    for (auto &loop:loops) {
+    for (auto &loop : loops) {
         llvm::outs() << loop->getName() << "\n";
         auto loopNode = LoopNode::makeNode(loop, this);
         loopNode->collapseLoop(this->Edges);
 
         this->Nodes.push_back(std::move(loopNode));
     }
-
 }
 
-std::unique_ptr<HLAC::FunctionNode> HLAC::FunctionNode::makeNode(llvm::Function* function, llvm::FunctionAnalysisManager *fam) {
+std::unique_ptr<HLAC::FunctionNode> HLAC::FunctionNode::makeNode(
+    llvm::Function* function,
+    llvm::FunctionAnalysisManager *fam) {
     auto fn = std::make_unique<FunctionNode>(function, fam);
     return fn;
 }

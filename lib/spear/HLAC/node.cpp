@@ -1,9 +1,10 @@
-//
-// Created by max on 1/16/26.
-//
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#include <memory>
 #include <llvm/IR/BasicBlock.h>
+#include <memory>
 #include "HLAC/hlac.h"
 
 std::unique_ptr<HLAC::Node> HLAC::Node::makeNode(llvm::BasicBlock *basic_block) {

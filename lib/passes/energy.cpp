@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <memory>
 
 #include "LLVMHandler.h"
 #include "ProfileHandler.h"
@@ -21,7 +22,6 @@
 
 #include <nlohmann/json.hpp>
 
-#include "HLAC/hlac.h"
 #include "HLAC/hlacwrapper.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/IR/Function.h"
@@ -476,11 +476,9 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             // Construct the functionTrees to the functions of the module
             for (auto &function : *funcList) {
-                //function.print(llvm::outs());
+                // function.print(llvm::outs());
 
                 graph->makeFunction(&function, &functionAnalysisManager);
-
-                // TODO weiter den graphen aufbauen...
 
                 auto name = function.getName();
                 if (name == "main") {
@@ -491,7 +489,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             int i = 0;
             for (auto &fn : graph->functions) {
-
                 if (fn->isMainFunction) {
                     llvm::outs() << "Found main at index " << i << "\n";
                     for (auto &bb : *fn->function) {

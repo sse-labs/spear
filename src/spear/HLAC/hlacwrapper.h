@@ -1,19 +1,20 @@
-//
-// Created by max on 1/16/26.
-//
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
-#ifndef SPEAR_HLACWRAPPER_H
-#define SPEAR_HLACWRAPPER_H
+#ifndef SRC_SPEAR_HLAC_HLACWRAPPER_H_
+#define SRC_SPEAR_HLAC_HLACWRAPPER_H_
+
+#include <memory>
 
 namespace HLAC {
 
-#include "hlac.h"
-
 class HLACWrapper {
-public:
-    static std::unique_ptr<HLAC::hlac> makeHLAC();
+ public:
+    static std::unique_ptr<hlac> makeHLAC();
 };
 
 }
 
-#endif //SPEAR_HLACWRAPPER_H
+#endif  // SRC_SPEAR_HLAC_HLACWRAPPER_H_
