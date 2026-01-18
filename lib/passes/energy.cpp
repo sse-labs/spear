@@ -478,7 +478,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             for (auto &function : *funcList) {
                 //function.print(llvm::outs());
 
-                graph->makeFunction(&function);
+                graph->makeFunction(&function, &functionAnalysisManager);
 
                 // TODO weiter den graphen aufbauen...
 
@@ -487,6 +487,19 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                     auto mainFunctionTree = FunctionTree::construct(&function);
                     functionTree = (mainFunctionTree);
                 }
+            }
+
+            int i = 0;
+            for (auto &fn : graph->functions) {
+
+                if (fn->isMainFunction) {
+                    llvm::outs() << "Found main at index " << i << "\n";
+                    for (auto &bb : *fn->function) {
+                        llvm::outs() << bb.getName() << "\n";
+                    }
+                }
+
+                i++;
             }
 
             if (functionTree != nullptr) {
