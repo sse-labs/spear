@@ -101,6 +101,8 @@ class LoopNode : public GenericNode {
      * @param edgeList List of edges from the node, this loop node is contained in
      */
     void collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList);
+
+    void constructCallNodes();
 };
 
 // Function Nodes
@@ -125,13 +127,25 @@ class FunctionNode : public GenericNode {
 
  private:
     void constructLoopNodes(std::vector<llvm::Loop *> &loops);
+    void constructCallNodes();
 };
 
 // Call Nodes
 class CallNode : public GenericNode {
  public:
-    llvm::Function *function = nullptr;
+    llvm::Function *calledFunction = nullptr;
     bool isVirtualCall = false;
+    llvm::CallBase *call = nullptr;
+
+    CallNode(llvm::Function *calls, llvm::CallBase *call);
+
+    void collapseCalls(HLAC::Node *belongingNode,
+        std::vector<std::unique_ptr<GenericNode>> &nodeList,
+        std::vector<std::unique_ptr<Edge>> &edgeList);
+
+    static std::unique_ptr<CallNode> makeNode(llvm::Function *function, llvm::CallBase *instruction);
+
+    static bool edgeExists(const std::vector<std::unique_ptr<Edge>> &edgeList, GenericNode *s, GenericNode *d);
 };
 
 // Complete Graph

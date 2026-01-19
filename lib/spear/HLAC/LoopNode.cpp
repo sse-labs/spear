@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include <utility>
 #include <memory>
+#include <vector>
 
 #include "HLAC/hlac.h"
 
@@ -97,6 +98,43 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
         HLAC::GenericNode *base = node.get();
         if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(base)) {
             loopNode->collapseLoop(this->Edges);
+        }
+    }
+}
+
+void HLAC::LoopNode::constructCallNodes() {
+    // Snapshot current nodes
+    std::vector<HLAC::GenericNode*> work;
+    work.reserve(this->Nodes.size());
+    for (auto &up : this->Nodes) work.push_back(up.get());
+
+    for (HLAC::GenericNode *base : work) {
+        if (!base) continue;
+
+        if (auto *normalnode = dynamic_cast<HLAC::Node *>(base)) {
+            // Collect calls first (important if collapseCalls splits blocks/erases calls)
+            std::vector<llvm::CallBase*> calls;
+            for (auto it = normalnode->block->begin(); it != normalnode->block->end(); ++it) {
+                if (auto *cb = llvm::dyn_cast<llvm::CallBase>(&*it)) {
+                    calls.push_back(cb);
+                }
+            }
+
+            for (llvm::CallBase *callbase : calls) {
+                // callbase might have been erased by a previous transformation
+                if (!callbase || !callbase->getParent()) continue;
+
+                llvm::Function *calledFunction = callbase->getCalledFunction();
+                auto callNodeUP = CallNode::makeNode(calledFunction, callbase);
+
+                HLAC::CallNode *callNode = callNodeUP.get();
+                this->Nodes.emplace_back(std::move(callNodeUP));
+
+                callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+            }
+
+        } else if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(base)) {
+            loopNode->constructCallNodes();
         }
     }
 }
