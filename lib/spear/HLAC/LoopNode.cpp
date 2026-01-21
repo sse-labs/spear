@@ -128,9 +128,10 @@ void HLAC::LoopNode::constructCallNodes() {
                 auto callNodeUP = CallNode::makeNode(calledFunction, callbase);
 
                 HLAC::CallNode *callNode = callNodeUP.get();
-                this->Nodes.emplace_back(std::move(callNodeUP));
-
-                callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                if (!callNode->calledFunction->getName().starts_with("llvm.")) {
+                    this->Nodes.emplace_back(std::move(callNodeUP));
+                    callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                }
             }
 
         } else if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(base)) {
@@ -143,4 +144,30 @@ std::unique_ptr<LoopNode> LoopNode::makeNode(llvm::Loop *loop, FunctionNode *fun
     auto ln = std::make_unique<LoopNode>(loop, function_node);
     return ln;
 }
+
+void HLAC::LoopNode::printDotRepresentation(std::ostream &os) {
+    os << "subgraph \"" << this->getDotName() << "\" {\n";
+    os << "style=filled;",
+    os << "fillcolor=\"#FFFFFF\";",
+    os << "color=\"#2B2B2B\";";
+    os << "penwidth=2;";
+    os << "fontname=\"Courier\";";
+    os << "  labelloc=\"t\";\n";
+    os << "  label=\"" << this->getDotName() << "\\l\";\n";
+
+    for (auto &node : this->Nodes) {
+        node->printDotRepresentation(os);
+    }
+
+    for (auto &edge : this->Edges) {
+        edge->printDotRepresentation(os);
+    }
+
+    os << "}\n";
+}
+
+std::string HLAC::LoopNode::getDotName() {
+    return "cluster_" + this->getAddress();
+}
+
 }  // namespace HLAC

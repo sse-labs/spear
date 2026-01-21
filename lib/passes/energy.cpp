@@ -487,6 +487,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 }
             }
 
+            graph->printDotRepresentation();
+
             int i = 0;
             for (auto &fn : graph->functions) {
                 if (fn->isMainFunction) {

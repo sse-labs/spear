@@ -94,6 +94,7 @@ void HLAC::FunctionNode::constructCallNodes() {
         if (!base) continue;
 
         if (auto *normalnode = dynamic_cast<HLAC::Node *>(base)) {
+            std::string sourcename = normalnode->block->getName().str();
             std::vector<llvm::CallBase*> calls;
             for (auto it = normalnode->block->begin(); it != normalnode->block->end(); ++it) {
                 if (auto *cb = llvm::dyn_cast<llvm::CallBase>(&*it)) {
@@ -109,9 +110,10 @@ void HLAC::FunctionNode::constructCallNodes() {
                 auto callNodeUP = CallNode::makeNode(calledFunction, callbase);
 
                 HLAC::CallNode *callNode = callNodeUP.get();
-                this->Nodes.emplace_back(std::move(callNodeUP));
-
-                callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                if (!callNode->calledFunction->getName().starts_with("llvm.")) {
+                    this->Nodes.emplace_back(std::move(callNodeUP));
+                    callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                }
             }
 
         } else if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(base)) {
@@ -131,4 +133,27 @@ std::unique_ptr<HLAC::Edge> HLAC::FunctionNode::makeEdge(GenericNode *src, Gener
     auto edge = std::make_unique<Edge>(src, dst);
 
     return edge;
+}
+
+void HLAC::FunctionNode::printDotRepresentation(std::ostream &os) {
+    os << "digraph " << "\"" << this->getDotName() << "\"" << " {" << std::endl;
+    os << "graph [pad=\".1\", ranksep=\"1.0\", nodesep=\"1.0\"];" << std::endl;
+    os << "compound=true;" << std::endl;
+    os << "fontname=\"Courier\";" << std::endl;
+    os << "  labelloc=\"t\";\n";
+    os << "label=" << "\"" << this->getDotName() << "\";" << std::endl;
+
+    for (auto &node : this->Nodes) {
+        node->printDotRepresentation(os);
+    }
+
+    for (auto &edge : this->Edges) {
+        edge->printDotRepresentation(os);
+    }
+
+    os << "}" << std::endl;
+}
+
+std::string HLAC::FunctionNode::getDotName() {
+    return "FunctionNode " + this->name.str();
 }

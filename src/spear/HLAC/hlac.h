@@ -56,6 +56,8 @@ class Edge {
      * @param destination Destination node of the edge
      */
     Edge(GenericNode* soure, GenericNode* destination) : soure(soure), destination(destination) {}
+
+    void printDotRepresentation(std::ostream &os);
 };
 
 /**
@@ -69,6 +71,23 @@ class GenericNode {
     std::string name;
 
     /**
+     *
+     * @param os
+     */
+    virtual void printDotRepresentation(std::ostream &os) {
+        os << "NOT IMPLEMENTED" << std::endl;
+    }
+
+    virtual std::string getDotName() {
+        return "NOT IMPLEMENTED";
+    }
+
+    std::string getAddress() {
+        auto addr = reinterpret_cast<std::uintptr_t>(this);
+        return std::to_string(addr);
+    }
+
+    /**
      * Generic destructor
      */
     virtual ~GenericNode() = default;
@@ -80,6 +99,10 @@ class Node : public GenericNode {
     llvm::BasicBlock *block = nullptr;
 
     static std::unique_ptr<Node> makeNode(llvm::BasicBlock *basic_block);
+
+    void printDotRepresentation(std::ostream &os) override;
+
+    std::string getDotName() override;
 };
 
 // Loop Nodes
@@ -103,6 +126,12 @@ class LoopNode : public GenericNode {
     void collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList);
 
     void constructCallNodes();
+
+    void printDotRepresentation(std::ostream &os) override;
+
+    std::string getDotName() override;
+
+    static HLAC::Node* findNodeByBB(std::vector<std::unique_ptr<GenericNode>> &nodeList, llvm::BasicBlock *bb);
 };
 
 // Function Nodes
@@ -119,12 +148,14 @@ class FunctionNode : public GenericNode {
     bool isDebugFunction = false;
     bool isLinkerFunction = false;
 
-    static std::unique_ptr<LoopNode> makeNode(llvm::Loop *loop);
     static std::unique_ptr<FunctionNode> makeNode(llvm::Function *func, llvm::FunctionAnalysisManager *fam);
     static std::unique_ptr<Edge> makeEdge(GenericNode *entry, GenericNode *exit);
 
     FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *fam);
 
+    void printDotRepresentation(std::ostream &os) override;
+
+    std::string getDotName() override;
  private:
     void constructLoopNodes(std::vector<llvm::Loop *> &loops);
     void constructCallNodes();
@@ -146,6 +177,12 @@ class CallNode : public GenericNode {
     static std::unique_ptr<CallNode> makeNode(llvm::Function *function, llvm::CallBase *instruction);
 
     static bool edgeExists(const std::vector<std::unique_ptr<Edge>> &edgeList, GenericNode *s, GenericNode *d);
+
+    void printDotRepresentation(std::ostream &os) override;
+
+    std::string getDotName() override;
+
+    static HLAC::Node* findNodeByBB(std::vector<std::unique_ptr<GenericNode>> &nodeList, llvm::BasicBlock *bb);
 };
 
 // Complete Graph
@@ -154,6 +191,8 @@ class hlac {
     std::vector<std::unique_ptr<FunctionNode>> functions;
 
     void makeFunction(llvm::Function *function, llvm::FunctionAnalysisManager *fam);
+
+    void printDotRepresentation();
 };
 }  // namespace HLAC
 
