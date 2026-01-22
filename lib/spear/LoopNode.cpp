@@ -139,7 +139,7 @@ void LoopNode::removeLoopEdgesFromSubGraphs() {
         auto *latchblock = this->loopTree->mainloop->getLoopLatch();
         // Get the Node the latchblock is contained in
         auto *latchnode = subgraph->findBlock(latchblock);
-        auto lnname = latchblock->getName();
+        // auto lnname = latchblock->getName();
         // Init the list of edges we want to keep
         std::vector<Edge *> tempedges;
 

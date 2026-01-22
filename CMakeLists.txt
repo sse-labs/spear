@@ -38,12 +38,14 @@ add_subdirectory(external)
 # Collect spear source files
 file(GLOB_RECURSE SPEAR_HEADERS
     src/spear/*.h
+    lib/spear/HLAC/*.h
     src/spear/profilers/*.h
 )
 
 file(GLOB_RECURSE SPEAR_SOURCES
     lib/spear/*.cpp
     lib/spear/profilers/*.cpp
+    lib/spear/HLAC/*.cpp
     lib/passes/*.cpp
 )
 
