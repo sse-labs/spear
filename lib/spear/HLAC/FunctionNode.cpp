@@ -11,40 +11,48 @@
 #include <utility>
 #include <memory>
 #include <vector>
+#include <string>
 
 #include "LLVMHandler.h"
 #include "HLAC/hlac.h"
 
+#define SPR_IGNORE_DEBUG_FUNCTIONS 1
 
+namespace HLAC {
 
-HLAC::FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *function_analysis_manager) {
+FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *function_analysis_manager) {
+    // Set the parameter of the FunctionNode
     this->function = function;
     this->name = function->getName();
     this->isLinkerFunction = function->isDeclarationForLinker();
 
-    if (this->name.startswith("llvm.")) {
+    // Determine if the function is a LLVM debug function
+    if (this->name.starts_with("llvm.")) {
         this->isDebugFunction = true;
     }
 
+    // Check if the function is the main function
     if (this->name.starts_with("main")) {
         this->isMainFunction = true;
     }
 
+    // If we can analyze the function e.g. we do not have a linker function
     if (!this->isLinkerFunction) {
-        std::unordered_map<const llvm::BasicBlock *, HLAC::GenericNode *> bb2node;
+        // Create nodes inside the function node
+        std::unordered_map<const llvm::BasicBlock *, GenericNode *> bb2node;
         bb2node.reserve(function->size());
 
-        // Create the nodes
+        // Create all NormalNodes by iteration over the list of basic blocks
         for (auto &basic_block : *function) {
-            auto normal_node = HLAC::Node::makeNode(&basic_block);
+            auto normal_node = Node::makeNode(&basic_block);
             GenericNode *raw = normal_node.get();
             this->Nodes.push_back(std::move(normal_node));
             bb2node.emplace(&basic_block, raw);
         }
 
-        // Create the edges
+        // Create all Edges from the basic blocks
         for (auto &basic_block : *function) {
-            HLAC::GenericNode *src = bb2node.at(&basic_block);
+            GenericNode *src = bb2node.at(&basic_block);
 
             llvm::Instruction *term = basic_block.getTerminator();
             if (!term) continue;
@@ -56,13 +64,15 @@ HLAC::FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysi
                 auto it = bb2node.find(succBB);
                 if (it == bb2node.end()) continue;
 
-                HLAC::GenericNode *dst = it->second;
+                GenericNode *dst = it->second;
 
-                auto e = HLAC::FunctionNode::makeEdge(src, dst);
+                auto e = FunctionNode::makeEdge(src, dst);
 
                 this->Edges.push_back(std::move(e));
             }
         }
+
+        // Query LLVM for information about loops
         llvm::DominatorTree domtree{};
         domtree.recalculate(*function);
         auto &loopAnalysis = function_analysis_manager->getResult<llvm::LoopAnalysis>(*function);
@@ -70,14 +80,17 @@ HLAC::FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysi
 
         // Get the vector of Top-Level loops present in the program
         auto loops = loopAnalysis.getTopLevelLoops();
+
+        // Construct all LoopNodes
         constructLoopNodes(loops);
-        constructCallNodes();
+
+        // Construct all CallNodes
+        constructCallNodes(SPR_IGNORE_DEBUG_FUNCTIONS);
     }
 }
 
-void HLAC::FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
+void FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
     for (auto &loop : loops) {
-        llvm::outs() << loop->getName() << "\n";
         auto loopNode = LoopNode::makeNode(loop, this);
         loopNode->collapseLoop(this->Edges);
 
@@ -85,57 +98,68 @@ void HLAC::FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
     }
 }
 
-void HLAC::FunctionNode::constructCallNodes() {
-    std::vector<HLAC::GenericNode*> work;
+void FunctionNode::constructCallNodes(bool considerDebugFunctions) {
+    // Create shadowed worklist of Nodes that need to be considered
+    // We shadow the list here to avoid dereferencing nodes while we are still working on them
+    std::vector<GenericNode*> work;
     work.reserve(this->Nodes.size());
     for (auto &up : this->Nodes) work.push_back(up.get());
 
-    for (HLAC::GenericNode *base : work) {
+    for (GenericNode *base : work) {
         if (!base) continue;
 
-        if (auto *normalnode = dynamic_cast<HLAC::Node *>(base)) {
+        // If the currently viewed Node is a NormalNode we need to extract all calls and create new CallNodes for each
+        // of them
+        if (auto *normalnode = dynamic_cast<Node *>(base)) {
             std::string sourcename = normalnode->block->getName().str();
+            // List of calls we need to consider
             std::vector<llvm::CallBase*> calls;
+            // Search for all calls inside the NormalNode's basic block
             for (auto it = normalnode->block->begin(); it != normalnode->block->end(); ++it) {
                 if (auto *cb = llvm::dyn_cast<llvm::CallBase>(&*it)) {
                     calls.push_back(cb);
                 }
             }
 
+            // Check each found call
             for (llvm::CallBase *callbase : calls) {
                 // callbase might have been erased by a previous transformation
                 if (!callbase || !callbase->getParent()) continue;
 
                 llvm::Function *calledFunction = callbase->getCalledFunction();
-                auto callNodeUP = CallNode::makeNode(calledFunction, callbase);
 
-                HLAC::CallNode *callNode = callNodeUP.get();
-                if (!callNode->calledFunction->getName().starts_with("llvm.")) {
+                // Construct the CallNode
+                auto callNodeUP = CallNode::makeNode(calledFunction, callbase);
+                CallNode *callNode = callNodeUP.get();
+
+                if (!callNode->isDebugFunction || !considerDebugFunctions) {
+                    // Add the CallNode to the list of Nodes and rewrite the edges of this FunctionNode
                     this->Nodes.emplace_back(std::move(callNodeUP));
                     callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
                 }
             }
 
-        } else if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(base)) {
-            loopNode->constructCallNodes();
+        } else if (auto *loopNode = dynamic_cast<LoopNode *>(base)) {
+            // If we encountered a LoopNode we need to construct CallNodes in the contained Nodes
+            // Call the constructCallNodes function recursively
+            loopNode->constructCallNodes(SPR_IGNORE_DEBUG_FUNCTIONS);
         }
     }
 }
 
-std::unique_ptr<HLAC::FunctionNode> HLAC::FunctionNode::makeNode(
+std::unique_ptr<FunctionNode> FunctionNode::makeNode(
     llvm::Function* function,
     llvm::FunctionAnalysisManager *fam) {
     auto fn = std::make_unique<FunctionNode>(function, fam);
     return fn;
 }
 
-std::unique_ptr<HLAC::Edge> HLAC::FunctionNode::makeEdge(GenericNode *src, GenericNode *dst) {
+std::unique_ptr<Edge> FunctionNode::makeEdge(GenericNode *src, GenericNode *dst) {
     auto edge = std::make_unique<Edge>(src, dst);
-
     return edge;
 }
 
-void HLAC::FunctionNode::printDotRepresentation(std::ostream &os) {
+void FunctionNode::printDotRepresentation(std::ostream &os) {
     os << "digraph " << "\"" << this->getDotName() << "\"" << " {" << std::endl;
     os << "graph [pad=\".1\", ranksep=\"1.0\", nodesep=\"1.0\"];" << std::endl;
     os << "compound=true;" << std::endl;
@@ -154,6 +178,8 @@ void HLAC::FunctionNode::printDotRepresentation(std::ostream &os) {
     os << "}" << std::endl;
 }
 
-std::string HLAC::FunctionNode::getDotName() {
-    return "FunctionNode " + this->name.str();
+std::string FunctionNode::getDotName() {
+    return "FunctionNode " + this->name;
 }
+
+}  // namespace HLAC

@@ -6,19 +6,22 @@
 #include "HLAC/hlac.h"
 #include <utility>
 #include <fstream>
+#include <string>
 
-void HLAC::hlac::makeFunction(llvm::Function* function, llvm::FunctionAnalysisManager *fam) {
+namespace HLAC {
+
+void hlac::makeFunction(llvm::Function* function, llvm::FunctionAnalysisManager *fam) {
     auto fnptr = FunctionNode::makeNode(function, fam);
     functions.emplace_back(std::move(fnptr));
 }
 
-void HLAC::hlac::printDotRepresentation() {
+void hlac::printDotRepresentation() {
     for (auto &fn : functions) {
-        if (fn->name == "main") {
-            std::string filename = fn->name.str() + ".dot";
-            std::ofstream out(filename);
+        std::string filename = fn->name + ".dot";
+        std::ofstream out(filename);
 
-            fn->printDotRepresentation(out);
-        }
+        fn->printDotRepresentation(out);
     }
 }
+
+}  // namespace HLAC

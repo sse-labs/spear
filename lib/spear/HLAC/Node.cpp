@@ -4,21 +4,27 @@
 */
 
 #include <llvm/IR/BasicBlock.h>
-#include <memory>
-#include "HLAC/hlac.h"
-#include "HLAC/util.h"
 #include <llvm/Support/raw_os_ostream.h>
 
-std::unique_ptr<HLAC::Node> HLAC::Node::makeNode(llvm::BasicBlock *basic_block) {
-    auto node = std::make_unique<HLAC::Node>();
+#include <memory>
+#include <utility>
+#include <string>
+
+#include "HLAC/hlac.h"
+#include "HLAC/util.h"
+
+namespace HLAC {
+
+std::unique_ptr<Node> Node::makeNode(llvm::BasicBlock *basic_block) {
+    // Store node parameters
+    auto node = std::make_unique<Node>();
     node->block = basic_block;
     node->name = basic_block->getName();
-
 
     return node;
 }
 
-void HLAC::Node::printDotRepresentation(std::ostream &os) {
+void Node::printDotRepresentation(std::ostream &os) {
     llvm::raw_os_ostream llvmOS(os);
 
     std::string rawBody;
@@ -29,7 +35,7 @@ void HLAC::Node::printDotRepresentation(std::ostream &os) {
 
         // Only strip for calls/invokes/callbr
         if (llvm::isa<llvm::CallBase>(I)) {
-            line = Util::stripParamsInInstText(std::move(line));
+            line = Util::stripParameters(std::move(line));
         }
 
         rawBody += line;
@@ -59,6 +65,8 @@ void HLAC::Node::printDotRepresentation(std::ostream &os) {
     llvmOS.flush();
 }
 
-std::string HLAC::Node::getDotName() {
+std::string Node::getDotName() {
     return "Node" + this->getAddress();
 }
+
+}  // namespace HLAC

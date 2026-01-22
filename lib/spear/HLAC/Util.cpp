@@ -1,14 +1,24 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
+
+#include <llvm/Demangle/Demangle.h>
+
+#include <regex>
+#include <utility>
+#include <string>
 
 #include "HLAC/util.h"
-#include <regex>
-#include <llvm/Demangle/Demangle.h>
 
 namespace HLAC {
 
 std::string Util::stripParameters(const std::string& s) {
-    // Remove everything from the first '(' to the end (handles normal demangles)
+    // Remove everything from the first '(' to the end
     auto pos = s.find('(');
-    if (pos == std::string::npos) return s;
+    if (pos == std::string::npos) {
+        return s;
+    }
     return s.substr(0, pos) + "(...)";
 }
 
@@ -18,24 +28,34 @@ std::string Util::dotRecordEscape(llvm::StringRef s) {
 
     for (char c : s) {
         switch (c) {
-            case '\\': out += "\\\\"; break;
-            case '"':  out += "\\\""; break;
-
-                // record-label metacharacters
-            case '{': case '}': case '|': case '<': case '>':
+            case '\\': {
+                out += "\\\\";
+                break;
+            }
+            case '"': {
+                out += "\\\"";
+                break;
+            }
+            case '{':
+            case '}':
+            case '|':
+            case '<':
+            case '>': {
                 out += '\\';
                 out += c;
                 break;
-
-            case '\n':
-                out += "\\l";   // ✅ LEFT-ALIGNED line break
+            }
+            case '\n': {
+                out += "\\l";
                 break;
-
-            case '\r':
+            }
+            case '\r': {
                 break;
-
-            default:
+            }
+            default: {
                 out += c;
+                break;
+            }
         }
     }
     return out;
@@ -47,14 +67,18 @@ std::string Util::dropReturnType(std::string s) {
     size_t ns = s.find("::");
 
     size_t start = std::string::npos;
-    if (op != std::string::npos) start = op + 1;       // skip leading space
-    else if (ns != std::string::npos) {
-        // crude: walk back to previous space before the first ::
+    if (op != std::string::npos) {
+        start = op + 1;
+    } else if (ns != std::string::npos) {
         size_t sp = s.rfind(' ', ns);
-        if (sp != std::string::npos) start = sp + 1;
+        if (sp != std::string::npos) {
+            start = sp + 1;
+        }
     }
 
-    if (start != std::string::npos) return s.substr(start);
+    if (start != std::string::npos) {
+        return s.substr(start);
+    }
     return s;
 }
 
@@ -64,12 +88,29 @@ std::string Util::escapeDotLabel(std::string s) {
 
     for (char c : s) {
         switch (c) {
-            case '\\': out += "\\\\"; break;
-            case '"':  out += "\\\""; break;
-            case '\n': out += "\\n";  break;
-            case '\r': break;
-            case '\t': out += "\\t";  break;
-            default:   out += c;      break;
+            case '\\': {
+                out += "\\\\";
+                break;
+            }
+            case '"': {
+                out += "\\\"";
+                break;
+            }
+            case '\n': {
+                out += "\\n";
+                break;
+            }
+            case '\r': {
+                break;
+            }
+            case '\t': {
+                out += "\\t";
+                break;
+            }
+            default: {
+                out += c;
+                break;
+            }
         }
     }
     return out;
@@ -78,10 +119,9 @@ std::string Util::escapeDotLabel(std::string s) {
 std::string Util::dotSafeDemangledName(const std::string& mangled) {
     std::string s = llvm::demangle(mangled);
     s = prettifyOperators(std::move(s));
-    s = escapeDotLabel(std::move(s));   // assumes you use label="..."
+    s = escapeDotLabel(std::move(s));
     return s;
 }
-
 
 std::string Util::prettifyOperators(std::string s) {
     auto replace_all = [&](const std::string& from, const std::string& to) {
@@ -92,7 +132,6 @@ std::string Util::prettifyOperators(std::string s) {
         }
     };
 
-    // Common ones you’ll see a lot
     replace_all("operator<<", "operator pipein");
     replace_all("operator>>", "operator pipeout");
     replace_all("operator<",  "operator less");
@@ -114,7 +153,6 @@ std::string Util::prettifyOperators(std::string s) {
 }
 
 std::string Util::shortenStdStreamOps(std::string s) {
-    // Normalize the operator token first
     auto replace_all = [&](const std::string& from, const std::string& to) {
         size_t pos = 0;
         while ((pos = s.find(from, pos)) != std::string::npos) {
@@ -122,11 +160,12 @@ std::string Util::shortenStdStreamOps(std::string s) {
             pos += to.size();
         }
     };
+
     replace_all("operator<<", "operator <<");
     replace_all("operator>>", "operator >>");
-    replace_all("operator|",  "operator |"); // if you have those
+    replace_all("operator|",  "operator |");
 
-    // Collapse the extremely common ostream signature noise
+    // Collapse the extremely common ostream signatures
     // Return type + namespace prefixes vary, so we match loosely.
     static const std::regex ostreamNoise(
         R"(std::basic_ostream<char,\s*std::char_traits<char>\s*>\s*&\s*)");
@@ -140,8 +179,8 @@ std::string Util::shortenStdStreamOps(std::string s) {
     s = std::regex_replace(s, ostreamNoise, "ostream& ");
     s = std::regex_replace(s, istreamNoise, "istream& ");
 
-    // Optional: shorten char traits occurrences in template args
-    s = std::regex_replace(s,
+    s = std::regex_replace(
+        s,
         std::regex(R"(std::char_traits<char>)"),
         "char_traits");
 
@@ -156,11 +195,21 @@ std::string Util::instToString(const llvm::Instruction &I) {
     return s;
 }
 
-std::string Util::stripParamsInInstText(std::string s) {
-    // Your old helper, but applied to ONE instruction line
-    auto pos = s.find('(');
-    if (pos == std::string::npos) return s;
-    return s.substr(0, pos) + "(...)";
+std::string Util::feasibilityToString(FEASIBILITY feas) {
+    switch (feas) {
+        case 0: {
+            return "⊤";
+        }
+        case 1: {
+            return "⊥";
+        }
+        case 2: {
+            return "?";
+        }
+        default: {
+            return "";
+        }
+    }
 }
 
-}
+}  // namespace HLAC

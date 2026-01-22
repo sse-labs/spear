@@ -3,112 +3,90 @@
  * All rights reserved.
 */
 
+#include <llvm/Demangle/Demangle.h>
+
 #include <memory>
 #include <vector>
-#include <llvm/Demangle/Demangle.h>
+#include <utility>
+#include <string>
 
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
 
 namespace HLAC {
 
-HLAC::CallNode::CallNode(llvm::Function *calls, llvm::CallBase *call) {
+CallNode::CallNode(llvm::Function *calls, llvm::CallBase *call) {
     this->call = call;
     this->calledFunction = calls;
     this->name = "Call to " + calledFunction->getName().str();
+    this->isLinkerFunction = calledFunction->isDeclarationForLinker();
+    this->isSyscall = false;
+    this->isDebugFunction = calledFunction->getName().starts_with("llvm.");
 }
 
-HLAC::Node* HLAC::CallNode::findNodeByBB(std::vector<std::unique_ptr<GenericNode>> &nodeList,
-                                llvm::BasicBlock *bb) {
-    if (!bb) return nullptr;
-    for (auto &up : nodeList) {
-        if (!up) continue;
-        if (auto *n = dynamic_cast<HLAC::Node*>(up.get())) {
-            if (n->block == bb) return n;
-        }
-    }
-    return nullptr;
-}
-
-void HLAC::CallNode::collapseCalls(HLAC::Node *belongingNode,
+void CallNode::collapseCalls(Node *belongingNode,
                                   std::vector<std::unique_ptr<GenericNode>> &nodeList,
                                   std::vector<std::unique_ptr<Edge>> &edgeList) {
+    // Check if the belonging node and the call are valid
     if (!belongingNode || !this->call) return;
 
+    // Check that the belonging node's block is valid
     llvm::BasicBlock *bb = belongingNode->block;
     if (!bb) return;
 
+    // Validate that our call originates from the referenced basic block
     if (this->call->getParent() != bb) return;
 
-    // 1) Collect targets from existing HLAC edges, and erase those edges (dedup source->CallNode)
+    /**
+     * Collect all edges taht start in the belonging node.
+     * Afterwards we delete these edges
+     */
     std::vector<GenericNode*> targets;
     targets.reserve(8);
 
-    bool hadEdgeToCallNode = false;
-
     for (auto it = edgeList.begin(); it != edgeList.end(); ) {
         Edge *e = it->get();
-        if (!e) { ++it; continue; }
+        if (!e) {
+            ++it;
+            continue;
+        }
 
         if (e->soure == belongingNode) {
+            // Deal with already existing edges to this CallNode
+            // We only want to store one edge
             if (e->destination == this) {
-                hadEdgeToCallNode = true;
-                it = edgeList.erase(it); // remove duplicates; we will add exactly one later
-                continue;
-            } else {
-                targets.push_back(e->destination);
-                it = edgeList.erase(it); // remove old belongingNode -> target edge
+                it = edgeList.erase(it);
                 continue;
             }
+            // Store the targets that need to be connected to our CallNode
+            targets.push_back(e->destination);
+            it = edgeList.erase(it);  // Remove the connection belongingNode -> target
+            continue;
         }
 
         ++it;
     }
 
-    // 2) If HLAC had no outgoing edges, derive targets from LLVM CFG successors (optional)
-    if (targets.empty()) {
-        llvm::Instruction *term = bb->getTerminator();
-        if (!term) return;
-
-        unsigned nsucc = term->getNumSuccessors();
-        targets.reserve(nsucc);
-
-        for (unsigned i = 0; i < nsucc; ++i) {
-            llvm::BasicBlock *succBB = term->getSuccessor(i);
-
-            // Find HLAC node that represents succBB
-            HLAC::Node *succNode = nullptr;
-            for (auto &up : nodeList) {
-                if (auto *n = dynamic_cast<HLAC::Node*>(up.get())) {
-                    if (n->block == succBB) { succNode = n; break; }
-                }
-            }
-            if (succNode) targets.push_back(succNode);
-        }
-    }
-
-    // 3) Add exactly one belongingNode -> CallNode
+    // Add an edge belongingNode -> CallNode
     if (!edgeExists(edgeList, belongingNode, this)) {
         edgeList.emplace_back(std::make_unique<Edge>(belongingNode, this));
     }
 
-    // 4) Add CallNode -> targets (dedup)
+    // Add CallNode -> targets
     for (GenericNode *t : targets) {
         if (!t || t == this) continue;
         if (!edgeExists(edgeList, this, t)) {
             edgeList.emplace_back(std::make_unique<Edge>(this, t));
         }
     }
-
-    // If targets is empty here, CallNode stays a leaf (e.g., call in return/unreachable block).
 }
 
-std::unique_ptr<CallNode> HLAC::CallNode::makeNode(llvm::Function *function, llvm::CallBase *instruction) {
+std::unique_ptr<CallNode> CallNode::makeNode(llvm::Function *function, llvm::CallBase *instruction) {
     auto callnode = std::make_unique<CallNode>(function, instruction);
     return callnode;
 }
 
-bool HLAC::CallNode::edgeExists(const std::vector<std::unique_ptr<Edge>> &edgeList, GenericNode *s, GenericNode *d) {
+bool CallNode::edgeExists(const std::vector<std::unique_ptr<Edge>> &edgeList, GenericNode *s, GenericNode *d) {
     for (auto &eup : edgeList) {
         const Edge *e = eup.get();
         if (e && e->soure == s && e->destination == d) return true;
@@ -116,14 +94,17 @@ bool HLAC::CallNode::edgeExists(const std::vector<std::unique_ptr<Edge>> &edgeLi
     return false;
 }
 
-void HLAC::CallNode::printDotRepresentation(std::ostream &os) {
+void CallNode::printDotRepresentation(std::ostream &os) {
+    // Demangle name of the function
     std::string full = llvm::demangle(this->calledFunction->getName().str());
 
+    // Call dot string cleaning pipeline
     std::string shortLabel = full;
     shortLabel = Util::shortenStdStreamOps(std::move(shortLabel));
     shortLabel = Util::dropReturnType(std::move(shortLabel));
     shortLabel = Util::stripParameters(std::move(shortLabel));
 
+    // Print dot representation to the given OS
     os << getDotName() << "["
        << "shape=record,"
        << "style=filled,"
@@ -131,8 +112,13 @@ void HLAC::CallNode::printDotRepresentation(std::ostream &os) {
        << "color=\"#2B2B2B\","
        << "penwidth=2,"
        << "fontname=\"Courier\","
-       << "label=\"{call:\\l| " << Util::dotRecordEscape(shortLabel) << "}\","
-       << "tooltip=\"" << Util::escapeDotLabel(full) << "\""
+       << "label=\"{"
+       << "call:\\l"
+       << "| " << Util::dotRecordEscape(shortLabel)
+       << "| { LINKERFUNC=" << isLinkerFunction
+       <<" | DEBUGFUNC=" << isDebugFunction
+       << " | SYSCALL=" << isSyscall << " }"
+       << "}\""
        << "];\n";
 }
 
