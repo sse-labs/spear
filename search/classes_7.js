@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['metaprofiler_0',['MetaProfiler',['../classMetaProfiler.html',1,'']]]
+  ['instructioncategory_0',['InstructionCategory',['../classInstructionCategory.html',1,'']]],
+  ['instructionelement_1',['InstructionElement',['../classInstructionElement.html',1,'']]]
 ];
