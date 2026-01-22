@@ -17,6 +17,8 @@
 #include <string>
 #include <memory>
 
+#include "analyses/loopbound.h"
+
 using llvm::Module;
 using llvm::PreservedAnalyses;
 using llvm::ModuleAnalysisManager;
@@ -28,46 +30,36 @@ PhasarHandlerPass::PhasarHandlerPass()
       Entrypoints({std::string("main")}) {}
 
 PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
-  // Store module and build PhASAR helper.
   mod = &M;
   HA = std::make_unique<psr::HelperAnalyses>(&M, Entrypoints);
   AnalysisResult.reset();
 
-  // Actually run the IDELinearConstantAnalysis
   runAnalysis();
 
-  // If this pass only computes information and doesn't modify the IR, we can
-  // conservatively say everything is preserved.
   return PreservedAnalyses::all();
 }
 
 void PhasarHandlerPass::runOnModule(llvm::Module &M) {
-  // Create a dummy module analysis manager so the regular run() entry point works
   ModuleAnalysisManager DummyAM;
   run(M, DummyAM);
 }
-
 
 void PhasarHandlerPass::runAnalysis() {
   if (!HA)
     return;
 
-  // Ensure we actually have a 'main' entry point
   if (!HA->getProjectIRDB().getFunctionDefinition("main"))
     return;
 
-  // Build the analysis problem and solve it
-  auto Problem = psr::createAnalysisProblem<psr::IDELinearConstantAnalysis>(
-      *HA, Entrypoints);
+  loopbound::LoopBoundIDEAnalysis Problem(
+      HA->getProjectIRDB(), Entrypoints);
 
-  // Alternative way of solving an IFDS/IDEProblem:
   auto Result = psr::solveIDEProblem(Problem, HA->getICFG());
 
-  // Result.dumpResults(HA->getICFG(), llvm::outs());
-
   AnalysisResult = std::make_unique<psr::OwningSolverResults<
-      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<int64_t>>>(
-      Result);
+      const llvm::Instruction *,
+      const llvm::Value *,
+      psr::LatticeDomain<int64_t>>>(Result);
 }
 
 void PhasarHandlerPass::dumpState() const {
@@ -83,9 +75,8 @@ PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
   if (!AnalysisResult || !Func)
     return ResultMap;
 
-  using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
+  using DomainVal = psr::LatticeDomain<int64_t>;
 
-  // Result:  BB_name -> { var_name -> (Value*, domain_val) }
   for (const llvm::BasicBlock &BB : *Func) {
     std::string BBName = BB.hasName()
                              ? BB.getName().str()
@@ -94,14 +85,13 @@ PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
                                        reinterpret_cast<uintptr_t>(&BB)) +
                                    ">";
 
-    // Ensure block entry exists
     auto &BBEntry = ResultMap[BBName];
 
     for (const llvm::Instruction &Inst : BB) {
       if (!AnalysisResult->containsNode(&Inst))
         continue;
 
-      psr::LLVMAnalysisDomainDefault::d_t Bottom = nullptr;
+      const llvm::Value *Bottom = nullptr;
       auto Res = AnalysisResult->resultsAtInLLVMSSA(&Inst, Bottom);
 
       for (const auto &ResElement : Res) {

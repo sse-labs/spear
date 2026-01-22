@@ -40,6 +40,7 @@ file(GLOB_RECURSE SPEAR_HEADERS
     src/spear/*.h
     lib/spear/HLAC/*.h
     src/spear/profilers/*.h
+    src/spear/analyses/*.h
 )
 
 file(GLOB_RECURSE SPEAR_SOURCES
@@ -47,6 +48,7 @@ file(GLOB_RECURSE SPEAR_SOURCES
     lib/spear/profilers/*.cpp
     lib/spear/HLAC/*.cpp
     lib/passes/*.cpp
+    src/spear/analyses/*.cpp
 )
 
 

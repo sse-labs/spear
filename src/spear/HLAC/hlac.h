@@ -13,6 +13,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <utility>
 
 namespace HLAC {
 
@@ -166,6 +167,11 @@ class LoopNode : public GenericNode {
      * Loop represented by the HLAC
      */
     llvm::Loop *loop = nullptr;
+
+    /**
+     * Loop bound representing (min, max) iteration count
+     */
+    std::pair<int64_t, int64_t> bounds;
 
     /**
      * Flag to store if the contained loop has subloops that find representation as further LoopNodes
