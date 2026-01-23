@@ -45,21 +45,34 @@ void PhasarHandlerPass::runOnModule(llvm::Module &M) {
 }
 
 void PhasarHandlerPass::runAnalysis() {
-  if (!HA)
-    return;
-
-  if (!HA->getProjectIRDB().getFunctionDefinition("main"))
-    return;
+  if (!HA) return;
+  if (!HA->getProjectIRDB().getFunctionDefinition("main")) return;
 
   loopbound::LoopBoundIDEAnalysis Problem(
-      HA->getProjectIRDB(), Entrypoints);
+    HA->getProjectIRDB(),
+    HA->getCFG(),          // <-- ADD THIS
+    Entrypoints);
+
+  using ResultsTy = psr::OwningSolverResults<
+      const llvm::Instruction *, const llvm::Value *, loopbound::DeltaInterval>;
+
+  auto &ICFG = HA->getICFG();
+
+  const llvm::Function *F = HA->getProjectIRDB().getFunctionDefinition("main");
+  auto *SeedI = &F->getEntryBlock().front();
+
+  llvm::outs() << "[LB] SeedI: " << *SeedI << "\n";
+  llvm::outs() << "[LB] Succs of SeedI:\n";
+  for (auto *Succ : ICFG.getSuccsOf(SeedI)) {
+    llvm::outs() << "  - " << *Succ << "\n";
+  }
+  llvm::outs() << "[LB] Preds of SeedI:\n";
+  for (auto *Pred : ICFG.getPredsOf(SeedI)) {
+    llvm::outs() << "  - " << *Pred << "\n";
+  }
 
   auto Result = psr::solveIDEProblem(Problem, HA->getICFG());
-
-  AnalysisResult = std::make_unique<psr::OwningSolverResults<
-      const llvm::Instruction *,
-      const llvm::Value *,
-      psr::LatticeDomain<int64_t>>>(Result);
+  AnalysisResult = std::make_unique<ResultsTy>(std::move(Result));
 }
 
 void PhasarHandlerPass::dumpState() const {
@@ -75,7 +88,7 @@ PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
   if (!AnalysisResult || !Func)
     return ResultMap;
 
-  using DomainVal = psr::LatticeDomain<int64_t>;
+  using DomainVal = loopbound::DeltaInterval;
 
   for (const llvm::BasicBlock &BB : *Func) {
     std::string BBName = BB.hasName()

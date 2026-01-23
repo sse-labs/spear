@@ -15,6 +15,9 @@
 #include <utility>
 #include <vector>
 
+#include "analyses/loopbound.h"
+#include "analyses/LoopBoundEdgeFunction.h"
+
 namespace llvm {
 class Module;
 class Function;
@@ -28,7 +31,7 @@ class Instruction;
 // This is written for the LLVM "new" pass manager (PassBuilder).
 class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
  public:
-  using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
+  using DomainVal = loopbound::DeltaInterval;
 
   // Result:  BB_name -> { var_name -> (Value*, domain_val) }
   using BoundVarMap =
@@ -60,7 +63,7 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
 
   // Solver results: PhASAR’s IDE solver result wrapper.
   std::unique_ptr<psr::OwningSolverResults<
-      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<int64_t>>>
+      const llvm::Instruction *, const llvm::Value *, loopbound::DeltaInterval>>
       AnalysisResult;
 
   // Function entrypoints
