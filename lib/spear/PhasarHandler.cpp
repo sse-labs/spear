@@ -34,45 +34,57 @@ PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   HA = std::make_unique<psr::HelperAnalyses>(&M, Entrypoints);
   AnalysisResult.reset();
 
-  runAnalysis();
+  auto &FAM = AM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*mod).getManager();
+  runAnalysis(&FAM);
+
+  runAnalysis(&FAM);
 
   return PreservedAnalyses::all();
 }
 
 void PhasarHandlerPass::runOnModule(llvm::Module &M) {
-  ModuleAnalysisManager DummyAM;
-  run(M, DummyAM);
+  llvm::PassBuilder PB;
+
+  llvm::LoopAnalysisManager LAM;
+  llvm::FunctionAnalysisManager FAM;
+  llvm::CGSCCAnalysisManager CGAM;
+  llvm::ModuleAnalysisManager MAM;
+
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  run(M, MAM);
 }
 
-void PhasarHandlerPass::runAnalysis() {
+void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
   if (!HA) return;
   if (!HA->getProjectIRDB().getFunctionDefinition("main")) return;
 
-  loopbound::LoopBoundIDEAnalysis Problem(
-    HA->getProjectIRDB(),
-    HA->getCFG(),          // <-- ADD THIS
-    Entrypoints);
+  llvm::Function *F = HA->getProjectIRDB().getFunctionDefinition("main");
+
+
 
   using ResultsTy = psr::OwningSolverResults<
       const llvm::Instruction *, const llvm::Value *, loopbound::DeltaInterval>;
 
   auto &ICFG = HA->getICFG();
 
-  const llvm::Function *F = HA->getProjectIRDB().getFunctionDefinition("main");
-  auto *SeedI = &F->getEntryBlock().front();
+  auto* domtree = new llvm::DominatorTree();
+  domtree->recalculate(*F);
 
-  llvm::outs() << "[LB] SeedI: " << *SeedI << "\n";
-  llvm::outs() << "[LB] Succs of SeedI:\n";
-  for (auto *Succ : ICFG.getSuccsOf(SeedI)) {
-    llvm::outs() << "  - " << *Succ << "\n";
-  }
-  llvm::outs() << "[LB] Preds of SeedI:\n";
-  for (auto *Pred : ICFG.getPredsOf(SeedI)) {
-    llvm::outs() << "  - " << *Pred << "\n";
-  }
+  auto &loopAnalysis = FAM->getResult<llvm::LoopAnalysis>(*F);
+  auto loops = loopAnalysis.getTopLevelLoops();
+
+
+  loopbound::LoopBoundIDEAnalysis Problem(&HA->getProjectIRDB(),{"main"}, &loops);
 
   auto Result = psr::solveIDEProblem(Problem, HA->getICFG());
   AnalysisResult = std::make_unique<ResultsTy>(std::move(Result));
+  delete domtree;
 }
 
 void PhasarHandlerPass::dumpState() const {

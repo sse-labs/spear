@@ -70,7 +70,7 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
   std::vector<std::string> Entrypoints;
 
   // Internal: construct analysis problem and run PhASAR solver.
-  void runAnalysis();
+  void runAnalysis(llvm::FunctionAnalysisManager *FAM);
 };
 
 #endif  // SRC_SPEAR_PHASARHANDLER_H_

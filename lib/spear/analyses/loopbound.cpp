@@ -1,27 +1,15 @@
 #include "analyses/loopbound.h"
 
-#include <phasar/PhasarLLVM/DataFlow/IfdsIde/LLVMZeroValue.h>
-#include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
-#include "analyses/LoopBoundEdgeFunction.h"
+#include <phasar/PhasarLLVM/ControlFlow/LLVMBasedCFG.h>
 
-#include <llvm/IR/Function.h>
-#include <llvm/IR/BasicBlock.h>
-
-#include <memory>
-#include <optional>
 #include <cstdio>
-
-static int LoopBoundTULoaded = []() {
-  std::fprintf(stderr, "[LB] loopbound.cpp TU LOADED\n");
-  std::fflush(stderr);
-  return 0;
-}();
-
-namespace llvm {
-class DbgInfoIntrinsic;
-}
+#include <memory>
+#include <utility>
+#include <phasar/PhasarLLVM/DataFlow/IfdsIde/LLVMZeroValue.h>
 
 namespace loopbound {
+
+// ======================= Flow helpers =======================
 
 namespace {
 
@@ -31,153 +19,348 @@ public:
   ContainerT computeTargets(D Src) override { return ContainerT{Src}; }
 };
 
-static LoopBoundIDEAnalysis::l_t initLattice() {
-  return LoopBoundIDEAnalysis::l_t::interval(0, 0);
-}
+template <typename D, typename ContainerT>
+class GenFromZero final : public psr::FlowFunction<D, ContainerT> {
+  D Gen;
+  D Zero;
+
+public:
+  GenFromZero(D Gen, D Zero) : Gen(Gen), Zero(Zero) {}
+
+  ContainerT computeTargets(D Src) override {
+    if (Src == Zero) {
+      return ContainerT{Zero, Gen};
+    }
+    return ContainerT{Src};
+  }
+};
 
 } // namespace
 
-LoopBoundIDEAnalysis::LoopBoundIDEAnalysis(
-    const psr::LLVMProjectIRDB &IRDB,
-    const typename LoopBoundDomain::c_t &CFG,
-    std::vector<std::string> EPs)
-    : base_t(&IRDB, std::move(EPs),
+// ======================= LoopBoundIDEAnalysis =======================
+
+LoopBoundIDEAnalysis::LoopBoundIDEAnalysis(const psr::LLVMProjectIRDB *IRDB,
+                                           std::vector<std::string> EPs, std::vector<llvm::Loop*> *loops)
+    : base_t(IRDB, EPs,
              std::optional<d_t>(
                  static_cast<d_t>(psr::LLVMZeroValue::getInstance()))),
-      IRDBPtr(&IRDB),
-      CFGPtr(&CFG) {}
+      IRDBPtr(IRDB),
+      EntryPoints(std::move(EPs)) {
+
+  this->loops = loops;
+  this->findLoopCounters();
+  llvm::errs() << "[LB] CTOR EPs=" << EntryPoints.size() << "\n";
+}
+
+psr::InitialSeeds<LoopBoundIDEAnalysis::n_t, LoopBoundIDEAnalysis::d_t,
+                  LoopBoundIDEAnalysis::l_t>
+LoopBoundIDEAnalysis::initialSeeds() {
+  psr::InitialSeeds<n_t, d_t, l_t> Seeds;
+
+  // Match the shipped examples: use a plain LLVMBasedCFG just to pick startpoints.
+  psr::LLVMBasedCFG CFG;
+  addSeedsForStartingPoints(EntryPoints, IRDBPtr, CFG, Seeds, getZeroValue(),
+                            bottomElement());
+
+  // If you want a different initial lattice element at startpoints, change above.
+  return Seeds;
+}
+
+bool LoopBoundIDEAnalysis::isZeroValue(d_t Fact) const noexcept {
+  return base_t::isZeroValue(Fact);
+}
+
+LoopBoundIDEAnalysis::l_t LoopBoundIDEAnalysis::topElement() { return l_t::top(); }
+LoopBoundIDEAnalysis::l_t LoopBoundIDEAnalysis::bottomElement() { return l_t::bottom(); }
+
+LoopBoundIDEAnalysis::l_t LoopBoundIDEAnalysis::join(l_t Lhs, l_t Rhs) {
+  auto Res = Lhs.join(Rhs);
+  if (Lhs != Rhs) {
+    llvm::errs() << "[LB] join: " << Lhs << " ⊓ " << Rhs << " = " << Res << "\n";
+  }
+  return Res;
+}
+
+psr::EdgeFunction<LoopBoundIDEAnalysis::l_t>
+LoopBoundIDEAnalysis::allTopFunction() {
+  // CRITICAL: must be the real EdgeFunction TOP. Don't use your custom edgeTop().
+  return psr::AllTop<l_t>{};
+}
 
 // ---------------- Flow functions ----------------
 
 LoopBoundIDEAnalysis::FlowFunctionPtrType
 LoopBoundIDEAnalysis::getNormalFlowFunction(n_t Curr, n_t Succ) {
+  llvm::errs() << "[LB] getNormalFlowFunction: " << *Curr << " -> " << *Succ << "\n";
 
-  // We need to define the flow here...
+  // Generate a fact for integer allocas from zero
+  /*if (const auto *Alloca = llvm::dyn_cast<llvm::AllocaInst>(Curr)) {
+    auto *AT = Alloca->getAllocatedType();
+    if (AT && AT->isIntegerTy()) {
+      return std::make_shared<GenFromZero<d_t, container_t>>(static_cast<d_t>(Alloca), getZeroValue());
+    }
+  }*/
 
-  auto *I = llvm::dyn_cast<llvm::Instruction>(Curr);
-  auto *S = llvm::dyn_cast<llvm::Instruction>(Succ);
 
-  llvm::errs() << "[LB] normal flow: "
-               << (I ? I->getOpcodeName() : "<null>") << " -> "
-               << (S ? S->getOpcodeName() : "<null>") << "\n";
-
-  /**
-   * We mainly have to deal with multiple cases here
-   *
-   * 1) If an variable is allocated or loaded, we reserver a variable value on our scratchpad
-   * 2) If we store a value to this variable we update our scratchpad
-   * 3) If we calculate a value using add/sub/mul/div, we update our scratchpad
-   */
-
-  if (auto *icmpInst = llvm::dyn_cast<llvm::ICmpInst>(Curr)) {
-    llvm::outs() << icmpInst << "\n";
+  if (const auto *icmpinst = llvm::dyn_cast<llvm::ICmpInst>(Curr)) {
+    llvm::errs() << "[LB] ICmpInst: " << icmpinst->getOperand(0) << " : " << icmpinst->getOperand(1) << "\n";
   }
 
+
   return std::make_shared<IdentityFlow<d_t, container_t>>();
 }
 
 LoopBoundIDEAnalysis::FlowFunctionPtrType
-LoopBoundIDEAnalysis::getCallFlowFunction(n_t, const llvm::Function *) {
+LoopBoundIDEAnalysis::getCallFlowFunction(n_t, f_t) {
   return std::make_shared<IdentityFlow<d_t, container_t>>();
 }
 
 LoopBoundIDEAnalysis::FlowFunctionPtrType
-LoopBoundIDEAnalysis::getRetFlowFunction(n_t, const llvm::Function *, n_t, n_t) {
+LoopBoundIDEAnalysis::getRetFlowFunction(n_t, f_t, n_t, n_t) {
   return std::make_shared<IdentityFlow<d_t, container_t>>();
 }
 
 LoopBoundIDEAnalysis::FlowFunctionPtrType
-LoopBoundIDEAnalysis::getCallToRetFlowFunction(
-    n_t, n_t, llvm::ArrayRef<f_t>) {
+LoopBoundIDEAnalysis::getCallToRetFlowFunction(n_t, n_t, llvm::ArrayRef<f_t>) {
   return std::make_shared<IdentityFlow<d_t, container_t>>();
 }
 
 LoopBoundIDEAnalysis::FlowFunctionPtrType
-LoopBoundIDEAnalysis::getSummaryFlowFunction(n_t, const llvm::Function *) {
+LoopBoundIDEAnalysis::getSummaryFlowFunction(n_t, f_t) {
   return nullptr;
 }
 
 // ---------------- Edge functions ----------------
 
-psr::EdgeFunction<LoopBoundIDEAnalysis::l_t>
-LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t, d_t, n_t, d_t) {
-  return loopbound::edgeIdentity();
-}
-
-psr::EdgeFunction<LoopBoundIDEAnalysis::l_t>
-LoopBoundIDEAnalysis::getCallEdgeFunction(n_t, d_t, const llvm::Function *, d_t) {
-  return loopbound::edgeIdentity();
-}
-
-psr::EdgeFunction<LoopBoundIDEAnalysis::l_t>
-LoopBoundIDEAnalysis::getReturnEdgeFunction(
-    n_t, const llvm::Function *, n_t, d_t, n_t, d_t) {
-  return loopbound::edgeIdentity();
-}
-
-psr::EdgeFunction<LoopBoundIDEAnalysis::l_t>
-LoopBoundIDEAnalysis::getCallToRetEdgeFunction(
-    n_t, d_t, n_t, d_t, llvm::ArrayRef<f_t>) {
-  return loopbound::edgeIdentity();
-}
-
-// ---------------- Seeds ----------------
-
-psr::InitialSeeds<LoopBoundIDEAnalysis::n_t,
-                  LoopBoundIDEAnalysis::d_t,
-                  LoopBoundIDEAnalysis::l_t>
-LoopBoundIDEAnalysis::initialSeeds() {
-
-  psr::InitialSeeds<n_t, d_t, l_t> Seeds;
-
-  const d_t Z = static_cast<d_t>(psr::LLVMZeroValue::getInstance());
-  const l_t Init = initLattice();
-
-  for (const auto &Name : EntryPoints) {
-    if (!IRDBPtr) continue;
-    const llvm::Function *F = IRDBPtr->getFunctionDefinition(Name);
-    if (!F || F->empty()) continue;
-
-    // Use the *real* entry start instruction
-    n_t Start = &F->getEntryBlock().front();
-
-    llvm::outs() << "[LB] Start seed at: " << *Start << "\n";
-
-    // Standard Z seed (required)
-    Seeds.addSeed(Start, Z, this->bottomElement());
-
-    // Your non-zero seed fact (to force propagation)
-    Seeds.addSeed(Start, Start, Init);
+LoopBoundIDEAnalysis::EdgeFunctionType
+LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t Curr, d_t CurrNode, n_t /*Succ*/,
+                                            d_t SuccNode) {
+  // Key IDE rule: when you generate from zero -> non-zero, edge fn should not be TOP.
+  // Use AllBottom (or a constant edge function) to force new info.
+  if (isZeroValue(CurrNode) && !isZeroValue(SuccNode)) {
+    if (llvm::isa<llvm::AllocaInst>(Curr)) {
+      return psr::AllBottom<l_t>{};
+    }
   }
 
-  return Seeds;
+  return psr::EdgeIdentity<l_t>{};
+}
+
+LoopBoundIDEAnalysis::EdgeFunctionType
+LoopBoundIDEAnalysis::getCallEdgeFunction(n_t, d_t, f_t, d_t) {
+  return psr::EdgeIdentity<l_t>{};
+}
+
+LoopBoundIDEAnalysis::EdgeFunctionType
+LoopBoundIDEAnalysis::getReturnEdgeFunction(n_t, f_t, n_t, d_t, n_t, d_t) {
+  return psr::EdgeIdentity<l_t>{};
+}
+
+LoopBoundIDEAnalysis::EdgeFunctionType
+LoopBoundIDEAnalysis::getCallToRetEdgeFunction(n_t, d_t, n_t, d_t,
+                                               llvm::ArrayRef<f_t>) {
+  return psr::EdgeIdentity<l_t>{};
+}
+
+void LoopBoundIDEAnalysis::findLoopCounters() {
+  // Iterate over the loops
+  for (auto loop : *this->loops) {
+
+    llvm::SmallVector<llvm::BasicBlock *, 8> ExitingBlocks;
+    loop->getExitingBlocks(ExitingBlocks);
+
+    /**
+     * We start our loop counter detection from the exiting blocks of the loop
+     * The exiting block of the loop performs a check on whether to traverse the backedge
+     * or the edge to a block outside of the loop.
+     */
+    for (llvm::BasicBlock *EB : ExitingBlocks) {
+      auto *br = llvm::dyn_cast<llvm::BranchInst>(EB->getTerminator());
+      if (!br || !br->isConditional())
+        continue;
+
+      llvm::Value *cond = br->getCondition();
+      auto *icmp = llvm::dyn_cast<llvm::ICmpInst>(cond);
+      if (!icmp)
+        continue;
+
+      auto info = findCounterFromICMP(icmp, loop);
+      llvm::errs() << *info->CounterSide << "\n";
+      llvm::errs() << *info->InvariantSide << "\n";
+      llvm::errs() << *info->Roots[0] << "\n";
+    }
+  }
+}
+
+std::optional<CounterFromIcmp> LoopBoundIDEAnalysis::findCounterFromICMP(llvm::ICmpInst *inst, llvm::Loop *loop) {
+  llvm::Value *LHS = inst->getOperand(0);
+  llvm::Value *RHS = inst->getOperand(1);
+
+  llvm::errs() << *inst << "\n";
+
+  auto leftSideRoots = sliceBackwards(LHS, loop);
+  auto rightSideRoots = sliceBackwards(RHS, loop);
+
+  if (!leftSideRoots.empty() && rightSideRoots.empty()) {
+    return CounterFromIcmp{LHS, RHS, leftSideRoots};
+  }
+
+  if (leftSideRoots.empty() && !rightSideRoots.empty()) {
+    return CounterFromIcmp{LHS, RHS, rightSideRoots};
+  }
+
+  return std::nullopt;
 }
 
 
-bool LoopBoundIDEAnalysis::isZeroValue(d_t Fact) const noexcept {
-  const d_t Z = static_cast<d_t>(psr::LLVMZeroValue::getInstance());
-  return Fact == Z;
+bool LoopBoundIDEAnalysis::isIrrelevantToLoop(llvm::Value *val, llvm::Loop *loop) {
+  if (llvm::isa<llvm::Constant>(val)) {
+    return true;
+  }
+
+  if (auto *I = llvm::dyn_cast<llvm::Instruction>(val))
+    return !loop->contains(I); // defined outside loop => invariant
+
+  // treat as invariant-ish
+  if (llvm::isa<llvm::Argument>(val)) {
+    return true;
+  }
+  return false;
 }
 
-loopbound::LoopBoundIDEAnalysis::l_t
-loopbound::LoopBoundIDEAnalysis::topElement() {
-  return l_t::top();
+bool LoopBoundIDEAnalysis::phiHasIncomingValueFromLoop(llvm::PHINode *phi, llvm::Loop *loop) {
+  // If phi is from outside the loop, it is not the phi we are looking for...
+  if (!loop->contains(phi) ||
+    phi->getParent() != loop->getHeader()) {
+    return false;
+  }
+
+  for (int i = 0; i < phi->getNumIncomingValues(); i++) {
+    // Check if one the incoming edges of phi is contained in the loop
+    if (loop->contains(phi->getIncomingBlock(i))) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
-loopbound::LoopBoundIDEAnalysis::l_t
-loopbound::LoopBoundIDEAnalysis::bottomElement() {
-  return l_t::bottom();
+bool LoopBoundIDEAnalysis::ptrDependsOnLoopCariedPhi(llvm::Value *ptr, llvm::Loop *loop) {
+  llvm::SmallVector<llvm::Value *, 32> worklist;
+
+  worklist.push_back(ptr);
+  while (!worklist.empty()) {
+    llvm::Value *curr = worklist.pop_back_val();
+
+    if (auto *phi = llvm::dyn_cast<llvm::PHINode>(curr)) {
+      if (phiHasIncomingValueFromLoop(phi, loop)) {
+        return true;
+      }
+
+      for (llvm::Value *incomingVal : phi->incoming_values()) {
+        worklist.push_back(incomingVal);
+      }
+    }
+
+    if (auto *inst = llvm::dyn_cast<llvm::Instruction>(curr)) {
+      if (loop->contains(inst)) {
+        for (llvm::Value *op : inst->operands()) {
+          worklist.push_back(op);
+        }
+      }
+      continue;
+    }
+  }
+
+  return false;
 }
 
-loopbound::LoopBoundIDEAnalysis::l_t
-loopbound::LoopBoundIDEAnalysis::join(l_t Lhs, l_t Rhs) {
-  return Lhs.join(Rhs);
+bool LoopBoundIDEAnalysis::isMemWrittenInLoop(llvm::LoadInst *load, llvm::Loop *loop) {
+  llvm::Value *ptr = load->getPointerOperand();
+
+  for (llvm::BasicBlock *block : loop->blocks()) {
+    for (llvm::Instruction &inst : *block) {
+      if (auto *storeInst = llvm::dyn_cast<llvm::StoreInst>(&inst)) {
+        if (storeInst->getPointerOperand() == ptr) {
+          return true;
+        }
+      }
+
+      if (auto *callInst = llvm::dyn_cast<llvm::CallInst>(&inst)) {
+        if (!callInst->onlyReadsMemory()) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
-psr::EdgeFunction<loopbound::LoopBoundIDEAnalysis::l_t>
-loopbound::LoopBoundIDEAnalysis::allTopFunction() {
-  return loopbound::edgeTop();
+bool LoopBoundIDEAnalysis::loadIsCarriedIn(llvm::LoadInst *inst, llvm::Loop *loop) {
+  if (!loop->contains(inst)) {
+    return false;
+  }
+
+  llvm::Value *ptr = inst->getPointerOperand();
+
+  if (ptrDependsOnLoopCariedPhi(ptr, loop)) {
+    return true;
+  }
+
+  if (isMemWrittenInLoop(inst, loop)) {
+    return true;
+  }
+
+  return false;
 }
 
+std::vector<llvm::Value *> LoopBoundIDEAnalysis::sliceBackwards(llvm::Value *start, llvm::Loop *loop) {
+  std::vector<llvm::Value *> roots;
+  llvm::SmallVector<llvm::Value *, 32> worklist;
+
+  worklist.push_back(start);
+
+  while (!worklist.empty()) {
+    llvm::Value *curr = worklist.pop_back_val();
+
+    if (isIrrelevantToLoop(curr, loop)) {
+      // If we encounter a loop invariant, we do not have to worry, as this is most likely not the counter
+      continue;
+    }
+
+    if (auto *phinst = llvm::dyn_cast<llvm::PHINode>(curr)) {
+      if (phiHasIncomingValueFromLoop(phinst, loop)) {
+        roots.push_back(phinst);
+        continue;
+      }
+
+      for (llvm::Value *incomingVal : phinst->incoming_values()) {
+        worklist.push_back(incomingVal);
+      }
+    }
+
+    if (auto *inst = llvm::dyn_cast<llvm::Instruction>(curr)) {
+      // Only accept a load as root if it is LOOP-CARRIED (otherwise it's just an invariant limit)
+      if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(inst)) {
+        if (loadIsCarriedIn(LI, loop)) { // implement as discussed
+          roots.push_back(LI);
+        }
+        continue;
+      }
+
+      // Normal instruction inside loop: walk operands
+      if (loop->contains(inst)) {
+        for (llvm::Value *Op : inst->operands()) {
+          worklist.push_back(Op);
+        }
+      }
+      continue;
+    }
+
+  }
+
+  return roots;
+}
 
 } // namespace loopbound
