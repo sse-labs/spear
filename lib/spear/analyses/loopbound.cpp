@@ -57,12 +57,10 @@ psr::InitialSeeds<LoopBoundIDEAnalysis::n_t, LoopBoundIDEAnalysis::d_t,
 LoopBoundIDEAnalysis::initialSeeds() {
   psr::InitialSeeds<n_t, d_t, l_t> Seeds;
 
-  // Match the shipped examples: use a plain LLVMBasedCFG just to pick startpoints.
   psr::LLVMBasedCFG CFG;
   addSeedsForStartingPoints(EntryPoints, IRDBPtr, CFG, Seeds, getZeroValue(),
                             bottomElement());
 
-  // If you want a different initial lattice element at startpoints, change above.
   return Seeds;
 }
 
@@ -135,8 +133,7 @@ LoopBoundIDEAnalysis::getSummaryFlowFunction(n_t, f_t) {
 LoopBoundIDEAnalysis::EdgeFunctionType
 LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t Curr, d_t CurrNode, n_t /*Succ*/,
                                             d_t SuccNode) {
-  // Key IDE rule: when you generate from zero -> non-zero, edge fn should not be TOP.
-  // Use AllBottom (or a constant edge function) to force new info.
+
   if (isZeroValue(CurrNode) && !isZeroValue(SuccNode)) {
     if (llvm::isa<llvm::AllocaInst>(Curr)) {
       return psr::AllBottom<l_t>{};
@@ -162,6 +159,22 @@ LoopBoundIDEAnalysis::getCallToRetEdgeFunction(n_t, d_t, n_t, d_t,
   return psr::EdgeIdentity<l_t>{};
 }
 
+std::optional<int64_t> LoopBoundIDEAnalysis::findConstInitForCell(llvm::Value *Addr, llvm::Loop *L) {
+  Addr = stripAddr(Addr);
+  llvm::BasicBlock *PreH = L->getLoopPreheader();
+  if (!PreH) return std::nullopt;
+
+  for (llvm::Instruction &I : *PreH) {
+    auto *SI = llvm::dyn_cast<llvm::StoreInst>(&I);
+    if (!SI) continue;
+    if (stripAddr(SI->getPointerOperand()) != Addr) continue;
+
+    if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(SI->getValueOperand()))
+      return CI->getSExtValue();
+  }
+  return std::nullopt;
+}
+
 void LoopBoundIDEAnalysis::findLoopCounters() {
   // Iterate over the loops
   for (auto loop : *this->loops) {
@@ -185,12 +198,57 @@ void LoopBoundIDEAnalysis::findLoopCounters() {
         continue;
 
       auto info = findCounterFromICMP(icmp, loop);
-      llvm::errs() << *info->CounterSide << "\n";
-      llvm::errs() << *info->InvariantSide << "\n";
-      llvm::errs() << *info->Roots[0] << "\n";
+
+      if (!info || info->Roots.empty()) {
+        continue;
+      }
+
+      auto init = findConstInitForCell(info->Roots[0], loop);
+
+      LoopDescription description = {
+        loop,
+        icmp,
+        info->Roots[0],
+        info->CounterSide,
+        info->InvariantSide,
+        init
+      };
+
+      LoopDescriptions.push_back(description);
+
+      llvm::errs() << "Generated Loop Description {\n";
+      llvm::errs() << "Loop: " << description.loop->getName() << "\n";
+      llvm::errs() << "ICMP: " << *description.icmp << "\n";
+      llvm::errs() << "Counter Root: " << *description.counterRoot << "\n";
+      llvm::errs() << "Counter Exp: " << *description.counterExpr << "\n";
+      llvm::errs() << "Invariant: " << *description.limitExpr << "\n";
+      llvm::errs() << "Init: " << *description.init << "\n";
+      llvm::errs() << "}\n";
+
     }
   }
 }
+
+llvm::Value* LoopBoundIDEAnalysis::stripAddr(llvm::Value *Ptr) {
+
+  while (true) {
+    if (auto *GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(Ptr)) {
+      Ptr = GEP->getPointerOperand();
+      continue;
+    }
+    if (auto *BC = llvm::dyn_cast<llvm::BitCastInst>(Ptr)) {
+      Ptr = BC->getOperand(0);
+      continue;
+    }
+    if (auto *ASC = llvm::dyn_cast<llvm::AddrSpaceCastInst>(Ptr)) {
+      Ptr = ASC->getOperand(0);
+      continue;
+    }
+    break;
+  }
+  return Ptr;
+}
+
 
 std::optional<CounterFromIcmp> LoopBoundIDEAnalysis::findCounterFromICMP(llvm::ICmpInst *inst, llvm::Loop *loop) {
   llvm::Value *LHS = inst->getOperand(0);
@@ -201,12 +259,15 @@ std::optional<CounterFromIcmp> LoopBoundIDEAnalysis::findCounterFromICMP(llvm::I
   auto leftSideRoots = sliceBackwards(LHS, loop);
   auto rightSideRoots = sliceBackwards(RHS, loop);
 
-  if (!leftSideRoots.empty() && rightSideRoots.empty()) {
+  const bool leftEmpty = !leftSideRoots.empty();
+  const bool rightEmpty = !rightSideRoots.empty();
+
+  if (leftEmpty && !rightEmpty) {
     return CounterFromIcmp{LHS, RHS, leftSideRoots};
   }
 
-  if (leftSideRoots.empty() && !rightSideRoots.empty()) {
-    return CounterFromIcmp{LHS, RHS, rightSideRoots};
+  if (!leftEmpty && rightEmpty) {
+    return CounterFromIcmp{RHS, LHS, rightSideRoots};
   }
 
   return std::nullopt;
@@ -219,9 +280,8 @@ bool LoopBoundIDEAnalysis::isIrrelevantToLoop(llvm::Value *val, llvm::Loop *loop
   }
 
   if (auto *I = llvm::dyn_cast<llvm::Instruction>(val))
-    return !loop->contains(I); // defined outside loop => invariant
+    return !loop->contains(I);
 
-  // treat as invariant-ish
   if (llvm::isa<llvm::Argument>(val)) {
     return true;
   }
@@ -247,6 +307,15 @@ bool LoopBoundIDEAnalysis::phiHasIncomingValueFromLoop(llvm::PHINode *phi, llvm:
 
 bool LoopBoundIDEAnalysis::ptrDependsOnLoopCariedPhi(llvm::Value *ptr, llvm::Loop *loop) {
   llvm::SmallVector<llvm::Value *, 32> worklist;
+  llvm::DenseSet<llvm::Value *> visited;
+
+  auto push = [&](llvm::Value *V) {
+    if (!V) return;
+    V = stripAddr(V);
+    if (visited.insert(V).second) {
+      worklist.push_back(V);
+    }
+  };
 
   worklist.push_back(ptr);
   while (!worklist.empty()) {
@@ -258,14 +327,14 @@ bool LoopBoundIDEAnalysis::ptrDependsOnLoopCariedPhi(llvm::Value *ptr, llvm::Loo
       }
 
       for (llvm::Value *incomingVal : phi->incoming_values()) {
-        worklist.push_back(incomingVal);
+        push(incomingVal);
       }
     }
 
     if (auto *inst = llvm::dyn_cast<llvm::Instruction>(curr)) {
       if (loop->contains(inst)) {
         for (llvm::Value *op : inst->operands()) {
-          worklist.push_back(op);
+          push(op);
         }
       }
       continue;
@@ -281,12 +350,12 @@ bool LoopBoundIDEAnalysis::isMemWrittenInLoop(llvm::LoadInst *load, llvm::Loop *
   for (llvm::BasicBlock *block : loop->blocks()) {
     for (llvm::Instruction &inst : *block) {
       if (auto *storeInst = llvm::dyn_cast<llvm::StoreInst>(&inst)) {
-        if (storeInst->getPointerOperand() == ptr) {
+        if (stripAddr(storeInst->getPointerOperand()) == ptr) {
           return true;
         }
       }
 
-      if (auto *callInst = llvm::dyn_cast<llvm::CallInst>(&inst)) {
+      if (auto *callInst = llvm::dyn_cast<llvm::CallBase>(&inst)) {
         if (!callInst->onlyReadsMemory()) {
           return true;
         }
@@ -302,7 +371,7 @@ bool LoopBoundIDEAnalysis::loadIsCarriedIn(llvm::LoadInst *inst, llvm::Loop *loo
     return false;
   }
 
-  llvm::Value *ptr = inst->getPointerOperand();
+  llvm::Value *ptr = stripAddr(inst->getPointerOperand());
 
   if (ptrDependsOnLoopCariedPhi(ptr, loop)) {
     return true;
@@ -315,14 +384,80 @@ bool LoopBoundIDEAnalysis::loadIsCarriedIn(llvm::LoadInst *inst, llvm::Loop *loo
   return false;
 }
 
+std::optional<int64_t> LoopBoundIDEAnalysis::findConstStepForCell(llvm::Value *Addr, llvm::Loop *L) {
+  Addr = stripAddr(Addr);
+
+  for (llvm::BasicBlock *BB : L->blocks()) {
+    for (llvm::Instruction &I : *BB) {
+      auto *SI = llvm::dyn_cast<llvm::StoreInst>(&I);
+      if (!SI) continue;
+
+      if (stripAddr(SI->getPointerOperand()) != Addr) continue;
+
+      llvm::Value *Val = SI->getValueOperand();
+      if (auto *BO = llvm::dyn_cast<llvm::BinaryOperator>(Val)) {
+        if (BO->getOpcode() == llvm::Instruction::Add) {
+          llvm::Value *Op0 = BO->getOperand(0);
+          llvm::Value *Op1 = BO->getOperand(1);
+
+          auto isLoadOfAddr = [&](llvm::Value *V) {
+            if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(V))
+              return stripAddr(LI->getPointerOperand()) == Addr;
+            return false;
+          };
+
+          if (isLoadOfAddr(Op0)) {
+            if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(Op1))
+              return CI->getSExtValue();
+          }
+          if (isLoadOfAddr(Op1)) {
+            if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(Op0))
+              return CI->getSExtValue();
+          }
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+bool LoopBoundIDEAnalysis::isStoredToInLoop(llvm::Value *Addr, llvm::Loop *L) {
+  Addr = stripAddr(Addr);
+
+  for (llvm::BasicBlock *BB : L->blocks()) {
+    for (llvm::Instruction &I : *BB) {
+      if (auto *SI = llvm::dyn_cast<llvm::StoreInst>(&I)) {
+        llvm::Value *Dst = stripAddr(SI->getPointerOperand());
+        if (Dst == Addr) return true;
+      }
+      if (auto *CB = llvm::dyn_cast<llvm::CallBase>(&I)) {
+        if (!CB->onlyReadsMemory()) return true;
+      }
+    }
+  }
+  return false;
+}
+
 std::vector<llvm::Value *> LoopBoundIDEAnalysis::sliceBackwards(llvm::Value *start, llvm::Loop *loop) {
   std::vector<llvm::Value *> roots;
   llvm::SmallVector<llvm::Value *, 32> worklist;
+  llvm::DenseSet<llvm::Value *> visited;
+  llvm::DenseSet<llvm::Value *> rootSet;
+
+  auto push = [&](llvm::Value *V) {
+    if (!V) return;
+    if (visited.insert(V).second) {
+      worklist.push_back(V);
+    }
+  };
 
   worklist.push_back(start);
 
   while (!worklist.empty()) {
     llvm::Value *curr = worklist.pop_back_val();
+    if (!curr) {
+      continue;
+    }
 
     if (isIrrelevantToLoop(curr, loop)) {
       // If we encounter a loop invariant, we do not have to worry, as this is most likely not the counter
@@ -331,28 +466,34 @@ std::vector<llvm::Value *> LoopBoundIDEAnalysis::sliceBackwards(llvm::Value *sta
 
     if (auto *phinst = llvm::dyn_cast<llvm::PHINode>(curr)) {
       if (phiHasIncomingValueFromLoop(phinst, loop)) {
-        roots.push_back(phinst);
-        continue;
-      }
-
-      for (llvm::Value *incomingVal : phinst->incoming_values()) {
-        worklist.push_back(incomingVal);
-      }
-    }
-
-    if (auto *inst = llvm::dyn_cast<llvm::Instruction>(curr)) {
-      // Only accept a load as root if it is LOOP-CARRIED (otherwise it's just an invariant limit)
-      if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(inst)) {
-        if (loadIsCarriedIn(LI, loop)) { // implement as discussed
-          roots.push_back(LI);
+        if (rootSet.insert(phinst).second) {
+          roots.push_back(phinst);
         }
         continue;
       }
 
-      // Normal instruction inside loop: walk operands
+      for (llvm::Value *incomingVal : phinst->incoming_values()) {
+        push(incomingVal);
+      }
+      continue;
+    }
+
+    if (auto *inst = llvm::dyn_cast<llvm::Instruction>(curr)) {
+      if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(inst)) {
+        if (loadIsCarriedIn(LI, loop)) {
+          llvm::Value *Addr = stripAddr(LI->getPointerOperand());
+          // The "root" is the memory cell, not the load itself
+          if (rootSet.insert(Addr).second) {
+            roots.push_back(Addr);
+          }
+        }
+        continue;
+      }
+
+      // Normal instruction inside loop
       if (loop->contains(inst)) {
         for (llvm::Value *Op : inst->operands()) {
-          worklist.push_back(Op);
+          push(Op);
         }
       }
       continue;

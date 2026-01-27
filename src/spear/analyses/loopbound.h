@@ -18,9 +18,19 @@ namespace loopbound {
 
 struct CounterFromIcmp {
     llvm::Value *CounterSide = nullptr;     // operator
-    llvm::Value *InvariantSide = nullptr;   // bound
-    std::vector<llvm::Value *> Roots;       // phi
+    llvm::Value *InvariantSide = nullptr;   // Bound the counter is checked against
+    std::vector<llvm::Value *> Roots;       // Counter that we want to analyze
 };
+
+struct LoopDescription {
+    llvm::Loop *loop;
+    llvm::ICmpInst *icmp;
+    llvm::Value *counterRoot;
+    llvm::Value *counterExpr;
+    llvm::Value *limitExpr;
+    std::optional<int64_t> init;
+};
+
 
 class DeltaInterval {
 public:
@@ -121,6 +131,9 @@ public:
                                             n_t RetSite, d_t RetSiteNode,
                                             llvm::ArrayRef<f_t> Callees) override;
 
+
+    std::vector<LoopDescription> LoopDescriptions;
+
 private:
     const psr::LLVMProjectIRDB *IRDBPtr = nullptr;
     std::vector<std::string> EntryPoints;
@@ -154,6 +167,20 @@ private:
     bool ptrDependsOnLoopCariedPhi(llvm::Value *ptr, llvm::Loop *loop);
 
     bool isIrrelevantToLoop(llvm::Value *val, llvm::Loop *loop);
+
+    static llvm::Value* stripAddr(llvm::Value *Ptr);
+
+    static bool isStoredToInLoop(llvm::Value *Addr, llvm::Loop *L);
+
+    static std::optional<int64_t> findConstStepForCell(llvm::Value *Addr, llvm::Loop *L);
+
+    /**
+     * Find init value of given counter value
+     * @param Addr Counter to analyze
+     * @param loop Corresponding loop
+     * @return Optional of the found value
+     */
+    std::optional<int64_t> findConstInitForCell(llvm::Value *Addr, llvm::Loop *loop);
 };
 
 } // namespace loopbound
