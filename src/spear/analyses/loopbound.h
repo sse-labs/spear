@@ -19,13 +19,13 @@ namespace loopbound {
 struct CounterFromIcmp {
     llvm::Value *CounterSide = nullptr;     // operator
     llvm::Value *InvariantSide = nullptr;   // Bound the counter is checked against
-    std::vector<llvm::Value *> Roots;       // Counter that we want to analyze
+    std::vector<const llvm::Value *> Roots;       // Counter that we want to analyze
 };
 
 struct LoopDescription {
     llvm::Loop *loop;
     llvm::ICmpInst *icmp;
-    llvm::Value *counterRoot;
+    const llvm::Value *counterRoot;
     llvm::Value *counterExpr;
     llvm::Value *limitExpr;
     std::optional<int64_t> init;
@@ -119,6 +119,10 @@ public:
                                                llvm::ArrayRef<f_t> Callees) override;
     FlowFunctionPtrType getSummaryFlowFunction(n_t CallSite, f_t Callee) override;
 
+    const LoopDescription *getLoopDescriptionForInst(const llvm::Instruction *I) const;
+
+    bool isCounterRootFactAtInst(d_t Fact, n_t AtInst) const;
+
     // Edge functions
     EdgeFunctionType getNormalEdgeFunction(n_t Curr, d_t CurrNode, n_t Succ,
                                          d_t SuccNode) override;
@@ -139,6 +143,9 @@ private:
     std::vector<std::string> EntryPoints;
     std::vector<llvm::Loop*> *loops;
 
+    llvm::DenseSet<const llvm::Value *> CounterRoots;
+    llvm::DenseMap<const llvm::Loop *, llvm::DenseSet<const llvm::Value *>> CounterRootsPerLoop;
+
     void findLoopCounters();
 
     /**
@@ -156,19 +163,19 @@ private:
      * @param loop Loop the analysis runs in
      * @return Vector of roots corresponding to the start node
      */
-    std::vector<llvm::Value *> sliceBackwards(llvm::Value *start, llvm::Loop *loop);
+    std::vector<const llvm::Value *> sliceBackwards(llvm::Value *start, llvm::Loop *loop);
 
-    bool phiHasIncomingValueFromLoop(llvm::PHINode *phi, llvm::Loop *loop);
+    bool phiHasIncomingValueFromLoop(const llvm::PHINode *phi, llvm::Loop *loop);
 
-    bool loadIsCarriedIn(llvm::LoadInst *inst, llvm::Loop *loop);
+    bool loadIsCarriedIn(const llvm::LoadInst *inst, llvm::Loop *loop);
 
-    bool isMemWrittenInLoop(llvm::LoadInst *inst, llvm::Loop *loop);
+    bool isMemWrittenInLoop(const llvm::LoadInst *inst, llvm::Loop *loop);
 
-    bool ptrDependsOnLoopCariedPhi(llvm::Value *ptr, llvm::Loop *loop);
+    bool ptrDependsOnLoopCariedPhi(const llvm::Value *ptr, llvm::Loop *loop);
 
-    bool isIrrelevantToLoop(llvm::Value *val, llvm::Loop *loop);
+    bool isIrrelevantToLoop(const llvm::Value *val, llvm::Loop *loop);
 
-    static llvm::Value* stripAddr(llvm::Value *Ptr);
+    static const llvm::Value *stripAddr(const llvm::Value *Ptr);
 
     static bool isStoredToInLoop(llvm::Value *Addr, llvm::Loop *L);
 
@@ -180,7 +187,15 @@ private:
      * @param loop Corresponding loop
      * @return Optional of the found value
      */
-    std::optional<int64_t> findConstInitForCell(llvm::Value *Addr, llvm::Loop *loop);
+    std::optional<int64_t> findConstInitForCell(const llvm::Value *Addr, llvm::Loop *loop);
+
+    void buildCounterRootIndex();
+
+    std::optional<int64_t> extractConstIncFromStore(const llvm::StoreInst *storeInst, const llvm::Value *counterRoot);
+
+    bool isLoadOfCounterRoot(llvm::Value *value, const llvm::Value *root);
+
+    bool isCounterRootFact(d_t Fact);
 };
 
 } // namespace loopbound

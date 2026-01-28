@@ -32,14 +32,12 @@ int64_t DeltaInterval::getLowerBound() const { return lowerBound; }
 int64_t DeltaInterval::getUpperBound() const { return upperBound; }
 
 DeltaInterval DeltaInterval::join(const DeltaInterval &other) const {
-    // Keep your "⊓" semantics from the logs: intersection / meet.
-    if (isBottom() || other.isBottom()) return bottom();
     if (isTop()) return other;
     if (other.isTop()) return *this;
+    if (isBottom() || other.isBottom()) return bottom();
 
-    const int64_t L = std::max(lowerBound, other.lowerBound);
-    const int64_t U = std::min(upperBound, other.upperBound);
-    if (L > U) return bottom();
+    const int64_t L = std::min(lowerBound, other.lowerBound);
+    const int64_t U = std::max(upperBound, other.upperBound);
     return interval(L, U);
 }
 

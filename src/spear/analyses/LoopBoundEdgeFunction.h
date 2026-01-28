@@ -49,6 +49,22 @@ struct DeltaIntervalTop {
     bool isConstant() const noexcept;
 };
 
+struct DeltaIntervalBottom {
+    using l_t = loopbound::l_t;
+
+    [[nodiscard]] l_t computeTarget(const l_t &source) const;
+
+    static EF compose(psr::EdgeFunctionRef<DeltaIntervalBottom>,
+                      const EF &second);
+
+    static EF join(psr::EdgeFunctionRef<DeltaIntervalBottom> thisFunc,
+                                       const psr::EdgeFunction<l_t> &otherFunc);
+
+    bool operator==(const DeltaIntervalBottom &) const = default;
+
+    bool isConstant() const noexcept;
+};
+
 struct DeltaIntervalNormal {
     using l_t = loopbound::l_t;
 
