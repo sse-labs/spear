@@ -17,6 +17,50 @@ namespace loopbound {
 using l_t = DeltaInterval;
 using EF  = psr::EdgeFunction<l_t>;
 
+struct DeltaIntervalCollect {
+    using l_t = loopbound::l_t;
+
+    int64_t lowerBound = 0;
+    int64_t upperBound = 0;
+
+    DeltaIntervalCollect() = default;
+    DeltaIntervalCollect(int64_t L, int64_t U);
+
+    [[nodiscard]] l_t computeTarget(const l_t &source) const;
+
+    // second ∘ this
+    static EF compose(psr::EdgeFunctionRef<DeltaIntervalCollect> self,
+                      const EF &second);
+
+    static EF join(psr::EdgeFunctionRef<DeltaIntervalCollect> self,
+                   const EF &other);
+
+    bool operator==(const DeltaIntervalCollect &) const = default;
+    bool isConstant() const noexcept;
+};
+
+struct DeltaIntervalAssign {
+    using l_t = loopbound::DeltaInterval;
+
+    int64_t lowerBound = 0;
+    int64_t upperBound = 0;
+
+    DeltaIntervalAssign() = default;
+    DeltaIntervalAssign(int64_t L, int64_t U);
+
+    [[nodiscard]] l_t computeTarget(const l_t &source) const;
+
+    // second ∘ this
+    static loopbound::EF compose(psr::EdgeFunctionRef<DeltaIntervalAssign> self,
+                                 const loopbound::EF &second);
+
+    static loopbound::EF join(psr::EdgeFunctionRef<DeltaIntervalAssign> thisFunc,
+                          const loopbound::EF &other);
+
+    bool operator==(const DeltaIntervalAssign &) const = default;
+    bool isConstant() const noexcept;
+};
+
 struct DeltaIntervalIdentity {
     using l_t = loopbound::l_t;
 

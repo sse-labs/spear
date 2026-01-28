@@ -29,14 +29,18 @@ struct LoopDescription {
     llvm::Value *counterExpr;
     llvm::Value *limitExpr;
     std::optional<int64_t> init;
+    std::optional<int64_t> step;
 };
 
 
 class DeltaInterval {
 public:
-    enum class ValueType { TOP, BOTTOM, NORMAL };
+    enum class ValueType { TOP, BOTTOM, NORMAL, EMPTY };
 
     DeltaInterval();
+
+    static DeltaInterval empty();     // EMPTY
+    bool isEmpty() const noexcept;
 
     static DeltaInterval bottom();
     static DeltaInterval top();
@@ -49,10 +53,10 @@ public:
     int64_t getLowerBound() const;
     int64_t getUpperBound() const;
 
-    // PhASAR expects "join" to be the semilattice join used by IDE values.
-    // In your logs you treat it as meet (⊓). That is okay as long as you're
-    // consistent across the solver; we keep your semantics.
     DeltaInterval join(const DeltaInterval &other) const;
+
+    DeltaInterval leastUpperBound(const DeltaInterval &other) const;
+    DeltaInterval greatestLowerBound(const DeltaInterval &other) const;
 
     bool operator==(const DeltaInterval &other) const;
     bool operator!=(const DeltaInterval &other) const;
@@ -67,6 +71,7 @@ private:
     int64_t lowerBound;
     int64_t upperBound;
 };
+
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                  const DeltaInterval &DI) {
@@ -108,6 +113,8 @@ public:
     l_t join(l_t Lhs, l_t Rhs) override;
     psr::EdgeFunction<l_t> allTopFunction() override;
 
+    bool isLatchToHeaderEdge(n_t Curr, n_t Succ) const;
+
     bool isZeroValue(d_t Fact) const noexcept override;
 
     // Flow functions
@@ -123,6 +130,10 @@ public:
 
     bool isCounterRootFactAtInst(d_t Fact, n_t AtInst) const;
 
+    std::optional<int64_t> computeConstTripCount(const LoopDescription &LD) const;
+
+    bool isExitingToExitEdge(n_t Curr, n_t Succ, const LoopDescription &LD) const;
+
     // Edge functions
     EdgeFunctionType getNormalEdgeFunction(n_t Curr, d_t CurrNode, n_t Succ,
                                          d_t SuccNode) override;
@@ -137,6 +148,12 @@ public:
 
 
     std::vector<LoopDescription> LoopDescriptions;
+
+    static const llvm::Value *stripAddr(const llvm::Value *Ptr);
+
+    std::vector<LoopDescription> getLoopDescriptions();
+
+    static std::optional<int64_t> extractConstIncFromStore(const llvm::StoreInst *storeInst, const llvm::Value *counterRoot);
 
 private:
     const psr::LLVMProjectIRDB *IRDBPtr = nullptr;
@@ -175,11 +192,9 @@ private:
 
     bool isIrrelevantToLoop(const llvm::Value *val, llvm::Loop *loop);
 
-    static const llvm::Value *stripAddr(const llvm::Value *Ptr);
-
     static bool isStoredToInLoop(llvm::Value *Addr, llvm::Loop *L);
 
-    static std::optional<int64_t> findConstStepForCell(llvm::Value *Addr, llvm::Loop *L);
+    static std::optional<int64_t> findConstStepForCell(const llvm::Value *Addr, llvm::Loop *L);
 
     /**
      * Find init value of given counter value
@@ -191,9 +206,7 @@ private:
 
     void buildCounterRootIndex();
 
-    std::optional<int64_t> extractConstIncFromStore(const llvm::StoreInst *storeInst, const llvm::Value *counterRoot);
-
-    bool isLoadOfCounterRoot(llvm::Value *value, const llvm::Value *root);
+    static bool isLoadOfCounterRoot(llvm::Value *value, const llvm::Value *root);
 
     bool isCounterRootFact(d_t Fact);
 };
