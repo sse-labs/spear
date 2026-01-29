@@ -1,11 +1,7 @@
-// /*
-//  * Copyright (c) 2026 Maximilian Krebs
-//  * All rights reserved.
-// *
-
-//
-// Created by max on 1/29/26.
-//
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
 #ifndef SPEAR_LOOPBOUNDWRAPPER_H
 #define SPEAR_LOOPBOUNDWRAPPER_H

@@ -172,36 +172,33 @@ LoopBoundIDEAnalysis::getSummaryFlowFunction(n_t, f_t) {
 }
 
 LoopBoundIDEAnalysis::l_t LoopBoundIDEAnalysis::topElement() {
-  return l_t::empty();
+  return l_t::ideNeutral();
 }
+
 LoopBoundIDEAnalysis::l_t LoopBoundIDEAnalysis::bottomElement() {
-  return l_t::top();
+  return l_t::ideAbsorbing();
 }
 
 LoopBoundIDEAnalysis::l_t LoopBoundIDEAnalysis::join(l_t Lhs, l_t Rhs) {
   l_t Res;
 
-  // Hull accumulation (possible increments)
-  // IMPORTANT: in this lattice, topElement() is EMPTY, not TOP.
   if (Lhs.isBottom()) {
-    Res = Rhs; // unreachable handling
+    Res = Rhs;
   } else if (Rhs.isBottom()) {
     Res = Lhs;
-  }
-  // If either side is IDE-bottom (= DeltaInterval::top()), result stays unknown.
-  else if (Lhs.isTop() || Rhs.isTop()) {
-    Res = l_t::top();
-  }
-  // EMPTY behaves like neutral:
-  else if (Lhs.isEmpty()) {
+  } else if (Lhs.isIdeAbsorbing() || Rhs.isIdeAbsorbing()) {
+    Res = l_t::ideAbsorbing();
+  } else if (Lhs.isIdeNeutral()) {
     Res = Rhs;
-  } else if (Rhs.isEmpty()) {
+  } else if (Rhs.isIdeNeutral()) {
     Res = Lhs;
   } else {
-    Res = Lhs.leastUpperBound(Rhs); // hull
+    Res = Lhs.leastUpperBound(Rhs);
   }
 
-  llvm::errs() << "[LB] join: " << Lhs << " lub " << Rhs << " = " << Res << "\n";
+  if (LB_DebugEnabled.load()) {
+    llvm::errs() << "[LB] join: " << Lhs << " lub " << Rhs << " = " << Res << "\n";
+  }
   return Res;
 }
 

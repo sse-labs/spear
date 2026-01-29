@@ -38,10 +38,26 @@ DeltaInterval DeltaInterval::interval(int64_t low, int64_t high) {
   return DeltaInterval(ValueType::NORMAL, low, high);
 }
 
+DeltaInterval DeltaInterval::ideNeutral() {
+  return empty();
+}
+
+DeltaInterval DeltaInterval::ideAbsorbing() {
+  return top();
+}
+
 bool DeltaInterval::isBottom() const { return valueType == ValueType::BOTTOM; }
 bool DeltaInterval::isTop() const { return valueType == ValueType::TOP; }
 bool DeltaInterval::isNORMAL() const { return valueType == ValueType::NORMAL; }
 bool DeltaInterval::isEmpty() const noexcept { return valueType == ValueType::EMPTY; }
+
+bool DeltaInterval::isIdeNeutral() const {
+  return isEmpty();
+}
+
+bool DeltaInterval::isIdeAbsorbing() const {
+  return isTop();
+}
 
 int64_t DeltaInterval::getLowerBound() const { return lowerBound; }
 int64_t DeltaInterval::getUpperBound() const { return upperBound; }

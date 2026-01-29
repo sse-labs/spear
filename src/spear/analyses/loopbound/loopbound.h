@@ -1,7 +1,22 @@
-// /*
-//  * Copyright (c) 2026 Maximilian Krebs
-//  * All rights reserved.
-// *
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
+
+/**
+ * Main LoopBound Anaylsis component. Implements a Phasar based IDE analysis.
+ * Uses Cullman and Martins approach for loop bound solving. See
+ *
+ * Christoph Cullmann and Florian Martin. Data-Flow Based Detection of Loop Bounds.
+ * In 7th International Workshop on Worst-Case Execution Time Analysis (WCET'07).
+ * Open Access Series in Informatics (OASIcs), Volume 6, pp. 1-6,
+ * Schloss Dagstuhl – Leibniz-Zentrum für Informatik (2007)
+ * https://doi.org/10.4230/OASIcs.WCET.2007.1193
+ *
+ * Calculates loop increment per iteration (alongside other loop properties) which we then can use
+ * to calculate the amount of iterations the loop executes.
+ *
+ */
 
 #ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_H_
 #define SRC_SPEAR_ANALYSES_LOOPBOUND_H_
@@ -19,6 +34,8 @@
 #include <vector>
 #include <llvm/Analysis/LoopInfo.h>
 
+#include "DeltaInterval.h"
+
 namespace loopbound {
 
 struct CounterFromIcmp {
@@ -27,6 +44,7 @@ struct CounterFromIcmp {
     std::vector<const llvm::Value *> Roots;       // Counter that we want to analyze
 };
 
+// TODO: Find a better name for this shitty internal representation
 struct LoopDescription {
     llvm::Loop *loop;
     llvm::ICmpInst *icmp;
@@ -36,54 +54,6 @@ struct LoopDescription {
     std::optional<int64_t> init;
     std::optional<int64_t> step;
 };
-
-
-class DeltaInterval {
-public:
-    enum class ValueType { TOP, BOTTOM, NORMAL, EMPTY };
-
-    DeltaInterval();
-
-    static DeltaInterval empty();     // EMPTY
-    bool isEmpty() const noexcept;
-
-    static DeltaInterval bottom();
-    static DeltaInterval top();
-    static DeltaInterval interval(int64_t low, int64_t high);
-
-    bool isBottom() const;
-    bool isTop() const;
-    bool isNORMAL() const;
-
-    int64_t getLowerBound() const;
-    int64_t getUpperBound() const;
-
-    DeltaInterval join(const DeltaInterval &other) const;
-
-    DeltaInterval leastUpperBound(const DeltaInterval &other) const;
-    DeltaInterval greatestLowerBound(const DeltaInterval &other) const;
-
-    bool operator==(const DeltaInterval &other) const;
-    bool operator!=(const DeltaInterval &other) const;
-
-    DeltaInterval add(int64_t constant) const;
-
-private:
-    DeltaInterval(ValueType valuetype, int64_t low, int64_t high)
-      : valueType(valuetype), lowerBound(low), upperBound(high) {}
-
-    ValueType valueType;
-    int64_t lowerBound;
-    int64_t upperBound;
-};
-
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                 const DeltaInterval &DI) {
-    if (DI.isBottom()) return OS << "⊥";
-    if (DI.isTop()) return OS << "⊤";
-    return OS << "[" << DI.getLowerBound() << ", " << DI.getUpperBound() << "]";
-}
 
 struct LoopBoundDomain : psr::LLVMAnalysisDomainDefault {
     using d_t = const llvm::Value *;
