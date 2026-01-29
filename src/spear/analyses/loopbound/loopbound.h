@@ -1,3 +1,8 @@
+// /*
+//  * Copyright (c) 2026 Maximilian Krebs
+//  * All rights reserved.
+// *
+
 #ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_H_
 #define SRC_SPEAR_ANALYSES_LOOPBOUND_H_
 
@@ -102,8 +107,7 @@ public:
     using FlowFunctionPtrType = typename base_t::FlowFunctionPtrType;
     using EdgeFunctionType = psr::EdgeFunction<l_t>;
 
-    explicit LoopBoundIDEAnalysis(const psr::LLVMProjectIRDB *IRDB,
-                               std::vector<std::string> EntryPoints, std::vector<llvm::Loop*> *loops);
+    explicit LoopBoundIDEAnalysis(const psr::LLVMProjectIRDB *IRDB, std::vector<llvm::Loop*> *loops);
 
     // Seeds / lattice / all-top
     [[nodiscard]] psr::InitialSeeds<n_t, d_t, l_t> initialSeeds() override;
@@ -157,7 +161,6 @@ public:
 
 private:
     const psr::LLVMProjectIRDB *IRDBPtr = nullptr;
-    std::vector<std::string> EntryPoints;
     std::vector<llvm::Loop*> *loops;
 
     llvm::DenseSet<const llvm::Value *> CounterRoots;

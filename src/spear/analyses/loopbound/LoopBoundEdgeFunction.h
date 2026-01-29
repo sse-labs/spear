@@ -10,7 +10,7 @@
 #include <algorithm>
 
 #include <phasar/DataFlow/IfdsIde/EdgeFunction.h>
-#include "analyses/loopbound.h"
+#include "loopbound.h"
 
 namespace loopbound {
 

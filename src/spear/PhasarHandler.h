@@ -15,8 +15,8 @@
 #include <utility>
 #include <vector>
 
-#include "analyses/loopbound.h"
-#include "analyses/LoopBoundEdgeFunction.h"
+#include "analyses/loopbound/loopbound.h"
+#include "analyses/loopbound/LoopBoundEdgeFunction.h"
 
 namespace llvm {
 class Module;
@@ -68,7 +68,7 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
 
   // Function entrypoints
   std::vector<std::string> Entrypoints;
-
+    
   // Internal: construct analysis problem and run PhASAR solver.
   void runAnalysis(llvm::FunctionAnalysisManager *FAM);
 };

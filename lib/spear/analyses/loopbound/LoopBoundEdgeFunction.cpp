@@ -1,10 +1,10 @@
-/*
- * Copyright (c) 2026 Maximilian Krebs
- * All rights reserved.
-*/
+// /*
+//  * Copyright (c) 2026 Maximilian Krebs
+//  * All rights reserved.
+// *
 
-#include "analyses/LoopBoundEdgeFunction.h"
-#include "analyses/util.h"
+#include "analyses/loopbound/LoopBoundEdgeFunction.h"
+#include "analyses/loopbound/util.h"
 
 namespace loopbound {
 

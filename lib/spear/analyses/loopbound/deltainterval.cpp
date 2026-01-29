@@ -1,9 +1,9 @@
-/*
- * Copyright (c) 2026 Maximilian Krebs
- * All rights reserved.
-*/
+// /*
+//  * Copyright (c) 2026 Maximilian Krebs
+//  * All rights reserved.
+// *
 
-#include "analyses/loopbound.h"
+#include "../../../../src/spear/analyses/loopbound/loopbound.h"
 
 #include <algorithm>
 #include <limits>

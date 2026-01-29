@@ -1,4 +1,9 @@
-#include "analyses/loopbound.h"
+// /*
+//  * Copyright (c) 2026 Maximilian Krebs
+//  * All rights reserved.
+// *
+
+#include "../../../../src/spear/analyses/loopbound/loopbound.h"
 
 #include <phasar/PhasarLLVM/ControlFlow/LLVMBasedCFG.h>
 
@@ -8,8 +13,8 @@
 #include <llvm/IR/Operator.h>
 #include <phasar/PhasarLLVM/DataFlow/IfdsIde/LLVMZeroValue.h>
 
-#include "analyses/LoopBoundEdgeFunction.h"
-#include "analyses/util.h"
+#include "analyses/loopbound/LoopBoundEdgeFunction.h"
+#include "analyses/loopbound/util.h"
 
 #include <atomic>
 
@@ -109,17 +114,14 @@ namespace loopbound {
 // ======================= LoopBoundIDEAnalysis =======================
 
 LoopBoundIDEAnalysis::LoopBoundIDEAnalysis(const psr::LLVMProjectIRDB *IRDB,
-                                           std::vector<std::string> EPs,
                                            std::vector<llvm::Loop *> *loops)
-    : base_t(IRDB, EPs,
+    : base_t(IRDB, {"main"},
              std::optional<d_t>(
                  static_cast<d_t>(psr::LLVMZeroValue::getInstance()))),
-      IRDBPtr(IRDB),
-      EntryPoints(std::move(EPs)) {
+      IRDBPtr(IRDB){
   this->loops = loops;
   this->findLoopCounters();
   this->buildCounterRootIndex();
-  llvm::errs() << "[LB] CTOR EPs=" << EntryPoints.size() << "\n";
 }
 
 // === Instrument initialSeeds() ===

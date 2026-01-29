@@ -14,7 +14,7 @@
 #include <string>
 #include <map>
 
-#include "analyses/loopbound.h"
+#include "../../src/spear/analyses/loopbound/loopbound.h"
 
 LoopTree::LoopTree(
     llvm::Loop *main,
