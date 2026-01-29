@@ -154,7 +154,7 @@ LoopBoundIDEAnalysis::initialSeeds() {
                  << ") -> [0,0]\n";
 
     Seeds.addSeed(headerNode, getZeroValue(), topElement());
-    Seeds.addSeed(headerNode, static_cast<d_t>(CanonRoot), l_t::bottom());
+    Seeds.addSeed(headerNode, static_cast<d_t>(CanonRoot), l_t::empty());
   }
 
   return Seeds;
@@ -170,16 +170,36 @@ LoopBoundIDEAnalysis::getSummaryFlowFunction(n_t, f_t) {
 }
 
 LoopBoundIDEAnalysis::l_t LoopBoundIDEAnalysis::topElement() {
-  return l_t::top();
+  return l_t::empty();
 }
 LoopBoundIDEAnalysis::l_t LoopBoundIDEAnalysis::bottomElement() {
-  return l_t::bottom();
+  return l_t::top();
 }
 
 LoopBoundIDEAnalysis::l_t LoopBoundIDEAnalysis::join(l_t Lhs, l_t Rhs) {
-  auto Res = Lhs.leastUpperBound(Rhs);
-  //llvm::errs() << "[LB] join: " << Lhs << " lub " << Rhs << " = " << Res
-  //             << "\n";
+  l_t Res;
+
+  // Hull accumulation (possible increments)
+  // IMPORTANT: in this lattice, topElement() is EMPTY, not TOP.
+  if (Lhs.isBottom()) {
+    Res = Rhs; // unreachable handling
+  } else if (Rhs.isBottom()) {
+    Res = Lhs;
+  }
+  // If either side is IDE-bottom (= DeltaInterval::top()), result stays unknown.
+  else if (Lhs.isTop() || Rhs.isTop()) {
+    Res = l_t::top();
+  }
+  // EMPTY behaves like neutral:
+  else if (Lhs.isEmpty()) {
+    Res = Rhs;
+  } else if (Rhs.isEmpty()) {
+    Res = Lhs;
+  } else {
+    Res = Lhs.leastUpperBound(Rhs); // hull
+  }
+
+  llvm::errs() << "[LB] join: " << Lhs << " lub " << Rhs << " = " << Res << "\n";
   return Res;
 }
 
@@ -259,15 +279,15 @@ bool LoopBoundIDEAnalysis::isLatchToHeaderEdge(n_t Curr, n_t Succ) const {
 LoopBoundIDEAnalysis::FlowFunctionPtrType
 LoopBoundIDEAnalysis::getNormalFlowFunction(n_t Curr, n_t Succ) {
   if (isLatchToHeaderEdge(Curr, Succ)) {
-    // KEEP facts! We reset the VALUE using the EF on this edge.
+    if (LB_DebugEnabled.load()) {
+      llvm::errs() << "[LB] CUT edge (no-kill facts): " << *Curr << " -> " << *Succ << "\n";
+    }
     auto Inner = std::make_shared<IdentityFlow<d_t, container_t>>();
-    return std::make_shared<DebugFlow<d_t, container_t>>(
-        Inner, "CutIdentity", this, Curr, Succ);
+    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "Identity", this, Curr, Succ);
   }
 
   auto Inner = std::make_shared<IdentityFlow<d_t, container_t>>();
-  return std::make_shared<DebugFlow<d_t, container_t>>(
-      Inner, "Identity", this, Curr, Succ);
+  return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "Identity", this, Curr, Succ);
 }
 
 
@@ -472,6 +492,7 @@ LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t Succ,
   // *edge function* cannot create a growing composed EF along the loop.
   // === Backedge: reset per-iteration collected increment interval ===
   if (isLatchToHeaderEdge(curr, Succ)) {
+    return EF(std::in_place_type<DeltaIntervalIdentity>);
 
     // Leave zero and fact changes alone.
     if (isZeroValue(currNode) || isZeroValue(succNode) || currNode != succNode) {

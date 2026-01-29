@@ -23,6 +23,7 @@ using llvm::Module;
 using llvm::PreservedAnalyses;
 using llvm::ModuleAnalysisManager;
 
+
 PhasarHandlerPass::PhasarHandlerPass()
     : mod(nullptr),
       HA(nullptr),
@@ -111,6 +112,26 @@ const llvm::Instruction *succOf(const llvm::Instruction *I) {
   return nullptr;
 }
 
+namespace {
+
+// ---- Presence-aware query helpers (C++17 SFINAE) ----
+template <typename T, typename = void>
+struct has_resultsAt : std::false_type {};
+
+template <typename T>
+struct has_resultsAt<T, std::void_t<decltype(std::declval<T &>().resultsAt(
+                         (const llvm::Instruction *)nullptr))>> : std::true_type {};
+
+template <typename T, typename = void>
+struct has_getAllResultsAt : std::false_type {};
+
+template <typename T>
+struct has_getAllResultsAt<T, std::void_t<decltype(std::declval<T &>().getAllResultsAt(
+                             (const llvm::Instruction *)nullptr))>> : std::true_type {};
+
+} // namespace
+
+
 void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
   using ResultsTy =
       psr::OwningSolverResults<const llvm::Instruction *, const llvm::Value *,
@@ -128,6 +149,7 @@ void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
   auto &LoopInfo = FAM->getResult<llvm::LoopAnalysis>(*Main);
 
   std::vector<llvm::Loop *> TopLoops;
+  TopLoops.reserve(LoopInfo.getTopLevelLoopsVector().size());
   for (llvm::Loop *L : LoopInfo) {
     if (L && !L->getParentLoop()) {
       TopLoops.push_back(L);
@@ -143,61 +165,113 @@ void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
 
   // --- Helpers ---
   auto stripAddr = [&](const llvm::Value *Ptr) -> const llvm::Value * {
-    if (!Ptr) return nullptr;
+    if (!Ptr) {
+      return nullptr;
+    }
     return Problem.stripAddr(Ptr);
   };
 
-  // Find the store that matches "i = i + C" for this loop's counterRoot
   auto findIncStoreInLoop =
       [&](const loopbound::LoopDescription &LD) -> const llvm::StoreInst * {
-        if (!LD.loop || !LD.counterRoot) return nullptr;
+    if (!LD.loop || !LD.counterRoot) {
+      return nullptr;
+    }
 
-        const llvm::Value *Root = stripAddr(LD.counterRoot);
-        if (!Root) return nullptr;
+    const llvm::Value *Root = stripAddr(LD.counterRoot);
+    if (!Root) {
+      return nullptr;
+    }
 
-        for (llvm::BasicBlock *BB : LD.loop->blocks()) {
-          for (llvm::Instruction &I : *BB) {
-            auto *SI = llvm::dyn_cast<llvm::StoreInst>(&I);
-            if (!SI) continue;
-            if (Problem.extractConstIncFromStore(SI, Root).has_value()) {
-              return SI;
-            }
-          }
+    for (llvm::BasicBlock *BB : LD.loop->blocks()) {
+      for (llvm::Instruction &I : *BB) {
+        auto *SI = llvm::dyn_cast<llvm::StoreInst>(&I);
+        if (!SI) {
+          continue;
         }
-        return nullptr;
-      };
+        if (Problem.extractConstIncFromStore(SI, Root).has_value()) {
+          return SI;
+        }
+      }
+    }
+    return nullptr;
+  };
 
-  // SAFE query: avoid resultAt() unless the (stmt,fact) entry exists.
-  auto safeResultAt =
-      [&](const llvm::Instruction *I, const llvm::Value *Fact)
-          -> std::optional<loopbound::DeltaInterval> {
-        if (!I || !Fact) return std::nullopt;
+  // successor node after store (where the store-edge EF has been applied)
+  auto succAfterStore =
+      [&](const llvm::StoreInst *SI) -> const llvm::Instruction * {
+    if (!SI) {
+      return nullptr;
+    }
+    if (const llvm::Instruction *N = SI->getNextNode()) {
+      return N;
+    }
+    return SI->getParent() ? SI->getParent()->getTerminator() : nullptr;
+  };
 
-        const llvm::Value *CanonFact = stripAddr(Fact);
-        if (!CanonFact) return std::nullopt;
+  // Presence-aware "tryGet": distinguishes "<no fact>" vs "⊤" when possible.
+  auto tryGet = [&](const llvm::Instruction *I, const llvm::Value *Fact)
+      -> std::optional<loopbound::DeltaInterval> {
+    if (!I || !Fact || !AnalysisResult) {
+      return std::nullopt;
+    }
 
-        // resultsAt(I) is safe; we just scan for the fact.
-        // (This avoids SIGSEGV when the pair isn't in the map.)
-        auto Map = AnalysisResult->resultsAt(I);
-        auto It = Map.find(CanonFact);
-        if (It == Map.end()) return std::nullopt;
+    const llvm::Value *Canon = stripAddr(Fact);
+    if (!Canon) {
+      return std::nullopt;
+    }
 
-        return It->second;
-      };
+     if constexpr (has_resultsAt<ResultsTy>::value) {
+      const auto &Map = AnalysisResult->resultsAt(I);
+      auto It = Map.find(Canon);
+      if (It == Map.end()) {
+        return std::nullopt;
+      }
+      return It->second;
 
-  // --- Print the collected interval where it actually exists: at the inc store ---
+    } else {
+      // fallback: can't distinguish "missing" vs TOP in this API shape
+      return AnalysisResult->resultAt(I, Canon);
+    }
+  };
+
+  auto printAt = [&](const char *Label, const llvm::Instruction *I,
+                     const llvm::Value *Fact) {
+    llvm::errs() << "[LB] " << Label << ": ";
+    if (!I) {
+      llvm::errs() << "<null>\n";
+      llvm::errs() << "[LB] Value@" << Label << "(pre): <no inst>\n";
+      return;
+    }
+    llvm::errs() << *I << "\n";
+
+    llvm::errs() << "[LB] Value@" << Label << "(pre): ";
+    if (auto V = tryGet(I, Fact)) {
+      llvm::errs() << *V << "\n";
+    } else {
+      llvm::errs() << "<no fact>\n";
+    }
+  };
+
+  // --- Iterate loop descriptions and print values at store + after-store ---
   const auto LoopDescs = Problem.getLoopDescriptions();
 
   for (const auto &LD : LoopDescs) {
-    if (!LD.loop || !LD.counterRoot) continue;
+    if (!LD.loop || !LD.counterRoot) {
+      continue;
+    }
 
     const llvm::Function *F = LD.loop->getHeader()->getParent();
-    if (!F || F->getName() != "main") continue;
+    if (!F || F->getName() != "main") {
+      continue;
+    }
 
     const llvm::Value *Root = stripAddr(LD.counterRoot);
-    if (!Root) continue;
+    if (!Root) {
+      continue;
+    }
 
     const llvm::StoreInst *IncStore = findIncStoreInLoop(LD);
+    const llvm::Instruction *AfterInc = succAfterStore(IncStore);
 
     llvm::errs() << "\n[LB] === Loop Result (main) ===\n";
     llvm::errs() << "[LB] Loop: " << LD.loop->getName() << "\n";
@@ -211,26 +285,11 @@ void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
 
     llvm::errs() << "[LB] IncStore: " << *IncStore << "\n";
 
-    const llvm::Instruction *AfterInc = succOf(IncStore);
+    // PRE at store
+    printAt("IncStore", IncStore, Root);
 
-    auto VPre  = safeResultAt(IncStore, Root);
-    auto VPost = safeResultAt(AfterInc, Root);
-
-    llvm::errs() << "[LB] Value@IncStore: ";
-    if (VPre) llvm::errs() << *VPre << "\n"; else llvm::errs() << "<absent>\n";
-
-    llvm::errs() << "[LB] AfterInc: ";
-    if (AfterInc) llvm::errs() << *AfterInc << "\n"; else llvm::errs() << "<null>\n";
-
-    llvm::errs() << "[LB] Value@AfterInc: ";
-    if (VPost) llvm::errs() << *VPost << "\n"; else llvm::errs() << "<absent>\n";
-
-    if (auto V = safeResultAt(IncStore, Root)) {
-      llvm::errs() << "[LB] Value@IncStore(pre): " << *V << "\n";
-    } else {
-      llvm::errs() << "[LB] Value@IncStore(pre): <absent at this stmt>\n";
-      llvm::errs() << "[LB] Hint: fact may be killed by a flow function on some path.\n";
-    }
+    // PRE at successor (this is where COLLECT should show up as value)
+    printAt("AfterInc", AfterInc, Root);
 
     llvm::errs() << "[LB] ==========================\n";
   }

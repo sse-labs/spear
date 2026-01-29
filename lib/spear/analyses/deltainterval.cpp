@@ -51,11 +51,10 @@ DeltaInterval DeltaInterval::join(const DeltaInterval &other) const {
 }
 
 DeltaInterval DeltaInterval::leastUpperBound(const DeltaInterval &other) const {
-  // unreachable handling
   if (isBottom()) return other;
   if (other.isBottom()) return *this;
 
-  // EMPTY is neutral for LUB in "collect increments"
+  // IMPORTANT: EMPTY = "no increments yet"
   if (isEmpty()) return other;
   if (other.isEmpty()) return *this;
 
