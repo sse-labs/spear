@@ -17,7 +17,7 @@
 #include <utility>
 #include <map>
 
-#include "analyses/loopbound/loopbound.h"
+#include "analyses/loopbound/LoopBound.h"
 
 class LLVMHandler;
 

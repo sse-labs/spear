@@ -17,7 +17,7 @@
 #include <string>
 #include <memory>
 
-#include "../../src/spear/analyses/loopbound/loopbound.h"
+#include "../../src/spear/analyses/loopbound/LoopBound.h"
 #include "../../src/spear/analyses/loopbound/util.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
 
@@ -80,7 +80,7 @@ PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
   if (!AnalysisResult || !Func)
     return ResultMap;
 
-  using DomainVal = loopbound::DeltaInterval;
+  using DomainVal = LoopBound::DeltaInterval;
 
   for (const llvm::BasicBlock &BB : *Func) {
     std::string BBName =

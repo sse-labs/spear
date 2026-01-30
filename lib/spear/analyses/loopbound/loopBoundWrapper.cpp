@@ -10,7 +10,7 @@
 #include <phasar/DataFlow/IfdsIde/Solver/IDESolver.h>
 #include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
 
-#include "analyses/loopbound/loopbound.h"
+#include "analyses/loopbound/LoopBound.h"
 #include "analyses/loopbound/util.h"
 
 LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManager *FAM) {
@@ -40,12 +40,12 @@ LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAn
     }
 
     // Create the analysis problem and solve it
-    loopbound::LoopBoundIDEAnalysis Problem(&helperAnalyses->getProjectIRDB(), &this->loops);
+    LoopBound::LoopBoundIDEAnalysis Problem(&helperAnalyses->getProjectIRDB(), &this->loops);
     auto Result = psr::solveIDEProblem(Problem, ICFG);
     this->cachedResults = std::make_unique<ResultsTy>(std::move(Result));
 
     // Query the generated loop descriptions from our analysis
-    const auto LoopDescs = Problem.getLoopDescriptions();
+    const auto LoopDescs = Problem.getLoopParameterDescriptions();
 
     // Iterate over them and create our loop classifiers
     for (const auto &description : LoopDescs) {
@@ -61,7 +61,7 @@ LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAn
         }
 
         // Query the address of the loop counter
-        const llvm::Value *Root = loopbound::LoopBoundIDEAnalysis::stripAddr(description.counterRoot);
+        const llvm::Value *Root = LoopBound::Util::stripAddr(description.counterRoot);
         if (!Root) {
             continue;
         }
@@ -104,7 +104,7 @@ bool LoopBoundWrapper::hasCachedValueAt(const llvm::Instruction *I,
     return !V.isBottom() && !V.isTop() && !V.isEmpty();
 }
 
-std::optional<loopbound::DeltaInterval> LoopBoundWrapper::queryIntervalAtInstuction(const llvm::Instruction *inst, const llvm::Value *fact) {
+std::optional<LoopBound::DeltaInterval> LoopBoundWrapper::queryIntervalAtInstuction(const llvm::Instruction *inst, const llvm::Value *fact) {
     // Check validity of parameters
     if (!inst || !fact) {
         return std::nullopt;
@@ -115,7 +115,7 @@ std::optional<loopbound::DeltaInterval> LoopBoundWrapper::queryIntervalAtInstuct
     }
 
     // Find the true address of the fact by stripping all pointer chains
-    const llvm::Value *cleanedAddrOfFact = loopbound::LoopBoundIDEAnalysis::stripAddr(fact);
+    const llvm::Value *cleanedAddrOfFact = LoopBound::Util::stripAddr(fact);
     if (!cleanedAddrOfFact) {
         return std::nullopt;
     }
@@ -135,14 +135,14 @@ std::optional<loopbound::DeltaInterval> LoopBoundWrapper::queryIntervalAtInstuct
     }
 }
 
-const llvm::StoreInst *LoopBoundWrapper::findStoreIncOfLoop(const loopbound::LoopDescription &description) {
+const llvm::StoreInst *LoopBoundWrapper::findStoreIncOfLoop(const LoopBound::LoopParameterDescription &description) {
     // Check whether the description is valid and contains the needed information
     if (!description.loop || !description.counterRoot) {
         return nullptr;
     }
 
     // Query the root of the loop (the counter variable) and strip it of any pointer shenanigans
-    const llvm::Value *Root = loopbound::LoopBoundIDEAnalysis::stripAddr(description.counterRoot);
+    const llvm::Value *Root = LoopBound::Util::stripAddr(description.counterRoot);
     if (!Root) {
         return nullptr;
     }
@@ -158,7 +158,7 @@ const llvm::StoreInst *LoopBoundWrapper::findStoreIncOfLoop(const loopbound::Loo
             // If we find a valid store, try to extract the increment
             // If an increment can be deduced, we have at least one store that increments
             // our counter variable, hence we have found a valid store that we can return
-            if (loopbound::LoopBoundIDEAnalysis::extractConstIncFromStore(SI, Root).has_value()) {
+            if (LoopBound::LoopBoundIDEAnalysis::extractConstIncFromStore(SI, Root).has_value()) {
                 return SI;
             }
         }
@@ -185,7 +185,7 @@ void LoopBoundWrapper::printClassifiers() {
         }
 
         if (classifier.predicate) {
-            llvm::errs() << "[LB] " << "Predicate: " << loopbound::predicateToSymbol(classifier.predicate) << "\n";
+            llvm::errs() << "[LB] " << "Predicate: " << LoopBound::Util::predicateToSymbol(classifier.predicate) << "\n";
         } else {
             llvm::errs() << "[LB] " << "Predicate: " << "NONE" << "\n";
         }
@@ -201,7 +201,7 @@ void LoopBoundWrapper::printClassifiers() {
     }
 }
 
-std::optional<int64_t> LoopBoundWrapper::findLoopCheckVal(const loopbound::LoopDescription &description) {
+std::optional<int64_t> LoopBoundWrapper::findLoopCheckVal(const LoopBound::LoopParameterDescription &description) {
     // Check if given loop is valid
     if (!description.loop) {
         return std::nullopt;
@@ -217,8 +217,8 @@ std::optional<int64_t> LoopBoundWrapper::findLoopCheckVal(const loopbound::LoopD
     const llvm::Value *Bv = description.icmp->getOperand(1);
 
     // Strip pointer chains from operands
-    const llvm::Value *CA = loopbound::getMemRootFromValue(A);
-    const llvm::Value *CB = loopbound::getMemRootFromValue(Bv);
+    const llvm::Value *CA = LoopBound::Util::getMemRootFromValue(A);
+    const llvm::Value *CB = LoopBound::Util::getMemRootFromValue(Bv);
 
     const llvm::Value *CounterSide = nullptr;
     const llvm::Value *OtherSide = nullptr;
@@ -239,7 +239,7 @@ std::optional<int64_t> LoopBoundWrapper::findLoopCheckVal(const loopbound::LoopD
         llvm::Function *Fn = const_cast<llvm::Function *>(LI->getFunction());
         if (Fn) {
             auto &DT = this->FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
-            if (auto Cst = loopbound::tryDeduceConstFromLoad(LI, DT)) {
+            if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT)) {
                 return Cst;
             }
         }

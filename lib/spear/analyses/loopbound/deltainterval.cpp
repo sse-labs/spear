@@ -3,12 +3,12 @@
 //  * All rights reserved.
 // *
 
-#include "../../../../src/spear/analyses/loopbound/loopbound.h"
+#include "../../../../src/spear/analyses/loopbound/LoopBound.h"
 
 #include <algorithm>
 #include <limits>
 
-namespace loopbound {
+namespace LoopBound {
 
 DeltaInterval::DeltaInterval()
     : valueType(ValueType::TOP),

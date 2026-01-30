@@ -7,7 +7,7 @@
 #define SPEAR_DELTAINTERVAL_H
 #include <cstdint>
 
-namespace loopbound {
+namespace LoopBound {
 
 class DeltaInterval {
 public:

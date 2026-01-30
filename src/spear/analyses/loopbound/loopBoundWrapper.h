@@ -5,18 +5,19 @@
 
 #ifndef SPEAR_LOOPBOUNDWRAPPER_H
 #define SPEAR_LOOPBOUNDWRAPPER_H
+
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/PassManager.h>
 #include <phasar/DataFlow/IfdsIde/SolverResults.h>
 #include <phasar/PhasarLLVM/HelperAnalyses.h>
 
-#include "loopbound.h"
+#include "LoopBound.h"
 
 /**
  * Phasar result type
  * Used to shorthand any interaction with the analysis result
  */
-using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *, const llvm::Value *, loopbound::DeltaInterval>;
+using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *, const llvm::Value *, LoopBound::DeltaInterval>;
 
 
 /**
@@ -29,7 +30,7 @@ public:
     llvm::Loop *loop;
 
     // Increment representation
-    std::optional<loopbound::DeltaInterval> increment;
+    std::optional<LoopBound::DeltaInterval> increment;
 
     // Init value
     std::optional<int64_t> init;
@@ -51,7 +52,7 @@ public:
      */
     LoopClassifier(
         llvm::Loop *loop,
-        std::optional<loopbound::DeltaInterval> increment,
+        std::optional<LoopBound::DeltaInterval> increment,
         std::optional<int64_t> init,
         llvm::CmpInst::Predicate *pred,
         std::optional<int64_t> check)
@@ -106,7 +107,7 @@ private:
      * @param description LoopDescription of the loop under analysis
      * @return A store instruction if one exists, nullptr otherwise
      */
-    const llvm::StoreInst *findStoreIncOfLoop(const loopbound::LoopDescription &description);
+    const llvm::StoreInst *findStoreIncOfLoop(const LoopBound::LoopParameterDescription &description);
 
     /**
      * Checks if for a given instruction and a root fact whether there exists a calculated increment value or not
@@ -122,7 +123,7 @@ private:
      * @param fact Fact that should be analysed at the given instruction
      * @return Returns a DeltaInterval instance representing the loop increment if it can be found
      */
-    std::optional<loopbound::DeltaInterval> queryIntervalAtInstuction(
+    std::optional<LoopBound::DeltaInterval> queryIntervalAtInstuction(
         const llvm::Instruction *inst, const llvm::Value *fact);
 
     /**
@@ -131,7 +132,7 @@ private:
      * @param description LoopDescription that defines the loop under analsis
      * @return Returns a check value if it can be found
      */
-    std::optional<int64_t> findLoopCheckVal(const loopbound::LoopDescription &description);
+    std::optional<int64_t> findLoopCheckVal(const LoopBound::LoopParameterDescription &description);
 
     /**
      * Print the internally safed loop classifiers
