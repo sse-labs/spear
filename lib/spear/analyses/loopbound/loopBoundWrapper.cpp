@@ -191,7 +191,13 @@ void LoopBoundWrapper::printClassifiers() {
         }
 
         if (classifier.check) {
-            llvm::errs() << "[LB] " << "Bound: " << classifier.check << "\n";
+            llvm::errs() << "[LB] " << "Check: " << classifier.check << "\n";
+        } else {
+            llvm::errs() << "[LB] " << "Check: " << "NONE" << "\n";
+        }
+
+        if (classifier.check) {
+            llvm::errs() << "[LB] " << "Bound: " << "[" << classifier.bound->getLowerBound() << ", " << classifier.bound->getUpperBound() << "]" "\n";
         } else {
             llvm::errs() << "[LB] " << "Bound: " << "UNBOUND" << "\n";
         }

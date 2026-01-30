@@ -32,6 +32,9 @@ public:
     // Increment representation
     std::optional<LoopBound::DeltaInterval> increment;
 
+    // Possible bound calculated from the parameters
+    std::optional<LoopBound::DeltaInterval> bound;
+
     // Init value
     std::optional<int64_t> init;
 
@@ -56,13 +59,21 @@ public:
         std::optional<int64_t> init,
         llvm::CmpInst::Predicate *pred,
         std::optional<int64_t> check)
-    : loop(loop), increment(increment), init(init), predicate(pred), check(check) {}
+    : loop(loop), increment(increment), init(init), predicate(pred), check(check) {
+        this->bound = calculateBound();
+    }
+
+    /**
+     * Calculate the possible loop bound from the stored information
+     * @return The possible loopbound
+     */
+    std::optional<LoopBound::DeltaInterval> calculateBound();
 
     /**
      * Checks if we found a check value. Otherwise, no bound calculation is possible
      * @return true if a check value exists, false otherwise
      */
-    bool isBoundable() {
+    bool isBoundable() const {
         return check.has_value();
     }
 };

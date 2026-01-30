@@ -119,6 +119,13 @@ std::optional<int64_t> tryDeduceConstFromLoad(const llvm::LoadInst *LI, llvm::Do
  */
 std::string predicateToSymbol(llvm::CmpInst::Predicate *pred);
 
+/**
+ * Check if the given ICMP predicate is an equal predicate (<=, >=)
+ * @param predicate
+ * @return
+ */
+bool isEqualityPred(llvm::CmpInst::Predicate *predicate);
+
 }  // namespace LoopBound::Util
 
 #endif  // SPEAR_UTIL_H

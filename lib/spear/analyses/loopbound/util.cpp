@@ -385,4 +385,16 @@ std::string predicateToSymbol(llvm::CmpInst::Predicate *P) {
   return "UNDEFINED";
 }
 
+bool isEqualityPred(llvm::CmpInst::Predicate *predicate) {
+  switch (*predicate) {
+    case llvm::CmpInst::ICMP_SLE:
+    case llvm::CmpInst::ICMP_SGE:
+    case llvm::CmpInst::ICMP_ULE:
+    case llvm::CmpInst::ICMP_UGE:
+      return true;
+    default:
+      return false;
+  }
+}
+
 } // namespace LoopBound::Util
