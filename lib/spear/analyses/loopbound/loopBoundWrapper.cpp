@@ -79,13 +79,14 @@ LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAn
             description.loop,
             increment,
             description.init,
-            &predicate,
+            predicate,
             checkval
         );
 
         this->loopClassifiers.push_back(newLoopClassifier);
-        printClassifiers();
     }
+
+    printClassifiers();
 }
 
 bool LoopBoundWrapper::hasCachedValueAt(const llvm::Instruction *I,
@@ -207,43 +208,42 @@ void LoopBoundWrapper::printClassifiers() {
     }
 }
 
-std::optional<int64_t> LoopBoundWrapper::findLoopCheckVal(const LoopBound::LoopParameterDescription &description) {
-    // Check if given loop is valid
-    if (!description.loop) {
+std::optional<int64_t>
+LoopBoundWrapper::findLoopCheckVal(const LoopBound::LoopParameterDescription &description) {
+    if (!description.loop || !description.icmp) {
         return std::nullopt;
     }
 
-    // Check if the loop has a valid icmp instruction
-    if (!description.icmp) {
-        return std::nullopt;
-    }
-
-    // Query the comparison operands of the icmp instruction
-    const llvm::Value *A = description.icmp->getOperand(0);
+    const llvm::Value *A  = description.icmp->getOperand(0);
     const llvm::Value *Bv = description.icmp->getOperand(1);
 
-    // Strip pointer chains from operands
     const llvm::Value *CA = LoopBound::Util::getMemRootFromValue(A);
     const llvm::Value *CB = LoopBound::Util::getMemRootFromValue(Bv);
 
     const llvm::Value *CounterSide = nullptr;
-    const llvm::Value *OtherSide = nullptr;
+    const llvm::Value *OtherSide   = nullptr;
 
-    // Check which side of the icmp is the constant we are comparing against
     if (CA && CA == description.counterRoot) {
         CounterSide = A;
-        OtherSide = Bv;
+        OtherSide   = Bv;
     } else if (CB && CB == description.counterRoot) {
         CounterSide = Bv;
-        OtherSide = A;
+        OtherSide   = A;
     } else {
         return std::nullopt;
     }
 
-    // Trace the values load and decuce the actual value behind it.
-    if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(OtherSide)) {
-        llvm::Function *Fn = const_cast<llvm::Function *>(LI->getFunction());
-        if (Fn) {
+    const llvm::Value *StrippedOther = OtherSide;
+    while (auto *Cast = llvm::dyn_cast<llvm::CastInst>(StrippedOther)) {
+        StrippedOther = Cast->getOperand(0);
+    }
+
+    if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(StrippedOther)) {
+        return static_cast<int64_t>(CI->getSExtValue());
+    }
+
+    if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(StrippedOther)) {
+        if (llvm::Function *Fn = const_cast<llvm::Function *>(LI->getFunction())) {
             auto &DT = this->FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
             if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT)) {
                 return Cst;

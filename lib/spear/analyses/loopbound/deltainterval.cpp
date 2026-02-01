@@ -48,7 +48,7 @@ DeltaInterval DeltaInterval::ideAbsorbing() {
 
 bool DeltaInterval::isBottom() const { return valueType == ValueType::BOTTOM; }
 bool DeltaInterval::isTop() const { return valueType == ValueType::TOP; }
-bool DeltaInterval::isNORMAL() const { return valueType == ValueType::NORMAL; }
+bool DeltaInterval::isNormal() const { return valueType == ValueType::NORMAL; }
 bool DeltaInterval::isEmpty() const noexcept { return valueType == ValueType::EMPTY; }
 
 bool DeltaInterval::isIdeNeutral() const {
@@ -70,7 +70,6 @@ DeltaInterval DeltaInterval::leastUpperBound(const DeltaInterval &other) const {
   if (isBottom()) return other;
   if (other.isBottom()) return *this;
 
-  // IMPORTANT: EMPTY = "no increments yet"
   if (isEmpty()) return other;
   if (other.isEmpty()) return *this;
 
@@ -82,10 +81,8 @@ DeltaInterval DeltaInterval::leastUpperBound(const DeltaInterval &other) const {
 }
 
 DeltaInterval DeltaInterval::greatestLowerBound(const DeltaInterval &other) const {
-  // unreachable handling
   if (isBottom() || other.isBottom()) return bottom();
 
-  // EMPTY: no increments known; GLB with EMPTY should stay EMPTY
   if (isEmpty() || other.isEmpty()) return empty();
 
   if (isTop()) return other;
@@ -94,8 +91,6 @@ DeltaInterval DeltaInterval::greatestLowerBound(const DeltaInterval &other) cons
   const int64_t L = std::max(lowerBound, other.lowerBound);
   const int64_t U = std::min(upperBound, other.upperBound);
   if (L > U) {
-    // For your domain you can represent "no overlap" as EMPTY or BOTTOM.
-    // For increment-sets, EMPTY is the natural "no possible increment".
     return empty();
   }
   return interval(L, U);
@@ -116,17 +111,4 @@ bool DeltaInterval::operator!=(const DeltaInterval &other) const {
   return !(*this == other);
 }
 
-DeltaInterval DeltaInterval::add(int64_t constant) const {
-  if (isBottom()) {
-    return *this;
-  }
-  if (isTop()) {
-    return top();
-  }
-  if (isEmpty()) {
-    return empty();
-  }
-  return interval(lowerBound + constant, upperBound + constant);
-}
-
-} // namespace loopbound
+}  // namespace loopbound

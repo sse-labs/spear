@@ -10,7 +10,7 @@
 
 namespace LoopBound::Util {
 
-std::atomic<bool> LB_DebugEnabled{true};
+std::atomic<bool> LB_DebugEnabled{false};
 
 const llvm::Value *asValue(LoopBound::LoopBoundDomain::d_t fact) {
   return static_cast<const llvm::Value *>(fact);
@@ -355,9 +355,9 @@ std::optional<int64_t> tryDeduceConstFromLoad(const llvm::LoadInst *LI,
   return C->getSExtValue();
 }
 
-std::string predicateToSymbol(llvm::CmpInst::Predicate *P) {
+std::string predicateToSymbol(llvm::CmpInst::Predicate P) {
   if (P) {
-    switch (*P) {
+    switch (P) {
     case llvm::CmpInst::ICMP_EQ:
       return "==";
     case llvm::CmpInst::ICMP_NE:
@@ -385,16 +385,45 @@ std::string predicateToSymbol(llvm::CmpInst::Predicate *P) {
   return "UNDEFINED";
 }
 
-bool isEqualityPred(llvm::CmpInst::Predicate *predicate) {
-  switch (*predicate) {
-    case llvm::CmpInst::ICMP_SLE:
-    case llvm::CmpInst::ICMP_SGE:
-    case llvm::CmpInst::ICMP_ULE:
-    case llvm::CmpInst::ICMP_UGE:
-      return true;
-    default:
-      return false;
+llvm::CmpInst::Predicate flipPredicate(llvm::CmpInst::Predicate predicate) {
+  switch (predicate) {
+    case llvm::CmpInst::Predicate::ICMP_SLT: return llvm::CmpInst::Predicate::ICMP_SGT;
+    case llvm::CmpInst::Predicate::ICMP_SLE: return llvm::CmpInst::Predicate::ICMP_SGE;
+    case llvm::CmpInst::Predicate::ICMP_SGT: return llvm::CmpInst::Predicate::ICMP_SLT;
+    case llvm::CmpInst::Predicate::ICMP_SGE: return llvm::CmpInst::Predicate::ICMP_SLE;
+
+    case llvm::CmpInst::Predicate::ICMP_ULT: return llvm::CmpInst::Predicate::ICMP_UGT;
+    case llvm::CmpInst::Predicate::ICMP_ULE: return llvm::CmpInst::Predicate::ICMP_UGE;
+    case llvm::CmpInst::Predicate::ICMP_UGT: return llvm::CmpInst::Predicate::ICMP_ULT;
+    case llvm::CmpInst::Predicate::ICMP_UGE: return llvm::CmpInst::Predicate::ICMP_ULE;
+
+    default: return predicate;
   }
 }
 
+int64_t floorDiv(int64_t a, int64_t b) {
+  int64_t q = a / b;
+  int64_t r = a % b;
+  if (r != 0 && ((r > 0) != (b > 0))) {
+    --q;
+  }
+  return q;
+}
+
+int64_t ceilDiv(int64_t a, int64_t b) {
+  int64_t q = a / b;
+  int64_t r = a % b;
+  if (r != 0 && ((r > 0) == (b > 0))) {
+    ++q;
+  }
+  return q;
+}
+
+int64_t exactDiv(int64_t a, int64_t b) {
+  if (a == 0 || b == 0) {
+    return 0;
+  }
+
+   return a / b;
+}
 } // namespace LoopBound::Util

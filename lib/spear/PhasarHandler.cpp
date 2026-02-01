@@ -40,7 +40,6 @@ PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
       AM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*mod).getManager();
 
   runAnalysis(&FAM);
-  runAnalysis(&FAM);
 
   return PreservedAnalyses::all();
 }

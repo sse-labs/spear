@@ -42,7 +42,7 @@ public:
     std::optional<int64_t> check;
 
     // Comparison operator
-    llvm::CmpInst::Predicate *predicate;
+    llvm::CmpInst::Predicate predicate;
 
     /**
      * Simple constructor
@@ -57,7 +57,7 @@ public:
         llvm::Loop *loop,
         std::optional<LoopBound::DeltaInterval> increment,
         std::optional<int64_t> init,
-        llvm::CmpInst::Predicate *pred,
+        llvm::CmpInst::Predicate pred,
         std::optional<int64_t> check)
     : loop(loop), increment(increment), init(init), predicate(pred), check(check) {
         this->bound = calculateBound();
@@ -76,6 +76,18 @@ public:
     bool isBoundable() const {
         return check.has_value();
     }
+private:
+    /**
+     * Performs the actual bound calculation depending on the predicate
+     * @param predicate Predicate relevant for the bound
+     * @param init Init value of the loop
+     * @param check Check the counter is running against
+     * @param increment Concrete increment per loop iteration
+     * @return Possible calculated bound
+     */
+    std::optional<int64_t> solveBound(llvm::CmpInst::Predicate predicate,
+                                      int64_t init, int64_t check, int64_t increment);
+
 };
 
 /**

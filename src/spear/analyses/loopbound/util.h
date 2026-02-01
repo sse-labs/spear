@@ -117,14 +117,21 @@ std::optional<int64_t> tryDeduceConstFromLoad(const llvm::LoadInst *LI, llvm::Do
  * @param pred Predicate to generate the string representation for
  * @return String representing the predicate (==, !=, <, >, <=, >=)
  */
-std::string predicateToSymbol(llvm::CmpInst::Predicate *pred);
+std::string predicateToSymbol(llvm::CmpInst::Predicate pred);
 
 /**
  * Check if the given ICMP predicate is an equal predicate (<=, >=)
  * @param predicate
  * @return
  */
-bool isEqualityPred(llvm::CmpInst::Predicate *predicate);
+llvm::CmpInst::Predicate flipPredicate(llvm::CmpInst::Predicate predicate);
+
+
+int64_t floorDiv(int64_t a, int64_t b);
+
+int64_t ceilDiv(int64_t a, int64_t b);
+
+int64_t exactDiv(int64_t a, int64_t b);
 
 }  // namespace LoopBound::Util
 

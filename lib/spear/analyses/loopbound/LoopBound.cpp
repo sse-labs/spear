@@ -114,14 +114,16 @@ LoopBoundIDEAnalysis::initialSeeds() {
 
     const llvm::Value *CanonRoot = LoopBound::Util::stripAddr(root);
 
-    llvm::errs() << LoopBound::Util::LB_TAG << " Seed @header=";
-    LoopBound::Util::dumpInst(headerNode);
-    llvm::errs() << "\n" << LoopBound::Util::LB_TAG << "   Zero=";
-    LoopBound::Util::dumpFact(this, getZeroValue());
-    llvm::errs() << "  -> " << l_t::ideNeutral() << "\n";
+    if (LoopBound::Util::LB_DebugEnabled.load()) {
+      llvm::errs() << LoopBound::Util::LB_TAG << " Seed @header=";
+      LoopBound::Util::dumpInst(headerNode);
+      llvm::errs() << "\n" << LoopBound::Util::LB_TAG << "   Zero=";
+      LoopBound::Util::dumpFact(this, getZeroValue());
+      llvm::errs() << "  -> " << l_t::ideNeutral() << "\n";
 
-    llvm::errs() << LoopBound::Util::LB_TAG << "   Root=" << CanonRoot
-                 << " -> " << l_t::ideNeutral() << "\n";
+      llvm::errs() << LoopBound::Util::LB_TAG << "   Root=" << CanonRoot
+                   << " -> " << l_t::ideNeutral() << "\n";
+    }
 
     Seeds.addSeed(headerNode, getZeroValue(), topElement());
     Seeds.addSeed(headerNode, static_cast<d_t>(CanonRoot), l_t::empty());
@@ -585,7 +587,7 @@ void LoopBoundIDEAnalysis::findLoopCounters() {
 
       LoopDescriptions.push_back(description);
 
-      llvm::errs() << "Generated Loop Description {\n";
+      /*llvm::errs() << "Generated Loop Description {\n";
       llvm::errs() << "Loop: " << description.loop->getName() << "\n";
       llvm::errs() << "ICMP: " << *description.icmp << "\n";
       llvm::errs() << "Counter Root: " << *description.counterRoot << "\n";
@@ -594,7 +596,7 @@ void LoopBoundIDEAnalysis::findLoopCounters() {
       } else {
         llvm::errs() << "Init: <unknown>\n";
       }
-      llvm::errs() << "}\n";
+      llvm::errs() << "}\n";*/
     }
   }
 }
@@ -605,7 +607,7 @@ LoopBoundIDEAnalysis::findCounterFromICMP(llvm::ICmpInst *inst,
   llvm::Value *LHS = inst->getOperand(0);
   llvm::Value *RHS = inst->getOperand(1);
 
-  llvm::errs() << *inst << "\n";
+  //llvm::errs() << *inst << "\n";
 
   auto leftSideRoots  = sliceBackwards(LHS, loop);
   auto rightSideRoots = sliceBackwards(RHS, loop);

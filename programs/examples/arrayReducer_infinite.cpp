@@ -9,7 +9,7 @@ int main(){
     long sum = 0;
     int i = 0;
 
-    while(i < length) {
+    while(true) {
         int a1 = searchroom[i];
         int a2 = searchroom[i+1];
         int a3 = searchroom[i+2];

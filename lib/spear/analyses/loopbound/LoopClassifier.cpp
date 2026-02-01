@@ -6,6 +6,43 @@
 #include "analyses/loopbound/loopBoundWrapper.h"
 #include "analyses/loopbound/util.h"
 
+
+std::optional<int64_t> LoopClassifier::solveBound(llvm::CmpInst::Predicate predicate, int64_t init, int64_t check, int64_t increment) {
+    int64_t delta = check - init;
+    if (increment < 0) {
+        increment = -increment;
+        delta = -delta;
+        predicate = LoopBound::Util::flipPredicate(predicate);
+    }
+
+    switch (predicate) {
+        // check > init + x*increment
+        case llvm::CmpInst::Predicate::ICMP_SLT:
+        case llvm::CmpInst::Predicate::ICMP_ULT:
+            return std::max<int64_t>(0, LoopBound::Util::ceilDiv(delta, increment));
+
+        // check >= init + x*increment
+        case llvm::CmpInst::Predicate::ICMP_SLE:
+        case llvm::CmpInst::Predicate::ICMP_ULE:
+            return std::max<int64_t>(0, LoopBound::Util::floorDiv(delta, increment) + 1);
+
+        case llvm::CmpInst::Predicate::ICMP_SGT:
+        case llvm::CmpInst::Predicate::ICMP_UGT:
+        case llvm::CmpInst::Predicate::ICMP_SGE:
+        case llvm::CmpInst::Predicate::ICMP_UGE:
+            return std::nullopt;
+
+        case llvm::CmpInst::Predicate::ICMP_EQ:
+            return std::nullopt;
+
+        case llvm::CmpInst::Predicate::ICMP_NE:
+            return std::nullopt;
+
+        default:
+            return std::nullopt;
+    }
+}
+
 std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
     // Check if properties are valid and exist
     if (!init || !check || !increment) {
@@ -16,16 +53,15 @@ std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
         return std::nullopt;
     }
 
-    int64_t lowerbound = 0;
-    int64_t upperbound = 0;
+    int64_t lowerval = increment.value().getLowerBound();
+    int64_t upperval = increment.value().getUpperBound();
 
-    if (LoopBound::Util::isEqualityPred(predicate)) {
-        lowerbound = std::ceil((check.value() - init.value()) / increment.value().getLowerBound());
-        upperbound = std::ceil((check.value() - init.value()) / increment.value().getUpperBound());
-    } else {
-        lowerbound = std::floor((check.value() - init.value()) / increment.value().getLowerBound());
-        upperbound = std::floor((check.value() - init.value()) / increment.value().getUpperBound());
+    auto optLowerboundVal = solveBound(predicate, init.value(), check.value(), lowerval);
+    auto optUpperboundVal = solveBound(predicate, init.value(), check.value(), upperval);
+
+    if (!optLowerboundVal || !optUpperboundVal) {
+        return std::nullopt;
     }
 
-    return LoopBound::DeltaInterval::interval(lowerbound, upperbound);
+    return LoopBound::DeltaInterval::interval(optLowerboundVal.value(), optUpperboundVal.value());
 }
