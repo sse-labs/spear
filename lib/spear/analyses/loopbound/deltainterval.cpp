@@ -16,26 +16,26 @@ DeltaInterval::DeltaInterval()
       upperBound(std::numeric_limits<int64_t>::max()) {}
 
 DeltaInterval DeltaInterval::bottom() {
-  return DeltaInterval(ValueType::BOTTOM, 0, 0);
+  return {ValueType::BOTTOM, 0, 0};
 }
 
 DeltaInterval DeltaInterval::top() {
-  return DeltaInterval(ValueType::TOP,
+  return {ValueType::TOP,
                        std::numeric_limits<int64_t>::min(),
-                       std::numeric_limits<int64_t>::max());
+                       std::numeric_limits<int64_t>::max()};
 }
 
 DeltaInterval DeltaInterval::empty() {
   // Neutral element for LUB over NORMAL increments.
   // Means: "no increments observed yet".
-  return DeltaInterval(ValueType::EMPTY, 0, 0);
+  return {ValueType::EMPTY, 0, 0};
 }
 
 DeltaInterval DeltaInterval::interval(int64_t low, int64_t high) {
   if (low > high) {
     std::swap(low, high);
   }
-  return DeltaInterval(ValueType::NORMAL, low, high);
+  return {ValueType::NORMAL, low, high};
 }
 
 DeltaInterval DeltaInterval::ideNeutral() {
@@ -46,10 +46,21 @@ DeltaInterval DeltaInterval::ideAbsorbing() {
   return top();
 }
 
-bool DeltaInterval::isBottom() const { return valueType == ValueType::BOTTOM; }
-bool DeltaInterval::isTop() const { return valueType == ValueType::TOP; }
-bool DeltaInterval::isNormal() const { return valueType == ValueType::NORMAL; }
-bool DeltaInterval::isEmpty() const noexcept { return valueType == ValueType::EMPTY; }
+bool DeltaInterval::isBottom() const {
+  return valueType == ValueType::BOTTOM;
+}
+
+bool DeltaInterval::isTop() const {
+  return valueType == ValueType::TOP;
+}
+
+bool DeltaInterval::isNormal() const {
+  return valueType == ValueType::NORMAL;
+}
+
+bool DeltaInterval::isEmpty() const noexcept {
+  return valueType == ValueType::EMPTY;
+}
 
 bool DeltaInterval::isIdeNeutral() const {
   return isEmpty();
@@ -59,8 +70,13 @@ bool DeltaInterval::isIdeAbsorbing() const {
   return isTop();
 }
 
-int64_t DeltaInterval::getLowerBound() const { return lowerBound; }
-int64_t DeltaInterval::getUpperBound() const { return upperBound; }
+int64_t DeltaInterval::getLowerBound() const {
+  return lowerBound;
+}
+
+int64_t DeltaInterval::getUpperBound() const {
+  return upperBound;
+}
 
 DeltaInterval DeltaInterval::join(const DeltaInterval &other) const {
   return leastUpperBound(other);
