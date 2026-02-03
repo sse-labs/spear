@@ -426,4 +426,11 @@ int64_t exactDiv(int64_t a, int64_t b) {
 
    return a / b;
 }
+
+const llvm::Value *stripCasts(const llvm::Value *V) {
+  while (auto *C = llvm::dyn_cast<llvm::CastInst>(V))
+    V = C->getOperand(0);
+  return V;
+}
+
 } // namespace LoopBound::Util

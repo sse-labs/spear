@@ -15,6 +15,10 @@ std::optional<int64_t> LoopClassifier::solveBound(llvm::CmpInst::Predicate predi
         predicate = LoopBound::Util::flipPredicate(predicate);
     }
 
+    if (increment == 0) {
+        return 0;
+    }
+
     switch (predicate) {
         // check > init + x*increment
         case llvm::CmpInst::Predicate::ICMP_SLT:

@@ -19,6 +19,21 @@
  */
 using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *, const llvm::Value *, LoopBound::DeltaInterval>;
 
+enum class CheckOp { Base, AddConst, SubConst, DivConst, MulConst };
+
+class CheckExpr {
+public:
+    const llvm::Value *Base = nullptr;
+    const llvm::LoadInst *BaseLoad = nullptr;
+    int64_t Offset = 0;
+    std::optional<int64_t> DivBy;
+    std::optional<int64_t> MulBy;
+
+    CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload,  int64_t offset) : Base(base), BaseLoad(baseload), Offset(offset) {}
+
+    std::optional<int64_t> calculateCheck(llvm::FunctionAnalysisManager *FAM);
+};
+
 
 /**
  * LoopClassifier Class
@@ -98,6 +113,8 @@ private:
  */
 class LoopBoundWrapper {
 public:
+    void debugProbe(const llvm::StoreInst *SI, const llvm::Value *Fact);
+
     /**
      * Constructor to run the loopbound analysis
      * @param helperAnalyses Phasar help analyses to access phasars analysis information
@@ -105,11 +122,16 @@ public:
      */
     LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManager *FAM);
 
+    void collectLoops(llvm::Loop *L, std::vector<llvm::Loop *> &Out);
+
     /**
      * Return the internal list of LoopClassifier objects
      * @return
      */
     std::vector<LoopClassifier> getClassifiers();
+
+    std::optional<CheckExpr> peelBasePlusConst(const llvm::Value *V);
+
 private:
     // Internal storage of the analysis results calculated by phasar
     std::unique_ptr<ResultsTy> cachedResults;
@@ -156,6 +178,8 @@ private:
      * @return Returns a check value if it can be found
      */
     std::optional<int64_t> findLoopCheckVal(const LoopBound::LoopParameterDescription &description);
+
+    std::optional<CheckExpr> findLoopCheckExpr(const LoopBound::LoopParameterDescription &description);
 
     /**
      * Print the internally safed loop classifiers

@@ -133,6 +133,9 @@ int64_t ceilDiv(int64_t a, int64_t b);
 
 int64_t exactDiv(int64_t a, int64_t b);
 
+
+const llvm::Value *stripCasts(const llvm::Value *V);
+
 }  // namespace LoopBound::Util
 
 #endif  // SPEAR_UTIL_H

@@ -7,6 +7,7 @@
 
 #include "analyses/loopbound/loopBoundWrapper.h"
 
+#include <llvm/Analysis/ScalarEvolution.h>
 #include <phasar/DataFlow/IfdsIde/Solver/IDESolver.h>
 #include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
 
@@ -32,11 +33,13 @@ LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAn
 
     // Get all the loops and safe them in our internal field
     auto &LoopInfo = FAM->getResult<llvm::LoopAnalysis>(*Main);
-    this->loops.reserve(LoopInfo.getTopLevelLoopsVector().size());
-    for (llvm::Loop *L : LoopInfo) {
-        if (L && !L->getParentLoop()) {
-            this->loops.push_back(L);
-        }
+    auto &ScalarEvolution = FAM->getResult<llvm::ScalarEvolutionAnalysis>(*Main);
+
+    this->loops.clear();
+    this->loops.reserve(LoopInfo.getLoopsInPreorder().size());
+
+    for (llvm::Loop *TopLevelLoop : LoopInfo.getTopLevelLoops()) {
+        collectLoops(TopLevelLoop, this->loops);
     }
 
     // Create the analysis problem and solve it
@@ -66,21 +69,18 @@ LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAn
             continue;
         }
 
-        // Search the blocks of our loop for the storage that saves the increments
-        // to our loop counter. At this instruction our Phasar analysis will save the
-        // increment interval.
         const llvm::StoreInst *IncStore = this->findStoreIncOfLoop(description);
 
         auto increment = queryIntervalAtInstuction(IncStore, Root);
         auto predicate = description.icmp->getPredicate();
-        auto checkval = findLoopCheckVal(description);
+        auto checkval = findLoopCheckExpr(description);
 
         LoopClassifier newLoopClassifier(
             description.loop,
             increment,
             description.init,
             predicate,
-            checkval
+            checkval->calculateCheck(FAM)
         );
 
         this->loopClassifiers.push_back(newLoopClassifier);
@@ -89,51 +89,76 @@ LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAn
     printClassifiers();
 }
 
+std::optional<int64_t> CheckExpr::calculateCheck(llvm::FunctionAnalysisManager *FAM) {
+    if (this->BaseLoad) {
+        const llvm::Function *CF = this->BaseLoad->getFunction();
+        if (CF) {
+            auto &DT = FAM->getResult<llvm::DominatorTreeAnalysis>(
+            *const_cast<llvm::Function *>(CF));
+
+            if (auto C = LoopBound::Util::tryDeduceConstFromLoad(this->BaseLoad, DT)) {
+                auto tmp = *C + this->Offset;
+                if (MulBy) {
+                    return tmp * MulBy.value();
+                }
+
+                if (DivBy) {
+                    return tmp / DivBy.value();
+                }
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+void LoopBoundWrapper::collectLoops(llvm::Loop *L, std::vector<llvm::Loop *> &Out) {
+    if (!L) {
+        return;
+    }
+
+    Out.push_back(L);
+
+    for (llvm::Loop *SubLoop : L->getSubLoops()) {
+        collectLoops(SubLoop, Out);
+    }
+}
+
 bool LoopBoundWrapper::hasCachedValueAt(const llvm::Instruction *I,
-                      const llvm::Value *Fact) const {
-    if (!this->cachedResults) return false;
+                                       const llvm::Value *Fact) const {
+    if (!this->cachedResults || !I || !Fact) return false;
+
+    const llvm::Value *CleanFact = LoopBound::Util::stripAddr(Fact);
+    if (!CleanFact) return false;
 
     const auto &R  = *this->cachedResults;
-    const auto &At = R.resultsAt(I);            // typically: map<Value*, DeltaInterval> (or similar)
+    const auto &At = R.resultsAt(I);
 
-    auto It = At.find(Fact);
+    auto It = At.find(CleanFact);
     if (It == At.end()) return false;
 
     const auto &V = It->second;
-
-    // Define “has a value” as: not unreachable, not unknown, not empty (adjust if needed)
     return !V.isBottom() && !V.isTop() && !V.isEmpty();
 }
 
-std::optional<LoopBound::DeltaInterval> LoopBoundWrapper::queryIntervalAtInstuction(const llvm::Instruction *inst, const llvm::Value *fact) {
-    // Check validity of parameters
-    if (!inst || !fact) {
+std::optional<LoopBound::DeltaInterval>
+LoopBoundWrapper::queryIntervalAtInstuction(const llvm::Instruction *Inst,
+                                            const llvm::Value *Fact) {
+    if (!Inst || !Fact || !this->cachedResults) {
         return std::nullopt;
     }
 
-    if (!this->cachedResults) {
+    const llvm::Value *CleanFact = LoopBound::Util::stripAddr(Fact);
+    if (!CleanFact) {
         return std::nullopt;
     }
 
-    // Find the true address of the fact by stripping all pointer chains
-    const llvm::Value *cleanedAddrOfFact = LoopBound::Util::stripAddr(fact);
-    if (!cleanedAddrOfFact) {
+    auto V = this->cachedResults->resultAt(Inst, CleanFact);
+
+    if (V.isBottom() || V.isTop() || V.isEmpty()) {
         return std::nullopt;
     }
-
-    // Check if we have a value for the given fact in our results
-    if (hasCachedValueAt(inst, fact)) {
-        // Query the fact from the results
-        const auto &Map = this->cachedResults->resultsAt(inst);
-        auto resultIterator = Map.find(cleanedAddrOfFact);
-
-        if (resultIterator == Map.end()) {
-            return std::nullopt;
-        }
-        return resultIterator->second;
-    } else {
-        return this->cachedResults->resultAt(inst, cleanedAddrOfFact);
-    }
+    return V;
 }
 
 const llvm::StoreInst *LoopBoundWrapper::findStoreIncOfLoop(const LoopBound::LoopParameterDescription &description) {
@@ -156,9 +181,6 @@ const llvm::StoreInst *LoopBoundWrapper::findStoreIncOfLoop(const LoopBound::Loo
                 continue;
             }
 
-            // If we find a valid store, try to extract the increment
-            // If an increment can be deduced, we have at least one store that increments
-            // our counter variable, hence we have found a valid store that we can return
             if (LoopBound::LoopBoundIDEAnalysis::extractConstIncFromStore(SI, Root).has_value()) {
                 return SI;
             }
@@ -197,7 +219,7 @@ void LoopBoundWrapper::printClassifiers() {
             llvm::errs() << "[LB] " << "Check: " << "NONE" << "\n";
         }
 
-        if (classifier.check) {
+        if (classifier.bound) {
             llvm::errs() << "[LB] " << "Bound: " << "[" << classifier.bound->getLowerBound() << ", " << classifier.bound->getUpperBound() << "]" "\n";
         } else {
             llvm::errs() << "[LB] " << "Bound: " << "UNBOUND" << "\n";
@@ -254,6 +276,158 @@ LoopBoundWrapper::findLoopCheckVal(const LoopBound::LoopParameterDescription &de
     return std::nullopt;
 }
 
+std::optional<CheckExpr> LoopBoundWrapper::findLoopCheckExpr(const LoopBound::LoopParameterDescription &description) {
+    if (!description.loop || !description.icmp) return std::nullopt;
+
+    const llvm::Value *A  = description.icmp->getOperand(0);
+    const llvm::Value *Bv = description.icmp->getOperand(1);
+
+    const llvm::Value *CA = LoopBound::Util::getMemRootFromValue(A);
+    const llvm::Value *CB = LoopBound::Util::getMemRootFromValue(Bv);
+
+    const llvm::Value *OtherSide = nullptr;
+
+    if (CA && CA == description.counterRoot) {
+        OtherSide = Bv;
+    } else if (CB && CB == description.counterRoot) {
+        OtherSide = A;
+    } else {
+        return std::nullopt;
+    }
+
+    OtherSide = LoopBound::Util::stripCasts(OtherSide);
+
+    // Try base+offset pattern (handles load, load +/- const, etc.)
+    if (auto E = peelBasePlusConst(OtherSide)) {
+        return *E;
+    }
+
+    // Fallback: if OtherSide is a load that can be proven constant, fold it
+    if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(OtherSide)) {
+        if (llvm::Function *Fn = const_cast<llvm::Function *>(LI->getFunction())) {
+            auto &DT = this->FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
+            if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT)) {
+                return CheckExpr{nullptr, nullptr, *Cst};
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
 std::vector<LoopClassifier> LoopBoundWrapper::getClassifiers() {
     return this->loopClassifiers;
+}
+
+std::optional<CheckExpr> LoopBoundWrapper::peelBasePlusConst(const llvm::Value *V) {
+    if (!V) return std::nullopt;
+    V = LoopBound::Util::stripCasts(V);
+
+    // Constant-only expression: no base, just an offset
+    if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(V)) {
+        return CheckExpr{nullptr, nullptr, CI->getSExtValue()};
+    }
+
+    // Load: BaseRoot (+0)
+    if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(V)) {
+        const llvm::Value *Root = LoopBound::Util::getMemRootFromValue(LI);
+        if (!Root) Root = LoopBound::Util::stripAddr(LI->getPointerOperand());
+        Root = LoopBound::Util::stripAddr(Root);
+
+        return CheckExpr{Root, LI, 0};
+    }
+
+    // Binary operators: add/sub/mul/div with constant
+    if (auto *BO = llvm::dyn_cast<llvm::BinaryOperator>(V)) {
+        const auto Op = BO->getOpcode();
+        const llvm::Value *L = LoopBound::Util::stripCasts(BO->getOperand(0));
+        const llvm::Value *R = LoopBound::Util::stripCasts(BO->getOperand(1));
+
+        // -------- Add --------
+        if (Op == llvm::Instruction::Add) {
+            if (auto *RC = llvm::dyn_cast<llvm::ConstantInt>(R)) {
+                if (auto E = peelBasePlusConst(L)) {
+                    E->Offset += RC->getSExtValue();
+                    return E;
+                }
+            }
+            if (auto *LC = llvm::dyn_cast<llvm::ConstantInt>(L)) {
+                if (auto E = peelBasePlusConst(R)) {
+                    E->Offset += LC->getSExtValue();
+                    return E;
+                }
+            }
+            return std::nullopt;
+        }
+
+        // -------- Sub --------
+        if (Op == llvm::Instruction::Sub) {
+            if (auto *RC = llvm::dyn_cast<llvm::ConstantInt>(R)) {
+                if (auto E = peelBasePlusConst(L)) {
+                    E->Offset -= RC->getSExtValue();
+                    return E;
+                }
+            }
+            // (C - X) not representable as base+const
+            return std::nullopt;
+        }
+
+        // -------- Mul --------
+        if (Op == llvm::Instruction::Mul) {
+            // only allow multiply by constant
+            if (auto *RC = llvm::dyn_cast<llvm::ConstantInt>(R)) {
+                const int64_t C = RC->getSExtValue();
+                if (auto E = peelBasePlusConst(L)) {
+                    // If expression currently has a division, we can fold C into numerator
+                    // but we keep it simple: allow if no DivBy set, else bail out.
+                    if (E->DivBy.has_value()) return std::nullopt;
+
+                    E->MulBy = E->MulBy.has_value() ? (*E->MulBy * C) : C;
+                    E->Offset *= C; // (base+off)*C
+                    return E;
+                }
+            }
+            if (auto *LC = llvm::dyn_cast<llvm::ConstantInt>(L)) {
+                const int64_t C = LC->getSExtValue();
+                if (auto E = peelBasePlusConst(R)) {
+                    if (E->DivBy.has_value()) return std::nullopt;
+
+                    E->MulBy = E->MulBy.has_value() ? (*E->MulBy * C) : C;
+                    E->Offset *= C;
+                    return E;
+                }
+            }
+            return std::nullopt;
+        }
+
+        // -------- Div (signed/unsigned) --------
+        if (Op == llvm::Instruction::SDiv || Op == llvm::Instruction::UDiv) {
+            // Only allow division by constant on the RHS: X / C
+            auto *RC = llvm::dyn_cast<llvm::ConstantInt>(R);
+            if (!RC) return std::nullopt;
+
+            const int64_t C = RC->getSExtValue();
+            if (C == 0) return std::nullopt;
+
+            if (auto E = peelBasePlusConst(L)) {
+                // Keep it simple: if already has MulBy, bail out.
+                // You can later normalize MulBy/DivBy with gcd.
+                if (E->MulBy.has_value()) return std::nullopt;
+
+                // (base+off)/C
+                // Note: integer division is not distributive over addition,
+                // so storing Offset here is only "symbolic". That's OK if
+                // calculateCheck() applies operations in the correct order:
+                //   ((baseValue + Offset) / C)
+                E->DivBy = E->DivBy.has_value() ? (*E->DivBy * C) : C;
+                return E;
+            }
+            return std::nullopt;
+        }
+
+        // Other ops not supported
+        return std::nullopt;
+    }
+
+    return std::nullopt;
 }

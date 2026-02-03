@@ -293,34 +293,34 @@ LoopBoundIDEAnalysis::getLoopDescriptionForInst(const llvm::Instruction *inst) c
   return nullptr;
 }
 
-bool LoopBoundIDEAnalysis::isCounterRootFactAtInst(d_t Fact, n_t AtInst) const {
-  if (!Fact || isZeroValue(Fact) || !AtInst) {
-    return false;
-  }
+  bool LoopBoundIDEAnalysis::isCounterRootFactAtInst(d_t Fact, n_t AtInst) const {
+  if (!Fact || isZeroValue(Fact) || !AtInst) return false;
 
   const auto *V = static_cast<const llvm::Value *>(Fact);
   V = LoopBound::Util::stripAddr(V);
+  if (!V) return false;
 
-  const LoopParameterDescription *LD = getLoopDescriptionForInst(AtInst);
-  if (!LD || !LD->loop) {
-    return false;
-  }
-
-  const llvm::Value *Root = LoopBound::Util::stripAddr(LD->counterRoot);
-
-  // Also guard by function (stack allocas are function-local)
   const llvm::Function *F1 = AtInst->getFunction();
-  const llvm::Function *F2 = nullptr;
-  if (auto *RI = llvm::dyn_cast<llvm::Instruction>(Root)) {
-    F2 = RI->getFunction();
-  } else if (auto *RA = llvm::dyn_cast<llvm::AllocaInst>(Root)) {
-    F2 = RA->getFunction();
-  }
-  if (F2 && F1 != F2) {
-    return false;
+
+  for (const auto &LD : LoopDescriptions) {
+    if (!LD.loop || !LD.counterRoot) continue;
+
+    // instruction must be inside that loop
+    if (!LD.loop->contains(AtInst)) continue;
+
+    const llvm::Value *Root = LoopBound::Util::stripAddr(LD.counterRoot);
+    if (!Root) continue;
+
+    // function-local sanity check
+    const llvm::Function *F2 = nullptr;
+    if (auto *RI = llvm::dyn_cast<llvm::Instruction>(Root)) F2 = RI->getFunction();
+    else if (auto *RA = llvm::dyn_cast<llvm::AllocaInst>(Root)) F2 = RA->getFunction();
+    if (F2 && F1 != F2) continue;
+
+    if (V == Root) return true;
   }
 
-  return V == Root;
+  return false;
 }
 
 
@@ -381,8 +381,8 @@ LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t Succ,
 
   if (auto *storeInst = llvm::dyn_cast<llvm::StoreInst>(curr)) {
     const llvm::Value *root = LoopBound::Util::stripAddr(static_cast<const llvm::Value *>(currNode));
-
     if (auto increment = extractConstIncFromStore(storeInst, root)) {
+
       auto E = EF(std::in_place_type<DeltaIntervalCollect>,
                   static_cast<int64_t>(*increment),
                   static_cast<int64_t>(*increment));
@@ -587,16 +587,16 @@ void LoopBoundIDEAnalysis::findLoopCounters() {
 
       LoopDescriptions.push_back(description);
 
-      /*llvm::errs() << "Generated Loop Description {\n";
-      llvm::errs() << "Loop: " << description.loop->getName() << "\n";
-      llvm::errs() << "ICMP: " << *description.icmp << "\n";
-      llvm::errs() << "Counter Root: " << *description.counterRoot << "\n";
-      if (description.init) {
-        llvm::errs() << "Init: " << *description.init << "\n";
-      } else {
-        llvm::errs() << "Init: <unknown>\n";
-      }
-      llvm::errs() << "}\n";*/
+      // llvm::errs() << "Generated Loop Description {\n";
+      // llvm::errs() << "Loop: " << description.loop->getName() << "\n";
+      // llvm::errs() << "ICMP: " << *description.icmp << "\n";
+      // llvm::errs() << "Counter Root: " << *description.counterRoot << "\n";
+      // if (description.init) {
+      //   llvm::errs() << "Init: " << *description.init << "\n";
+      // } else {
+      //   llvm::errs() << "Init: <unknown>\n";
+      // }
+      // llvm::errs() << "}\n";
     }
   }
 }

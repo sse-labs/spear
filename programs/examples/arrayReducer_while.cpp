@@ -17,11 +17,7 @@ int main(){
 
         sum += a1 + a2 + a3 + a4;
 
-        if (i < length/2) {
-            i = i + 4;
-        } else {
-            i = i + 3;
-        }
+        i=i+3;
     }
 
     std::cout << "Sum of array: " << sum << "\n";
