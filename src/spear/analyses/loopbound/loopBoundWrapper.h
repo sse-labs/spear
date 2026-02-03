@@ -100,7 +100,7 @@ private:
      * @param increment Concrete increment per loop iteration
      * @return Possible calculated bound
      */
-    std::optional<int64_t> solveBound(llvm::CmpInst::Predicate predicate,
+    static std::optional<int64_t> solveBound(llvm::CmpInst::Predicate predicate,
                                       int64_t init, int64_t check, int64_t increment);
 
 };
@@ -113,8 +113,6 @@ private:
  */
 class LoopBoundWrapper {
 public:
-    void debugProbe(const llvm::StoreInst *SI, const llvm::Value *Fact);
-
     /**
      * Constructor to run the loopbound analysis
      * @param helperAnalyses Phasar help analyses to access phasars analysis information
@@ -177,8 +175,6 @@ private:
      * @param description LoopDescription that defines the loop under analsis
      * @return Returns a check value if it can be found
      */
-    std::optional<int64_t> findLoopCheckVal(const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo);
-
     std::optional<CheckExpr> findLoopCheckExpr(const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo);
 
     /**

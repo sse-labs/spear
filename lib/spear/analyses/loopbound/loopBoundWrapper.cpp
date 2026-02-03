@@ -232,52 +232,6 @@ void LoopBoundWrapper::printClassifiers() {
     }
 }
 
-std::optional<int64_t>
-LoopBoundWrapper::findLoopCheckVal(const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) {
-    if (!description.loop || !description.icmp) {
-        return std::nullopt;
-    }
-
-    const llvm::Value *A  = description.icmp->getOperand(0);
-    const llvm::Value *Bv = description.icmp->getOperand(1);
-
-    const llvm::Value *CA = LoopBound::Util::getMemRootFromValue(A);
-    const llvm::Value *CB = LoopBound::Util::getMemRootFromValue(Bv);
-
-    const llvm::Value *CounterSide = nullptr;
-    const llvm::Value *OtherSide   = nullptr;
-
-    if (CA && CA == description.counterRoot) {
-        CounterSide = A;
-        OtherSide   = Bv;
-    } else if (CB && CB == description.counterRoot) {
-        CounterSide = Bv;
-        OtherSide   = A;
-    } else {
-        return std::nullopt;
-    }
-
-    const llvm::Value *StrippedOther = OtherSide;
-    while (auto *Cast = llvm::dyn_cast<llvm::CastInst>(StrippedOther)) {
-        StrippedOther = Cast->getOperand(0);
-    }
-
-    if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(StrippedOther)) {
-        return static_cast<int64_t>(CI->getSExtValue());
-    }
-
-    if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(StrippedOther)) {
-        if (llvm::Function *Fn = const_cast<llvm::Function *>(LI->getFunction())) {
-            auto &DT = this->FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
-            if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT, LIInfo)) {
-                return Cst;
-            }
-        }
-    }
-
-    return std::nullopt;
-}
-
 std::optional<CheckExpr> LoopBoundWrapper::findLoopCheckExpr(const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) {
     if (!description.loop || !description.icmp) return std::nullopt;
 
@@ -306,7 +260,7 @@ std::optional<CheckExpr> LoopBoundWrapper::findLoopCheckExpr(const LoopBound::Lo
 
     // Fallback: if OtherSide is a load that can be proven constant, fold it
     if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(OtherSide)) {
-        if (llvm::Function *Fn = const_cast<llvm::Function *>(LI->getFunction())) {
+        if (auto *Fn = const_cast<llvm::Function *>(LI->getFunction())) {
             auto &DT = this->FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
             if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT, LIInfo)) {
                 return CheckExpr{nullptr, nullptr, *Cst};

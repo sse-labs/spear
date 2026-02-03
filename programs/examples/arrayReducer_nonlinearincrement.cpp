@@ -21,7 +21,7 @@ int main(){
 
     long sum = 0;
 
-    for(int i=0; i < length; i = i + 1){
+    for(int i=0; i < length; i = i * 3){
         int a1 = searchroom[i];
 
         sum += a1;

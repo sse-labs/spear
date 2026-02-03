@@ -7,19 +7,20 @@
 #include "analyses/loopbound/util.h"
 
 
-std::optional<int64_t> LoopClassifier::solveBound(llvm::CmpInst::Predicate predicate, int64_t init, int64_t check, int64_t increment) {
+std::optional<int64_t> LoopClassifier::solveBound(llvm::CmpInst::Predicate pred,
+    int64_t init, int64_t check, int64_t increment) {
     int64_t delta = check - init;
     if (increment < 0) {
         increment = -increment;
         delta = -delta;
-        predicate = LoopBound::Util::flipPredicate(predicate);
+        pred = LoopBound::Util::flipPredicate(pred);
     }
 
     if (increment == 0) {
         return 0;
     }
 
-    switch (predicate) {
+    switch (pred) {
         // check > init + x*increment
         case llvm::CmpInst::Predicate::ICMP_SLT:
         case llvm::CmpInst::Predicate::ICMP_ULT:
@@ -49,7 +50,11 @@ std::optional<int64_t> LoopClassifier::solveBound(llvm::CmpInst::Predicate predi
 
 std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
     // Check if properties are valid and exist
-    if (!init || !check || !increment) {
+    if (!init || !check) {
+        return std::nullopt;
+    }
+
+    if (!increment) {
         return std::nullopt;
     }
 
