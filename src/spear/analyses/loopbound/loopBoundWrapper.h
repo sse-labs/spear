@@ -19,18 +19,57 @@
  */
 using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *, const llvm::Value *, LoopBound::DeltaInterval>;
 
-enum class CheckOp { Base, AddConst, SubConst, DivConst, MulConst };
-
+/**
+ * Check Expression Class
+ * Models checks, loops run against.
+ * Allows for calculation of check values if they are no direct constant.
+ *
+ * We model loop checks as affine expression
+ * check = offset + i * scaling
+*/
 class CheckExpr {
 public:
+    /**
+     * Base Value the expression is based on.
+     * Should be a memory root derived from a load instruction
+    */
     const llvm::Value *Base = nullptr;
+
+    /**
+     * Corresponding load instruction of the vase value
+     */
     const llvm::LoadInst *BaseLoad = nullptr;
+
+    /**
+     * Represents the offset of our calculation
+     */
     int64_t Offset = 0;
+
+    /**
+     * Division value to represent the scaling factor 1/scaling
+     */
     std::optional<int64_t> DivBy;
+
+    /**
+     * Multiplication value to represent the scaling factor scaling
+     */
     std::optional<int64_t> MulBy;
 
-    CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload,  int64_t offset) : Base(base), BaseLoad(baseload), Offset(offset) {}
+    /**
+     * Constructor
+     * @param base Memory root the check is based on
+     * @param baseload Load of the memory root
+     * @param offset Constant offset
+     */
+    CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload,  int64_t offset) :
+    Base(base), BaseLoad(baseload), Offset(offset) {}
 
+    /**
+     * Calculate the actual check value from the stored information
+     * @param FAM FunctionAnalysisManger used to deduce constnats
+     * @param LIInfo LoopInfo to infer loop related constants
+     * @return Possible calculated check value
+     */
     std::optional<int64_t> calculateCheck(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &LIInfo);
 };
 
@@ -120,6 +159,11 @@ public:
      */
     LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManager *FAM);
 
+    /**
+     * Store the given loop and its subloops in the given vector
+     * @param L Loop to save and analyze
+     * @param Out Vector to store L and its subloop in
+     */
     void collectLoops(llvm::Loop *L, std::vector<llvm::Loop *> &Out);
 
     /**
@@ -128,6 +172,11 @@ public:
      */
     std::vector<LoopClassifier> getClassifiers();
 
+    /**
+     * Calculate Checkexpression recursively from the given value.
+     * @param V Value to analyse
+     * @return The constructed Checkexpression if possible
+     */
     std::optional<CheckExpr> peelBasePlusConst(const llvm::Value *V);
 
 private:
@@ -175,7 +224,8 @@ private:
      * @param description LoopDescription that defines the loop under analsis
      * @return Returns a check value if it can be found
      */
-    std::optional<CheckExpr> findLoopCheckExpr(const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo);
+    std::optional<CheckExpr> findLoopCheckExpr(
+        const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo);
 
     /**
      * Print the internally safed loop classifiers

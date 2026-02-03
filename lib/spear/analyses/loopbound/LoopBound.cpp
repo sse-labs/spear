@@ -80,8 +80,6 @@ public:
 
 namespace LoopBound {
 
-// ======================= LoopBoundIDEAnalysis =======================
-
 LoopBoundIDEAnalysis::LoopBoundIDEAnalysis(const psr::LLVMProjectIRDB *IRDB,
                                            std::vector<llvm::Loop *> *loops)
     : base_t(IRDB, {"main"},
@@ -91,7 +89,6 @@ LoopBoundIDEAnalysis::LoopBoundIDEAnalysis(const psr::LLVMProjectIRDB *IRDB,
   this->findLoopCounters();
 }
 
-// === Instrument initialSeeds() ===
 psr::InitialSeeds<LoopBoundIDEAnalysis::n_t, LoopBoundIDEAnalysis::d_t,
                   LoopBoundIDEAnalysis::l_t>
 LoopBoundIDEAnalysis::initialSeeds() {
@@ -172,9 +169,6 @@ LoopBoundIDEAnalysis::allTopFunction() {
   return psr::AllTop<l_t>{};
 }
 
-// ---------------- Flow functions ----------------
-
-// Detect latch->header (backedge) for one of our tracked loops.
 bool LoopBoundIDEAnalysis::isLatchToHeaderEdge(n_t Curr, n_t Succ) const {
   if (!Curr || !Succ) {
     return false;
@@ -218,7 +212,7 @@ bool LoopBoundIDEAnalysis::isLatchToHeaderEdge(n_t Curr, n_t Succ) const {
       continue;
     }
 
-    // Also ensure CB actually has successor Header (cheap sanity check)
+    // Ensure CB actually has successor Header
     const llvm::Instruction *Term = CB->getTerminator();
     if (!Term) {
       continue;
@@ -274,9 +268,6 @@ LoopBoundIDEAnalysis::getCallToRetFlowFunction(n_t Curr, n_t Succ,
                                                       this, Curr, Succ);
 }
 
-// ---------------- Edge functions ----------------
-
-// Helper: determine which LoopDescription applies at a program point (curr instruction).
 const LoopParameterDescription *
 LoopBoundIDEAnalysis::getLoopDescriptionForInst(const llvm::Instruction *inst) const {
   if (!inst) {
@@ -323,8 +314,6 @@ LoopBoundIDEAnalysis::getLoopDescriptionForInst(const llvm::Instruction *inst) c
   return false;
 }
 
-
-// === Instrument getNormalEdgeFunction() heavily ===
 LoopBoundIDEAnalysis::EdgeFunctionType
 LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t Succ,
                                             d_t succNode) {
@@ -422,8 +411,6 @@ LoopBoundIDEAnalysis::getCallToRetEdgeFunction(n_t, d_t, n_t, d_t,
                                                llvm::ArrayRef<f_t>) {
   return EF(std::in_place_type<DeltaIntervalIdentity>);
 }
-
-// ---------------- Existing helpers ----------------
 
 std::optional<int64_t>
 LoopBoundIDEAnalysis::extractConstIncFromStore(const llvm::StoreInst *storeInst,

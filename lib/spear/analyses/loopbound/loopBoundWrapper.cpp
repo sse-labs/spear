@@ -253,12 +253,12 @@ std::optional<CheckExpr> LoopBoundWrapper::findLoopCheckExpr(const LoopBound::Lo
 
     OtherSide = LoopBound::Util::stripCasts(OtherSide);
 
-    // Try base+offset pattern (handles load, load +/- const, etc.)
+    // Try to derive simple offset + constant check
     if (auto E = peelBasePlusConst(OtherSide)) {
         return *E;
     }
 
-    // Fallback: if OtherSide is a load that can be proven constant, fold it
+    // Fallback if constant check is hidden behind load
     if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(OtherSide)) {
         if (auto *Fn = const_cast<llvm::Function *>(LI->getFunction())) {
             auto &DT = this->FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
@@ -279,12 +279,12 @@ std::optional<CheckExpr> LoopBoundWrapper::peelBasePlusConst(const llvm::Value *
     if (!V) return std::nullopt;
     V = LoopBound::Util::stripCasts(V);
 
-    // Constant-only expression: no base, just an offset
+    // Constant-only expression no scalation factor, just an offset
     if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(V)) {
         return CheckExpr{nullptr, nullptr, CI->getSExtValue()};
     }
 
-    // Load: BaseRoot (+0)
+    // Checkexpression with offset zero behind load
     if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(V)) {
         const llvm::Value *Root = LoopBound::Util::getMemRootFromValue(LI);
         if (!Root) Root = LoopBound::Util::stripAddr(LI->getPointerOperand());
@@ -293,13 +293,12 @@ std::optional<CheckExpr> LoopBoundWrapper::peelBasePlusConst(const llvm::Value *
         return CheckExpr{Root, LI, 0};
     }
 
-    // Binary operators: add/sub/mul/div with constant
+    // Check is result of calculation with add/sub/mul/div and constant
     if (auto *BO = llvm::dyn_cast<llvm::BinaryOperator>(V)) {
         const auto Op = BO->getOpcode();
         const llvm::Value *L = LoopBound::Util::stripCasts(BO->getOperand(0));
         const llvm::Value *R = LoopBound::Util::stripCasts(BO->getOperand(1));
 
-        // -------- Add --------
         if (Op == llvm::Instruction::Add) {
             if (auto *RC = llvm::dyn_cast<llvm::ConstantInt>(R)) {
                 if (auto E = peelBasePlusConst(L)) {
@@ -316,7 +315,6 @@ std::optional<CheckExpr> LoopBoundWrapper::peelBasePlusConst(const llvm::Value *
             return std::nullopt;
         }
 
-        // -------- Sub --------
         if (Op == llvm::Instruction::Sub) {
             if (auto *RC = llvm::dyn_cast<llvm::ConstantInt>(R)) {
                 if (auto E = peelBasePlusConst(L)) {
@@ -328,18 +326,16 @@ std::optional<CheckExpr> LoopBoundWrapper::peelBasePlusConst(const llvm::Value *
             return std::nullopt;
         }
 
-        // -------- Mul --------
         if (Op == llvm::Instruction::Mul) {
             // only allow multiply by constant
             if (auto *RC = llvm::dyn_cast<llvm::ConstantInt>(R)) {
                 const int64_t C = RC->getSExtValue();
                 if (auto E = peelBasePlusConst(L)) {
-                    // If expression currently has a division, we can fold C into numerator
-                    // but we keep it simple: allow if no DivBy set, else bail out.
+                    // Only allow calculation if no division is currently occurring
                     if (E->DivBy.has_value()) return std::nullopt;
 
                     E->MulBy = E->MulBy.has_value() ? (*E->MulBy * C) : C;
-                    E->Offset *= C; // (base+off)*C
+                    E->Offset *= C; // (base+offset)*C
                     return E;
                 }
             }
@@ -356,7 +352,6 @@ std::optional<CheckExpr> LoopBoundWrapper::peelBasePlusConst(const llvm::Value *
             return std::nullopt;
         }
 
-        // -------- Div (signed/unsigned) --------
         if (Op == llvm::Instruction::SDiv || Op == llvm::Instruction::UDiv) {
             // Only allow division by constant on the RHS: X / C
             auto *RC = llvm::dyn_cast<llvm::ConstantInt>(R);
@@ -366,24 +361,16 @@ std::optional<CheckExpr> LoopBoundWrapper::peelBasePlusConst(const llvm::Value *
             if (C == 0) return std::nullopt;
 
             if (auto E = peelBasePlusConst(L)) {
-                // Keep it simple: if already has MulBy, bail out.
-                // You can later normalize MulBy/DivBy with gcd.
+                // Only allow if multiplication is not occurring
                 if (E->MulBy.has_value()) return std::nullopt;
 
-                // (base+off)/C
-                // Note: integer division is not distributive over addition,
-                // so storing Offset here is only "symbolic". That's OK if
-                // calculateCheck() applies operations in the correct order:
-                //   ((baseValue + Offset) / C)
+                // (base+offset)/C
                 E->DivBy = E->DivBy.has_value() ? (*E->DivBy * C) : C;
                 return E;
             }
             return std::nullopt;
         }
-
-        // Other ops not supported
         return std::nullopt;
     }
-
     return std::nullopt;
 }

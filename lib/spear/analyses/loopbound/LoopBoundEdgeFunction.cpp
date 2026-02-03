@@ -1,7 +1,7 @@
-// /*
-//  * Copyright (c) 2026 Maximilian Krebs
-//  * All rights reserved.
-// *
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
 #include "analyses/loopbound/LoopBoundEdgeFunction.h"
 #include "analyses/loopbound/util.h"
@@ -158,7 +158,7 @@ EF DeltaIntervalCollect::join(psr::EdgeFunctionRef<DeltaIntervalCollect> thisFun
     return EF(std::in_place_type<DeltaIntervalCollect>, L, U);
   }
 
-  // Mixing families => conservative
+  // Mixing Elements => conservative
   return EF(std::in_place_type<DeltaIntervalTop>);
 }
 
