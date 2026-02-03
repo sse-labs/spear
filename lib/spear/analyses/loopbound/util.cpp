@@ -331,26 +331,39 @@ const llvm::Value *getMemRootFromValue(const llvm::Value *V) {
   return nullptr;
 }
 
-std::optional<int64_t> tryDeduceConstFromLoad(const llvm::LoadInst *LI,
-                                              llvm::DominatorTree &DT) {
-  if (!LI) {
-    return std::nullopt;
-  }
+  std::optional<int64_t>
+  tryDeduceConstFromLoad(const llvm::LoadInst *LI,
+                         llvm::DominatorTree &DT,
+                         llvm::LoopInfo &LIInfo) {
+  if (!LI) return std::nullopt;
 
   const llvm::Value *Obj = getUnderlyingObject(LI->getPointerOperand());
-  if (!Obj) {
-    return std::nullopt;
+  if (!Obj) return std::nullopt;
+
+  // If Obj is written in any loop that can affect this load, do not treat it as const.
+  // In particular: if there is a store to Obj in any loop that contains this load
+  // (or any parent loop), it's loop-variant.
+  llvm::Loop *L = LIInfo.getLoopFor(LI->getParent());
+  if (L) {
+    for (llvm::Loop *Cur = L; Cur != nullptr; Cur = Cur->getParentLoop()) {
+      for (llvm::BasicBlock *BB : Cur->blocks()) {
+        for (llvm::Instruction &I : *BB) {
+          auto *SI = llvm::dyn_cast<llvm::StoreInst>(&I);
+          if (!SI) continue;
+          const llvm::Value *Dst = stripAddr(SI->getPointerOperand());
+          if (Dst == Obj) {
+            return std::nullopt; // loop-variant → not const
+          }
+        }
+      }
+    }
   }
 
   const llvm::StoreInst *Def = findDominatingStoreToObject(LI, Obj, DT);
-  if (!Def) {
-    return std::nullopt;
-  }
+  if (!Def) return std::nullopt;
 
   const llvm::ConstantInt *C = tryEvalToConstInt(Def->getValueOperand());
-  if (!C) {
-    return std::nullopt;
-  }
+  if (!C) return std::nullopt;
 
   return C->getSExtValue();
 }

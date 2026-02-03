@@ -110,7 +110,7 @@ const llvm::Value *getMemRootFromValue(const llvm::Value *val);
  * @param DT DominatorTree
  * @return Optional value representing the constant integer value
  */
-std::optional<int64_t> tryDeduceConstFromLoad(const llvm::LoadInst *LI, llvm::DominatorTree &DT);
+std::optional<int64_t> tryDeduceConstFromLoad(const llvm::LoadInst *LI, llvm::DominatorTree &DT, llvm::LoopInfo &LIInfo);
 
 /**
  * Convert a given predicate to a string

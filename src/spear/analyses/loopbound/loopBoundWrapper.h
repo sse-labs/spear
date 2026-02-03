@@ -31,7 +31,7 @@ public:
 
     CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload,  int64_t offset) : Base(base), BaseLoad(baseload), Offset(offset) {}
 
-    std::optional<int64_t> calculateCheck(llvm::FunctionAnalysisManager *FAM);
+    std::optional<int64_t> calculateCheck(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &LIInfo);
 };
 
 
@@ -177,9 +177,9 @@ private:
      * @param description LoopDescription that defines the loop under analsis
      * @return Returns a check value if it can be found
      */
-    std::optional<int64_t> findLoopCheckVal(const LoopBound::LoopParameterDescription &description);
+    std::optional<int64_t> findLoopCheckVal(const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo);
 
-    std::optional<CheckExpr> findLoopCheckExpr(const LoopBound::LoopParameterDescription &description);
+    std::optional<CheckExpr> findLoopCheckExpr(const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo);
 
     /**
      * Print the internally safed loop classifiers

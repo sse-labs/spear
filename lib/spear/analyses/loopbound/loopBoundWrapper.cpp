@@ -73,14 +73,14 @@ LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAn
 
         auto increment = queryIntervalAtInstuction(IncStore, Root);
         auto predicate = description.icmp->getPredicate();
-        auto checkval = findLoopCheckExpr(description);
+        auto checkval = findLoopCheckExpr(description, LoopInfo);
 
         LoopClassifier newLoopClassifier(
             description.loop,
             increment,
             description.init,
             predicate,
-            checkval->calculateCheck(FAM)
+            checkval->calculateCheck(FAM, LoopInfo)
         );
 
         this->loopClassifiers.push_back(newLoopClassifier);
@@ -89,14 +89,14 @@ LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAn
     printClassifiers();
 }
 
-std::optional<int64_t> CheckExpr::calculateCheck(llvm::FunctionAnalysisManager *FAM) {
+std::optional<int64_t> CheckExpr::calculateCheck(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &LIInfo) {
     if (this->BaseLoad) {
         const llvm::Function *CF = this->BaseLoad->getFunction();
         if (CF) {
             auto &DT = FAM->getResult<llvm::DominatorTreeAnalysis>(
             *const_cast<llvm::Function *>(CF));
 
-            if (auto C = LoopBound::Util::tryDeduceConstFromLoad(this->BaseLoad, DT)) {
+            if (auto C = LoopBound::Util::tryDeduceConstFromLoad(this->BaseLoad, DT, LIInfo)) {
                 auto tmp = *C + this->Offset;
                 if (MulBy) {
                     return tmp * MulBy.value();
@@ -105,6 +105,8 @@ std::optional<int64_t> CheckExpr::calculateCheck(llvm::FunctionAnalysisManager *
                 if (DivBy) {
                     return tmp / DivBy.value();
                 }
+
+                return tmp;
             }
         }
     }
@@ -231,7 +233,7 @@ void LoopBoundWrapper::printClassifiers() {
 }
 
 std::optional<int64_t>
-LoopBoundWrapper::findLoopCheckVal(const LoopBound::LoopParameterDescription &description) {
+LoopBoundWrapper::findLoopCheckVal(const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) {
     if (!description.loop || !description.icmp) {
         return std::nullopt;
     }
@@ -267,7 +269,7 @@ LoopBoundWrapper::findLoopCheckVal(const LoopBound::LoopParameterDescription &de
     if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(StrippedOther)) {
         if (llvm::Function *Fn = const_cast<llvm::Function *>(LI->getFunction())) {
             auto &DT = this->FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
-            if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT)) {
+            if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT, LIInfo)) {
                 return Cst;
             }
         }
@@ -276,7 +278,7 @@ LoopBoundWrapper::findLoopCheckVal(const LoopBound::LoopParameterDescription &de
     return std::nullopt;
 }
 
-std::optional<CheckExpr> LoopBoundWrapper::findLoopCheckExpr(const LoopBound::LoopParameterDescription &description) {
+std::optional<CheckExpr> LoopBoundWrapper::findLoopCheckExpr(const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) {
     if (!description.loop || !description.icmp) return std::nullopt;
 
     const llvm::Value *A  = description.icmp->getOperand(0);
@@ -306,7 +308,7 @@ std::optional<CheckExpr> LoopBoundWrapper::findLoopCheckExpr(const LoopBound::Lo
     if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(OtherSide)) {
         if (llvm::Function *Fn = const_cast<llvm::Function *>(LI->getFunction())) {
             auto &DT = this->FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
-            if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT)) {
+            if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT, LIInfo)) {
                 return CheckExpr{nullptr, nullptr, *Cst};
             }
         }
