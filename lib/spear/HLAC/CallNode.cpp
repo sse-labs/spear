@@ -21,7 +21,7 @@ CallNode::CallNode(llvm::Function *calls, llvm::CallBase *call) {
     this->name = "Call to " + calledFunction->getName().str();
     this->isLinkerFunction = calledFunction->isDeclarationForLinker();
     this->isSyscall = false;
-    this->isDebugFunction = calledFunction->getName().starts_with("llvm.");
+    this->isDebugFunction = calledFunction->getName().startswith("llvm.");
 }
 
 void CallNode::collapseCalls(Node *belongingNode,

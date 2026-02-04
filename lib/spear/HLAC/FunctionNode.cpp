@@ -15,6 +15,7 @@
 
 #include "LLVMHandler.h"
 #include "HLAC/hlac.h"
+#include "HLAC/util.h"
 
 #define SPR_IGNORE_DEBUG_FUNCTIONS 1
 
@@ -27,12 +28,12 @@ FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManag
     this->isLinkerFunction = function->isDeclarationForLinker();
 
     // Determine if the function is a LLVM debug function
-    if (this->name.starts_with("llvm.")) {
+    if (HLAC::Util::starts_with(this->name, "llvm.")) {
         this->isDebugFunction = true;
     }
 
     // Check if the function is the main function
-    if (this->name.starts_with("main")) {
+    if (HLAC::Util::starts_with(this->name, "main")) {
         this->isMainFunction = true;
     }
 

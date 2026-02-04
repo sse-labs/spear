@@ -14,6 +14,8 @@
 #include "analyses/loopbound/LoopBound.h"
 #include "analyses/loopbound/util.h"
 
+#include <ostream>
+
 LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManager *FAM) {
     if (!helperAnalyses) {
         return;
@@ -204,7 +206,7 @@ void LoopBoundWrapper::printClassifiers() {
         }
 
         if (classifier.init) {
-            llvm::errs() << "[LB] " << "Init: " << classifier.init << "\n";
+            llvm::errs() << "[LB] " << "Init: " << classifier.init.value() << "\n";
         } else {
             llvm::errs() << "[LB] " << "Init: " << "NONE" << "\n";
         }
@@ -216,7 +218,7 @@ void LoopBoundWrapper::printClassifiers() {
         }
 
         if (classifier.check) {
-            llvm::errs() << "[LB] " << "Check: " << classifier.check << "\n";
+            llvm::errs() << "[LB] " << "Check: " << classifier.check.value() << "\n";
         } else {
             llvm::errs() << "[LB] " << "Check: " << "NONE" << "\n";
         }

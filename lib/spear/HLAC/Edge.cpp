@@ -4,6 +4,7 @@
 */
 
 #include <string>
+#include <ostream>
 
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"

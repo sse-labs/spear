@@ -80,6 +80,8 @@ class Util {
      * @return String representing the feasibility value
      */
     static std::string feasibilityToString(FEASIBILITY feas);
+
+    static bool starts_with(const std::string& s, const std::string& prefix);
 };
 
 }  // namespace HLAC

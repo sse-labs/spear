@@ -212,4 +212,8 @@ std::string Util::feasibilityToString(FEASIBILITY feas) {
     }
 }
 
+bool Util::starts_with(const std::string& s, const std::string& prefix) {
+    return s.rfind(prefix, 0) == 0;
+};
+
 }  // namespace HLAC
