@@ -3,17 +3,19 @@
  * All rights reserved.
 */
 
+#include "analyses/loopbound/LoopBound.h"
+
+#include <llvm/Analysis/ConstantFolding.h>
+#include <llvm/IR/Operator.h>
+
 #include <phasar/PhasarLLVM/ControlFlow/LLVMBasedCFG.h>
 #include <phasar/PhasarLLVM/DataFlow/IfdsIde/LLVMZeroValue.h>
-#include <llvm/IR/Operator.h>
-#include "llvm/Analysis/ConstantFolding.h"
 
 #include <atomic>
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "analyses/loopbound/LoopBound.h"
 #include "analyses/loopbound/LoopBoundEdgeFunction.h"
 #include "analyses/loopbound/util.h"
 
@@ -576,7 +578,8 @@ bool LoopBoundIDEAnalysis::isLoadOfCounterRoot(llvm::Value *value,
 }
 
 std::optional<int64_t>
-LoopBoundIDEAnalysis::findConstInitForCell(llvm::FunctionAnalysisManager *FAM, const llvm::Value *Addr, llvm::Loop *loop) {
+LoopBoundIDEAnalysis::findConstInitForCell(
+llvm::FunctionAnalysisManager *FAM, const llvm::Value *Addr, llvm::Loop *loop) {
   // Check if loop preheader exists. Otherwise, we cannot infer the initial value
   auto *preheader = loop->getLoopPreheader();
   if (!preheader) {
@@ -624,7 +627,7 @@ LoopBoundIDEAnalysis::findConstInitForCell(llvm::FunctionAnalysisManager *FAM, c
     // Case where the candidate is a load
     if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(candidate)) {
       auto &domTree = FAM->getResult<llvm::DominatorTreeAnalysis>(*function);
-      auto &LIInfo = FAM->getResult<llvm::LoopAnalysis>(*function); // or pass LoopInfo in
+      auto &LIInfo = FAM->getResult<llvm::LoopAnalysis>(*function);
       if (auto constFromLoad = LoopBound::Util::tryDeduceConstFromLoad(loadInst, domTree, LIInfo)) {
         return *constFromLoad;
       }

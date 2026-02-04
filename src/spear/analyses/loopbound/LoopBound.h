@@ -101,7 +101,8 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      * @param IRDB LLVM IR database of the file(s) under analysis
      * @param loops Vector containing all loops found in the current program
      */
-    explicit LoopBoundIDEAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, std::vector<llvm::Loop*> *loops);
+    explicit LoopBoundIDEAnalysis(
+    llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, std::vector<llvm::Loop*> *loops);
 
     /**
      * Analyzes the given store instruction to find the increment that is occuring to the given root variable.

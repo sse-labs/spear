@@ -50,7 +50,8 @@ std::optional<int64_t> LoopClassifier::solveAdditiveBound(llvm::CmpInst::Predica
     }
 }
 
-std::optional<int64_t> LoopClassifier::solveMultiplicativeBound(llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
+std::optional<int64_t> LoopClassifier::solveMultiplicativeBound(
+llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
     // We do not deal with == or !=
     // Only calculate check o init * increment^k
     // Where o is one of { <, <= } and init > 0, check > 0, increment > 0
@@ -66,8 +67,7 @@ std::optional<int64_t> LoopClassifier::solveMultiplicativeBound(llvm::CmpInst::P
     }
 
     // Sanity check for paremeter value domain
-    // TODO we should catch increments <= 0 already while creating the multiplicative interval in the first place
-    if (increment <= 0 || init <= 0 || check <=0 ) {
+    if (increment <= 0 || init <= 0 || check <=0) {
         return std::nullopt;
     }
 
@@ -102,7 +102,8 @@ std::optional<int64_t> LoopClassifier::solveMultiplicativeBound(llvm::CmpInst::P
     return iterations;
 }
 
-std::optional<int64_t> LoopClassifier::solveDivisionBound(llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
+std::optional<int64_t> LoopClassifier::solveDivisionBound(
+llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
     // We do not deal with == or !=
     // Only calculate check o init * increment^k
     // Where o is one of { <, <= } and init > 0, check > 0, increment > 0
@@ -118,8 +119,7 @@ std::optional<int64_t> LoopClassifier::solveDivisionBound(llvm::CmpInst::Predica
     }
 
     // Sanity check for paremeter value domain
-    // TODO we should catch increments <= 0 already while creating the multiplicative interval in the first place
-    if (increment <= 0 || init <= 0 || check <= 0 ) {
+    if (increment <= 0 || init <= 0 || check <= 0) {
         return std::nullopt;
     }
 
