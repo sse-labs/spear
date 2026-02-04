@@ -3,13 +3,16 @@
  * All rights reserved.
 */
 
-#ifndef SPEAR_LOOPBOUNDWRAPPER_H
-#define SPEAR_LOOPBOUNDWRAPPER_H
+#ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUNDWRAPPER_H_
+#define SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUNDWRAPPER_H_
 
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/PassManager.h>
 #include <phasar/DataFlow/IfdsIde/SolverResults.h>
 #include <phasar/PhasarLLVM/HelperAnalyses.h>
+
+#include <memory>
+#include <vector>
 
 #include "LoopBound.h"
 
@@ -28,7 +31,7 @@ using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *, const llvm
  * check = offset + i * scaling
 */
 class CheckExpr {
-public:
+ public:
     /**
      * Base Value the expression is based on.
      * Should be a memory root derived from a load instruction
@@ -79,7 +82,7 @@ public:
  * Description of an analyzed loop.
  */
 class LoopClassifier {
-public:
+ public:
     // Which loop the classifier belongs to
     llvm::Loop *loop;
 
@@ -130,7 +133,8 @@ public:
     bool isBoundable() const {
         return check.has_value();
     }
-private:
+
+ private:
     /**
      * Performs the actual bound calculation depending on the predicate
      * @param predicate Predicate relevant for the bound
@@ -141,7 +145,6 @@ private:
      */
     static std::optional<int64_t> solveBound(llvm::CmpInst::Predicate predicate,
                                       int64_t init, int64_t check, int64_t increment);
-
 };
 
 /**
@@ -151,7 +154,7 @@ private:
  * from the main function of the program under analysis
  */
 class LoopBoundWrapper {
-public:
+ public:
     /**
      * Constructor to run the loopbound analysis
      * @param helperAnalyses Phasar help analyses to access phasars analysis information
@@ -179,7 +182,7 @@ public:
      */
     std::optional<CheckExpr> peelBasePlusConst(const llvm::Value *V);
 
-private:
+ private:
     // Internal storage of the analysis results calculated by phasar
     std::unique_ptr<ResultsTy> cachedResults;
 
@@ -216,7 +219,7 @@ private:
      * @return Returns a DeltaInterval instance representing the loop increment if it can be found
      */
     std::optional<LoopBound::DeltaInterval> queryIntervalAtInstuction(
-        const llvm::Instruction *inst, const llvm::Value *fact);
+    const llvm::Instruction *inst, const llvm::Value *fact);
 
     /**
      * Searches the loop defined by the given LoopDescription for a constant check value that the loop counter
@@ -233,5 +236,4 @@ private:
     void printClassifiers();
 };
 
-
-#endif //SPEAR_LOOPBOUNDWRAPPER_H
+#endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUNDWRAPPER_H_

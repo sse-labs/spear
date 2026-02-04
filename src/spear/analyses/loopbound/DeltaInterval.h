@@ -3,9 +3,8 @@
  * All rights reserved.
 */
 
-#ifndef SPEAR_DELTAINTERVAL_H
-#define SPEAR_DELTAINTERVAL_H
-#include <cstdint>
+#ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_DELTAINTERVAL_H_
+#define SRC_SPEAR_ANALYSES_LOOPBOUND_DELTAINTERVAL_H_
 
 namespace LoopBound {
 
@@ -13,7 +12,7 @@ namespace LoopBound {
  * DeltaInterval class to represent the lattice values
  */
 class DeltaInterval {
-public:
+ public:
     // Type of the object
     enum class ValueType { TOP, BOTTOM, NORMAL, EMPTY };
 
@@ -143,7 +142,7 @@ public:
      */
     bool operator!=(const DeltaInterval &other) const;
 
-private:
+ private:
     /**
      * Internal constructor to create a new DeltaInterval
      * @param valuetype Type the interval should be represented
@@ -176,6 +175,6 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
     return OS << "[" << DI.getLowerBound() << ", " << DI.getUpperBound() << "]";
 }
 
-}
+}  // namespace LoopBound
 
-#endif //SPEAR_DELTAINTERVAL_H
+#endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_DELTAINTERVAL_H_

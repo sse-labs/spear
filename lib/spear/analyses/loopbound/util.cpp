@@ -8,6 +8,8 @@
 #include <llvm/IR/Operator.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <string>
+
 namespace LoopBound::Util {
 
 std::atomic<bool> LB_DebugEnabled{false};
@@ -331,10 +333,8 @@ const llvm::Value *getMemRootFromValue(const llvm::Value *V) {
   return nullptr;
 }
 
-  std::optional<int64_t>
-  tryDeduceConstFromLoad(const llvm::LoadInst *LI,
-                         llvm::DominatorTree &DT,
-                         llvm::LoopInfo &LIInfo) {
+std::optional<int64_t> tryDeduceConstFromLoad(
+const llvm::LoadInst *LI, llvm::DominatorTree &DT, llvm::LoopInfo &LIInfo) {
   if (!LI) return std::nullopt;
 
   const llvm::Value *Obj = getUnderlyingObject(LI->getPointerOperand());
@@ -352,7 +352,7 @@ const llvm::Value *getMemRootFromValue(const llvm::Value *V) {
           if (!SI) continue;
           const llvm::Value *Dst = stripAddr(SI->getPointerOperand());
           if (Dst == Obj) {
-            return std::nullopt; // loop-variant → not const
+            return std::nullopt;  // loop-variant → not const
           }
         }
       }
@@ -437,13 +437,14 @@ int64_t exactDiv(int64_t a, int64_t b) {
     return 0;
   }
 
-   return a / b;
+  return a / b;
 }
 
 const llvm::Value *stripCasts(const llvm::Value *V) {
-  while (auto *C = llvm::dyn_cast<llvm::CastInst>(V))
+  while (auto *C = llvm::dyn_cast<llvm::CastInst>(V)) {
     V = C->getOperand(0);
+  }
   return V;
 }
 
-} // namespace LoopBound::Util
+}  // namespace LoopBound::Util

@@ -68,7 +68,7 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
 
   // Function entrypoints
   std::vector<std::string> Entrypoints;
-    
+
   // Internal: construct analysis problem and run PhASAR solver.
   void runAnalysis(llvm::FunctionAnalysisManager *FAM);
 };

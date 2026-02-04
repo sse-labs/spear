@@ -42,8 +42,8 @@
  *
  */
 
-#ifndef SPEAR_LOOPBOUNDEDGEFUNCTION_H
-#define SPEAR_LOOPBOUNDEDGEFUNCTION_H
+#ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUNDEDGEFUNCTION_H_
+#define SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUNDEDGEFUNCTION_H_
 
 #include <phasar/DataFlow/IfdsIde/EdgeFunction.h>
 #include "LoopBound.h"
@@ -291,6 +291,6 @@ EF edgeIdentity();
  */
 EF edgeTop();
 
-}  // namespace loopbound
+}  // namespace LoopBound
 
-#endif  //SPEAR_LOOPBOUNDEDGEFUNCTION_H
+#endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUNDEDGEFUNCTION_H_

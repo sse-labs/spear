@@ -18,19 +18,19 @@
  *
  */
 
-#ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_H_
-#define SRC_SPEAR_ANALYSES_LOOPBOUND_H_
+#ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUND_H_
+#define SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUND_H_
 
 #include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>
 #include <phasar/DataFlow/IfdsIde/EdgeFunctions.h>
 #include <phasar/PhasarLLVM/Domain/LLVMAnalysisDomain.h>
-#include "phasar/PhasarLLVM/DB/LLVMProjectIRDB.h"
+#include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
 
 #include <llvm/IR/Instructions.h>
+#include <llvm/Analysis/LoopInfo.h>
 
 #include <set>
 #include <vector>
-#include <llvm/Analysis/LoopInfo.h>
 
 #include "DeltaInterval.h"
 
@@ -40,9 +40,9 @@ namespace LoopBound {
  * Internal representation of the counter corresponding to one loop.
  */
 struct LoopCounterICMP {
-    llvm::Value *CounterSide = nullptr;     // Operator with counter variable
-    llvm::Value *InvariantSide = nullptr;   // Operator the counter is checked against
-    std::vector<const llvm::Value *> Roots; // Counter the ICMP is build uppon
+    llvm::Value *CounterSide = nullptr;      // Operator with counter variable
+    llvm::Value *InvariantSide = nullptr;    // Operator the counter is checked against
+    std::vector<const llvm::Value *> Roots;  // Counter the ICMP is build uppon
 };
 
 /**
@@ -61,9 +61,9 @@ struct LoopParameterDescription {
  * Domain definition of the LoopBoundAnalysis
  */
 struct LoopBoundDomain : psr::LLVMAnalysisDomainDefault {
-    using d_t = const llvm::Value *; // Flow-Fact -> In our case the loop counter root
-    using l_t = DeltaInterval; // Latice Element -> Our DeltaInterval to track increments
-    using i_t = psr::LLVMBasedICFG; // Control flow type -> Here we operate on the ICFG
+    using d_t = const llvm::Value *;  // Flow-Fact -> In our case the loop counter root
+    using l_t = DeltaInterval;  // Latice Element -> Our DeltaInterval to track increments
+    using i_t = psr::LLVMBasedICFG;  // Control flow type -> Here we operate on the ICFG
 };
 
 /**
@@ -117,7 +117,8 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      * @param counterRoot Loop counter the store instruction should be analyzed for
      * @return
      */
-    static std::optional<int64_t> extractConstIncFromStore(const llvm::StoreInst *storeInst, const llvm::Value *counterRoot);
+    static std::optional<int64_t> extractConstIncFromStore(
+    const llvm::StoreInst *storeInst, const llvm::Value *counterRoot);
 
     /**
      * Getter to return the internal list of LoopParamterDescriptions
@@ -377,6 +378,6 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
     static bool isLoadOfCounterRoot(llvm::Value *value, const llvm::Value *root);
 };
 
-}  // namespace loopbound
+}  // namespace LoopBound
 
-#endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_H_
+#endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUND_H_

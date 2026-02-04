@@ -3,20 +3,21 @@
  * All rights reserved.
 */
 
-#include <phasar.h>
-
-#include "analyses/loopbound/loopBoundWrapper.h"
-
 #include <llvm/Analysis/ScalarEvolution.h>
 #include <phasar/DataFlow/IfdsIde/Solver/IDESolver.h>
 #include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
+#include <phasar.h>
+
+#include <utility>
+#include <memory>
+#include <vector>
 
 #include "analyses/loopbound/LoopBound.h"
+#include "analyses/loopbound/loopBoundWrapper.h"
 #include "analyses/loopbound/util.h"
 
-#include <ostream>
-
-LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManager *FAM) {
+LoopBoundWrapper::LoopBoundWrapper(
+std::unique_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManager *FAM) {
     if (!helperAnalyses) {
         return;
     }
@@ -82,8 +83,7 @@ LoopBoundWrapper::LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAn
             increment,
             description.init,
             predicate,
-            checkval->calculateCheck(FAM, LoopInfo)
-        );
+            checkval->calculateCheck(FAM, LoopInfo));
 
         this->loopClassifiers.push_back(newLoopClassifier);
     }
@@ -200,7 +200,8 @@ void LoopBoundWrapper::printClassifiers() {
         llvm::errs() << "[LB] " << "Name: " << classifier.loop->getName() << "\n";
 
         if (classifier.increment) {
-            llvm::errs() << "[LB] " << "Inc: " << "[" << classifier.increment->getLowerBound() << ", " << classifier.increment->getUpperBound() << "]" << "\n";
+            llvm::errs() << "[LB] " << "Inc: " << "[" << classifier.increment->getLowerBound()
+            << ", " << classifier.increment->getUpperBound() << "]" << "\n";
         } else {
             llvm::errs() << "[LB] " << "Inc: " << "[" << "NONE" << "]" << "\n";
         }
@@ -212,7 +213,8 @@ void LoopBoundWrapper::printClassifiers() {
         }
 
         if (classifier.predicate) {
-            llvm::errs() << "[LB] " << "Predicate: " << LoopBound::Util::predicateToSymbol(classifier.predicate) << "\n";
+            llvm::errs() << "[LB] " << "Predicate: "
+            << LoopBound::Util::predicateToSymbol(classifier.predicate) << "\n";
         } else {
             llvm::errs() << "[LB] " << "Predicate: " << "NONE" << "\n";
         }
@@ -224,7 +226,8 @@ void LoopBoundWrapper::printClassifiers() {
         }
 
         if (classifier.bound) {
-            llvm::errs() << "[LB] " << "Bound: " << "[" << classifier.bound->getLowerBound() << ", " << classifier.bound->getUpperBound() << "]" "\n";
+            llvm::errs() << "[LB] " << "Bound: " << "[" << classifier.bound->getLowerBound()
+            << ", " << classifier.bound->getUpperBound() << "]" "\n";
         } else {
             llvm::errs() << "[LB] " << "Bound: " << "UNBOUND" << "\n";
         }
@@ -234,7 +237,8 @@ void LoopBoundWrapper::printClassifiers() {
     }
 }
 
-std::optional<CheckExpr> LoopBoundWrapper::findLoopCheckExpr(const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) {
+std::optional<CheckExpr> LoopBoundWrapper::findLoopCheckExpr(
+const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) {
     if (!description.loop || !description.icmp) return std::nullopt;
 
     const llvm::Value *A  = description.icmp->getOperand(0);
@@ -337,7 +341,7 @@ std::optional<CheckExpr> LoopBoundWrapper::peelBasePlusConst(const llvm::Value *
                     if (E->DivBy.has_value()) return std::nullopt;
 
                     E->MulBy = E->MulBy.has_value() ? (*E->MulBy * C) : C;
-                    E->Offset *= C; // (base+offset)*C
+                    E->Offset *= C;  // (base+offset)*C
                     return E;
                 }
             }

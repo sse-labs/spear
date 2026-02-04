@@ -3,6 +3,8 @@
  * All rights reserved.
 */
 
+#include <algorithm>
+
 #include "analyses/loopbound/LoopBoundEdgeFunction.h"
 #include "analyses/loopbound/util.h"
 
@@ -105,7 +107,7 @@ DeltaIntervalCollect::computeTarget(const l_t &source) const {
   if (source.isTop()) {
     return source;
   }
-  return source.leastUpperBound(inc); // hull accumulate
+  return source.leastUpperBound(inc);  // hull accumulate
 }
 
 EF DeltaIntervalCollect::compose(psr::EdgeFunctionRef<DeltaIntervalCollect> self,
@@ -173,4 +175,4 @@ EF edgeTop() {
   return EF(std::in_place_type<DeltaIntervalTop>);
 }
 
-} // namespace loopbound
+}  // namespace LoopBound

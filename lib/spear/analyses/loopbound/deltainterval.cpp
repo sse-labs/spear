@@ -1,19 +1,19 @@
-// /*
-//  * Copyright (c) 2026 Maximilian Krebs
-//  * All rights reserved.
-// *
-
-#include "../../../../src/spear/analyses/loopbound/LoopBound.h"
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
 #include <algorithm>
 #include <limits>
+#include <utility>
+
+#include "analyses/loopbound/LoopBound.h"
 
 namespace LoopBound {
 
 DeltaInterval::DeltaInterval()
-    : valueType(ValueType::TOP),
-      lowerBound(std::numeric_limits<int64_t>::min()),
-      upperBound(std::numeric_limits<int64_t>::max()) {}
+    : valueType(ValueType::TOP), lowerBound(std::numeric_limits<int64_t>::min()),
+upperBound(std::numeric_limits<int64_t>::max()) {}
 
 DeltaInterval DeltaInterval::bottom() {
   return {ValueType::BOTTOM, 0, 0};
@@ -127,4 +127,4 @@ bool DeltaInterval::operator!=(const DeltaInterval &other) const {
   return !(*this == other);
 }
 
-}  // namespace loopbound
+}  // namespace LoopBound

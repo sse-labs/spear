@@ -3,6 +3,8 @@
  * All rights reserved.
  */
 
+#include <algorithm>
+
 #include "analyses/loopbound/loopBoundWrapper.h"
 #include "analyses/loopbound/util.h"
 

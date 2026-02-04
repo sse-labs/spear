@@ -3,19 +3,18 @@
  * All rights reserved.
 */
 
-#include "analyses/loopbound/LoopBound.h"
-
 #include <phasar/PhasarLLVM/ControlFlow/LLVMBasedCFG.h>
-
-#include <memory>
-#include <utility>
-#include <llvm/IR/Operator.h>
 #include <phasar/PhasarLLVM/DataFlow/IfdsIde/LLVMZeroValue.h>
-
-#include "analyses/loopbound/LoopBoundEdgeFunction.h"
-#include "analyses/loopbound/util.h"
+#include <llvm/IR/Operator.h>
 
 #include <atomic>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "analyses/loopbound/LoopBound.h"
+#include "analyses/loopbound/LoopBoundEdgeFunction.h"
+#include "analyses/loopbound/util.h"
 
 namespace {
 
@@ -27,7 +26,7 @@ class DebugFlow final : public psr::FlowFunction<D, ContainerT> {
   LoopBound::LoopBoundIDEAnalysis::n_t Curr;
   LoopBound::LoopBoundIDEAnalysis::n_t Succ;
 
-public:
+ public:
   DebugFlow(std::shared_ptr<psr::FlowFunction<D, ContainerT>> Inner,
             const char *Name,
             LoopBound::LoopBoundIDEAnalysis *A,
@@ -65,18 +64,18 @@ public:
 
 template <typename D, typename ContainerT>
 class IdentityFlow final : public psr::FlowFunction<D, ContainerT> {
-public:
+ public:
   ContainerT computeTargets(D Src) override { return ContainerT{Src}; }
 };
 
 
 template <typename D, typename ContainerT>
 class KeepLocalOnCallToRet final : public psr::FlowFunction<D, ContainerT> {
-public:
+ public:
   ContainerT computeTargets(D Src) override { return ContainerT{Src}; }
 };
 
-} // namespace
+}  // namespace
 
 namespace LoopBound {
 
@@ -89,8 +88,7 @@ LoopBoundIDEAnalysis::LoopBoundIDEAnalysis(const psr::LLVMProjectIRDB *IRDB,
   this->findLoopCounters();
 }
 
-psr::InitialSeeds<LoopBoundIDEAnalysis::n_t, LoopBoundIDEAnalysis::d_t,
-                  LoopBoundIDEAnalysis::l_t>
+psr::InitialSeeds<LoopBoundIDEAnalysis::n_t, LoopBoundIDEAnalysis::d_t, LoopBoundIDEAnalysis::l_t>
 LoopBoundIDEAnalysis::initialSeeds() {
   psr::InitialSeeds<n_t, d_t, l_t> Seeds;
 
@@ -284,7 +282,7 @@ LoopBoundIDEAnalysis::getLoopDescriptionForInst(const llvm::Instruction *inst) c
   return nullptr;
 }
 
-  bool LoopBoundIDEAnalysis::isCounterRootFactAtInst(d_t Fact, n_t AtInst) const {
+bool LoopBoundIDEAnalysis::isCounterRootFactAtInst(d_t Fact, n_t AtInst) const {
   if (!Fact || isZeroValue(Fact) || !AtInst) return false;
 
   const auto *V = static_cast<const llvm::Value *>(Fact);
@@ -315,9 +313,7 @@ LoopBoundIDEAnalysis::getLoopDescriptionForInst(const llvm::Instruction *inst) c
 }
 
 LoopBoundIDEAnalysis::EdgeFunctionType
-LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t Succ,
-                                            d_t succNode) {
-
+LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t Succ, d_t succNode) {
   if (isLatchToHeaderEdge(curr, Succ)) {
     return EF(std::in_place_type<DeltaIntervalIdentity>);
   }
@@ -371,7 +367,6 @@ LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t Succ,
   if (auto *storeInst = llvm::dyn_cast<llvm::StoreInst>(curr)) {
     const llvm::Value *root = LoopBound::Util::stripAddr(static_cast<const llvm::Value *>(currNode));
     if (auto increment = extractConstIncFromStore(storeInst, root)) {
-
       auto E = EF(std::in_place_type<DeltaIntervalCollect>,
                   static_cast<int64_t>(*increment),
                   static_cast<int64_t>(*increment));
@@ -540,7 +535,6 @@ LoopBoundIDEAnalysis::findConstInitForCell(const llvm::Value *Addr,
 
 void LoopBoundIDEAnalysis::findLoopCounters() {
   for (auto loop : *this->loops) {
-
     llvm::SmallVector<llvm::BasicBlock *, 8> ExitingBlocks;
     loop->getExitingBlocks(ExitingBlocks);
 
@@ -593,8 +587,6 @@ LoopBoundIDEAnalysis::findCounterFromICMP(llvm::ICmpInst *inst,
                                          llvm::Loop *loop) {
   llvm::Value *LHS = inst->getOperand(0);
   llvm::Value *RHS = inst->getOperand(1);
-
-  //llvm::errs() << *inst << "\n";
 
   auto leftSideRoots  = sliceBackwards(LHS, loop);
   auto rightSideRoots = sliceBackwards(RHS, loop);
@@ -693,4 +685,4 @@ std::vector<LoopParameterDescription> LoopBoundIDEAnalysis::getLoopParameterDesc
   return LoopDescriptions;
 }
 
-} // namespace loopbound
+}  // namespace LoopBound

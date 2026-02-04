@@ -3,16 +3,16 @@
  * All rights reserved.
 */
 
-#ifndef SPEAR_UTIL_H
-#define SPEAR_UTIL_H
-
-#include <atomic>
-#include <optional>
-#include <string>
+#ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_UTIL_H_
+#define SRC_SPEAR_ANALYSES_LOOPBOUND_UTIL_H_
 
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/Instructions.h>
+
+#include <atomic>
+#include <optional>
+#include <string>
 
 #include "LoopBound.h"
 #include "LoopBoundEdgeFunction.h"
@@ -110,7 +110,8 @@ const llvm::Value *getMemRootFromValue(const llvm::Value *val);
  * @param DT DominatorTree
  * @return Optional value representing the constant integer value
  */
-std::optional<int64_t> tryDeduceConstFromLoad(const llvm::LoadInst *LI, llvm::DominatorTree &DT, llvm::LoopInfo &LIInfo);
+std::optional<int64_t> tryDeduceConstFromLoad(
+const llvm::LoadInst *LI, llvm::DominatorTree &DT, llvm::LoopInfo &LIInfo);
 
 /**
  * Convert a given predicate to a string
@@ -138,4 +139,4 @@ const llvm::Value *stripCasts(const llvm::Value *V);
 
 }  // namespace LoopBound::Util
 
-#endif  // SPEAR_UTIL_H
+#endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_UTIL_H_
