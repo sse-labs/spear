@@ -143,7 +143,18 @@ class LoopClassifier {
      * @param increment Concrete increment per loop iteration
      * @return Possible calculated bound
      */
-    static std::optional<int64_t> solveBound(llvm::CmpInst::Predicate predicate,
+    static std::optional<int64_t> solveAdditiveBound(llvm::CmpInst::Predicate predicate,
+                                      int64_t init, int64_t check, int64_t increment);
+
+    /**
+    * Performs the actual bound calculation depending on the predicate
+    * @param predicate Predicate relevant for the bound
+    * @param init Init value of the loop
+    * @param check Check the counter is running against
+    * @param increment Concrete increment per loop iteration
+    * @return Possible calculated bound
+    */
+    static std::optional<int64_t> solveMultiplicativeBound(llvm::CmpInst::Predicate predicate,
                                       int64_t init, int64_t check, int64_t increment);
 };
 

@@ -14,7 +14,7 @@ namespace LoopBound {
 class DeltaInterval {
  public:
     // Type of the object
-    enum class ValueType { TOP, BOTTOM, NORMAL, EMPTY };
+    enum class ValueType { TOP, BOTTOM, Additive, MULTIPLICATIVE, EMPTY };
 
     /**
      * Generic constructor
@@ -45,7 +45,7 @@ class DeltaInterval {
      * @param high Upper value of the interval
      * @return DeltaInterval of type normal
      */
-    static DeltaInterval interval(int64_t low, int64_t high);
+    static DeltaInterval interval(int64_t low, int64_t high, ValueType valueType);
 
     /**
      * Create a neutral value = empty
@@ -72,10 +72,16 @@ class DeltaInterval {
     bool isTop() const;
 
     /**
-     * Check if the current instance is of type normal
+     * Check if the current instance is of type Additive
      * @return true if normal, false otherwise
      */
-    bool isNormal() const;
+    bool isAdditive() const;
+
+    /**
+     * Checks if the current instance is of type Multiplicative
+     * @return True if multiplicative, false otherwise
+     */
+    bool isMultiplicative() const;
 
     /**
      * Check if the current instance is neutral

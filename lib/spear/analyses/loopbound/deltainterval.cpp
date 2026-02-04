@@ -31,11 +31,11 @@ DeltaInterval DeltaInterval::empty() {
   return {ValueType::EMPTY, 0, 0};
 }
 
-DeltaInterval DeltaInterval::interval(int64_t low, int64_t high) {
+DeltaInterval DeltaInterval::interval(int64_t low, int64_t high, ValueType valueType) {
   if (low > high) {
     std::swap(low, high);
   }
-  return {ValueType::NORMAL, low, high};
+  return {valueType, low, high};
 }
 
 DeltaInterval DeltaInterval::ideNeutral() {
@@ -54,8 +54,12 @@ bool DeltaInterval::isTop() const {
   return valueType == ValueType::TOP;
 }
 
-bool DeltaInterval::isNormal() const {
-  return valueType == ValueType::NORMAL;
+bool DeltaInterval::isAdditive() const {
+  return valueType == ValueType::Additive;
+}
+
+bool DeltaInterval::isMultiplicative() const {
+  return valueType == ValueType::MULTIPLICATIVE;
 }
 
 bool DeltaInterval::isEmpty() const noexcept {
@@ -93,7 +97,7 @@ DeltaInterval DeltaInterval::leastUpperBound(const DeltaInterval &other) const {
 
   const int64_t L = std::min(lowerBound, other.lowerBound);
   const int64_t U = std::max(upperBound, other.upperBound);
-  return interval(L, U);
+  return interval(L, U, valueType);
 }
 
 DeltaInterval DeltaInterval::greatestLowerBound(const DeltaInterval &other) const {
@@ -109,7 +113,7 @@ DeltaInterval DeltaInterval::greatestLowerBound(const DeltaInterval &other) cons
   if (L > U) {
     return empty();
   }
-  return interval(L, U);
+  return interval(L, U, valueType);
 }
 
 bool DeltaInterval::operator==(const DeltaInterval &other) const {

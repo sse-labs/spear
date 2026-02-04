@@ -67,6 +67,14 @@ struct LoopBoundDomain : psr::LLVMAnalysisDomainDefault {
 };
 
 /**
+ * Increment Representation to distinguish additive from multiplicative increments
+ */
+struct LoopBoundIncrementInstance {
+    std::optional<int64_t> increment;
+    DeltaInterval::ValueType type;
+};
+
+/**
  * LoopBoundIDEAnalysis class
  * Implements the LoopBound analysis
  */
@@ -117,7 +125,7 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      * @param counterRoot Loop counter the store instruction should be analyzed for
      * @return
      */
-    static std::optional<int64_t> extractConstIncFromStore(
+    static std::optional<LoopBoundIncrementInstance> extractConstIncFromStore(
     const llvm::StoreInst *storeInst, const llvm::Value *counterRoot);
 
     /**

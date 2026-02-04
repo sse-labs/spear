@@ -9,7 +9,7 @@
 #include "analyses/loopbound/util.h"
 
 
-std::optional<int64_t> LoopClassifier::solveBound(llvm::CmpInst::Predicate pred,
+std::optional<int64_t> LoopClassifier::solveAdditiveBound(llvm::CmpInst::Predicate pred,
     int64_t init, int64_t check, int64_t increment) {
     int64_t delta = check - init;
     if (increment < 0) {
@@ -50,6 +50,58 @@ std::optional<int64_t> LoopClassifier::solveBound(llvm::CmpInst::Predicate pred,
     }
 }
 
+std::optional<int64_t> LoopClassifier::solveMultiplicativeBound(llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
+    // We do not deal with == or !=
+    // Only calculate check o init * increment^k
+    // Where o is one of { <, <= } and init > 0, check > 0, increment > 0
+    if (pred == llvm::CmpInst::ICMP_EQ || pred == llvm::CmpInst::ICMP_NE) {
+        return std::nullopt;
+    }
+
+    const bool isLessThan = pred == llvm::CmpInst::ICMP_SLT || pred == llvm::CmpInst::ICMP_ULT;
+    const bool isLessOrEqualThan = pred == llvm::CmpInst::ICMP_SLE || pred == llvm::CmpInst::ICMP_ULE;
+
+    if (!isLessThan && !isLessOrEqualThan) {
+        return std::nullopt;
+    }
+
+    // Sanity check for paremeter value domain
+    // TODO we should catch increments <= 0 already while creating the multiplicative interval in the first place
+    if (increment <= 0 || init <= 0 || check <=0 ) {
+        return std::nullopt;
+    }
+
+    // Validate if the condition is already false at the beginning of the loop, so we would not iterate even once
+    bool conditionHolds = LoopBound::Util::predicatesCoditionHolds(pred, init, check);
+
+    if (!conditionHolds) {
+        return 0;
+    }
+
+    long double iterationCandidate = (std::log((long double) check) - std::log((long double) init)) /
+    std::log((long double) increment);
+
+    long double iterations = iterationCandidate;
+    if (isLessThan) {
+        iterations = std::ceil(iterations);
+    }
+
+    if (isLessOrEqualThan) {
+        iterations = std::floor(iterations) + 1;
+    }
+
+    // Sanity check
+    if (iterations < 0.0) {
+        iterations = 0.0;
+    }
+
+    if (iterations > (long double)std::numeric_limits<int64_t>::max()) {
+        return std::nullopt;
+    }
+
+    return iterations;
+}
+
 std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
     // Check if properties are valid and exist
     if (!init || !check) {
@@ -64,15 +116,40 @@ std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
         return std::nullopt;
     }
 
-    int64_t lowerval = increment.value().getLowerBound();
-    int64_t upperval = increment.value().getUpperBound();
+    // If we have an additive interval just use the generic calculation method
+    if (increment.value().isAdditive()) {
+        llvm::errs() << "CALCULATING ADDITIVE BOUND!!!!!" << "\n";
+        int64_t lowerval = increment.value().getLowerBound();
+        int64_t upperval = increment.value().getUpperBound();
 
-    auto optLowerboundVal = solveBound(predicate, init.value(), check.value(), lowerval);
-    auto optUpperboundVal = solveBound(predicate, init.value(), check.value(), upperval);
+        auto optLowerboundVal = solveAdditiveBound(predicate, init.value(), check.value(), lowerval);
+        auto optUpperboundVal = solveAdditiveBound(predicate, init.value(), check.value(), upperval);
 
-    if (!optLowerboundVal || !optUpperboundVal) {
-        return std::nullopt;
+        if (!optLowerboundVal || !optUpperboundVal) {
+            return std::nullopt;
+        }
+
+        return LoopBound::DeltaInterval::interval(
+            optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Additive);
     }
 
-    return LoopBound::DeltaInterval::interval(optLowerboundVal.value(), optUpperboundVal.value());
+
+    if (increment.value().isMultiplicative()) {
+        llvm::errs() << "CALCULATING MULTIPLICATIVE BOUND!!!!!" << "\n";
+
+        int64_t lowerval = increment.value().getLowerBound();
+        int64_t upperval = increment.value().getUpperBound();
+
+        auto optLowerboundVal = solveMultiplicativeBound(predicate, init.value(), check.value(), lowerval);
+        auto optUpperboundVal = solveMultiplicativeBound(predicate, init.value(), check.value(), upperval);
+
+        if (!optLowerboundVal || !optUpperboundVal) {
+            return std::nullopt;
+        }
+
+        return LoopBound::DeltaInterval::interval(
+            optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::MULTIPLICATIVE);
+    }
+
+    return std::nullopt;
 }

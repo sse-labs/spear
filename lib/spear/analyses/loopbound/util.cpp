@@ -83,7 +83,7 @@ void dumpEF(const LoopBound::EF &edgeFunction) {
     llvm::errs() << "EF=BOT";
     return;
   }
-  if (auto *C = edgeFunction.template dyn_cast<LoopBound::DeltaIntervalCollect>()) {
+  if (auto *C = edgeFunction.template dyn_cast<LoopBound::DeltaIntervalAdditive>()) {
     llvm::errs() << "EF=COLLECT[" << C->lowerBound << "," << C->upperBound << "]";
     return;
   }
@@ -446,5 +446,15 @@ const llvm::Value *stripCasts(const llvm::Value *V) {
   }
   return V;
 }
+
+bool predicatesCoditionHolds(llvm::CmpInst::Predicate pred, int64_t val, int64_t check){
+  switch (pred) {
+    case llvm::CmpInst::ICMP_SLT: return val <  check;
+    case llvm::CmpInst::ICMP_SLE: return val <= check;
+    case llvm::CmpInst::ICMP_ULT: return (uint64_t)val <  (uint64_t)check;
+    case llvm::CmpInst::ICMP_ULE: return (uint64_t)val <= (uint64_t)check;
+    default: return false;
+  }
+};
 
 }  // namespace LoopBound::Util

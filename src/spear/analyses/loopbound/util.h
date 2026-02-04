@@ -137,6 +137,8 @@ int64_t exactDiv(int64_t a, int64_t b);
 
 const llvm::Value *stripCasts(const llvm::Value *V);
 
+bool predicatesCoditionHolds(llvm::CmpInst::Predicate pred, int64_t val, int64_t check);
+
 }  // namespace LoopBound::Util
 
 #endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_UTIL_H_

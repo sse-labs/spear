@@ -88,18 +88,18 @@ DeltaIntervalTop::join(psr::EdgeFunctionRef<DeltaIntervalTop>,
 
 bool DeltaIntervalTop::isConstant() const noexcept { return false; }
 
-//=========================== Collect EF ============================//
+//=========================== Additive EF ============================//
 
-DeltaIntervalCollect::DeltaIntervalCollect(int64_t L, int64_t U)
+DeltaIntervalAdditive::DeltaIntervalAdditive(int64_t L, int64_t U)
     : lowerBound(L), upperBound(U) {}
 
-[[nodiscard]] DeltaIntervalCollect::l_t
-DeltaIntervalCollect::computeTarget(const l_t &source) const {
+[[nodiscard]] DeltaIntervalAdditive::l_t
+DeltaIntervalAdditive::computeTarget(const l_t &source) const {
   if (source.isBottom()) {
     return source;
   }
 
-  const l_t inc = l_t::interval(lowerBound, upperBound);
+  const l_t inc = l_t::interval(lowerBound, upperBound, DeltaInterval::ValueType::Additive);
 
   if (source.isEmpty()) {
     return inc;
@@ -107,10 +107,11 @@ DeltaIntervalCollect::computeTarget(const l_t &source) const {
   if (source.isTop()) {
     return source;
   }
+
   return source.leastUpperBound(inc);  // hull accumulate
 }
 
-EF DeltaIntervalCollect::compose(psr::EdgeFunctionRef<DeltaIntervalCollect> self,
+EF DeltaIntervalAdditive::compose(psr::EdgeFunctionRef<DeltaIntervalAdditive> self,
                                 const EF &second) {
   // second ∘ collect
 
@@ -129,17 +130,21 @@ EF DeltaIntervalCollect::compose(psr::EdgeFunctionRef<DeltaIntervalCollect> self
     return EF(std::in_place_type<DeltaIntervalTop>);
   }
 
-  if (auto *otherC = second.template dyn_cast<DeltaIntervalCollect>()) {
+  if (second.template isa<DeltaIntervalMultiplicative>()) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  if (auto *otherC = second.template dyn_cast<DeltaIntervalAdditive>()) {
     const int64_t L = std::min(self->lowerBound, otherC->lowerBound);
     const int64_t U = std::max(self->upperBound, otherC->upperBound);
-    return EF(std::in_place_type<DeltaIntervalCollect>, L, U);
+    return EF(std::in_place_type<DeltaIntervalAdditive>, L, U);
   }
 
   // Mixing families => conservative
   return EF(std::in_place_type<DeltaIntervalTop>);
 }
 
-EF DeltaIntervalCollect::join(psr::EdgeFunctionRef<DeltaIntervalCollect> thisFunc,
+EF DeltaIntervalAdditive::join(psr::EdgeFunctionRef<DeltaIntervalAdditive> thisFunc,
                              const EF &other) {
   // IMPORTANT: Identity and Bottom are neutral here.
   if (other.template isa<DeltaIntervalBottom>() ||
@@ -154,18 +159,109 @@ EF DeltaIntervalCollect::join(psr::EdgeFunctionRef<DeltaIntervalCollect> thisFun
     return EF(std::in_place_type<DeltaIntervalTop>);
   }
 
-  if (auto *otherC = other.template dyn_cast<DeltaIntervalCollect>()) {
+  if (other.template isa<DeltaIntervalMultiplicative>()) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+      }
+
+  if (auto *otherC = other.template dyn_cast<DeltaIntervalAdditive>()) {
     const int64_t L = std::min(thisFunc->lowerBound, otherC->lowerBound);
     const int64_t U = std::max(thisFunc->upperBound, otherC->upperBound);
-    return EF(std::in_place_type<DeltaIntervalCollect>, L, U);
+    return EF(std::in_place_type<DeltaIntervalAdditive>, L, U);
   }
 
   // Mixing Elements => conservative
   return EF(std::in_place_type<DeltaIntervalTop>);
 }
 
-bool DeltaIntervalCollect::isConstant() const noexcept { return false; }
+bool DeltaIntervalAdditive::isConstant() const noexcept { return false; }
 
+
+//=========================== Multiplicative EF ============================//
+
+DeltaIntervalMultiplicative::DeltaIntervalMultiplicative(int64_t L, int64_t U)
+    : lowerBound(L), upperBound(U) {}
+
+[[nodiscard]] DeltaIntervalMultiplicative::l_t
+DeltaIntervalMultiplicative::computeTarget(const l_t &source) const {
+  if (source.isBottom()) {
+    return source;
+  }
+
+  const l_t inc = l_t::interval(lowerBound, upperBound, DeltaInterval::ValueType::MULTIPLICATIVE);
+
+  if (source.isEmpty()) {
+    return inc;
+  }
+  if (source.isTop()) {
+    return source;
+  }
+
+  return source.leastUpperBound(inc);  // hull accumulate
+}
+
+EF DeltaIntervalMultiplicative::compose(psr::EdgeFunctionRef<DeltaIntervalMultiplicative> self,
+                                const EF &second) {
+  // second ∘ collect
+
+  if (second.template isa<DeltaIntervalIdentity>() ||
+      second.template isa<psr::EdgeIdentity<l_t>>()) {
+    return EF(self);
+  }
+
+  if (second.template isa<DeltaIntervalBottom>() ||
+      llvm::isa<psr::AllBottom<l_t>>(second)) {
+    return EF(std::in_place_type<DeltaIntervalBottom>);
+  }
+
+  if (second.template isa<DeltaIntervalTop>() ||
+      llvm::isa<psr::AllTop<l_t>>(second)) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  if (second.template isa<DeltaIntervalAdditive>()) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  if (auto *otherC = second.template dyn_cast<DeltaIntervalMultiplicative>()) {
+    const int64_t L = std::min(self->lowerBound, otherC->lowerBound);
+    const int64_t U = std::max(self->upperBound, otherC->upperBound);
+    return EF(std::in_place_type<DeltaIntervalMultiplicative>, L, U);
+  }
+
+  // Mixing families => conservative
+  return EF(std::in_place_type<DeltaIntervalTop>);
+}
+
+EF DeltaIntervalMultiplicative::join(psr::EdgeFunctionRef<DeltaIntervalMultiplicative> thisFunc,
+                             const EF &other) {
+  // IMPORTANT: Identity and Bottom are neutral here.
+  if (other.template isa<DeltaIntervalBottom>() ||
+      llvm::isa<psr::AllBottom<l_t>>(other) ||
+      other.template isa<DeltaIntervalIdentity>() ||
+      other.template isa<psr::EdgeIdentity<l_t>>()) {
+    return EF(thisFunc);
+  }
+
+  if (other.template isa<DeltaIntervalTop>() ||
+      llvm::isa<psr::AllTop<l_t>>(other)) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  if (other.template isa<DeltaIntervalAdditive>()) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+      }
+
+  if (auto *otherC = other.template dyn_cast<DeltaIntervalMultiplicative>()) {
+    const int64_t L = std::min(thisFunc->lowerBound, otherC->lowerBound);
+    const int64_t U = std::max(thisFunc->upperBound, otherC->upperBound);
+    return EF(std::in_place_type<DeltaIntervalMultiplicative>, L, U);
+  }
+
+  // Mixing Elements => conservative
+  return EF(std::in_place_type<DeltaIntervalTop>);
+}
+
+bool DeltaIntervalMultiplicative::isConstant() const noexcept { return false; }
 
 EF edgeIdentity() {
   return EF(std::in_place_type<DeltaIntervalIdentity>);

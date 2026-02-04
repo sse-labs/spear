@@ -54,11 +54,11 @@ using l_t = DeltaInterval;
 using EF  = psr::EdgeFunction<l_t>;
 
 /**
- * DeltaIntervalCollect
+ * DeltaIntervalAdditive
  *
  * Defines edge function operations used for calculating the increment interval
  */
-struct DeltaIntervalCollect {
+struct DeltaIntervalAdditive {
     // Define the lattice elements
     using l_t = LoopBound::l_t;
 
@@ -75,14 +75,14 @@ struct DeltaIntervalCollect {
     /**
      * Default constructor
      */
-    DeltaIntervalCollect() = default;
+    DeltaIntervalAdditive() = default;
 
     /**
      * Create a new DeltaInterval edge function
      * @param lowerIncrement lower increment
      * @param upperIncrement upper increment
      */
-    DeltaIntervalCollect(int64_t lowerIncrement, int64_t upperIncrement);
+    DeltaIntervalAdditive(int64_t lowerIncrement, int64_t upperIncrement);
 
     /**
      * Calculates the lattice value by computing source with the value of this instance
@@ -99,7 +99,7 @@ struct DeltaIntervalCollect {
      * @param second Another possible edge function
      * @return Returns the resulting edge function calculated from the two given edge functions
      */
-    static EF compose(psr::EdgeFunctionRef<DeltaIntervalCollect> self,
+    static EF compose(psr::EdgeFunctionRef<DeltaIntervalAdditive> self,
                       const EF &second);
 
     /**
@@ -109,14 +109,86 @@ struct DeltaIntervalCollect {
      * @param other Another possible edge function
      * @return Returns the resulting edge function calculated from the two given edge functions
      */
-    static EF join(psr::EdgeFunctionRef<DeltaIntervalCollect> self,
+    static EF join(psr::EdgeFunctionRef<DeltaIntervalAdditive> self,
                    const EF &other);
 
     /**
      * Implementation of the equal operator for DeltaIntervalCollect edge functions
      * @return True if the instances match, false otherwise
      */
-    bool operator==(const DeltaIntervalCollect &) const = default;
+    bool operator==(const DeltaIntervalAdditive &) const = default;
+
+    /**
+     * Describes if this edge function is constant
+     * @return Returns false in any case.
+     */
+    bool isConstant() const noexcept;
+};
+
+/**
+ * DeltaIntervalCollect
+ *
+ * Defines edge function operations used for calculating the increment interval
+ */
+struct DeltaIntervalMultiplicative {
+    // Define the lattice elements
+    using l_t = LoopBound::l_t;
+
+    /**
+     * Lower increment value
+     */
+    int64_t lowerBound = 0;
+
+    /**
+     * Higher increment value
+     */
+    int64_t upperBound = 0;
+
+    /**
+     * Default constructor
+     */
+    DeltaIntervalMultiplicative() = default;
+
+    /**
+     * Create a new DeltaInterval edge function
+     * @param lowerIncrement lower increment
+     * @param upperIncrement upper increment
+     */
+    DeltaIntervalMultiplicative(int64_t lowerIncrement, int64_t upperIncrement);
+
+    /**
+     * Calculates the lattice value by computing source with the value of this instance
+     *
+     * @param source Incoming lattice value
+     * @return Computed lattice value
+     */
+    [[nodiscard]] l_t computeTarget(const l_t &source) const;
+
+    /**
+     * Calculates composition of the two given edge functions along one path
+     *
+     * @param self This DeltaIntervalCollect instance
+     * @param second Another possible edge function
+     * @return Returns the resulting edge function calculated from the two given edge functions
+     */
+    static EF compose(psr::EdgeFunctionRef<DeltaIntervalMultiplicative> self,
+                      const EF &second);
+
+    /**
+     * Calculates the merging of the two given edge functions
+     *
+     * @param self This DeltaIntervalCollect instance
+     * @param other Another possible edge function
+     * @return Returns the resulting edge function calculated from the two given edge functions
+     */
+    static EF join(psr::EdgeFunctionRef<DeltaIntervalMultiplicative> self,
+                   const EF &other);
+
+    /**
+     * Implementation of the equal operator for DeltaIntervalCollect edge functions
+     * @return True if the instances match, false otherwise
+     */
+    bool operator==(const DeltaIntervalMultiplicative &) const = default;
 
     /**
      * Describes if this edge function is constant

@@ -367,17 +367,28 @@ LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t Succ, d_
   if (auto *storeInst = llvm::dyn_cast<llvm::StoreInst>(curr)) {
     const llvm::Value *root = LoopBound::Util::stripAddr(static_cast<const llvm::Value *>(currNode));
     if (auto increment = extractConstIncFromStore(storeInst, root)) {
-      auto E = EF(std::in_place_type<DeltaIntervalCollect>,
-                  static_cast<int64_t>(*increment),
-                  static_cast<int64_t>(*increment));
+      EF E;
+
+      if (increment->type == DeltaInterval::ValueType::Additive) {
+        E = EF(std::in_place_type<DeltaIntervalAdditive>,
+                  static_cast<int64_t>(*increment->increment),
+                  static_cast<int64_t>(*increment->increment));
+      }
+
+      if (increment->type == DeltaInterval::ValueType::MULTIPLICATIVE) {
+        E = EF(std::in_place_type<DeltaIntervalMultiplicative>,
+                  static_cast<int64_t>(*increment->increment),
+                  static_cast<int64_t>(*increment->increment));
+      }
 
       if (LoopBound::Util::LB_DebugEnabled.load()) {
         llvm::errs() << "[LB] INC matched at store: " << *storeInst
-                     << "  inc=" << *increment << "\n";
+                     << "  inc=" << *increment->increment << "\n";
         llvm::errs() << LoopBound::Util::LB_TAG << "   produced ";
         LoopBound::Util::dumpEF(E);
         llvm::errs() << "\n";
       }
+
       return E;
     }
   }
@@ -407,7 +418,7 @@ LoopBoundIDEAnalysis::getCallToRetEdgeFunction(n_t, d_t, n_t, d_t,
   return EF(std::in_place_type<DeltaIntervalIdentity>);
 }
 
-std::optional<int64_t>
+std::optional<LoopBoundIncrementInstance>
 LoopBoundIDEAnalysis::extractConstIncFromStore(const llvm::StoreInst *storeInst,
                                               const llvm::Value *counterRoot) {
   if (!storeInst || !counterRoot) {
@@ -457,7 +468,8 @@ LoopBoundIDEAnalysis::extractConstIncFromStore(const llvm::StoreInst *storeInst,
             llvm::errs() << LoopBound::Util::LB_TAG << "   OK: load(root)+C  C="
                          << constantIncrement->getSExtValue() << "\n";
           }
-          return constantIncrement->getSExtValue();
+          return LoopBoundIncrementInstance{
+            constantIncrement->getSExtValue(), DeltaInterval::ValueType::Additive};
         }
       }
 
@@ -465,10 +477,11 @@ LoopBoundIDEAnalysis::extractConstIncFromStore(const llvm::StoreInst *storeInst,
         if (auto *constantIncrement =
                 llvm::dyn_cast<llvm::ConstantInt>(firstOperand)) {
           if (LoopBound::Util::LB_DebugEnabled.load()) {
-            llvm::errs() << LoopBound::Util::LB_TAG << "   OK: C+load(root)  C="
+            llvm::errs() << LoopBound::Util::LB_TAG << "   OK: C+load(root)  C(ADD)="
                          << constantIncrement->getSExtValue() << "\n";
           }
-          return constantIncrement->getSExtValue();
+          return LoopBoundIncrementInstance{
+            constantIncrement->getSExtValue(), DeltaInterval::ValueType::Additive};
         }
       }
 
@@ -483,11 +496,31 @@ LoopBoundIDEAnalysis::extractConstIncFromStore(const llvm::StoreInst *storeInst,
         if (auto *constantIncrement =
                 llvm::dyn_cast<llvm::ConstantInt>(secondOperand)) {
           if (LoopBound::Util::LB_DebugEnabled.load()) {
-            llvm::errs() << LoopBound::Util::LB_TAG << "   OK: load(root)-C  C="
+            llvm::errs() << LoopBound::Util::LB_TAG << "   OK: load(root)-C  C(SUB)="
                          << constantIncrement->getSExtValue() << "\n";
           }
-          return -constantIncrement->getSExtValue();
+          return LoopBoundIncrementInstance{
+            -constantIncrement->getSExtValue(), DeltaInterval::ValueType::Additive};
         }
+      }
+
+      if (LoopBound::Util::LB_DebugEnabled.load()) {
+        llvm::errs() << LoopBound::Util::LB_TAG << "   FAIL: sub but not (load(root)-C)\n";
+      }
+      return std::nullopt;
+    }
+
+    case llvm::Instruction::Mul: {
+      if (isLoadOfCounterRoot(firstOperand, root)) {
+        if (auto *constantIncrement =
+                llvm::dyn_cast<llvm::ConstantInt>(secondOperand)) {
+          if (LoopBound::Util::LB_DebugEnabled.load()) {
+            llvm::errs() << LoopBound::Util::LB_TAG << "   OK: load(root)-C  C(MUL)="
+                         << constantIncrement->getSExtValue() << "\n";
+          }
+          return LoopBoundIncrementInstance{
+            constantIncrement->getSExtValue(), DeltaInterval::ValueType::MULTIPLICATIVE};
+                }
       }
 
       if (LoopBound::Util::LB_DebugEnabled.load()) {
