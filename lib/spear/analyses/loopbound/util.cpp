@@ -78,13 +78,25 @@ void dumpEF(const LoopBound::EF &edgeFunction) {
     llvm::errs() << "EF=ID";
     return;
   }
+
   if (edgeFunction.template isa<LoopBound::DeltaIntervalBottom>() ||
       llvm::isa<psr::AllBottom<LoopBound::l_t>>(edgeFunction)) {
     llvm::errs() << "EF=BOT";
     return;
   }
+
   if (auto *C = edgeFunction.template dyn_cast<LoopBound::DeltaIntervalAdditive>()) {
-    llvm::errs() << "EF=COLLECT[" << C->lowerBound << "," << C->upperBound << "]";
+    llvm::errs() << "EF=ADD[" << C->lowerBound << "," << C->upperBound << "]";
+    return;
+  }
+
+  if (auto *C = edgeFunction.template dyn_cast<LoopBound::DeltaIntervalMultiplicative>()) {
+    llvm::errs() << "EF=MUL[" << C->lowerBound << "," << C->upperBound << "]";
+    return;
+  }
+
+  if (auto *C = edgeFunction.template dyn_cast<LoopBound::DeltaIntervalDivision>()) {
+    llvm::errs() << "EF=DIV[" << C->lowerBound << "," << C->upperBound << "]";
     return;
   }
 
@@ -449,11 +461,20 @@ const llvm::Value *stripCasts(const llvm::Value *V) {
 
 bool predicatesCoditionHolds(llvm::CmpInst::Predicate pred, int64_t val, int64_t check){
   switch (pred) {
+    // signed
     case llvm::CmpInst::ICMP_SLT: return val <  check;
     case llvm::CmpInst::ICMP_SLE: return val <= check;
+    case llvm::CmpInst::ICMP_SGT: return val >  check;
+    case llvm::CmpInst::ICMP_SGE: return val >= check;
+
+      // unsigned
     case llvm::CmpInst::ICMP_ULT: return (uint64_t)val <  (uint64_t)check;
     case llvm::CmpInst::ICMP_ULE: return (uint64_t)val <= (uint64_t)check;
-    default: return false;
+    case llvm::CmpInst::ICMP_UGT: return (uint64_t)val >  (uint64_t)check;
+    case llvm::CmpInst::ICMP_UGE: return (uint64_t)val >= (uint64_t)check;
+
+    default:
+      return false;
   }
 };
 

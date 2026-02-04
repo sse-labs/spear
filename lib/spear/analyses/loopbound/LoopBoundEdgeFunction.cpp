@@ -187,7 +187,7 @@ DeltaIntervalMultiplicative::computeTarget(const l_t &source) const {
     return source;
   }
 
-  const l_t inc = l_t::interval(lowerBound, upperBound, DeltaInterval::ValueType::MULTIPLICATIVE);
+  const l_t inc = l_t::interval(lowerBound, upperBound, DeltaInterval::ValueType::Multiplicative);
 
   if (source.isEmpty()) {
     return inc;
@@ -218,7 +218,12 @@ EF DeltaIntervalMultiplicative::compose(psr::EdgeFunctionRef<DeltaIntervalMultip
     return EF(std::in_place_type<DeltaIntervalTop>);
   }
 
+  // Do not mix lattice element types
   if (second.template isa<DeltaIntervalAdditive>()) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  if (second.template isa<DeltaIntervalDivision>()) {
     return EF(std::in_place_type<DeltaIntervalTop>);
   }
 
@@ -247,9 +252,14 @@ EF DeltaIntervalMultiplicative::join(psr::EdgeFunctionRef<DeltaIntervalMultiplic
     return EF(std::in_place_type<DeltaIntervalTop>);
   }
 
+  // Do not mix lattice element types
   if (other.template isa<DeltaIntervalAdditive>()) {
     return EF(std::in_place_type<DeltaIntervalTop>);
-      }
+  }
+
+  if (other.template isa<DeltaIntervalDivision>()) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
 
   if (auto *otherC = other.template dyn_cast<DeltaIntervalMultiplicative>()) {
     const int64_t L = std::min(thisFunc->lowerBound, otherC->lowerBound);
@@ -263,6 +273,105 @@ EF DeltaIntervalMultiplicative::join(psr::EdgeFunctionRef<DeltaIntervalMultiplic
 
 bool DeltaIntervalMultiplicative::isConstant() const noexcept { return false; }
 
+//=========================== Division EF ============================//
+
+DeltaIntervalDivision::DeltaIntervalDivision(int64_t L, int64_t U)
+    : lowerBound(L), upperBound(U) {}
+
+[[nodiscard]] DeltaIntervalMultiplicative::l_t
+DeltaIntervalDivision::computeTarget(const l_t &source) const {
+  if (source.isBottom()) {
+    return source;
+  }
+
+  const l_t inc = l_t::interval(lowerBound, upperBound, DeltaInterval::ValueType::Division);
+
+  if (source.isEmpty()) {
+    return inc;
+  }
+  if (source.isTop()) {
+    return source;
+  }
+
+  return source.leastUpperBound(inc);  // hull accumulate
+}
+
+EF DeltaIntervalDivision::compose(psr::EdgeFunctionRef<DeltaIntervalDivision> self,
+                                const EF &second) {
+  // second ∘ collect
+
+  if (second.template isa<DeltaIntervalIdentity>() ||
+      second.template isa<psr::EdgeIdentity<l_t>>()) {
+    return EF(self);
+  }
+
+  if (second.template isa<DeltaIntervalBottom>() ||
+      llvm::isa<psr::AllBottom<l_t>>(second)) {
+    return EF(std::in_place_type<DeltaIntervalBottom>);
+  }
+
+  if (second.template isa<DeltaIntervalTop>() ||
+      llvm::isa<psr::AllTop<l_t>>(second)) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  // Do not mix lattice element types
+  if (second.template isa<DeltaIntervalAdditive>()) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  if (second.template isa<DeltaIntervalMultiplicative>()) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  if (auto *otherC = second.template dyn_cast<DeltaIntervalDivision>()) {
+    const int64_t L = std::min(self->lowerBound, otherC->lowerBound);
+    const int64_t U = std::max(self->upperBound, otherC->upperBound);
+    return EF(std::in_place_type<DeltaIntervalDivision>, L, U);
+  }
+
+  // Mixing families => conservative
+  return EF(std::in_place_type<DeltaIntervalTop>);
+}
+
+EF DeltaIntervalDivision::join(psr::EdgeFunctionRef<DeltaIntervalDivision> thisFunc,
+                             const EF &other) {
+  // IMPORTANT: Identity and Bottom are neutral here.
+  if (other.template isa<DeltaIntervalBottom>() ||
+      llvm::isa<psr::AllBottom<l_t>>(other) ||
+      other.template isa<DeltaIntervalIdentity>() ||
+      other.template isa<psr::EdgeIdentity<l_t>>()) {
+    return EF(thisFunc);
+  }
+
+  if (other.template isa<DeltaIntervalTop>() ||
+      llvm::isa<psr::AllTop<l_t>>(other)) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  // Do not mix lattice element types
+  if (other.template isa<DeltaIntervalAdditive>()) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  if (other.template isa<DeltaIntervalMultiplicative>()) {
+    return EF(std::in_place_type<DeltaIntervalTop>);
+  }
+
+  if (auto *otherC = other.template dyn_cast<DeltaIntervalDivision>()) {
+    const int64_t L = std::min(thisFunc->lowerBound, otherC->lowerBound);
+    const int64_t U = std::max(thisFunc->upperBound, otherC->upperBound);
+    return EF(std::in_place_type<DeltaIntervalDivision>, L, U);
+  }
+
+  // Mixing Elements => conservative
+  return EF(std::in_place_type<DeltaIntervalTop>);
+}
+
+bool DeltaIntervalDivision::isConstant() const noexcept { return false; }
+
+
+// =========================== Helper ======================================
 EF edgeIdentity() {
   return EF(std::in_place_type<DeltaIntervalIdentity>);
 }

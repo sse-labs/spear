@@ -46,7 +46,7 @@ std::unique_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManag
     }
 
     // Create the analysis problem and solve it
-    LoopBound::LoopBoundIDEAnalysis Problem(&helperAnalyses->getProjectIRDB(), &this->loops);
+    LoopBound::LoopBoundIDEAnalysis Problem(FAM, &helperAnalyses->getProjectIRDB(), &this->loops);
     auto Result = psr::solveIDEProblem(Problem, ICFG);
     this->cachedResults = std::make_unique<ResultsTy>(std::move(Result));
 
@@ -92,7 +92,7 @@ std::unique_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManag
 }
 
 std::optional<int64_t> CheckExpr::calculateCheck(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &LIInfo) {
-    if (this->BaseLoad) {
+    if (!this->isConstant && this->BaseLoad) {
         const llvm::Function *CF = this->BaseLoad->getFunction();
         if (CF) {
             auto &DT = FAM->getResult<llvm::DominatorTreeAnalysis>(
@@ -111,6 +111,11 @@ std::optional<int64_t> CheckExpr::calculateCheck(llvm::FunctionAnalysisManager *
                 return tmp;
             }
         }
+    }
+
+    // Handle the simple case that check is a constant i.e. for(int i = 9; i > 0; i--)
+    if (this->isConstant) {
+        return this->Offset;
     }
 
     return std::nullopt;
@@ -259,6 +264,21 @@ const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) 
 
     OtherSide = LoopBound::Util::stripCasts(OtherSide);
 
+    // Handling of constant checks
+    if (auto *C = llvm::dyn_cast<llvm::Constant>(OtherSide)) {
+        // Strip constant casts like zext/sext/trunc on constants
+        if (auto *SC = llvm::dyn_cast<llvm::ConstantExpr>(C)) {
+            if (SC->isCast()) {
+                if (auto *OpC = llvm::dyn_cast<llvm::Constant>(SC->getOperand(0)))
+                    C = OpC;
+            }
+        }
+        if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(C)) {
+            return CheckExpr{nullptr, nullptr, CI->getSExtValue(), true};
+        }
+    }
+
+
     // Try to derive simple offset + constant check
     if (auto E = peelBasePlusConst(OtherSide)) {
         return *E;
@@ -269,7 +289,7 @@ const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) 
         if (auto *Fn = const_cast<llvm::Function *>(LI->getFunction())) {
             auto &DT = this->FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
             if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT, LIInfo)) {
-                return CheckExpr{nullptr, nullptr, *Cst};
+                return CheckExpr{nullptr, nullptr, *Cst, false};
             }
         }
     }
@@ -287,7 +307,7 @@ std::optional<CheckExpr> LoopBoundWrapper::peelBasePlusConst(const llvm::Value *
 
     // Constant-only expression no scalation factor, just an offset
     if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(V)) {
-        return CheckExpr{nullptr, nullptr, CI->getSExtValue()};
+        return CheckExpr{nullptr, nullptr, CI->getSExtValue(), true};
     }
 
     // Checkexpression with offset zero behind load
@@ -296,7 +316,7 @@ std::optional<CheckExpr> LoopBoundWrapper::peelBasePlusConst(const llvm::Value *
         if (!Root) Root = LoopBound::Util::stripAddr(LI->getPointerOperand());
         Root = LoopBound::Util::stripAddr(Root);
 
-        return CheckExpr{Root, LI, 0};
+        return CheckExpr{Root, LI, 0, false};
     }
 
     // Check is result of calculation with add/sub/mul/div and constant

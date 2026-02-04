@@ -102,6 +102,63 @@ std::optional<int64_t> LoopClassifier::solveMultiplicativeBound(llvm::CmpInst::P
     return iterations;
 }
 
+std::optional<int64_t> LoopClassifier::solveDivisionBound(llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
+    // We do not deal with == or !=
+    // Only calculate check o init * increment^k
+    // Where o is one of { <, <= } and init > 0, check > 0, increment > 0
+    if (pred == llvm::CmpInst::ICMP_EQ || pred == llvm::CmpInst::ICMP_NE) {
+        return std::nullopt;
+    }
+
+    const bool isGreaterThan = pred == llvm::CmpInst::ICMP_SGT || pred == llvm::CmpInst::ICMP_UGT;
+    const bool isGreaterOrEqualThan = pred == llvm::CmpInst::ICMP_SGE || pred == llvm::CmpInst::ICMP_UGE;
+
+    if (!isGreaterThan && !isGreaterOrEqualThan) {
+        return std::nullopt;
+    }
+
+    // Sanity check for paremeter value domain
+    // TODO we should catch increments <= 0 already while creating the multiplicative interval in the first place
+    if (increment <= 0 || init <= 0 || check <= 0 ) {
+        return std::nullopt;
+    }
+
+    // Validate if the condition is already false at the beginning of the loop, so we would not iterate even once
+    bool conditionHolds = LoopBound::Util::predicatesCoditionHolds(pred, init, check);
+
+    if (!conditionHolds) {
+        return 0;
+    }
+
+    // For divisions we need
+    long double iterationCandidate = (std::log((long double) init) - std::log((long double) check)) /
+    std::log((long double) increment);
+
+    long double iterations = iterationCandidate;
+    if (isGreaterThan) {
+        iterations = std::ceil(iterations);
+    }
+
+    if (isGreaterOrEqualThan) {
+        iterations = std::floor(iterations) + 1;
+    }
+
+    // Sanity check
+    if (!std::isfinite(iterations)) {
+        return std::nullopt;
+    }
+
+    if (iterations < 0.0) {
+        iterations = 0.0;
+    }
+
+    if (iterations > (long double)std::numeric_limits<int64_t>::max()) {
+        return std::nullopt;
+    }
+
+    return iterations;
+}
+
 std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
     // Check if properties are valid and exist
     if (!init || !check) {
@@ -148,7 +205,24 @@ std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
         }
 
         return LoopBound::DeltaInterval::interval(
-            optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::MULTIPLICATIVE);
+            optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Multiplicative);
+    }
+
+    if (increment.value().isDivision()) {
+        llvm::errs() << "CALCULATING DIVISION BOUND!!!!!" << "\n";
+
+        int64_t lowerval = increment.value().getLowerBound();
+        int64_t upperval = increment.value().getUpperBound();
+
+        auto optLowerboundVal = solveDivisionBound(predicate, init.value(), check.value(), lowerval);
+        auto optUpperboundVal = solveDivisionBound(predicate, init.value(), check.value(), upperval);
+
+        if (!optLowerboundVal || !optUpperboundVal) {
+            return std::nullopt;
+        }
+
+        return LoopBound::DeltaInterval::interval(
+            optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Division);
     }
 
     return std::nullopt;

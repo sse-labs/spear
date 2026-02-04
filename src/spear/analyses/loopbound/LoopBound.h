@@ -101,7 +101,7 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      * @param IRDB LLVM IR database of the file(s) under analysis
      * @param loops Vector containing all loops found in the current program
      */
-    explicit LoopBoundIDEAnalysis(const psr::LLVMProjectIRDB *IRDB, std::vector<llvm::Loop*> *loops);
+    explicit LoopBoundIDEAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, std::vector<llvm::Loop*> *loops);
 
     /**
      * Analyzes the given store instruction to find the increment that is occuring to the given root variable.
@@ -325,7 +325,7 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      * Searches the interal representation of loops for possible loop counters.
      * If a loop counter is found, we create a LoopParameterDescription and safe it internally
      */
-    void findLoopCounters();
+    void findLoopCounters(llvm::FunctionAnalysisManager *FAM);
 
     /**
      * Takes the given ICMP inst peels the operators from it until it finds the corresponding counter root
@@ -374,7 +374,8 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      * @param loop Corresponding loop
      * @return Optional of the found value
      */
-    std::optional<int64_t> findConstInitForCell(const llvm::Value *Addr, llvm::Loop *loop);
+    std::optional<int64_t> findConstInitForCell(llvm::FunctionAnalysisManager *FAM,
+    const llvm::Value *Addr, llvm::Loop *loop);
 
     /**
      * Checks if the given load instruction is loading the given counter root

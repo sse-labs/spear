@@ -198,6 +198,78 @@ struct DeltaIntervalMultiplicative {
 };
 
 /**
+ * DeltaIntervalCollect
+ *
+ * Defines edge function operations used for calculating the increment interval
+ */
+struct DeltaIntervalDivision {
+    // Define the lattice elements
+    using l_t = LoopBound::l_t;
+
+    /**
+     * Lower increment value
+     */
+    int64_t lowerBound = 0;
+
+    /**
+     * Higher increment value
+     */
+    int64_t upperBound = 0;
+
+    /**
+     * Default constructor
+     */
+    DeltaIntervalDivision() = default;
+
+    /**
+     * Create a new DeltaInterval edge function
+     * @param lowerIncrement lower increment
+     * @param upperIncrement upper increment
+     */
+    DeltaIntervalDivision(int64_t lowerIncrement, int64_t upperIncrement);
+
+    /**
+     * Calculates the lattice value by computing source with the value of this instance
+     *
+     * @param source Incoming lattice value
+     * @return Computed lattice value
+     */
+    [[nodiscard]] l_t computeTarget(const l_t &source) const;
+
+    /**
+     * Calculates composition of the two given edge functions along one path
+     *
+     * @param self This DeltaIntervalCollect instance
+     * @param second Another possible edge function
+     * @return Returns the resulting edge function calculated from the two given edge functions
+     */
+    static EF compose(psr::EdgeFunctionRef<DeltaIntervalDivision> self,
+                      const EF &second);
+
+    /**
+     * Calculates the merging of the two given edge functions
+     *
+     * @param self This DeltaIntervalCollect instance
+     * @param other Another possible edge function
+     * @return Returns the resulting edge function calculated from the two given edge functions
+     */
+    static EF join(psr::EdgeFunctionRef<DeltaIntervalDivision> self,
+                   const EF &other);
+
+    /**
+     * Implementation of the equal operator for DeltaIntervalCollect edge functions
+     * @return True if the instances match, false otherwise
+     */
+    bool operator==(const DeltaIntervalDivision &) const = default;
+
+    /**
+     * Describes if this edge function is constant
+     * @return Returns false in any case.
+     */
+    bool isConstant() const noexcept;
+};
+
+/**
  * DeltaIntervalIdentity
  *
  * Identity edge function.

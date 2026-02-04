@@ -49,6 +49,11 @@ class CheckExpr {
     int64_t Offset = 0;
 
     /**
+     * Flag to distinguish loaded checks from constants
+     */
+    bool isConstant = false;
+
+    /**
      * Division value to represent the scaling factor 1/scaling
      */
     std::optional<int64_t> DivBy;
@@ -64,8 +69,8 @@ class CheckExpr {
      * @param baseload Load of the memory root
      * @param offset Constant offset
      */
-    CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload,  int64_t offset) :
-    Base(base), BaseLoad(baseload), Offset(offset) {}
+    CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload,  int64_t offset, bool constant) :
+    Base(base), BaseLoad(baseload), Offset(offset), isConstant(constant) {}
 
     /**
      * Calculate the actual check value from the stored information
@@ -155,6 +160,17 @@ class LoopClassifier {
     * @return Possible calculated bound
     */
     static std::optional<int64_t> solveMultiplicativeBound(llvm::CmpInst::Predicate predicate,
+                                      int64_t init, int64_t check, int64_t increment);
+
+    /**
+    * Performs the actual bound calculation depending on the predicate
+    * @param predicate Predicate relevant for the bound
+    * @param init Init value of the loop
+    * @param check Check the counter is running against
+    * @param increment Concrete increment per loop iteration
+    * @return Possible calculated bound
+    */
+    static std::optional<int64_t> solveDivisionBound(llvm::CmpInst::Predicate predicate,
                                       int64_t init, int64_t check, int64_t increment);
 };
 

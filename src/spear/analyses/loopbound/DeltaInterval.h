@@ -14,7 +14,7 @@ namespace LoopBound {
 class DeltaInterval {
  public:
     // Type of the object
-    enum class ValueType { TOP, BOTTOM, Additive, MULTIPLICATIVE, EMPTY };
+    enum class ValueType { TOP, BOTTOM, Additive, Multiplicative, Division, EMPTY };
 
     /**
      * Generic constructor
@@ -82,6 +82,12 @@ class DeltaInterval {
      * @return True if multiplicative, false otherwise
      */
     bool isMultiplicative() const;
+
+    /**
+     * Checks if the current instance is of type Division
+     * @return True if diision, false otherwise
+     */
+    bool isDivision() const;
 
     /**
      * Check if the current instance is neutral

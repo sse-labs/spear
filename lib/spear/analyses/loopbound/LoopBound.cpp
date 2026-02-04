@@ -6,6 +6,7 @@
 #include <phasar/PhasarLLVM/ControlFlow/LLVMBasedCFG.h>
 #include <phasar/PhasarLLVM/DataFlow/IfdsIde/LLVMZeroValue.h>
 #include <llvm/IR/Operator.h>
+#include "llvm/Analysis/ConstantFolding.h"
 
 #include <atomic>
 #include <memory>
@@ -79,13 +80,13 @@ class KeepLocalOnCallToRet final : public psr::FlowFunction<D, ContainerT> {
 
 namespace LoopBound {
 
-LoopBoundIDEAnalysis::LoopBoundIDEAnalysis(const psr::LLVMProjectIRDB *IRDB,
+LoopBoundIDEAnalysis::LoopBoundIDEAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB,
                                            std::vector<llvm::Loop *> *loops)
     : base_t(IRDB, {"main"},
              std::optional<d_t>(
                  static_cast<d_t>(psr::LLVMZeroValue::getInstance()))) {
   this->loops = loops;
-  this->findLoopCounters();
+  this->findLoopCounters(FAM);
 }
 
 psr::InitialSeeds<LoopBoundIDEAnalysis::n_t, LoopBoundIDEAnalysis::d_t, LoopBoundIDEAnalysis::l_t>
@@ -375,8 +376,14 @@ LoopBoundIDEAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t Succ, d_
                   static_cast<int64_t>(*increment->increment));
       }
 
-      if (increment->type == DeltaInterval::ValueType::MULTIPLICATIVE) {
+      if (increment->type == DeltaInterval::ValueType::Multiplicative) {
         E = EF(std::in_place_type<DeltaIntervalMultiplicative>,
+                  static_cast<int64_t>(*increment->increment),
+                  static_cast<int64_t>(*increment->increment));
+      }
+
+      if (increment->type == DeltaInterval::ValueType::Division) {
+        E = EF(std::in_place_type<DeltaIntervalDivision>,
                   static_cast<int64_t>(*increment->increment),
                   static_cast<int64_t>(*increment->increment));
       }
@@ -519,7 +526,27 @@ LoopBoundIDEAnalysis::extractConstIncFromStore(const llvm::StoreInst *storeInst,
                          << constantIncrement->getSExtValue() << "\n";
           }
           return LoopBoundIncrementInstance{
-            constantIncrement->getSExtValue(), DeltaInterval::ValueType::MULTIPLICATIVE};
+            constantIncrement->getSExtValue(), DeltaInterval::ValueType::Multiplicative};
+                }
+      }
+
+      if (LoopBound::Util::LB_DebugEnabled.load()) {
+        llvm::errs() << LoopBound::Util::LB_TAG << "   FAIL: sub but not (load(root)-C)\n";
+      }
+      return std::nullopt;
+    }
+
+    case llvm::Instruction::UDiv:
+    case llvm::Instruction::SDiv: {
+      if (isLoadOfCounterRoot(firstOperand, root)) {
+        if (auto *constantIncrement =
+                llvm::dyn_cast<llvm::ConstantInt>(secondOperand)) {
+          if (LoopBound::Util::LB_DebugEnabled.load()) {
+            llvm::errs() << LoopBound::Util::LB_TAG << "   OK: load(root)-C  C(DIV)="
+                         << constantIncrement->getSExtValue() << "\n";
+          }
+          return LoopBoundIncrementInstance{
+            constantIncrement->getSExtValue(), DeltaInterval::ValueType::Division};
                 }
       }
 
@@ -531,7 +558,7 @@ LoopBoundIDEAnalysis::extractConstIncFromStore(const llvm::StoreInst *storeInst,
 
     default: {
       if (LoopBound::Util::LB_DebugEnabled.load()) {
-        llvm::errs() << LoopBound::Util::LB_TAG << "   FAIL: opcode not add/sub\n";
+        llvm::errs() << LoopBound::Util::LB_TAG << "   FAIL: opcode not add/sub/mul/sdiv/udiv\n";
       }
       return std::nullopt;
     }
@@ -549,24 +576,68 @@ bool LoopBoundIDEAnalysis::isLoadOfCounterRoot(llvm::Value *value,
 }
 
 std::optional<int64_t>
-LoopBoundIDEAnalysis::findConstInitForCell(const llvm::Value *Addr,
-                                          llvm::Loop *L) {
-  auto strippedAddr = LoopBound::Util::stripAddr(Addr);
-  llvm::BasicBlock *PreH = L->getLoopPreheader();
-  if (!PreH) return std::nullopt;
-
-  for (llvm::Instruction &I : *PreH) {
-    auto *SI = llvm::dyn_cast<llvm::StoreInst>(&I);
-    if (!SI) continue;
-    if (LoopBound::Util::stripAddr(SI->getPointerOperand()) != strippedAddr) continue;
-
-    if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(SI->getValueOperand()))
-      return CI->getSExtValue();
+LoopBoundIDEAnalysis::findConstInitForCell(llvm::FunctionAnalysisManager *FAM, const llvm::Value *Addr, llvm::Loop *loop) {
+  // Check if loop preheader exists. Otherwise, we cannot infer the initial value
+  auto *preheader = loop->getLoopPreheader();
+  if (!preheader) {
+    return std::nullopt;
   }
+
+  // Get address of counter variable of the loop
+  const llvm::Value *StrippedAddr = LoopBound::Util::stripAddr(Addr);
+
+  // Query helper values that we need to infer the value
+  auto *function = preheader->getParent();
+  auto &dataLayout  = function->getParent()->getDataLayout();
+
+  // Iterate over instructions in preheader
+  for (llvm::Instruction &inst : *preheader) {
+    // Check if the current instruction is a store instruction
+    // Any other instruction is not relevant
+    auto *storeCandidate = llvm::dyn_cast<llvm::StoreInst>(&inst);
+    if (!storeCandidate) {
+      continue;
+    }
+
+    // Check if the store instruction references our loop variable
+    // If not it is not relevant for initial value querying
+    if (LoopBound::Util::stripAddr(storeCandidate->getPointerOperand()) != StrippedAddr) {
+      continue;
+    }
+
+    // Remove casts from the value that we want to infer the constant value from
+    const llvm::Value *candidate = LoopBound::Util::stripCasts(storeCandidate->getValueOperand());
+
+    // Case where the candidate is a direct constant value
+    if (auto *constantInt = llvm::dyn_cast<llvm::ConstantInt>(candidate))
+      return constantInt->getSExtValue();
+
+    // Case where the candidate is a constant expression hidden behind add/sub etc.
+    if (auto *instructionCandidate = llvm::dyn_cast<llvm::Instruction>(candidate)) {
+      if (llvm::Constant *possibleConstant = llvm::ConstantFoldInstruction(
+        const_cast<llvm::Instruction*>(instructionCandidate), dataLayout)) {
+        if (auto *constantInt = llvm::dyn_cast<llvm::ConstantInt>(possibleConstant))
+          return constantInt->getSExtValue();
+      }
+    }
+
+    // Case where the candidate is a load
+    if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(candidate)) {
+      auto &domTree = FAM->getResult<llvm::DominatorTreeAnalysis>(*function);
+      auto &LIInfo = FAM->getResult<llvm::LoopAnalysis>(*function); // or pass LoopInfo in
+      if (auto constFromLoad = LoopBound::Util::tryDeduceConstFromLoad(loadInst, domTree, LIInfo)) {
+        return *constFromLoad;
+      }
+    }
+
+    // Case where we found the init store but can't make it constant
+    return std::nullopt;
+  }
+
   return std::nullopt;
 }
 
-void LoopBoundIDEAnalysis::findLoopCounters() {
+void LoopBoundIDEAnalysis::findLoopCounters(llvm::FunctionAnalysisManager *FAM) {
   for (auto loop : *this->loops) {
     llvm::SmallVector<llvm::BasicBlock *, 8> ExitingBlocks;
     loop->getExitingBlocks(ExitingBlocks);
@@ -582,7 +653,7 @@ void LoopBoundIDEAnalysis::findLoopCounters() {
       auto info = findCounterFromICMP(icmp, loop);
       if (!info || info->Roots.empty()) continue;
 
-      auto init = findConstInitForCell(info->Roots[0], loop);
+      auto init = findConstInitForCell(FAM, info->Roots[0], loop);
 
       llvm::Function *LoopF = loop->getHeader()->getParent();
 

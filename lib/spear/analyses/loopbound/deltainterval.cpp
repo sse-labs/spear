@@ -59,7 +59,11 @@ bool DeltaInterval::isAdditive() const {
 }
 
 bool DeltaInterval::isMultiplicative() const {
-  return valueType == ValueType::MULTIPLICATIVE;
+  return valueType == ValueType::Multiplicative;
+}
+
+bool DeltaInterval::isDivision() const {
+  return valueType == ValueType::Division;
 }
 
 bool DeltaInterval::isEmpty() const noexcept {
