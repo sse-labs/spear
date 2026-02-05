@@ -17,78 +17,104 @@
 #include "analyses/loopbound/util.h"
 
 LoopBoundWrapper::LoopBoundWrapper(
-std::unique_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManager *FAM) {
-    if (!helperAnalyses) {
-        return;
+    std::unique_ptr<psr::HelperAnalyses> helperAnalyses,
+    llvm::FunctionAnalysisManager *FAM) {
+
+  if (!helperAnalyses) {
+    return;
+  }
+  this->FAM = FAM;
+
+  // Get the interprocedural control flow graph from phasar
+  auto &ICFG = helperAnalyses->getICFG();
+
+  // Get module (exact accessor may differ depending on your IRDB version)
+  // Common patterns are: getLLVMModule(), getModule(), getModuleRef(), ...
+  llvm::Module *M = helperAnalyses->getProjectIRDB().getModule();
+  if (!M) {
+    llvm::errs() << "[LB] module not found\n";
+    return;
+  }
+
+  // Collect loops from ALL non-llvm.* function DEFINITIONS
+  this->loops.clear();
+  this->loopClassifiers.clear();
+
+  for (llvm::Function &F : *M) {
+    if (F.isDeclaration()) {
+      continue; // "declaration for the linker"
+    }
+    if (F.getName().starts_with("llvm.")) {
+      continue;
     }
 
-    this->FAM = FAM;
+    auto &LI = FAM->getResult<llvm::LoopAnalysis>(F);
 
-    // Get the iterprocedual control flow graph from phasar
-    auto &ICFG = helperAnalyses->getICFG();
+    // Collect all loops (top-level + subloops)
+    for (llvm::Loop *TopLevelLoop : LI.getTopLevelLoops()) {
+      collectLoops(TopLevelLoop, this->loops);
+    }
+  }
 
-    // Check if main is even present in the program
-    llvm::Function *Main = helperAnalyses->getProjectIRDB().getFunctionDefinition("main");
-    if (!Main) {
-        llvm::errs() << "[LB] main not found\n";
-        return;
+  // Create the analysis problem and solve it ONCE over the whole ICFG
+  LoopBound::LoopBoundIDEAnalysis Problem(FAM, &helperAnalyses->getProjectIRDB(), &this->loops);
+  auto Result = psr::solveIDEProblem(Problem, ICFG);
+  this->cachedResults = std::make_unique<ResultsTy>(std::move(Result));
+
+  // Query the generated loop descriptions from our analysis
+  const auto LoopDescs = Problem.getLoopParameterDescriptions();
+
+  // Build classifiers; IMPORTANT: use LoopInfo of the loop's parent function
+  for (const auto &description : LoopDescs) {
+    if (!description.loop || !description.counterRoot || !description.icmp) {
+      continue;
     }
 
-    // Get all the loops and safe them in our internal field
-    auto &LoopInfo = FAM->getResult<llvm::LoopAnalysis>(*Main);
-    auto &ScalarEvolution = FAM->getResult<llvm::ScalarEvolutionAnalysis>(*Main);
-
-    this->loops.clear();
-    this->loops.reserve(LoopInfo.getLoopsInPreorder().size());
-
-    for (llvm::Loop *TopLevelLoop : LoopInfo.getTopLevelLoops()) {
-        collectLoops(TopLevelLoop, this->loops);
+    llvm::BasicBlock *Header = description.loop->getHeader();
+    if (!Header) {
+      continue;
     }
 
-    // Create the analysis problem and solve it
-    LoopBound::LoopBoundIDEAnalysis Problem(FAM, &helperAnalyses->getProjectIRDB(), &this->loops);
-    auto Result = psr::solveIDEProblem(Problem, ICFG);
-    this->cachedResults = std::make_unique<ResultsTy>(std::move(Result));
-
-    // Query the generated loop descriptions from our analysis
-    const auto LoopDescs = Problem.getLoopParameterDescriptions();
-
-    // Iterate over them and create our loop classifiers
-    for (const auto &description : LoopDescs) {
-        // Check validity of the loop description
-        if (!description.loop || !description.counterRoot) {
-            continue;
-        }
-
-        // Additionally check if the loop corresponds to the main function
-        const llvm::Function *mainFunctionCandidate = description.loop->getHeader()->getParent();
-        if (!mainFunctionCandidate || mainFunctionCandidate->getName() != "main") {
-            continue;
-        }
-
-        // Query the address of the loop counter
-        const llvm::Value *Root = LoopBound::Util::stripAddr(description.counterRoot);
-        if (!Root) {
-            continue;
-        }
-
-        const llvm::StoreInst *IncStore = this->findStoreIncOfLoop(description);
-
-        auto increment = queryIntervalAtInstuction(IncStore, Root);
-        auto predicate = description.icmp->getPredicate();
-        auto checkval = findLoopCheckExpr(description, LoopInfo);
-
-        LoopClassifier newLoopClassifier(
-            description.loop,
-            increment,
-            description.init,
-            predicate,
-            checkval->calculateCheck(FAM, LoopInfo));
-
-        this->loopClassifiers.push_back(newLoopClassifier);
+    llvm::Function *ParentF = Header->getParent();
+    if (!ParentF) {
+      continue;
     }
 
-    printClassifiers();
+    // Enforce same filter here too (defensive)
+    if (ParentF->isDeclaration() || ParentF->getName().starts_with("llvm.")) {
+      continue;
+    }
+
+    auto &LI = FAM->getResult<llvm::LoopAnalysis>(*ParentF);
+
+    const llvm::Value *Root = LoopBound::Util::stripAddr(description.counterRoot);
+    if (!Root) {
+      continue;
+    }
+
+    const llvm::StoreInst *IncStore = this->findStoreIncOfLoop(description);
+
+    auto increment = queryIntervalAtInstuction(IncStore, Root);
+    auto predicate = description.icmp->getPredicate();
+
+    auto checkExpr = findLoopCheckExpr(description, FAM, LI);
+    if (!checkExpr) {
+      continue;
+    }
+
+    LoopClassifier newLoopClassifier(
+        ParentF,
+        description.loop,
+        increment,
+        description.init,
+        predicate,
+        checkExpr->calculateCheck(FAM, LI),
+        description.type);
+
+    this->loopClassifiers.push_back(std::move(newLoopClassifier));
+  }
+
+  printClassifiers();
 }
 
 std::optional<int64_t> CheckExpr::calculateCheck(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &LIInfo) {
@@ -202,7 +228,9 @@ void LoopBoundWrapper::printClassifiers() {
     llvm::errs() << "\nLoop Classifiers:\n";
     for (const auto &classifier : this->loopClassifiers) {
         llvm::errs() << "[LB] ==========================\n";
+        llvm::errs() << "[LB] " << "Function: " << llvm::itaniumDemangle(classifier.function->getName()) << "\n";
         llvm::errs() << "[LB] " << "Name: " << classifier.loop->getName() << "\n";
+        llvm::errs() << "[LB] " << "Type: " << LoopBound::Util::LoopTypeToString(classifier.type) << "\n";
 
         if (classifier.increment) {
             llvm::errs() << "[LB] " << "Inc: " << "[" << classifier.increment->getLowerBound()
@@ -243,7 +271,7 @@ void LoopBoundWrapper::printClassifiers() {
 }
 
 std::optional<CheckExpr> LoopBoundWrapper::findLoopCheckExpr(
-const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) {
+const LoopBound::LoopParameterDescription &description, llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &LIInfo) {
     if (!description.loop || !description.icmp) return std::nullopt;
 
     const llvm::Value *A  = description.icmp->getOperand(0);
@@ -287,7 +315,7 @@ const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) 
     // Fallback if constant check is hidden behind load
     if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(OtherSide)) {
         if (auto *Fn = const_cast<llvm::Function *>(LI->getFunction())) {
-            auto &DT = this->FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
+            auto &DT = FAM->getResult<llvm::DominatorTreeAnalysis>(*Fn);
             if (auto Cst = LoopBound::Util::tryDeduceConstFromLoad(LI, DT, LIInfo)) {
                 return CheckExpr{nullptr, nullptr, *Cst, false};
             }
@@ -296,6 +324,7 @@ const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo) 
 
     return std::nullopt;
 }
+
 
 std::vector<LoopClassifier> LoopBoundWrapper::getClassifiers() {
     return this->loopClassifiers;

@@ -45,6 +45,15 @@ struct LoopCounterICMP {
     std::vector<const llvm::Value *> Roots;  // Counter the ICMP is build uppon
 };
 
+enum LoopType {
+    NORMAL_LOOP,
+    MALFORMED_LOOP,
+    SYMBOLIC_BOUND_LOOP,
+    NON_COUNTING_LOOP,
+    NESTED_LOOP,
+    UNKNOWN_LOOP
+};
+
 /**
  * Internal description of the loop we are analyzing.
  * Stores information about the loop, the counter and the related scalar values
@@ -55,6 +64,7 @@ struct LoopParameterDescription {
     llvm::ICmpInst *icmp = nullptr;  // The ICMP instruction of the loop
     const llvm::Value *counterRoot = nullptr;  // The instruction defining the counter of the loop
     std::optional<int64_t> init = std::nullopt;  // Initial value of the loop
+    LoopType type = LoopType::UNKNOWN_LOOP;
 };
 
 /**
@@ -142,6 +152,14 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      * @return True if the fact is the ZeroValue, false otherwise
      */
     bool isZeroValue(d_t Fact) const noexcept override;
+
+    /**
+     * Takes the given ICMP inst peels the operators from it until it finds the corresponding counter root
+     * @param inst ICMP instruction to analyze
+     * @param loop Loop the icmp belongs to
+     * @return Returns an optional value containing the loop counter icmp description if it can be found
+     */
+    static std::optional<LoopCounterICMP> findCounterFromICMP(llvm::ICmpInst *inst, llvm::Loop *loop);
 
  private:
     /**
@@ -329,21 +347,13 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
     void findLoopCounters(llvm::FunctionAnalysisManager *FAM);
 
     /**
-     * Takes the given ICMP inst peels the operators from it until it finds the corresponding counter root
-     * @param inst ICMP instruction to analyze
-     * @param loop Loop the icmp belongs to
-     * @return Returns an optional value containing the loop counter icmp description if it can be found
-     */
-    std::optional<LoopCounterICMP> findCounterFromICMP(llvm::ICmpInst *inst, llvm::Loop *loop);
-
-    /**
      * Start at the given ICMP instruction and analyse the operands until we reach the corresponding
      * phi instruction to determine the loop counter.
      * @param start Instruction to start from
      * @param loop Loop the analysis runs in
      * @return Vector of roots corresponding to the start node
      */
-    std::vector<const llvm::Value *> sliceBackwards(llvm::Value *start, llvm::Loop *loop);
+    static std::vector<const llvm::Value *> sliceBackwards(llvm::Value *start, llvm::Loop *loop);
 
     /**
      * Checks if the given load instruction is reading from a memory location that is written inside the given loop
@@ -352,7 +362,7 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      * @param loop Loop to check
      * @return Returns true if the load reads from a memory location that is modified inside the loop. False otherwise
      */
-    bool loadIsCarriedIn(const llvm::LoadInst *inst, llvm::Loop *loop);
+    static bool loadIsCarriedIn(const llvm::LoadInst *inst, llvm::Loop *loop);
 
     /**
      * Checks if the given value is relevant to the loop.
@@ -367,7 +377,7 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      * @param loop Corresponding loop
      * @return True if the value is not relevant, false otherwise.
      */
-    bool isIrrelevantToLoop(const llvm::Value *val, llvm::Loop *loop);
+    static bool isIrrelevantToLoop(const llvm::Value *val, llvm::Loop *loop);
 
     /**
      * Find init value of given counter value

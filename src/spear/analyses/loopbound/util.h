@@ -135,9 +135,38 @@ int64_t ceilDiv(int64_t a, int64_t b);
 int64_t exactDiv(int64_t a, int64_t b);
 
 
+static const llvm::LoadInst *getDirectLoadFromRoot(const llvm::Value *V,
+                                                   const llvm::Value *Root);
+
 const llvm::Value *stripCasts(const llvm::Value *V);
 
 bool predicatesCoditionHolds(llvm::CmpInst::Predicate pred, int64_t val, int64_t check);
+
+LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription description, llvm::FunctionAnalysisManager *FAM);
+
+bool loopIsUniform(llvm::Loop *loop, llvm::DominatorTree &DT);
+
+bool loopConditionCannotBeDeduced(LoopBound::LoopParameterDescription description,
+llvm::FunctionAnalysisManager *FAM,
+                                  llvm::DominatorTree &DT,
+                                  llvm::LoopInfo &LIInfo);
+
+bool loopInitCannotBeDeduced(LoopBound::LoopParameterDescription description);
+
+bool loopIsCounting(llvm::Loop *loop, llvm::ICmpInst *IC);
+
+bool loopBoundIsModified(llvm::Loop *loop);
+
+bool loopisMonotonic(llvm::Loop *loop);
+
+static bool isMemoryRootWrittenInLoop(const llvm::Value *Base,
+                                     llvm::Loop *L);
+
+bool loopIsDependentNested(const LoopParameterDescription &desc,
+                           llvm::LoopInfo &LIInfo);
+
+
+std::string LoopTypeToString(LoopBound::LoopType type);
 
 }  // namespace LoopBound::Util
 

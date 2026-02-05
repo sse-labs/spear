@@ -91,6 +91,9 @@ class LoopClassifier {
     // Which loop the classifier belongs to
     llvm::Loop *loop;
 
+    // Which function the loop belongs to
+    llvm::Function *function;
+
     // Increment representation
     std::optional<LoopBound::DeltaInterval> increment;
 
@@ -106,6 +109,9 @@ class LoopClassifier {
     // Comparison operator
     llvm::CmpInst::Predicate predicate;
 
+    // Looptype
+    LoopBound::LoopType type;
+
     /**
      * Simple constructor
      * @param loop The loop we are analysing
@@ -116,12 +122,14 @@ class LoopClassifier {
      * @param check Constant value we are checking the loop variable against
      */
     LoopClassifier(
+        llvm::Function *func,
         llvm::Loop *loop,
         std::optional<LoopBound::DeltaInterval> increment,
         std::optional<int64_t> init,
         llvm::CmpInst::Predicate pred,
-        std::optional<int64_t> check)
-    : loop(loop), increment(increment), init(init), predicate(pred), check(check) {
+        std::optional<int64_t> check,
+        LoopBound::LoopType type)
+    : function(func), loop(loop), increment(increment), init(init), predicate(pred), check(check), type(type) {
         this->bound = calculateBound();
     }
 
@@ -207,7 +215,16 @@ class LoopBoundWrapper {
      * @param V Value to analyse
      * @return The constructed Checkexpression if possible
      */
-    std::optional<CheckExpr> peelBasePlusConst(const llvm::Value *V);
+    static std::optional<CheckExpr> peelBasePlusConst(const llvm::Value *V);
+
+    /**
+     * Searches the loop defined by the given LoopDescription for a constant check value that the loop counter
+     * is checked against
+     * @param description LoopDescription that defines the loop under analsis
+     * @return Returns a check value if it can be found
+     */
+    static std::optional<CheckExpr> findLoopCheckExpr(
+        const LoopBound::LoopParameterDescription &description, llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &LIInfo);
 
  private:
     // Internal storage of the analysis results calculated by phasar
@@ -247,15 +264,6 @@ class LoopBoundWrapper {
      */
     std::optional<LoopBound::DeltaInterval> queryIntervalAtInstuction(
     const llvm::Instruction *inst, const llvm::Value *fact);
-
-    /**
-     * Searches the loop defined by the given LoopDescription for a constant check value that the loop counter
-     * is checked against
-     * @param description LoopDescription that defines the loop under analsis
-     * @return Returns a check value if it can be found
-     */
-    std::optional<CheckExpr> findLoopCheckExpr(
-        const LoopBound::LoopParameterDescription &description, llvm::LoopInfo &LIInfo);
 
     /**
      * Print the internally safed loop classifiers

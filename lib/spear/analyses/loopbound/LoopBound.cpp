@@ -671,7 +671,10 @@ void LoopBoundIDEAnalysis::findLoopCounters(llvm::FunctionAnalysisManager *FAM) 
           icmp,
           info->Roots[0],
           init,
+          LoopBound::LoopType::UNKNOWN_LOOP
       };
+
+      description.type = Util::determineLoopType(description, FAM);
 
       LoopDescriptions.push_back(description);
 

@@ -9,10 +9,13 @@
 #include <llvm/Support/raw_ostream.h>
 
 #include <string>
+#include <llvm/Analysis/ConstantFolding.h>
+
+#include "analyses/loopbound/loopBoundWrapper.h"
 
 namespace LoopBound::Util {
 
-std::atomic<bool> LB_DebugEnabled{false};
+std::atomic<bool> LB_DebugEnabled{true};
 
 const llvm::Value *asValue(LoopBound::LoopBoundDomain::d_t fact) {
   return static_cast<const llvm::Value *>(fact);
@@ -475,6 +478,264 @@ bool predicatesCoditionHolds(llvm::CmpInst::Predicate pred, int64_t val, int64_t
 
     default:
       return false;
+  }
+}
+
+bool loopIsUniform(llvm::Loop *L, llvm::DominatorTree &DT) {
+  if (!L) return false;
+
+  // Still important for your init/inc inference
+  llvm::BasicBlock *PreH  = L->getLoopPreheader();
+  llvm::BasicBlock *Latch = L->getLoopLatch();
+  if (!PreH || !Latch) return false;
+
+  // We need at least one "main" exiting condition that bounds the backedge.
+  // Prefer: condition on latch terminator
+  auto *LatchBr = llvm::dyn_cast<llvm::BranchInst>(Latch->getTerminator());
+  if (LatchBr && LatchBr->isConditional()) {
+    if (LoopBound::Util::peelToICmp(LatchBr->getCondition())) {
+      return true;
+    }
+  }
+
+  // Otherwise: find an exiting block whose terminator condition is an ICmp
+  // and which dominates the latch (so it constrains the backedge count).
+  llvm::SmallVector<llvm::BasicBlock*, 8> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+
+  for (llvm::BasicBlock *EB : ExitingBlocks) {
+    auto *BI = llvm::dyn_cast<llvm::BranchInst>(EB->getTerminator());
+    if (!BI || !BI->isConditional()) continue;
+
+    const llvm::ICmpInst *IC = LoopBound::Util::peelToICmp(BI->getCondition());
+    if (!IC) continue;
+
+    // If this test dominates the latch, it bounds how often we can reach the latch.
+    if (DT.dominates(EB, Latch)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+static const llvm::LoadInst *getDirectLoadFromRoot(const llvm::Value *V,
+                                                   const llvm::Value *Root) {
+  if (!V || !Root) return nullptr;
+
+  V = LoopBound::Util::stripCasts(V);
+
+  // Accept add/sub with 0 around the load (common noise)
+  if (auto *BO = llvm::dyn_cast<llvm::BinaryOperator>(V)) {
+    auto opc = BO->getOpcode();
+    if (opc == llvm::Instruction::Add || opc == llvm::Instruction::Sub) {
+      const llvm::Value *A = LoopBound::Util::stripCasts(BO->getOperand(0));
+      const llvm::Value *B = LoopBound::Util::stripCasts(BO->getOperand(1));
+
+      // x + 0 or x - 0
+      if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(B)) {
+        if (CI->isZero()) {
+          V = A;
+        }
+      }
+    }
+  }
+
+  auto *LI = llvm::dyn_cast<llvm::LoadInst>(V);
+  if (!LI) return nullptr;
+
+  const llvm::Value *Ptr = LoopBound::Util::stripAddr(LI->getPointerOperand());
+  return (Ptr == Root) ? LI : nullptr;
+}
+
+
+bool loopConditionCannotBeDeduced(LoopBound::LoopParameterDescription description,
+                                  llvm::FunctionAnalysisManager *FAM,
+                                  llvm::DominatorTree &DT,
+                                  llvm::LoopInfo &LIInfo) {
+  auto checkexpr = LoopBoundWrapper::findLoopCheckExpr(description, FAM, LIInfo);
+  if (checkexpr.has_value()) {
+    auto bound = checkexpr.value().calculateCheck(FAM, LIInfo);
+    return bound.has_value();
+  }
+  return true;
+}
+
+bool loopInitCannotBeDeduced(LoopBound::LoopParameterDescription description) {
+  return !description.init.has_value();
+}
+
+bool loopIsCounting(llvm::Loop *loop, llvm::ICmpInst *IC) {
+  if (!loop || !IC) return false;
+
+  auto info = LoopBoundIDEAnalysis::findCounterFromICMP(IC, loop);
+  if (!info || info->Roots.empty()) {
+    return false; // no counter candidate
+  }
+
+  const llvm::Value *Root = LoopBound::Util::stripAddr(info->Roots[0]);
+
+  // Look for a store to that root inside the loop that we can parse as increment
+  bool foundIncrementStore = false;
+
+  for (llvm::BasicBlock *BB : loop->blocks()) {
+    for (llvm::Instruction &I : *BB) {
+      auto *SI = llvm::dyn_cast<llvm::StoreInst>(&I);
+      if (!SI) continue;
+
+      // must store to the same root object
+      const llvm::Value *Dst = LoopBound::Util::stripAddr(SI->getPointerOperand());
+      if (Dst != Root) continue;
+
+      // can we extract a constant increment/mul/div etc?
+      if (LoopBoundIDEAnalysis::extractConstIncFromStore(SI, Root).has_value()) {
+        foundIncrementStore = true;
+        break;
+      }
+    }
+    if (foundIncrementStore) break;
+  }
+
+  return foundIncrementStore;
+}
+
+static bool isMemoryRootWrittenInLoop(const llvm::Value *Base,
+                                     llvm::Loop *L) {
+  if (!Base || !L) return false;
+
+  const llvm::Value *NormBase = LoopBound::Util::stripAddr(Base);
+
+  for (llvm::BasicBlock *BB : L->blocks()) {
+    for (llvm::Instruction &I : *BB) {
+      auto *SI = llvm::dyn_cast<llvm::StoreInst>(&I);
+      if (!SI) continue;
+
+      const llvm::Value *Dst =
+          LoopBound::Util::stripAddr(SI->getPointerOperand());
+      if (Dst == NormBase) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool loopIsDependentNested(const LoopParameterDescription &desc,
+                           llvm::LoopInfo &LIInfo) {
+  if (!desc.loop || !desc.icmp || !desc.counterRoot) {
+    return false;
+  }
+
+  llvm::Loop *L = desc.loop;
+  llvm::Loop *Parent = L->getParentLoop();
+  if (!Parent) {
+    return false; // not nested
+  }
+
+  const llvm::Value *CounterRoot =
+      LoopBound::Util::stripAddr(desc.counterRoot);
+
+  const llvm::Value *Op0 =
+      LoopBound::Util::stripCasts(desc.icmp->getOperand(0));
+  const llvm::Value *Op1 =
+      LoopBound::Util::stripCasts(desc.icmp->getOperand(1));
+
+  auto norm = [](const llvm::Value *V) -> const llvm::Value * {
+    if (!V) return nullptr;
+    return LoopBound::Util::stripAddr(
+             LoopBound::Util::stripCasts(V));
+  };
+
+  auto E0 = LoopBoundWrapper::peelBasePlusConst(Op0);
+  auto E1 = LoopBoundWrapper::peelBasePlusConst(Op1);
+
+  auto isCounterExpr = [&](const std::optional<CheckExpr> &E) -> bool {
+    if (!E || E->isConstant) return false;
+    return norm(E->Base) == CounterRoot;
+  };
+
+  const bool op0IsCounterSide = isCounterExpr(E0);
+  const bool op1IsCounterSide = isCounterExpr(E1);
+
+  const llvm::Value *BoundV = nullptr;
+
+  if (op0IsCounterSide && !op1IsCounterSide) {
+    BoundV = Op1;
+  } else if (!op0IsCounterSide && op1IsCounterSide) {
+    BoundV = Op0;
+  } else {
+    // ambiguous or malformed -> don't classify as dependent nested
+    return false;
+  }
+
+  auto BoundExpr = LoopBoundWrapper::peelBasePlusConst(BoundV);
+  if (!BoundExpr || BoundExpr->isConstant || !BoundExpr->Base) {
+    return false; // constant or unbased bound
+  }
+
+  const llvm::Value *BoundBase = norm(BoundExpr->Base);
+
+  // Check all enclosing loops
+  for (llvm::Loop *P = Parent; P != nullptr; P = P->getParentLoop()) {
+    if (isMemoryRootWrittenInLoop(BoundBase, P)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription description, llvm::FunctionAnalysisManager *FAM) {
+  auto *preheader = description.loop->getLoopPreheader();
+  auto *function = preheader->getParent();
+
+  auto &domTree = FAM->getResult<llvm::DominatorTreeAnalysis>(*function);
+  auto &LIInfo = FAM->getResult<llvm::LoopAnalysis>(*function);
+
+  llvm::errs() << description.loop->getName() << "\n";
+
+  // Check if loop is non uniform
+  if (!loopIsUniform(description.loop, domTree)) {
+    return LoopType::MALFORMED_LOOP;
+  }
+
+  if (loopIsDependentNested(description, LIInfo)) {
+    return LoopType::NESTED_LOOP;
+  }
+
+  if (!loopConditionCannotBeDeduced(description, FAM, domTree, LIInfo)) {
+    return LoopType::SYMBOLIC_BOUND_LOOP;
+  }
+
+  if (loopInitCannotBeDeduced(description)) {
+    return LoopType::SYMBOLIC_BOUND_LOOP;
+  }
+
+  if (!loopIsCounting(description.loop, description.icmp)) {
+    return LoopType::NON_COUNTING_LOOP;
+  }
+
+  return LoopType::NORMAL_LOOP;
+}
+
+std::string LoopTypeToString(LoopBound::LoopType type) {
+  switch (type) {
+    case LoopBound::LoopType::NORMAL_LOOP:
+      return "NORMAL_LOOP";
+    case LoopType::MALFORMED_LOOP:
+      return "MALFORMED_LOOP";
+    case LoopType::SYMBOLIC_BOUND_LOOP:
+      return "SYMBOLIC_BOUND_LOOP";
+    case LoopType::NON_COUNTING_LOOP:
+      return "NON_COUNTING_LOOP";
+    case LoopType::NESTED_LOOP:
+      return "NESTED_LOOP";
+    case LoopType::UNKNOWN_LOOP:
+      return "UNKNOWN_LOOP";
+    default:
+      return "";
   }
 }
 
