@@ -16,6 +16,7 @@
 #include <utility>
 #include <string>
 #include <memory>
+#include <catch2/internal/catch_unique_ptr.hpp>
 
 #include "../../src/spear/analyses/loopbound/LoopBound.h"
 #include "../../src/spear/analyses/loopbound/util.h"
@@ -63,7 +64,7 @@ void PhasarHandlerPass::runOnModule(llvm::Module &M) {
 }
 
 void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
-  LoopBoundWrapper lbw((std::move(HA)), FAM);
+  loopboundwrapper = make_unique<LoopBoundWrapper>((std::move(HA)), FAM);
 }
 
 void PhasarHandlerPass::dumpState() const {

@@ -14,6 +14,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <analyses/loopbound/loopBoundWrapper.h>
 
 #include "analyses/loopbound/LoopBound.h"
 #include "analyses/loopbound/LoopBoundEdgeFunction.h"
@@ -53,6 +54,8 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
   // Query all "bound variables" in a function, grouped per basic block.
   // Requires that `run()` (and hence `runAnalysis()`) has been executed.
   BoundVarMap queryBoundVars(llvm::Function *Func) const;
+
+  std::unique_ptr<LoopBoundWrapper> loopboundwrapper = nullptr;
 
  private:
   // Backing module – only valid during/after `run()`.

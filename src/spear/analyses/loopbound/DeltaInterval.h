@@ -6,6 +6,8 @@
 #ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_DELTAINTERVAL_H_
 #define SRC_SPEAR_ANALYSES_LOOPBOUND_DELTAINTERVAL_H_
 
+#include <cstdint>
+
 namespace LoopBound {
 
 /**
@@ -120,6 +122,12 @@ class DeltaInterval {
     int64_t getUpperBound() const;
 
     /**
+     * Return the valuetype of the represented interval as string
+     * @return valuetype
+     */
+    std::string getValueTypeAsStr() const;
+
+    /**
      * Join two DeltaIntervals
      * @param other The other interval to join with
      * @return Joined statement
@@ -184,8 +192,22 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                  const DeltaInterval &DI) {
     if (DI.isBottom()) return OS << "⊥";
     if (DI.isTop()) return OS << "⊤";
-    return OS << "[" << DI.getLowerBound() << ", " << DI.getUpperBound() << "]";
+    return OS << "[" << DI.getLowerBound() << ", "
+    << DI.getUpperBound() << "] -> " << DI.getValueTypeAsStr();
 }
+
+inline std::string toString(const std::optional<LoopBound::DeltaInterval>& DI) {
+    std::string s;
+    llvm::raw_string_ostream rso(s);
+    rso << DI;
+    rso.flush();
+    return s;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const std::optional<LoopBound::DeltaInterval>& DI) {
+    return os << toString(DI);
+}
+
 
 }  // namespace LoopBound
 

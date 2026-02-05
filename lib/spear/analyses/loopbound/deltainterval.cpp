@@ -86,6 +86,25 @@ int64_t DeltaInterval::getUpperBound() const {
   return upperBound;
 }
 
+std::string DeltaInterval::getValueTypeAsStr() const {
+  switch (valueType) {
+    case ValueType::BOTTOM:
+      return "Bottom";
+    case ValueType::TOP:
+      return "Top";
+    case ValueType::Additive:
+      return "Additive";
+    case ValueType::Multiplicative:
+      return "Multiplicative";
+    case ValueType::Division:
+      return "Division";
+    case ValueType::EMPTY:
+      return "Empty";
+    default:
+      return "";
+  }
+}
+
 DeltaInterval DeltaInterval::join(const DeltaInterval &other) const {
   return leastUpperBound(other);
 }

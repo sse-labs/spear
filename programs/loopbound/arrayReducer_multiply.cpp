@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+ */
+
 #include <iostream>
 #include "../helper/randomFiller.cpp"
 
@@ -7,7 +12,7 @@ int main(){
     fillArrayRandom(searchroom, length, length*4);
 
     long sum = 0;
-    int i = 0;
+    int i = 1;
 
     while(i < length) {
         int a1 = searchroom[i];
