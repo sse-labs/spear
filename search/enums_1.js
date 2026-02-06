@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['strategy_0',['Strategy',['../classAnalysisStrategy.html#a4f55ee7abd18085d3a94537512fb673b',1,'AnalysisStrategy']]]
+  ['looptype_0',['LoopType',['../namespaceLoopBound.html#a7c54a9f40f78bc05e04204a9f18e74df',1,'LoopBound']]]
 ];

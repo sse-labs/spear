@@ -1,12 +1,7 @@
 var searchData=
 [
-  ['read_0',['read',['../classProfileHandler.html#a2af31ac8536f4415244d87dbcd9daf89',1,'ProfileHandler']]],
-  ['readmultiplier_1',['readMultiplier',['../classRegisterReader.html#a119b1f2fa4619881dd10e704650c1ca3',1,'RegisterReader']]],
-  ['red_2',['red',['../classColor.html#a66cc90002e84ded9053aa91c9678f8e6',1,'Color']]],
-  ['registerreader_3',['registerreader',['../classRegisterReader.html',1,'RegisterReader'],['../classRegisterReader.html#ae6c04ca1a23d22c2dcd5adcde62d6189',1,'RegisterReader::RegisterReader()']]],
-  ['removeloopedgesfromsubgraphs_4',['removeLoopEdgesFromSubGraphs',['../classLoopNode.html#ae2c48a161e3fca624295b9c608c6e560',1,'LoopNode']]],
-  ['removenode_5',['removeNode',['../classProgramGraph.html#a3d7172355f93bc903a9a3f6bdf215451',1,'ProgramGraph']]],
-  ['removeorphanededges_6',['removeOrphanedEdges',['../classProgramGraph.html#afc10742190eb8fa0610e975032d71491',1,'ProgramGraph']]],
-  ['repeatamount_7',['repeatAmount',['../classCLIOptions.html#af5437b11c7ee1c45fa4f1ac2a56f2a52',1,'CLIOptions']]],
-  ['replacenodeswithloopnode_8',['replaceNodesWithLoopNode',['../classProgramGraph.html#a2463f6a911a85ed865ad09c26dc5c3a6',1,'ProgramGraph']]]
+  ['offset_0',['Offset',['../classCheckExpr.html#afa2f37ffa62a3e47c3b729376b5eb335',1,'CheckExpr']]],
+  ['operation_1',['operation',['../classCLIOptions.html#a843ce59621f2fd7a67ab2b4e570f95f9',1,'CLIOptions']]],
+  ['operator_21_3d_2',['operator!=',['../classLoopBound_1_1DeltaInterval.html#ab64a3fb9892ebfd8e647f7d86adb7ced',1,'LoopBound::DeltaInterval']]],
+  ['operator_3d_3d_3',['operator==',['../classLoopBound_1_1DeltaInterval.html#a4e86d39123be809168cc98dbdc924dcc',1,'LoopBound::DeltaInterval::operator==()'],['../structLoopBound_1_1DeltaIntervalAdditive.html#a145e9f965d5758ed82b5b8f6a0e0f468',1,'LoopBound::DeltaIntervalAdditive::operator==()'],['../structLoopBound_1_1DeltaIntervalMultiplicative.html#a8aaeb6edc34f68f7991fe31d066c1678',1,'LoopBound::DeltaIntervalMultiplicative::operator==()'],['../structLoopBound_1_1DeltaIntervalDivision.html#ad7df63aca6ad4c5ed40f50f2247b2d88',1,'LoopBound::DeltaIntervalDivision::operator==()'],['../structLoopBound_1_1DeltaIntervalIdentity.html#ad6ba5e74c00464f8881a78e2fc4f7271',1,'LoopBound::DeltaIntervalIdentity::operator==()'],['../structLoopBound_1_1DeltaIntervalTop.html#ae5d1fd6a9bdbf8febc4083df065acb7c',1,'LoopBound::DeltaIntervalTop::operator==()'],['../structLoopBound_1_1DeltaIntervalBottom.html#a183e228722343933032b524610f5a923',1,'LoopBound::DeltaIntervalBottom::operator==()']]]
 ];

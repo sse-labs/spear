@@ -105,32 +105,28 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <span class="keywordtype">bool</span> useCallAnalysis;</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="classLLVMHandler.html#abc36c7facc34793b6636f7bd61bcc477">   35</a></span>    <span class="keyword">explicit</span> <a class="code hl_function" href="classLLVMHandler.html#abc36c7facc34793b6636f7bd61bcc477">LLVMHandler</a>(</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="classLLVMHandler.html#a5fa12d2aac33eb0249abc09bf0ee0a19">   35</a></span>    <span class="keyword">explicit</span> <a class="code hl_function" href="classLLVMHandler.html#a5fa12d2aac33eb0249abc09bf0ee0a19">LLVMHandler</a>(</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>        json energyModel,</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>        <span class="keywordtype">int</span> <a class="code hl_variable" href="classLLVMHandler.html#ad013cd1f31a0ed8edaeb3863654bd8cd">valueIfIndeterminable</a>,</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        <span class="keywordtype">bool</span> useCallAnalysis,</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        <a class="code hl_class" href="classEnergyFunction.html">EnergyFunction</a> pool[],</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        <span class="keywordtype">int</span> poolSize);</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno"><a class="line" href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">   47</a></span>    <span class="keywordtype">double</span> <a class="code hl_function" href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">getNodeSum</a>(<a class="code hl_class" href="classNode.html">Node</a> *node);</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>     <span class="keywordtype">int</span> efficient;</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>     <span class="keywordtype">int</span> inefficient;</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno"><a class="line" href="classLLVMHandler.html#ad013cd1f31a0ed8edaeb3863654bd8cd">   55</a></span>    <span class="keywordtype">int</span> <a class="code hl_variable" href="classLLVMHandler.html#ad013cd1f31a0ed8edaeb3863654bd8cd">valueIfIndeterminable</a>;</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> <span class="keyword">private</span>:</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    json energyValues;</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>};</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>        <span class="keywordtype">bool</span> useCallAnalysis,</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        <a class="code hl_class" href="classEnergyFunction.html">EnergyFunction</a> pool[],</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        <span class="keywordtype">int</span> poolSize);</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno"><a class="line" href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">   46</a></span>    <span class="keywordtype">double</span> <a class="code hl_function" href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">getNodeSum</a>(<a class="code hl_class" href="classNode.html">Node</a> *node);</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>     <span class="keywordtype">int</span> efficient;</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>     <span class="keywordtype">int</span> inefficient;</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> <span class="keyword">private</span>:</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    json energyValues;</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>};</div>
 </div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span><span class="preprocessor">#endif  </span><span class="comment">// SRC_SPEAR_LLVMHANDLER_H_</span></div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span><span class="preprocessor">#endif  </span><span class="comment">// SRC_SPEAR_LLVMHANDLER_H_</span></div>
 <div class="ttc" id="aclassEnergyFunction_html"><div class="ttname"><a href="classEnergyFunction.html">EnergyFunction</a></div><div class="ttdef"><b>Definition</b> EnergyFunction.h:19</div></div>
 <div class="ttc" id="aclassLLVMHandler_html"><div class="ttname"><a href="classLLVMHandler.html">LLVMHandler</a></div><div class="ttdef"><b>Definition</b> LLVMHandler.h:24</div></div>
 <div class="ttc" id="aclassLLVMHandler_html_a01a198ecdfee6b3e833715de3877107f"><div class="ttname"><a href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">LLVMHandler::getNodeSum</a></div><div class="ttdeci">double getNodeSum(Node *node)</div></div>
-<div class="ttc" id="aclassLLVMHandler_html_abc36c7facc34793b6636f7bd61bcc477"><div class="ttname"><a href="classLLVMHandler.html#abc36c7facc34793b6636f7bd61bcc477">LLVMHandler::LLVMHandler</a></div><div class="ttdeci">LLVMHandler(json energyModel, int valueIfIndeterminable, bool useCallAnalysis, EnergyFunction pool[], int poolSize)</div></div>
-<div class="ttc" id="aclassLLVMHandler_html_ad013cd1f31a0ed8edaeb3863654bd8cd"><div class="ttname"><a href="classLLVMHandler.html#ad013cd1f31a0ed8edaeb3863654bd8cd">LLVMHandler::valueIfIndeterminable</a></div><div class="ttdeci">int valueIfIndeterminable</div><div class="ttdef"><b>Definition</b> LLVMHandler.h:55</div></div>
+<div class="ttc" id="aclassLLVMHandler_html_a5fa12d2aac33eb0249abc09bf0ee0a19"><div class="ttname"><a href="classLLVMHandler.html#a5fa12d2aac33eb0249abc09bf0ee0a19">LLVMHandler::LLVMHandler</a></div><div class="ttdeci">LLVMHandler(json energyModel, bool useCallAnalysis, EnergyFunction pool[], int poolSize)</div></div>
 <div class="ttc" id="aclassNode_html"><div class="ttname"><a href="classNode.html">Node</a></div><div class="ttdef"><b>Definition</b> ProgramGraph.h:59</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

@@ -1,10 +1,4 @@
 var searchData=
 [
-  ['mainloop_0',['mainloop',['../classLoopTree.html#a47c9acc4afdca8d22884c12aa8a2db29',1,'LoopTree']]],
-  ['makeedge_1',['makeEdge',['../classHLAC_1_1FunctionNode.html#a8a6270e0d3cd88253a4a4d156de8544e',1,'HLAC::FunctionNode']]],
-  ['makefunction_2',['makeFunction',['../classHLAC_1_1hlac.html#a2c0250ecb3687377b9634ea5aae25da4',1,'HLAC::hlac']]],
-  ['makehlac_3',['makeHLAC',['../classHLAC_1_1HLACWrapper.html#a68e0ed317fdfbe13e7f29caebfee3d9e',1,'HLAC::HLACWrapper']]],
-  ['makenode_4',['makenode',['../classHLAC_1_1Node.html#a6303371bfa6eaa5c08a40d0088c4c202',1,'HLAC::Node::makeNode()'],['../classHLAC_1_1LoopNode.html#adb7daba49e21597e9e89fddd5dc3c918',1,'HLAC::LoopNode::makeNode()'],['../classHLAC_1_1FunctionNode.html#a3b4e4a38c52925bd2afdc24ef6420a76',1,'HLAC::FunctionNode::makeNode()'],['../classHLAC_1_1CallNode.html#af91f342febbce6bed517757cdd7a1885',1,'HLAC::CallNode::makeNode()']]],
-  ['metaprofiler_5',['metaprofiler',['../classMetaProfiler.html',1,'MetaProfiler'],['../classMetaProfiler.html#a74e3e1e2dd423b066b17eb9c753642d7',1,'MetaProfiler::MetaProfiler()']]],
-  ['mode_6',['mode',['../classCLIOptions.html#ab65b0e082ceb99ecc49eb429d2f9e841',1,'CLIOptions']]]
+  ['join_0',['join',['../classLoopBound_1_1DeltaInterval.html#a9071ebe001496e2d8de6311fb8ca0c91',1,'LoopBound::DeltaInterval::join()'],['../structLoopBound_1_1DeltaIntervalAdditive.html#ac659fddf3897aa6704daa335512f3f46',1,'LoopBound::DeltaIntervalAdditive::join()'],['../structLoopBound_1_1DeltaIntervalMultiplicative.html#ab0a18399a398aa2db827118bdeb3593b',1,'LoopBound::DeltaIntervalMultiplicative::join()'],['../structLoopBound_1_1DeltaIntervalDivision.html#ad2dff22115d381dc58fad0109f2257ca',1,'LoopBound::DeltaIntervalDivision::join()'],['../structLoopBound_1_1DeltaIntervalIdentity.html#a822529e20fc3291f6d9acdb68a0e68b3',1,'LoopBound::DeltaIntervalIdentity::join()'],['../structLoopBound_1_1DeltaIntervalTop.html#a0d90ea26699da8398338ebef3b3eafe6',1,'LoopBound::DeltaIntervalTop::join()'],['../structLoopBound_1_1DeltaIntervalBottom.html#a9234b9533485c98c7c38906b51408a2a',1,'LoopBound::DeltaIntervalBottom::join()']]]
 ];

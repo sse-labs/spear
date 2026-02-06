@@ -81,8 +81,8 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:abc36c7facc34793b6636f7bd61bcc477" id="r_abc36c7facc34793b6636f7bd61bcc477"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLLVMHandler.html#abc36c7facc34793b6636f7bd61bcc477">LLVMHandler</a> (json energyModel, int <a class="el" href="classLLVMHandler.html#ad013cd1f31a0ed8edaeb3863654bd8cd">valueIfIndeterminable</a>, bool useCallAnalysis, <a class="el" href="classEnergyFunction.html">EnergyFunction</a> pool[], int poolSize)</td></tr>
-<tr class="separator:abc36c7facc34793b6636f7bd61bcc477"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5fa12d2aac33eb0249abc09bf0ee0a19" id="r_a5fa12d2aac33eb0249abc09bf0ee0a19"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLLVMHandler.html#a5fa12d2aac33eb0249abc09bf0ee0a19">LLVMHandler</a> (json energyModel, bool useCallAnalysis, <a class="el" href="classEnergyFunction.html">EnergyFunction</a> pool[], int poolSize)</td></tr>
+<tr class="separator:a5fa12d2aac33eb0249abc09bf0ee0a19"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a01a198ecdfee6b3e833715de3877107f" id="r_a01a198ecdfee6b3e833715de3877107f"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f">getNodeSum</a> (<a class="el" href="classNode.html">Node</a> *node)</td></tr>
 <tr class="separator:a01a198ecdfee6b3e833715de3877107f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -100,14 +100,12 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>efficient</b></td></tr
 <tr class="memitem:ade1a5c084eaea452661cdf7d7997817c" id="r_ade1a5c084eaea452661cdf7d7997817c"><td class="memItemLeft" align="right" valign="top"><a id="ade1a5c084eaea452661cdf7d7997817c" name="ade1a5c084eaea452661cdf7d7997817c"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>inefficient</b></td></tr>
 <tr class="separator:ade1a5c084eaea452661cdf7d7997817c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad013cd1f31a0ed8edaeb3863654bd8cd" id="r_ad013cd1f31a0ed8edaeb3863654bd8cd"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLLVMHandler.html#ad013cd1f31a0ed8edaeb3863654bd8cd">valueIfIndeterminable</a></td></tr>
-<tr class="separator:ad013cd1f31a0ed8edaeb3863654bd8cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classLLVMHandler.html">LLVMHandler</a> - Class for combining LLVM IR with energy values to reason about the energy consumption of a program </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="abc36c7facc34793b6636f7bd61bcc477" name="abc36c7facc34793b6636f7bd61bcc477"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abc36c7facc34793b6636f7bd61bcc477">&#9670;&#160;</a></span>LLVMHandler()</h2>
+<a id="a5fa12d2aac33eb0249abc09bf0ee0a19" name="a5fa12d2aac33eb0249abc09bf0ee0a19"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5fa12d2aac33eb0249abc09bf0ee0a19">&#9670;&#160;</a></span>LLVMHandler()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -120,12 +118,6 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>inefficient</b></td></
           <td>(</td>
           <td class="paramtype">json&#160;</td>
           <td class="paramname"><em>energyModel</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>valueIfIndeterminable</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -190,22 +182,6 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>inefficient</b></td></
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Double value of the approximated energy </dd></dl>
-
-</div>
-</div>
-<h2 class="groupheader">Member Data Documentation</h2>
-<a id="ad013cd1f31a0ed8edaeb3863654bd8cd" name="ad013cd1f31a0ed8edaeb3863654bd8cd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad013cd1f31a0ed8edaeb3863654bd8cd">&#9670;&#160;</a></span>valueIfIndeterminable</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int LLVMHandler::valueIfIndeterminable</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Fallback value of the loop bound calculation representing an upper bound </p>
 
 </div>
 </div>

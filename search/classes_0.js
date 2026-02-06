@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['analysisoptions_0',['AnalysisOptions',['../classAnalysisOptions.html',1,'']]],
-  ['analysisstrategy_1',['AnalysisStrategy',['../classAnalysisStrategy.html',1,'']]]
+  ['analysisconfiguration_0',['AnalysisConfiguration',['../structAnalysisConfiguration.html',1,'']]],
+  ['analysisoptions_1',['AnalysisOptions',['../classAnalysisOptions.html',1,'']]],
+  ['analysisstrategy_2',['AnalysisStrategy',['../classAnalysisStrategy.html',1,'']]]
 ];

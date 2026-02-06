@@ -72,6 +72,7 @@ $(function() {
   <div class="summary">
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classPhasarHandlerPass-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">PhasarHandlerPass Class Reference</div></div>
 </div><!--header-->
@@ -85,11 +86,11 @@ Inheritance diagram for PhasarHandlerPass:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:a2f3c6beaf9cd7e63fe73e1b8ddc00b89" id="r_a2f3c6beaf9cd7e63fe73e1b8ddc00b89"><td class="memItemLeft" align="right" valign="top"><a id="a2f3c6beaf9cd7e63fe73e1b8ddc00b89" name="a2f3c6beaf9cd7e63fe73e1b8ddc00b89"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>DomainVal</b> = psr::IDELinearConstantAnalysisDomain::l_t</td></tr>
-<tr class="separator:a2f3c6beaf9cd7e63fe73e1b8ddc00b89"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab10dd52495d1a2bf4d447907cf5770b7" id="r_ab10dd52495d1a2bf4d447907cf5770b7"><td class="memItemLeft" align="right" valign="top"><a id="ab10dd52495d1a2bf4d447907cf5770b7" name="ab10dd52495d1a2bf4d447907cf5770b7"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>DomainVal</b> = <a class="el" href="classLoopBound_1_1DeltaInterval.html">LoopBound::DeltaInterval</a></td></tr>
+<tr class="separator:ab10dd52495d1a2bf4d447907cf5770b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abcf4ea02227f9f3a96f702fbb2a8389d" id="r_abcf4ea02227f9f3a96f702fbb2a8389d"><td class="memItemLeft" align="right" valign="top"><a id="abcf4ea02227f9f3a96f702fbb2a8389d" name="abcf4ea02227f9f3a96f702fbb2a8389d"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>BoundVarMap</b> = std::map&lt; std::string, std::map&lt; std::string, std::pair&lt; const llvm::Value *, DomainVal &gt; &gt; &gt;</td></tr>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>BoundVarMap</b> = std::map&lt; std::string, std::map&lt; std::string, std::pair&lt; const llvm::Value *, <a class="el" href="classLoopBound_1_1DeltaInterval.html">DomainVal</a> &gt; &gt; &gt;</td></tr>
 <tr class="separator:abcf4ea02227f9f3a96f702fbb2a8389d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -106,6 +107,12 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>runOnModule</b> (llvm
 <tr class="memitem:a5fdf98052cdd3df915f28b42ac32b632" id="r_a5fdf98052cdd3df915f28b42ac32b632"><td class="memItemLeft" align="right" valign="top"><a id="a5fdf98052cdd3df915f28b42ac32b632" name="a5fdf98052cdd3df915f28b42ac32b632"></a>
 BoundVarMap&#160;</td><td class="memItemRight" valign="bottom"><b>queryBoundVars</b> (llvm::Function *Func) const</td></tr>
 <tr class="separator:a5fdf98052cdd3df915f28b42ac32b632"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:a74e9859085a2ab53c0c817dfe4d861f1" id="r_a74e9859085a2ab53c0c817dfe4d861f1"><td class="memItemLeft" align="right" valign="top"><a id="a74e9859085a2ab53c0c817dfe4d861f1" name="a74e9859085a2ab53c0c817dfe4d861f1"></a>
+std::unique_ptr&lt; <a class="el" href="classLoopBoundWrapper.html">LoopBoundWrapper</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>loopboundwrapper</b> = nullptr</td></tr>
+<tr class="separator:a74e9859085a2ab53c0c817dfe4d861f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>src/spear/<a class="el" href="PhasarHandler_8h_source.html">PhasarHandler.h</a></li>

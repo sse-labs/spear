@@ -1,6 +1,25 @@
 var searchData=
 [
-  ['llvmhandler_0',['LLVMHandler',['../classLLVMHandler.html#abc36c7facc34793b6636f7bd61bcc477',1,'LLVMHandler']]],
-  ['loopnode_1',['loopnode',['../classHLAC_1_1LoopNode.html#a82e5a3daab7de12e54aecacf22d081a5',1,'HLAC::LoopNode::LoopNode()'],['../classLoopNode.html#a9ed8fbdf9af17f6c52f7ccd4bc0de458',1,'LoopNode::LoopNode()']]],
-  ['looptree_2',['LoopTree',['../classLoopTree.html#a0d7c4ff00d14caa2313e146c3ee0ba8d',1,'LoopTree']]]
+  ['ideabsorbing_0',['ideAbsorbing',['../classLoopBound_1_1DeltaInterval.html#a6f4f368b38ec51baa92156816baccdb4',1,'LoopBound::DeltaInterval']]],
+  ['ideneutral_1',['ideNeutral',['../classLoopBound_1_1DeltaInterval.html#a7abc6bbda73d6c3955337bc98463d75f',1,'LoopBound::DeltaInterval']]],
+  ['instructionelement_2',['InstructionElement',['../classInstructionElement.html#a3425386642214cea46cdd3dbb84ae236',1,'InstructionElement']]],
+  ['insttostring_3',['instToString',['../classHLAC_1_1Util.html#a2318fc88a7ecd14f8ccb7cacd59acca4',1,'HLAC::Util']]],
+  ['interpolate_4',['interpolate',['../classColor.html#aaf9a34dbdd3f0f0f76eb4bedccb8ff7a',1,'Color']]],
+  ['interval_5',['interval',['../classLoopBound_1_1DeltaInterval.html#ae0ef7d64422593fc1a3d8185dd015ddb',1,'LoopBound::DeltaInterval']]],
+  ['isadditive_6',['isAdditive',['../classLoopBound_1_1DeltaInterval.html#a1dfbff998b03f703cab387f5b705b2e0',1,'LoopBound::DeltaInterval']]],
+  ['isbottom_7',['isBottom',['../classLoopBound_1_1DeltaInterval.html#a86422e492e6932eb8ffd93dce8aafa19',1,'LoopBound::DeltaInterval']]],
+  ['isboundable_8',['isBoundable',['../classLoopClassifier.html#a89076136832b5744bc91c0d34d735eb6',1,'LoopClassifier']]],
+  ['iscallinstruction_9',['isCallInstruction',['../classInstructionCategory.html#a98c93bd3443118b327232d9ba4782c1d',1,'InstructionCategory']]],
+  ['isconstant_10',['isconstant',['../structLoopBound_1_1DeltaIntervalIdentity.html#a698f55d65d70ca86b725ac6220d214b7',1,'LoopBound::DeltaIntervalIdentity::isConstant()'],['../structLoopBound_1_1DeltaIntervalBottom.html#ab12cfb2a811a6b5f654b68a4b3e834a8',1,'LoopBound::DeltaIntervalBottom::isConstant()'],['../structLoopBound_1_1DeltaIntervalTop.html#a3a64c304d2420a100e735cae154f7c8f',1,'LoopBound::DeltaIntervalTop::isConstant()'],['../structLoopBound_1_1DeltaIntervalDivision.html#a1586c86d75a1c252c05bba1030f24f51',1,'LoopBound::DeltaIntervalDivision::isConstant()'],['../structLoopBound_1_1DeltaIntervalMultiplicative.html#a344a82333f0b208b194879c7dbc350a1',1,'LoopBound::DeltaIntervalMultiplicative::isConstant()'],['../structLoopBound_1_1DeltaIntervalAdditive.html#ac326cd61696346a36a022c0ed4c19d22',1,'LoopBound::DeltaIntervalAdditive::isConstant()']]],
+  ['isdivision_11',['isDivision',['../classLoopBound_1_1DeltaInterval.html#ad605a3897d75615a5dc6c4c9bde8fd7c',1,'LoopBound::DeltaInterval']]],
+  ['isdivisioninstruction_12',['isDivisionInstruction',['../classInstructionCategory.html#afd4ae0cf849abefa42d2372d2a6ec9a3',1,'InstructionCategory']]],
+  ['isempty_13',['isEmpty',['../classLoopBound_1_1DeltaInterval.html#adff12169ffcd8821a0988f03e14293e6',1,'LoopBound::DeltaInterval']]],
+  ['isideabsorbing_14',['isIdeAbsorbing',['../classLoopBound_1_1DeltaInterval.html#a0f145cc2f073c6293a8c0245f40f9f19',1,'LoopBound::DeltaInterval']]],
+  ['isideneutral_15',['isIdeNeutral',['../classLoopBound_1_1DeltaInterval.html#a12180e36a9e2d1645359e29a8ef2458c',1,'LoopBound::DeltaInterval']]],
+  ['isleafnode_16',['isLeafNode',['../classLoopNode.html#a4afd2722296ce93e0559a35f1c715900',1,'LoopNode']]],
+  ['ismemoryinstruction_17',['isMemoryInstruction',['../classInstructionCategory.html#a4f16dc867b0e4a591b1ad974efd464de',1,'InstructionCategory']]],
+  ['ismultiplicative_18',['isMultiplicative',['../classLoopBound_1_1DeltaInterval.html#a218773aaa80786f9333062b000faeb59',1,'LoopBound::DeltaInterval']]],
+  ['isprogramflowinstruction_19',['isProgramFlowInstruction',['../classInstructionCategory.html#a2a6d6a8096fd40e3070b956c43d8ff6c',1,'InstructionCategory']]],
+  ['istop_20',['isTop',['../classLoopBound_1_1DeltaInterval.html#a519916b58ffc25e5b54684f4095756b4',1,'LoopBound::DeltaInterval']]],
+  ['iszerovalue_21',['isZeroValue',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a6d0bfd73702f3ff58ed056fcd35ba692',1,'LoopBound::LoopBoundIDEAnalysis']]]
 ];

@@ -1,17 +1,10 @@
 var searchData=
 [
-  ['call_0',['call',['../classHLAC_1_1CallNode.html#a61c4a0def2e9bdfd5d01f0f5053f71f8',1,'HLAC::CallNode']]],
-  ['calledfunction_1',['calledFunction',['../classHLAC_1_1CallNode.html#a510b5e48568161aac8804c69a8fbe727',1,'HLAC::CallNode']]],
-  ['callnode_2',['callnode',['../classHLAC_1_1CallNode.html',1,'HLAC::CallNode'],['../classHLAC_1_1CallNode.html#aaf0941549de75099dae6d3e79504a9c8',1,'HLAC::CallNode::CallNode()']]],
-  ['category_3',['Category',['../classInstructionCategory.html#a14ad4cf371fe24802f27ecea612e7cb6',1,'InstructionCategory']]],
-  ['clihandler_4',['CLIHandler',['../classCLIHandler.html',1,'']]],
-  ['clioptions_5',['clioptions',['../classCLIOptions.html',1,'CLIOptions'],['../classCLIOptions.html#a4f74ae2e8115cdd2b5c7e2b618bf07e1',1,'CLIOptions::CLIOptions()']]],
-  ['codepath_6',['codePath',['../classCLIOptions.html#a85ce1ab745d5d1bf70daeaa411a4360f',1,'CLIOptions']]],
-  ['collapsecalls_7',['collapseCalls',['../classHLAC_1_1CallNode.html#a63b8c60fc56eafbd6bf55f49505f94e6',1,'HLAC::CallNode']]],
-  ['collapseloop_8',['collapseLoop',['../classHLAC_1_1LoopNode.html#a0bcef023b44e0728df391e081256b715',1,'HLAC::LoopNode']]],
-  ['color_9',['color',['../classColor.html',1,'Color'],['../classColor.html#a05db4332a7f68a7ba431968131d2b92c',1,'Color::Color()']]],
-  ['construct_10',['construct',['../classFunctionTree.html#a751509513fa28986d0c573d16ccef363',1,'FunctionTree::construct()'],['../classLoopNode.html#a767cfc348db0031f90df5fea4b6fe8c9',1,'LoopNode::construct()'],['../classProgramGraph.html#a79fb6e448801193a0114eaa41479a9a2',1,'ProgramGraph::construct()']]],
-  ['constructcallnodes_11',['constructCallNodes',['../classHLAC_1_1LoopNode.html#ab27886c6add0a7a5ebafdb4e720eaaa3',1,'HLAC::LoopNode']]],
-  ['containsloopnodes_12',['containsLoopNodes',['../classProgramGraph.html#a9acb2b3f9ecb3af4b87b7ff10398f3fa',1,'ProgramGraph']]],
-  ['cpuprofiler_13',['cpuprofiler',['../classCPUProfiler.html',1,'CPUProfiler'],['../classCPUProfiler.html#ac941f07ad39d835856521e2b1b088f26',1,'CPUProfiler::CPUProfiler()']]]
+  ['base_0',['Base',['../classCheckExpr.html#a034edf828ee12457de18cc27444fe13d',1,'CheckExpr']]],
+  ['base_5ft_1',['base_t',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a72d294eebc8976ac1cbf912280e0da7b',1,'LoopBound::LoopBoundIDEAnalysis']]],
+  ['baseload_2',['BaseLoad',['../classCheckExpr.html#ac5f49197de70be0f7255653bf9797f1a',1,'CheckExpr']]],
+  ['block_3',['block',['../classHLAC_1_1Node.html#a759c3ce50e3a3bc04add24bd6351898b',1,'HLAC::Node::block'],['../classNode.html#a566343761c406cb16f18a15dfa121f61',1,'Node::block']]],
+  ['blocks_4',['blocks',['../classLoopTree.html#a659874a23317ce521464fae13c332050',1,'LoopTree']]],
+  ['bottom_5',['bottom',['../classLoopBound_1_1DeltaInterval.html#a67bc590116be313803e29f33e4ba0007',1,'LoopBound::DeltaInterval']]],
+  ['bounds_6',['bounds',['../classHLAC_1_1LoopNode.html#a4a4675f7c9b5e06fa04dfc11c65d4e1c',1,'HLAC::LoopNode']]]
 ];

@@ -1,8 +1,8 @@
 var searchData=
 [
-  ['_7egenericnode_0',['~GenericNode',['../classHLAC_1_1GenericNode.html#aca3cecfbdd918205f5234129c6e1cfd8',1,'HLAC::GenericNode']]],
-  ['_7eloopnode_1',['~LoopNode',['../classLoopNode.html#aeef0c735da0948bbeaedc474a6c75709',1,'LoopNode']]],
-  ['_7elooptree_2',['~LoopTree',['../classLoopTree.html#ac7a3306c81d41d6cea849992f3fec9ce',1,'LoopTree']]],
-  ['_7eprofiler_3',['~Profiler',['../classProfiler.html#a6ee27bbefdab9be91f0ab004a456c7c5',1,'Profiler']]],
-  ['_7eprogramgraph_4',['~ProgramGraph',['../classProgramGraph.html#af44e4d1105e7b04a53afe76a8350d303',1,'ProgramGraph']]]
+  ['setorcreate_0',['setOrCreate',['../classProfileHandler.html#af0703d6672d08a13182ee97c48b69c40',1,'ProfileHandler']]],
+  ['shortenstdstreamops_1',['shortenStdStreamOps',['../classHLAC_1_1Util.html#a7a93af7bb1535c75341cda5054ae7966',1,'HLAC::Util']]],
+  ['starttime_2',['startTime',['../classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669',1,'MetaProfiler']]],
+  ['stoptime_3',['stopTime',['../classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e',1,'MetaProfiler']]],
+  ['stripparameters_4',['stripParameters',['../classHLAC_1_1Util.html#a79ee9e15c5d8b16851825a381071e908',1,'HLAC::Util']]]
 ];
