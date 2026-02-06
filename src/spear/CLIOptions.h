@@ -23,7 +23,6 @@ enum class Operation {
  */
 class CLIOptions {
  public:
-
     /**
      * Path where profile should be saved
      */

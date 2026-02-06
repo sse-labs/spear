@@ -8,16 +8,17 @@
 
 #include <phasar.h>
 #include <llvm/IR/PassManager.h>
+#include <analyses/loopbound/loopBoundWrapper.h>
+
 
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#include <analyses/loopbound/loopBoundWrapper.h>
 
 #include "analyses/loopbound/LoopBound.h"
-#include "analyses/loopbound/LoopBoundEdgeFunction.h"
+
 
 namespace llvm {
 class Module;

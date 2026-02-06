@@ -44,7 +44,6 @@ CLIOptions CLIHandler::parseCLI(int argc, char **argv) {
             std::string configPath;
 
             for (const auto &arg : arguments) {
-
                 // Parse the model path
                 if (arg == "--model") {
                     if (hasOption(arguments, "--model")) {

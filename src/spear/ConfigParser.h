@@ -3,10 +3,15 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_CONFIGPARSER_H
-#define SPEAR_CONFIGPARSER_H
+#ifndef SRC_SPEAR_CONFIGPARSER_H_
+#define SRC_SPEAR_CONFIGPARSER_H_
+
+
+#include <string>
+#include <map>
 
 #include <nlohmann/json.hpp>
+
 using json = nlohmann::json;
 
 #define ULTIMATEFALLBACK 10000
@@ -64,8 +69,8 @@ struct ProfilingConfiguration {
 };
 
 class ConfigParser {
-public:
-    explicit ConfigParser(std::string path);
+ public:
+    explicit ConfigParser(const std::string& path);
 
     void read(const std::string & fileName);
 
@@ -78,7 +83,7 @@ public:
 
     void parse();
 
-private:
+ private:
     json config;
     static AnalysisConfiguration analysisConfiguration;
     static ProfilingConfiguration profilingConfiguration;
@@ -120,7 +125,6 @@ private:
      * @return Strategy enum type
      */
     static Strategy strToStrategy(const std::string& str);
-
 };
 
-#endif //SPEAR_CONFIGPARSER_H
+#endif  // SRC_SPEAR_CONFIGPARSER_H_

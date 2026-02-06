@@ -166,22 +166,26 @@ std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
     // Handle fallback values for bounding first
     if (type == LoopBound::MALFORMED_LOOP) {
         auto boundval = fallback["MALFORMED_LOOP"];
-        return LoopBound::DeltaInterval::interval(boundval, boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
+        return LoopBound::DeltaInterval::interval(boundval,
+            boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
     if (type == LoopBound::SYMBOLIC_BOUND_LOOP) {
         auto boundval = fallback["SYMBOLIC_BOUND_LOOP"];
-        return LoopBound::DeltaInterval::interval(boundval, boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
+        return LoopBound::DeltaInterval::interval(boundval,
+            boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
     if (type == LoopBound::NON_COUNTING_LOOP) {
         auto boundval = fallback["NON_COUNTING_LOOP"];
-        return LoopBound::DeltaInterval::interval(boundval, boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
+        return LoopBound::DeltaInterval::interval(boundval,
+            boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
     if (type == LoopBound::NESTED_LOOP) {
         auto boundval = fallback["NESTED_LOOP"];
-        return LoopBound::DeltaInterval::interval(boundval, boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
+        return LoopBound::DeltaInterval::interval(boundval,
+            boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
     // Handle normal loop type
@@ -205,15 +209,18 @@ std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
             int64_t lowerval = increment.value().getLowerBound();
             int64_t upperval = increment.value().getUpperBound();
 
-            auto optLowerboundVal = solveAdditiveBound(predicate, init.value(), check.value(), lowerval);
-            auto optUpperboundVal = solveAdditiveBound(predicate, init.value(), check.value(), upperval);
+            auto optLowerboundVal = solveAdditiveBound(predicate,
+                init.value(), check.value(), lowerval);
+            auto optUpperboundVal = solveAdditiveBound(predicate,
+                init.value(), check.value(), upperval);
 
             if (!optLowerboundVal || !optUpperboundVal) {
                 return std::nullopt;
             }
 
             return LoopBound::DeltaInterval::interval(
-                optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Additive);
+                optLowerboundVal.value(), optUpperboundVal.value(),
+                LoopBound::DeltaInterval::ValueType::Additive);
         }
 
 
@@ -223,15 +230,18 @@ std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
             int64_t lowerval = increment.value().getLowerBound();
             int64_t upperval = increment.value().getUpperBound();
 
-            auto optLowerboundVal = solveMultiplicativeBound(predicate, init.value(), check.value(), lowerval);
-            auto optUpperboundVal = solveMultiplicativeBound(predicate, init.value(), check.value(), upperval);
+            auto optLowerboundVal = solveMultiplicativeBound(predicate,
+                init.value(), check.value(), lowerval);
+            auto optUpperboundVal = solveMultiplicativeBound(predicate,
+                init.value(), check.value(), upperval);
 
             if (!optLowerboundVal || !optUpperboundVal) {
                 return std::nullopt;
             }
 
             return LoopBound::DeltaInterval::interval(
-                optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Multiplicative);
+                optLowerboundVal.value(), optUpperboundVal.value(),
+                LoopBound::DeltaInterval::ValueType::Multiplicative);
         }
 
         if (increment.value().isDivision()) {
@@ -240,20 +250,24 @@ std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
             int64_t lowerval = increment.value().getLowerBound();
             int64_t upperval = increment.value().getUpperBound();
 
-            auto optLowerboundVal = solveDivisionBound(predicate, init.value(), check.value(), lowerval);
-            auto optUpperboundVal = solveDivisionBound(predicate, init.value(), check.value(), upperval);
+            auto optLowerboundVal = solveDivisionBound(predicate,
+                init.value(), check.value(), lowerval);
+            auto optUpperboundVal = solveDivisionBound(predicate,
+                init.value(), check.value(), upperval);
 
             if (!optLowerboundVal || !optUpperboundVal) {
                 return std::nullopt;
             }
 
             return LoopBound::DeltaInterval::interval(
-                optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Division);
+                optLowerboundVal.value(), optUpperboundVal.value(),
+                LoopBound::DeltaInterval::ValueType::Division);
         }
     }
 
 
     // If the loop could not be classified we need to rely on our unknown fallback value...
     auto boundval = fallback["UNKNOWN_LOOP"];
-    return LoopBound::DeltaInterval::interval(boundval, boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
+    return LoopBound::DeltaInterval::interval(boundval, boundval,
+        LoopBound::DeltaInterval::ValueType::FALLBACK);
 }

@@ -42,7 +42,7 @@ LoopBoundWrapper::LoopBoundWrapper(
 
   for (llvm::Function &F : *M) {
     if (F.isDeclaration()) {
-      continue; // "declaration for the linker"
+      continue;
     }
     if (F.getName().starts_with("llvm.")) {
       continue;

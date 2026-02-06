@@ -224,7 +224,8 @@ class LoopBoundWrapper {
      * @return Returns a check value if it can be found
      */
     static std::optional<CheckExpr> findLoopCheckExpr(
-        const LoopBound::LoopParameterDescription &description, llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &LIInfo);
+        const LoopBound::LoopParameterDescription &description, llvm::FunctionAnalysisManager *FAM,
+        llvm::LoopInfo &LIInfo);
 
  private:
     // Internal storage of the analysis results calculated by phasar

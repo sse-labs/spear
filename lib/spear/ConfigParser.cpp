@@ -7,11 +7,13 @@
 
 #include <fstream>
 #include <iostream>
+#include <string>
+#include <vector>
 
 AnalysisConfiguration ConfigParser::analysisConfiguration = {};
 ProfilingConfiguration ConfigParser::profilingConfiguration = {};
 
-ConfigParser::ConfigParser(std::string path) {
+ConfigParser::ConfigParser(const std::string& path) {
     this->read(path);
 }
 
@@ -47,18 +49,27 @@ bool ConfigParser::fallbackValid(json object) {
     if (object.contains("fallback")) {
         auto fallback = object["fallback"];
 
-        if (fallback.is_object() &&
-                    fallback.contains("MALFORMED_LOOP") && fallback["MALFORMED_LOOP"].is_number_unsigned() && fallback["MALFORMED_LOOP"] > 0 &&
-                    fallback.contains("SYMBOLIC_BOUND_LOOP") && fallback["SYMBOLIC_BOUND_LOOP"].is_number_unsigned() && fallback["SYMBOLIC_BOUND_LOOP"] > 0 &&
-                    fallback.contains("NON_COUNTING_LOOP") && fallback["NON_COUNTING_LOOP"].is_number_unsigned() && fallback["NON_COUNTING_LOOP"] > 0 &&
-                    fallback.contains("NESTED_LOOP") && fallback["NESTED_LOOP"].is_number_unsigned() && fallback["NESTED_LOOP"] > 0 &&
-                    fallback.contains("UNKNOWN_LOOP") && fallback["UNKNOWN_LOOP"].is_number_unsigned() && fallback["UNKNOWN_LOOP"] > 0) {
-            return true;
+        if (!fallback.is_object()) {
+            std::cout << "Invalid analysis.fallback: not an object." << std::endl;
+            return false;
         }
 
-        std::cout << "Invalid analysis.fallback: missing or non-positive loop fallback values." << std::endl;
-        return false;
-    }
+        const std::vector<std::string> requiredKeys = {
+            "MALFORMED_LOOP", "SYMBOLIC_BOUND_LOOP", "NON_COUNTING_LOOP",
+            "NESTED_LOOP", "UNKNOWN_LOOP"
+        };
+
+        for (const auto& key : requiredKeys) {
+            if (!fallback.contains(key) ||
+                !fallback[key].is_number_unsigned() ||
+                fallback[key] <= 0) {
+                std::cout << "Invalid analysis.fallback: missing or "
+                          << "non-positive loop fallback values." << std::endl;
+                return false;
+            }
+        }
+            return true;
+        }
 
     std::cout << "Invalid analysis: missing fallback section." << std::endl;
     return false;

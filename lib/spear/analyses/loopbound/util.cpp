@@ -3,15 +3,16 @@
  * All rights reserved.
 */
 
-#include "analyses/loopbound/util.h"
 
 #include <llvm/IR/Operator.h>
 #include <llvm/Support/raw_ostream.h>
-
-#include <string>
 #include <llvm/Analysis/ConstantFolding.h>
 
+#include <string>
+
+#include "analyses/loopbound/util.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
+
 
 namespace LoopBound::Util {
 std::atomic<bool> LB_DebugEnabled{false};
@@ -570,7 +571,7 @@ bool loopIsCounting(llvm::Loop *loop, llvm::ICmpInst *IC) {
 
   auto info = LoopBoundIDEAnalysis::findCounterFromICMP(IC, loop);
   if (!info || info->Roots.empty()) {
-    return false; // no counter candidate
+    return false;
   }
 
   const llvm::Value *Root = LoopBound::Util::stripAddr(info->Roots[0]);
@@ -629,7 +630,7 @@ bool loopIsDependentNested(const LoopParameterDescription &desc,
   llvm::Loop *L = desc.loop;
   llvm::Loop *Parent = L->getParentLoop();
   if (!Parent) {
-    return false; // not nested
+    return false;
   }
 
   const llvm::Value *CounterRoot =
@@ -670,7 +671,7 @@ bool loopIsDependentNested(const LoopParameterDescription &desc,
 
   auto BoundExpr = LoopBoundWrapper::peelBasePlusConst(BoundV);
   if (!BoundExpr || BoundExpr->isConstant || !BoundExpr->Base) {
-    return false; // constant or unbased bound
+    return false;
   }
 
   const llvm::Value *BoundBase = norm(BoundExpr->Base);
@@ -686,13 +687,14 @@ bool loopIsDependentNested(const LoopParameterDescription &desc,
 }
 
 
-LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription description, llvm::FunctionAnalysisManager *FAM) {
+LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription description,
+llvm::FunctionAnalysisManager *FAM) {
   auto *preheader = description.loop->getLoopPreheader();
   auto *function = preheader->getParent();
 
   auto &domTree = FAM->getResult<llvm::DominatorTreeAnalysis>(*function);
   auto &LIInfo = FAM->getResult<llvm::LoopAnalysis>(*function);
-  
+
   // Check if loop is non uniform
   if (!loopIsUniform(description.loop, domTree)) {
     return LoopType::MALFORMED_LOOP;
@@ -755,7 +757,7 @@ LoopType strToLoopType(const std::string &loopTypeString) {
   if (loopTypeString == "UNKNOWN_LOOP") {
     return LoopType::UNKNOWN_LOOP;
   }
-  return LoopType::UNKNOWN_LOOP; // default
+  return LoopType::UNKNOWN_LOOP;
 }
 
-}// namespace LoopBound::Util
+}  // namespace LoopBound::Util

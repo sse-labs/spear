@@ -142,7 +142,8 @@ const llvm::Value *stripCasts(const llvm::Value *V);
 
 bool predicatesCoditionHolds(llvm::CmpInst::Predicate pred, int64_t val, int64_t check);
 
-LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription description, llvm::FunctionAnalysisManager *FAM);
+LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription description,
+llvm::FunctionAnalysisManager *FAM);
 
 bool loopIsUniform(llvm::Loop *loop, llvm::DominatorTree &DT);
 

@@ -4,7 +4,7 @@
  */
 
 #include <catch2/catch_test_macros.hpp>
-#include "testutils.h"
+#include "../testutils.h"
 
 
 TEST_CASE("Arrayreducer_simple.ll") {
@@ -21,7 +21,7 @@ TEST_CASE("Arrayreducer_simple.ll") {
 
     INFO("Classifier increment " << firstClassifier.increment);
     REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        1,1, LoopBound::DeltaInterval::ValueType::Additive));
+        1, 1, LoopBound::DeltaInterval::ValueType::Additive));
 
     INFO("Classifier init " << firstClassifier.init.value());
     REQUIRE(firstClassifier.init.value() == 0);
@@ -34,7 +34,7 @@ TEST_CASE("Arrayreducer_simple.ll") {
 
     INFO("Classifier bound " << firstClassifier.bound);
     REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
-        9000,9000, LoopBound::DeltaInterval::ValueType::Additive));
+        9000, 9000, LoopBound::DeltaInterval::ValueType::Additive));
 }
 
 TEST_CASE("Arrayreducer_complex.ll") {
@@ -51,7 +51,7 @@ TEST_CASE("Arrayreducer_complex.ll") {
 
     INFO("Classifier increment " << firstClassifier.increment);
     REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        4,4, LoopBound::DeltaInterval::ValueType::Additive));
+        4, 4, LoopBound::DeltaInterval::ValueType::Additive));
 
     INFO("Classifier init " << firstClassifier.init.value());
     REQUIRE(firstClassifier.init.value() == 0);
@@ -64,7 +64,7 @@ TEST_CASE("Arrayreducer_complex.ll") {
 
     INFO("Classifier bound " << firstClassifier.bound);
     REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
-        2250,2250, LoopBound::DeltaInterval::ValueType::Additive));
+        2250, 2250, LoopBound::DeltaInterval::ValueType::Additive));
 }
 
 TEST_CASE("Arrayreducer_while.ll") {
@@ -81,7 +81,7 @@ TEST_CASE("Arrayreducer_while.ll") {
 
     INFO("Classifier increment " << firstClassifier.increment);
     REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3,3, LoopBound::DeltaInterval::ValueType::Additive));
+        3, 3, LoopBound::DeltaInterval::ValueType::Additive));
 
     INFO("Classifier init " << firstClassifier.init.value());
     REQUIRE(firstClassifier.init.value() == 0);
@@ -94,7 +94,7 @@ TEST_CASE("Arrayreducer_while.ll") {
 
     INFO("Classifier bound " << firstClassifier.bound);
     REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
-        3000,3000, LoopBound::DeltaInterval::ValueType::Additive));
+        3000, 3000, LoopBound::DeltaInterval::ValueType::Additive));
 }
 
 TEST_CASE("Arrayreducer_whileif.ll") {
@@ -111,7 +111,7 @@ TEST_CASE("Arrayreducer_whileif.ll") {
 
     INFO("Classifier increment " << firstClassifier.increment);
     REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3,4, LoopBound::DeltaInterval::ValueType::Additive));
+        3, 4, LoopBound::DeltaInterval::ValueType::Additive));
 
     INFO("Classifier init " << firstClassifier.init.value());
     REQUIRE(firstClassifier.init.value() == 0);
@@ -124,7 +124,7 @@ TEST_CASE("Arrayreducer_whileif.ll") {
 
     INFO("Classifier bound " << firstClassifier.bound);
     REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
-        2250,3000, LoopBound::DeltaInterval::ValueType::Additive));
+        2250, 3000, LoopBound::DeltaInterval::ValueType::Additive));
 }
 
 TEST_CASE("Arrayreducer_multiply.ll") {
@@ -141,7 +141,7 @@ TEST_CASE("Arrayreducer_multiply.ll") {
 
     INFO("Classifier increment " << firstClassifier.increment);
     REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3,3, LoopBound::DeltaInterval::ValueType::Multiplicative));
+        3, 3, LoopBound::DeltaInterval::ValueType::Multiplicative));
 
     INFO("Classifier init " << firstClassifier.init.value());
     REQUIRE(firstClassifier.init.value() == 1);
@@ -154,7 +154,7 @@ TEST_CASE("Arrayreducer_multiply.ll") {
 
     INFO("Classifier bound " << firstClassifier.bound);
     REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
-        9,9, LoopBound::DeltaInterval::ValueType::Multiplicative));
+        9, 9, LoopBound::DeltaInterval::ValueType::Multiplicative));
 }
 
 TEST_CASE("Arrayreducer_negative.ll") {
@@ -171,7 +171,7 @@ TEST_CASE("Arrayreducer_negative.ll") {
 
     INFO("Classifier increment " << firstClassifier.increment);
     REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        -23,-23, LoopBound::DeltaInterval::ValueType::Additive));
+        -23, -23, LoopBound::DeltaInterval::ValueType::Additive));
 
     INFO("Classifier init " << firstClassifier.init.value());
     REQUIRE(firstClassifier.init.value() == 9000);
@@ -184,7 +184,7 @@ TEST_CASE("Arrayreducer_negative.ll") {
 
     INFO("Classifier bound " << firstClassifier.bound);
     REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
-        392,392, LoopBound::DeltaInterval::ValueType::Additive));
+        392, 392, LoopBound::DeltaInterval::ValueType::Additive));
 }
 
 TEST_CASE("Arrayreducer_nonlinearincrement.ll") {
@@ -201,7 +201,7 @@ TEST_CASE("Arrayreducer_nonlinearincrement.ll") {
 
     INFO("Classifier increment " << firstClassifier.increment);
     REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3,3, LoopBound::DeltaInterval::ValueType::Multiplicative));
+        3, 3, LoopBound::DeltaInterval::ValueType::Multiplicative));
 
     INFO("Classifier init " << firstClassifier.init.value());
     REQUIRE(firstClassifier.init.value() == 1);
@@ -214,7 +214,7 @@ TEST_CASE("Arrayreducer_nonlinearincrement.ll") {
 
     INFO("Classifier bound " << firstClassifier.bound);
     REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
-        9,9, LoopBound::DeltaInterval::ValueType::Multiplicative));
+        9, 9, LoopBound::DeltaInterval::ValueType::Multiplicative));
 }
 
 TEST_CASE("Arrayreducer_nonlinearincrementDIV.ll") {
@@ -231,7 +231,7 @@ TEST_CASE("Arrayreducer_nonlinearincrementDIV.ll") {
 
     INFO("Classifier increment " << firstClassifier.increment);
     REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3,3, LoopBound::DeltaInterval::ValueType::Division));
+        3, 3, LoopBound::DeltaInterval::ValueType::Division));
 
     INFO("Classifier init " << firstClassifier.init.value());
     REQUIRE(firstClassifier.init.value() == 9000);
@@ -244,7 +244,7 @@ TEST_CASE("Arrayreducer_nonlinearincrementDIV.ll") {
 
     INFO("Classifier bound " << firstClassifier.bound);
     REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
-        5,5, LoopBound::DeltaInterval::ValueType::Division));
+        5, 5, LoopBound::DeltaInterval::ValueType::Division));
 }
 
 TEST_CASE("Arrayreducer_whilenonlinearincrementWithIFMultipleFamily.ll") {
@@ -289,7 +289,7 @@ TEST_CASE("Arrayreducer_whilenonlinearincrementWithIFOneFamily.ll") {
 
     INFO("Classifier increment " << firstClassifier.increment);
     REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3,12, LoopBound::DeltaInterval::ValueType::Multiplicative));
+        3, 12, LoopBound::DeltaInterval::ValueType::Multiplicative));
 
     INFO("Classifier init " << firstClassifier.init.value());
     REQUIRE(firstClassifier.init.value() == 1);
@@ -302,5 +302,5 @@ TEST_CASE("Arrayreducer_whilenonlinearincrementWithIFOneFamily.ll") {
 
     INFO("Classifier bound " << firstClassifier.bound);
     REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
-        4,9, LoopBound::DeltaInterval::ValueType::Multiplicative));
+        4, 9, LoopBound::DeltaInterval::ValueType::Multiplicative));
 }

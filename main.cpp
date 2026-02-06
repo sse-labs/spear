@@ -153,12 +153,12 @@ int main(int argc, char *argv[]) {
                     } else {
                         std::string profileHelpMsg =  "Usage: spear profile <arguments>\n===================="
                                                       "==========\nArguments:"
-                                                      "\n\t Profile the system and generate the estimated energy usage of"
-                                                      " the device. Used for any further analysis"
+                                                      "\n\t Profile the system and generate the estimated energy usage"
+                                                      " of the device. Used for any further analysis"
                                                       "\n\t\t --iterations Amount of measurement repetitions (int)"
                                                       "\n\t\t --model Path to the compiled profile programs"
-                                                      "\n\t\t --savelocation Path the calculated profile will be saved to"
-                                                      "\n\n";
+                                                      "\n\t\t --savelocation Path the calculated profile will be saved "
+                                                      "to \n\n";
                         std::cerr << profileHelpMsg << std::endl;
                         return 1;
                     }

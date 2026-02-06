@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <limits>
 #include <utility>
+#include <string>
 
 #include "analyses/loopbound/LoopBound.h"
 
