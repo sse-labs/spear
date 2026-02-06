@@ -20,7 +20,8 @@
  * Phasar result type
  * Used to shorthand any interaction with the analysis result
  */
-using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *, const llvm::Value *, LoopBound::DeltaInterval>;  // Phasar solver results alias
+using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *,
+const llvm::Value *, LoopBound::DeltaInterval>;  // Phasar solver results alias
 
 /**
  * Check Expression Class
