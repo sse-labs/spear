@@ -7,74 +7,26 @@
 #include <utility>
 #include <string>
 
-ProfileOptions::ProfileOptions(std::string codePath, int repeatAmount, std::string saveLocation) {
+ProfileOptions::ProfileOptions(std::string codePath, std::string configPath, std::string saveLocation) {
     this->codePath = std::move(codePath);
-    this->repeatAmount = repeatAmount;
+    this->configPath = std::move(configPath);
     this->saveLocation = std::move(saveLocation);
 
     this->operation = Operation::PROFILE;
 }
 
-AnalysisOptions::AnalysisOptions(std::string profilePath, Mode mode, Format format, Strategy strategy, int loopBound,
-                                 std::string programPath, DeepCalls deepCalls, std::string forFunction) {
+AnalysisOptions::AnalysisOptions(std::string profilePath, std::string configPath, std::string programPath) {
     this->profilePath = std::move(profilePath);
-    this->mode = mode;
-    this-> format = format;
-    this->strategy = strategy;
-    this->loopBound = loopBound;
-    this->deepCalls = deepCalls;
     this->programPath = std::move(programPath);
-    this->forFunction = std::move(forFunction);
+    this->configPath = std::move(configPath);
 
     this->operation = Operation::ANALYZE;
 }
 
 CLIOptions::CLIOptions() {
     this->codePath = "";
-    this->repeatAmount = -1;
     this->saveLocation = "";
     this->profilePath = "";
     this->operation = Operation::UNDEFINED;
-    this->mode = Mode::UNDEFINED;
-    this->format = Format::UNDEFINED;
-    this->strategy = Strategy::UNDEFINED;
-    this->deepCalls = DeepCalls::UNDEFINED;
-    this->loopBound = -1;
     this->programPath = "";
-}
-
-Mode CLIOptions::strToMode(const std::string& str) {
-    if (str == "program") {
-        return Mode::PROGRAM;
-    } else if (str == "function") {
-        return Mode::FUNCTION;
-    } else if (str == "instruction") {
-        return Mode::INSTRUCTION;
-    } else if (str == "block") {
-        return Mode::BLOCK;
-    } else {
-        return Mode::UNDEFINED;
-    }
-}
-
-Strategy CLIOptions::strToStrategy(const std::string &str) {
-    if (str == "worst") {
-        return Strategy::WORST;
-    } else if (str == "average") {
-        return Strategy::AVERAGE;
-    } else if (str == "worst") {
-        return Strategy::WORST;
-    } else {
-        return Strategy::UNDEFINED;
-    }
-}
-
-Format CLIOptions::strToFormat(const std::string &str) {
-    if (str == "plain") {
-        return Format::PLAIN;
-    } else if (str == "json") {
-        return Format::JSON;
-    } else {
-        return Format::UNDEFINED;
-    }
 }

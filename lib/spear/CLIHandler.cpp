@@ -41,20 +41,9 @@ CLIOptions CLIHandler::parseCLI(int argc, char **argv) {
             int repeat = -1;
             std::string modelPath;
             std::string savePath;
+            std::string configPath;
 
             for (const auto &arg : arguments) {
-                // Parse the iterations given by the user
-                if (arg == "--iterations") {
-                    if (hasOption(arguments, "--iterations")) {
-                        const std::string_view iterationsString = get_option(arguments, "--iterations");
-
-                        try {
-                            repeat = std::stoi(iterationsString.data());
-                        } catch(std::exception &E) {
-                            repeat = -1;
-                        }
-                    }
-                }
 
                 // Parse the model path
                 if (arg == "--model") {
@@ -63,6 +52,16 @@ CLIOptions CLIHandler::parseCLI(int argc, char **argv) {
 
                         if (CLIHandler::exists(modelString.data())) {
                             modelPath = modelString;
+                        }
+                    }
+                }
+
+                if (arg == "--config") {
+                    if (hasOption(arguments, "--config")) {
+                        const std::string_view configLocationString = get_option(arguments, "--config");
+
+                        if (CLIHandler::exists(configLocationString.data())) {
+                            configPath = configLocationString;
                         }
                     }
                 }
@@ -79,15 +78,11 @@ CLIOptions CLIHandler::parseCLI(int argc, char **argv) {
                 }
             }
 
-            return ProfileOptions(modelPath, repeat, savePath);
+            return ProfileOptions(modelPath, configPath, savePath);
 
         } else if (operation == Operation::ANALYZE) {
             std::string profilePath;
-            Mode mode = Mode::UNDEFINED;
-            Format format = Format::UNDEFINED;
-            DeepCalls deepCalls = DeepCalls::UNDEFINED;
-            Strategy strategy = Strategy::UNDEFINED;
-            int loopBound = -1;
+            std::string configPath;
             std::string programPath;
             std::string forFunction;
 
@@ -102,62 +97,12 @@ CLIOptions CLIHandler::parseCLI(int argc, char **argv) {
                     }
                 }
 
-                if (arg == "--mode") {
-                    if (hasOption(arguments, "--mode")) {
-                        const std::string_view modeString = get_option(arguments, "--mode");
+                if (arg == "--config") {
+                    if (hasOption(arguments, "--config")) {
+                        const std::string_view configLocationString = get_option(arguments, "--config");
 
-                        if (modeString == "program") {
-                            mode = Mode::PROGRAM;
-                        } else if (modeString == "function") {
-                            mode = Mode::FUNCTION;
-                        } else if (modeString == "block") {
-                            mode = Mode::BLOCK;
-                        } else if (modeString == "instruction") {
-                            mode = Mode::INSTRUCTION;
-                        } else if (modeString == "graph") {
-                            mode = Mode::GRAPH;
-                        }
-                    }
-                }
-
-                if (arg == "--format") {
-                    if (hasOption(arguments, "--format")) {
-                        const std::string_view formatString = get_option(arguments, "--format");
-
-                        if (formatString == "plain") {
-                            format = Format::PLAIN;
-                        } else if (formatString == "json") {
-                            format = Format::JSON;
-                        }
-                    }
-                }
-
-                if (arg == "--strategy") {
-                    if (hasOption(arguments, "--strategy")) {
-                        const std::string_view strategyString = get_option(arguments, "--strategy");
-
-                        if (strategyString == "worst") {
-                            strategy = Strategy::WORST;
-                        } else if (strategyString == "average") {
-                            strategy = Strategy::AVERAGE;
-                        } else if (strategyString == "best") {
-                            strategy = Strategy::BEST;
-                        }
-                    }
-                }
-
-                if (arg == "--withCalls") {
-                    deepCalls = DeepCalls::ENABLED;
-                }
-
-                if (arg == "--loopbound") {
-                    if (hasOption(arguments, "--loopbound")) {
-                        const std::string_view loopboundString = get_option(arguments, "--loopbound");
-
-                        try {
-                            loopBound = std::stoi(loopboundString.data());
-                        } catch(std::exception &E) {
-                            loopBound = -1;
+                        if (CLIHandler::exists(configLocationString.data())) {
+                            configPath = configLocationString;
                         }
                     }
                 }
@@ -171,15 +116,8 @@ CLIOptions CLIHandler::parseCLI(int argc, char **argv) {
                         }
                     }
                 }
-
-                if (arg == "--forFunction") {
-                    if (hasOption(arguments, "--forFunction")) {
-                        const std::string_view functionName = get_option(arguments, "--forFunction");
-                        forFunction = functionName;
-                    }
-                }
             }
-            return AnalysisOptions(profilePath, mode, format, strategy, loopBound, programPath, deepCalls, forFunction);
+            return AnalysisOptions(profilePath, configPath, programPath);
         }
     }
 

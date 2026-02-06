@@ -260,7 +260,8 @@ void LoopBoundWrapper::printClassifiers() {
 
         if (classifier.bound) {
             llvm::errs() << "[LB] " << "Bound: " << "[" << classifier.bound->getLowerBound()
-            << ", " << classifier.bound->getUpperBound() << "]" "\n";
+            << ", " << classifier.bound->getUpperBound() << "]" <<
+                " (" << classifier.bound->getValueTypeAsStr() << ")" << "\n";
         } else {
             llvm::errs() << "[LB] " << "Bound: " << "UNBOUND" << "\n";
         }

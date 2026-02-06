@@ -16,7 +16,7 @@ namespace LoopBound {
 class DeltaInterval {
  public:
     // Type of the object
-    enum class ValueType { TOP, BOTTOM, Additive, Multiplicative, Division, EMPTY };
+    enum class ValueType { TOP, BOTTOM, Additive, Multiplicative, Division, EMPTY, FALLBACK };
 
     /**
      * Generic constructor
@@ -126,6 +126,13 @@ class DeltaInterval {
      * @return valuetype
      */
     std::string getValueTypeAsStr() const;
+
+    /**
+     * Convert a ValueType to its string representation
+     * @param type The ValueType to convert
+     * @return String representation of the ValueType
+     */
+    static std::string valueTypeToStr(ValueType type);
 
     /**
      * Join two DeltaIntervals

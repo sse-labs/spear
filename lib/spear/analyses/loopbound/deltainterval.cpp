@@ -87,7 +87,11 @@ int64_t DeltaInterval::getUpperBound() const {
 }
 
 std::string DeltaInterval::getValueTypeAsStr() const {
-  switch (valueType) {
+  return valueTypeToStr(valueType);
+}
+
+std::string DeltaInterval::valueTypeToStr(ValueType type) {
+  switch (type) {
     case ValueType::BOTTOM:
       return "Bottom";
     case ValueType::TOP:
@@ -100,6 +104,8 @@ std::string DeltaInterval::getValueTypeAsStr() const {
       return "Division";
     case ValueType::EMPTY:
       return "Empty";
+    case ValueType::FALLBACK:
+      return "Fallback";
     default:
       return "";
   }

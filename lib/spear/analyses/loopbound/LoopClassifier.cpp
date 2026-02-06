@@ -5,6 +5,7 @@
 
 #include <algorithm>
 
+#include "ConfigParser.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
 #include "analyses/loopbound/util.h"
 
@@ -160,70 +161,99 @@ llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
 }
 
 std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
-    // Check if properties are valid and exist
-    if (!init || !check) {
-        return std::nullopt;
+    auto fallback = ConfigParser::getAnalysisConfiguration().fallback;
+
+    // Handle fallback values for bounding first
+    if (type == LoopBound::MALFORMED_LOOP) {
+        auto boundval = fallback["MALFORMED_LOOP"];
+        return LoopBound::DeltaInterval::interval(boundval, boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
-    if (!increment) {
-        return std::nullopt;
+    if (type == LoopBound::SYMBOLIC_BOUND_LOOP) {
+        auto boundval = fallback["SYMBOLIC_BOUND_LOOP"];
+        return LoopBound::DeltaInterval::interval(boundval, boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
-    if (!predicate) {
-        return std::nullopt;
+    if (type == LoopBound::NON_COUNTING_LOOP) {
+        auto boundval = fallback["NON_COUNTING_LOOP"];
+        return LoopBound::DeltaInterval::interval(boundval, boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
-    // If we have an additive interval just use the generic calculation method
-    if (increment.value().isAdditive()) {
-        llvm::errs() << "CALCULATING ADDITIVE BOUND!!!!!" << "\n";
-        int64_t lowerval = increment.value().getLowerBound();
-        int64_t upperval = increment.value().getUpperBound();
+    if (type == LoopBound::NESTED_LOOP) {
+        auto boundval = fallback["NESTED_LOOP"];
+        return LoopBound::DeltaInterval::interval(boundval, boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
+    }
 
-        auto optLowerboundVal = solveAdditiveBound(predicate, init.value(), check.value(), lowerval);
-        auto optUpperboundVal = solveAdditiveBound(predicate, init.value(), check.value(), upperval);
-
-        if (!optLowerboundVal || !optUpperboundVal) {
+    // Handle normal loop type
+    if (type == LoopBound::NORMAL_LOOP) {
+        // Check if properties are valid and exist
+        if (!init || !check) {
             return std::nullopt;
         }
 
-        return LoopBound::DeltaInterval::interval(
-            optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Additive);
-    }
-
-
-    if (increment.value().isMultiplicative()) {
-        llvm::errs() << "CALCULATING MULTIPLICATIVE BOUND!!!!!" << "\n";
-
-        int64_t lowerval = increment.value().getLowerBound();
-        int64_t upperval = increment.value().getUpperBound();
-
-        auto optLowerboundVal = solveMultiplicativeBound(predicate, init.value(), check.value(), lowerval);
-        auto optUpperboundVal = solveMultiplicativeBound(predicate, init.value(), check.value(), upperval);
-
-        if (!optLowerboundVal || !optUpperboundVal) {
+        if (!increment) {
             return std::nullopt;
         }
 
-        return LoopBound::DeltaInterval::interval(
-            optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Multiplicative);
-    }
-
-    if (increment.value().isDivision()) {
-        llvm::errs() << "CALCULATING DIVISION BOUND!!!!!" << "\n";
-
-        int64_t lowerval = increment.value().getLowerBound();
-        int64_t upperval = increment.value().getUpperBound();
-
-        auto optLowerboundVal = solveDivisionBound(predicate, init.value(), check.value(), lowerval);
-        auto optUpperboundVal = solveDivisionBound(predicate, init.value(), check.value(), upperval);
-
-        if (!optLowerboundVal || !optUpperboundVal) {
+        if (!predicate) {
             return std::nullopt;
         }
 
-        return LoopBound::DeltaInterval::interval(
-            optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Division);
+        // If we have an additive interval just use the generic calculation method
+        if (increment.value().isAdditive()) {
+            llvm::errs() << "CALCULATING ADDITIVE BOUND!!!!!" << "\n";
+            int64_t lowerval = increment.value().getLowerBound();
+            int64_t upperval = increment.value().getUpperBound();
+
+            auto optLowerboundVal = solveAdditiveBound(predicate, init.value(), check.value(), lowerval);
+            auto optUpperboundVal = solveAdditiveBound(predicate, init.value(), check.value(), upperval);
+
+            if (!optLowerboundVal || !optUpperboundVal) {
+                return std::nullopt;
+            }
+
+            return LoopBound::DeltaInterval::interval(
+                optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Additive);
+        }
+
+
+        if (increment.value().isMultiplicative()) {
+            llvm::errs() << "CALCULATING MULTIPLICATIVE BOUND!!!!!" << "\n";
+
+            int64_t lowerval = increment.value().getLowerBound();
+            int64_t upperval = increment.value().getUpperBound();
+
+            auto optLowerboundVal = solveMultiplicativeBound(predicate, init.value(), check.value(), lowerval);
+            auto optUpperboundVal = solveMultiplicativeBound(predicate, init.value(), check.value(), upperval);
+
+            if (!optLowerboundVal || !optUpperboundVal) {
+                return std::nullopt;
+            }
+
+            return LoopBound::DeltaInterval::interval(
+                optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Multiplicative);
+        }
+
+        if (increment.value().isDivision()) {
+            llvm::errs() << "CALCULATING DIVISION BOUND!!!!!" << "\n";
+
+            int64_t lowerval = increment.value().getLowerBound();
+            int64_t upperval = increment.value().getUpperBound();
+
+            auto optLowerboundVal = solveDivisionBound(predicate, init.value(), check.value(), lowerval);
+            auto optUpperboundVal = solveDivisionBound(predicate, init.value(), check.value(), upperval);
+
+            if (!optLowerboundVal || !optUpperboundVal) {
+                return std::nullopt;
+            }
+
+            return LoopBound::DeltaInterval::interval(
+                optLowerboundVal.value(), optUpperboundVal.value(), LoopBound::DeltaInterval::ValueType::Division);
+        }
     }
 
-    return std::nullopt;
+
+    // If the loop could not be classified we need to rely on our unknown fallback value...
+    auto boundval = fallback["UNKNOWN_LOOP"];
+    return LoopBound::DeltaInterval::interval(boundval, boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
 }

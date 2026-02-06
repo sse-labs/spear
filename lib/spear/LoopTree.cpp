@@ -14,6 +14,7 @@
 #include <string>
 #include <map>
 
+#include "ConfigParser.h"
 #include "../../src/spear/analyses/loopbound/LoopBound.h"
 
 LoopTree::LoopTree(
@@ -215,7 +216,7 @@ uint64_t LoopTree::iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds>
 
 uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
                                  llvm::ScalarEvolution *scalarEvolution) {
-    uint64_t boundValue = this->handler->valueIfIndeterminable;
+    uint64_t boundValue = ConfigParser::getAnalysisConfiguration().fallback["UNKNOWN_LOOP"];
 
     // Query the loopbound with scalar evolution
     auto loopBound = loop->getBounds(*scalarEvolution);
@@ -248,7 +249,7 @@ uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
         tripCount->print(llvm::errs());
         llvm::errs() << "\n";
         llvm::errs() << "\t\t\t=> Fallback loop bound = " << boundValue << "\n";
-        boundValue = this->handler->valueIfIndeterminable;
+        boundValue = ConfigParser::getAnalysisConfiguration().fallback["UNKNOWN_LOOP"];
     }
 
     return boundValue;

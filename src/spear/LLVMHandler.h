@@ -34,7 +34,6 @@ class LLVMHandler {
      */
     explicit LLVMHandler(
         json energyModel,
-        int valueIfIndeterminable,
         bool useCallAnalysis,
         EnergyFunction pool[],
         int poolSize);
@@ -48,11 +47,6 @@ class LLVMHandler {
 
      int efficient;
      int inefficient;
-
-    /**
-     * Fallback value of the loop bound calculation representing an upper bound
-     */
-    int valueIfIndeterminable;
 
  private:
     /**

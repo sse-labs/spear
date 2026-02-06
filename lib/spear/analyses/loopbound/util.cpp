@@ -14,8 +14,7 @@
 #include "analyses/loopbound/loopBoundWrapper.h"
 
 namespace LoopBound::Util {
-
-std::atomic<bool> LB_DebugEnabled{true};
+std::atomic<bool> LB_DebugEnabled{false};
 
 const llvm::Value *asValue(LoopBound::LoopBoundDomain::d_t fact) {
   return static_cast<const llvm::Value *>(fact);
@@ -32,12 +31,12 @@ const llvm::Value *stripAddr(const llvm::Value *Ptr) {
 
     if (auto *OP = llvm::dyn_cast<llvm::Operator>(Ptr)) {
       switch (OP->getOpcode()) {
-      case llvm::Instruction::BitCast:
-      case llvm::Instruction::AddrSpaceCast:
-        Ptr = OP->getOperand(0)->stripPointerCasts();
-        continue;
-      default:
-        break;
+        case llvm::Instruction::BitCast:
+        case llvm::Instruction::AddrSpaceCast:
+          Ptr = OP->getOperand(0)->stripPointerCasts();
+          continue;
+        default:
+          break;
       }
     }
 
@@ -86,7 +85,7 @@ void dumpEF(const LoopBound::EF &edgeFunction) {
       llvm::isa<psr::AllBottom<LoopBound::l_t>>(edgeFunction)) {
     llvm::errs() << "EF=BOT";
     return;
-  }
+      }
 
   if (auto *C = edgeFunction.template dyn_cast<LoopBound::DeltaIntervalAdditive>()) {
     llvm::errs() << "EF=ADD[" << C->lowerBound << "," << C->upperBound << "]";
@@ -155,17 +154,17 @@ const llvm::ConstantInt *tryEvalToConstInt(const llvm::Value *val) {
     unsigned W = Cast->getType()->getIntegerBitWidth();
 
     switch (Cast->getOpcode()) {
-    case llvm::Instruction::ZExt:
-      Val = Val.zext(W);
-      break;
-    case llvm::Instruction::SExt:
-      Val = Val.sext(W);
-      break;
-    case llvm::Instruction::Trunc:
-      Val = Val.trunc(W);
-      break;
-    default:
-      return nullptr;
+      case llvm::Instruction::ZExt:
+        Val = Val.zext(W);
+        break;
+      case llvm::Instruction::SExt:
+        Val = Val.sext(W);
+        break;
+      case llvm::Instruction::Trunc:
+        Val = Val.trunc(W);
+        break;
+      default:
+        return nullptr;
     }
 
     return llvm::ConstantInt::get(Cast->getType()->getContext(), Val);
@@ -188,45 +187,45 @@ const llvm::ConstantInt *tryEvalToConstInt(const llvm::Value *val) {
   llvm::APInt R(A.getBitWidth(), 0);
 
   switch (BO->getOpcode()) {
-  case llvm::Instruction::Add:
-    R = A + B;
-    break;
-  case llvm::Instruction::Sub:
-    R = A - B;
-    break;
-  case llvm::Instruction::Mul:
-    R = A * B;
-    break;
-  case llvm::Instruction::And:
-    R = A & B;
-    break;
-  case llvm::Instruction::Or:
-    R = A | B;
-    break;
-  case llvm::Instruction::Xor:
-    R = A ^ B;
-    break;
-  case llvm::Instruction::Shl:
-    R = A.shl(B);
-    break;
-  case llvm::Instruction::LShr:
-    R = A.lshr(B);
-    break;
-  case llvm::Instruction::AShr:
-    R = A.ashr(B);
-    break;
-  case llvm::Instruction::UDiv:
-    if (B == 0)
+    case llvm::Instruction::Add:
+      R = A + B;
+      break;
+    case llvm::Instruction::Sub:
+      R = A - B;
+      break;
+    case llvm::Instruction::Mul:
+      R = A * B;
+      break;
+    case llvm::Instruction::And:
+      R = A & B;
+      break;
+    case llvm::Instruction::Or:
+      R = A | B;
+      break;
+    case llvm::Instruction::Xor:
+      R = A ^ B;
+      break;
+    case llvm::Instruction::Shl:
+      R = A.shl(B);
+      break;
+    case llvm::Instruction::LShr:
+      R = A.lshr(B);
+      break;
+    case llvm::Instruction::AShr:
+      R = A.ashr(B);
+      break;
+    case llvm::Instruction::UDiv:
+      if (B == 0)
+        return nullptr;
+      R = A.udiv(B);
+      break;
+    case llvm::Instruction::SDiv:
+      if (B == 0)
+        return nullptr;
+      R = A.sdiv(B);
+      break;
+    default:
       return nullptr;
-    R = A.udiv(B);
-    break;
-  case llvm::Instruction::SDiv:
-    if (B == 0)
-      return nullptr;
-    R = A.sdiv(B);
-    break;
-  default:
-    return nullptr;
   }
 
   return llvm::ConstantInt::get(BO->getType()->getContext(), R);
@@ -386,28 +385,28 @@ const llvm::LoadInst *LI, llvm::DominatorTree &DT, llvm::LoopInfo &LIInfo) {
 std::string predicateToSymbol(llvm::CmpInst::Predicate P) {
   if (P) {
     switch (P) {
-    case llvm::CmpInst::ICMP_EQ:
-      return "==";
-    case llvm::CmpInst::ICMP_NE:
-      return "!=";
-    case llvm::CmpInst::ICMP_UGT:
-      return ">";
-    case llvm::CmpInst::ICMP_ULT:
-      return "<";
-    case llvm::CmpInst::ICMP_UGE:
-      return ">=";
-    case llvm::CmpInst::ICMP_ULE:
-      return "<=";
-    case llvm::CmpInst::ICMP_SGT:
-      return ">";
-    case llvm::CmpInst::ICMP_SLT:
-      return "<";
-    case llvm::CmpInst::ICMP_SGE:
-      return ">=";
-    case llvm::CmpInst::ICMP_SLE:
-      return "<=";
-    default:
-      return "UNKNOWN PREDICATE";
+      case llvm::CmpInst::ICMP_EQ:
+        return "==";
+      case llvm::CmpInst::ICMP_NE:
+        return "!=";
+      case llvm::CmpInst::ICMP_UGT:
+        return ">";
+      case llvm::CmpInst::ICMP_ULT:
+        return "<";
+      case llvm::CmpInst::ICMP_UGE:
+        return ">=";
+      case llvm::CmpInst::ICMP_ULE:
+        return "<=";
+      case llvm::CmpInst::ICMP_SGT:
+        return ">";
+      case llvm::CmpInst::ICMP_SLT:
+        return "<";
+      case llvm::CmpInst::ICMP_SGE:
+        return ">=";
+      case llvm::CmpInst::ICMP_SLE:
+        return "<=";
+      default:
+        return "UNKNOWN PREDICATE";
     }
   }
   return "UNDEFINED";
@@ -693,9 +692,7 @@ LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription descri
 
   auto &domTree = FAM->getResult<llvm::DominatorTreeAnalysis>(*function);
   auto &LIInfo = FAM->getResult<llvm::LoopAnalysis>(*function);
-
-  llvm::errs() << description.loop->getName() << "\n";
-
+  
   // Check if loop is non uniform
   if (!loopIsUniform(description.loop, domTree)) {
     return LoopType::MALFORMED_LOOP;
@@ -739,4 +736,26 @@ std::string LoopTypeToString(LoopBound::LoopType type) {
   }
 }
 
-}  // namespace LoopBound::Util
+LoopType strToLoopType(const std::string &loopTypeString) {
+  if (loopTypeString == "NORMAL_LOOP") {
+    return LoopType::NORMAL_LOOP;
+  }
+  if (loopTypeString == "MALFORMED_LOOP") {
+    return LoopType::MALFORMED_LOOP;
+  }
+  if (loopTypeString == "SYMBOLIC_BOUND_LOOP") {
+    return LoopType::SYMBOLIC_BOUND_LOOP;
+  }
+  if (loopTypeString == "NON_COUNTING_LOOP") {
+    return LoopType::NON_COUNTING_LOOP;
+  }
+  if (loopTypeString == "NESTED_LOOP") {
+    return LoopType::NESTED_LOOP;
+  }
+  if (loopTypeString == "UNKNOWN_LOOP") {
+    return LoopType::UNKNOWN_LOOP;
+  }
+  return LoopType::UNKNOWN_LOOP; // default
+}
+
+}// namespace LoopBound::Util
