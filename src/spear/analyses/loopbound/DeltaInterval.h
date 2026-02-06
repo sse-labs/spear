@@ -126,14 +126,20 @@ class DeltaInterval {
      * Return the valuetype of the represented interval as string
      * @return valuetype
      */
+    std::string valueTypeToStr(ValueType type) const;
+
+    /**
+     * Return the valuetype of the represented interval as string
+     * @return valuetype
+     */
     std::string getValueTypeAsStr() const;
 
     /**
-     * Convert a ValueType to its string representation
-     * @param type The ValueType to convert
-     * @return String representation of the ValueType
-     */
-    static std::string valueTypeToStr(ValueType type);
+    * Convert a ValueType to its string representation
+    * @param type ValueType to convert
+    * @return String representation of the ValueType
+    */
+    std::string valueTypeToStr(ValueType type);
 
     /**
      * Join two DeltaIntervals
@@ -170,6 +176,11 @@ class DeltaInterval {
      */
     bool operator!=(const DeltaInterval &other) const;
 
+    /**
+     * Valuetype of this instance
+     */
+    ValueType valueType;
+
  private:
     /**
      * Internal constructor to create a new DeltaInterval
@@ -179,11 +190,6 @@ class DeltaInterval {
      */
     DeltaInterval(ValueType valuetype, int64_t low, int64_t high)
       : valueType(valuetype), lowerBound(low), upperBound(high) {}
-
-    /**
-     * Valuetype of this instance
-     */
-    ValueType valueType;
 
     /**
      * Lower bound of this instance

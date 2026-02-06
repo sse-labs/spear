@@ -45,12 +45,15 @@ struct LoopCounterICMP {
     std::vector<const llvm::Value *> Roots;  // Counter the ICMP is build uppon
 };
 
+/**
+ * Enumeration of different loop types that can be detected during analysis.
+ */
 enum LoopType {
-    NORMAL_LOOP,
-    MALFORMED_LOOP,
-    SYMBOLIC_BOUND_LOOP,
-    NON_COUNTING_LOOP,
-    NESTED_LOOP,
+    NORMAL_LOOP,           // A standard counting loop with clear bounds
+    MALFORMED_LOOP,        // A loop with malformed or unclear structure
+    SYMBOLIC_BOUND_LOOP,   // A loop with symbolic (non-constant) bounds
+    NON_COUNTING_LOOP,     // A loop that doesn't follow counting pattern
+    NESTED_LOOP,           // A loop nested inside another loop
     UNKNOWN_LOOP
 };
 

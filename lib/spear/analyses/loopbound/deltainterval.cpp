@@ -91,6 +91,10 @@ std::string DeltaInterval::getValueTypeAsStr() const {
   return valueTypeToStr(valueType);
 }
 
+std::string DeltaInterval::valueTypeToStr(ValueType type) const {
+  return const_cast<DeltaInterval*>(this)->valueTypeToStr(type);
+}
+
 std::string DeltaInterval::valueTypeToStr(ValueType type) {
   switch (type) {
     case ValueType::BOTTOM:

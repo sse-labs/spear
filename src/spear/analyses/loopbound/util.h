@@ -121,52 +121,143 @@ const llvm::LoadInst *LI, llvm::DominatorTree &DT, llvm::LoopInfo &LIInfo);
 std::string predicateToSymbol(llvm::CmpInst::Predicate pred);
 
 /**
- * Check if the given ICMP predicate is an equal predicate (<=, >=)
- * @param predicate
- * @return
+ * Flip an ICMP predicate direction (e.g., < -> >).
+ * @param predicate Predicate to flip
+ * @return Flipped predicate, or original if not flippable
  */
 llvm::CmpInst::Predicate flipPredicate(llvm::CmpInst::Predicate predicate);
 
-
+/**
+ * Floor division with correct behavior for negative operands.
+ * @param a Dividend
+ * @param b Divisor
+ * @return Floor(a / b)
+ */
 int64_t floorDiv(int64_t a, int64_t b);
 
+/**
+ * Ceil division with correct behavior for negative operands.
+ * @param a Dividend
+ * @param b Divisor
+ * @return Ceil(a / b)
+ */
 int64_t ceilDiv(int64_t a, int64_t b);
 
+/**
+ * Exact integer division (returns 0 if either operand is 0).
+ * @param a Dividend
+ * @param b Divisor
+ * @return a / b, or 0 if a or b is 0
+ */
 int64_t exactDiv(int64_t a, int64_t b);
 
-
+/**
+ * Get a direct load from a given root pointer expression.
+ * @param V Value to inspect
+ * @param Root Root pointer to match
+ * @return Load instruction if it directly loads from Root, nullptr otherwise
+ */
 static const llvm::LoadInst *getDirectLoadFromRoot(const llvm::Value *V,
                                                    const llvm::Value *Root);
 
+/**
+ * Strip cast instructions from the given value.
+ * @param V Value to strip
+ * @return Value without leading casts
+ */
 const llvm::Value *stripCasts(const llvm::Value *V);
 
+/**
+ * Check if a predicate holds for two integer values.
+ * @param pred Predicate to evaluate
+ * @param val Left-hand value
+ * @param check Right-hand value
+ * @return True if predicate holds, otherwise false
+ */
 bool predicatesCoditionHolds(llvm::CmpInst::Predicate pred, int64_t val, int64_t check);
 
+/**
+ * Determine the loop type for the given loop description.
+ * @param description Loop parameter description
+ * @param FAM FunctionAnalysisManager
+ * @return LoopType classification
+ */
 LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription description,
 llvm::FunctionAnalysisManager *FAM);
 
+/**
+ * Check whether a loop has a uniform, analyzable structure.
+ * @param loop Loop to inspect
+ * @param DT DominatorTree
+ * @return True if uniform, otherwise false
+ */
 bool loopIsUniform(llvm::Loop *loop, llvm::DominatorTree &DT);
 
+/**
+ * Check whether the loop condition cannot be deduced.
+ * @param description Loop parameter description
+ * @param FAM FunctionAnalysisManager
+ * @param DT DominatorTree
+ * @param LIInfo LoopInfo
+ * @return True if condition cannot be deduced, otherwise false
+ */
 bool loopConditionCannotBeDeduced(LoopBound::LoopParameterDescription description,
 llvm::FunctionAnalysisManager *FAM,
                                   llvm::DominatorTree &DT,
                                   llvm::LoopInfo &LIInfo);
 
+/**
+ * Check whether the loop init cannot be deduced.
+ * @param description Loop parameter description
+ * @return True if init cannot be deduced, otherwise false
+ */
 bool loopInitCannotBeDeduced(LoopBound::LoopParameterDescription description);
 
+/**
+ * Check whether a loop is a counting loop based on its condition.
+ * @param loop Loop to inspect
+ * @param IC ICmp condition used by the loop
+ * @return True if counting, otherwise false
+ */
 bool loopIsCounting(llvm::Loop *loop, llvm::ICmpInst *IC);
 
+/**
+ * Check whether the loop bound variable is modified inside the loop.
+ * @param loop Loop to inspect
+ * @return True if modified, otherwise false
+ */
 bool loopBoundIsModified(llvm::Loop *loop);
 
+/**
+ * Check whether the loop counter is monotonic.
+ * @param loop Loop to inspect
+ * @return True if monotonic, otherwise false
+ */
 bool loopisMonotonic(llvm::Loop *loop);
 
+/**
+ * Check whether a memory root is written within a loop.
+ * @param Base Base memory location
+ * @param L Loop to inspect
+ * @return True if written, otherwise false
+ */
 static bool isMemoryRootWrittenInLoop(const llvm::Value *Base,
                                      llvm::Loop *L);
 
+/**
+ * Check whether a loop is dependent nested (bound depends on outer loop state).
+ * @param desc Loop parameter description
+ * @param LIInfo LoopInfo
+ * @return True if dependent nested, otherwise false
+ */
 bool loopIsDependentNested(const LoopParameterDescription &desc,
                            llvm::LoopInfo &LIInfo);
 
-
+/**
+ * Convert a loop type to its string name.
+ * @param type Loop type to stringify
+ * @return String representation of the loop type
+ */
 std::string LoopTypeToString(LoopBound::LoopType type);
 
 }  // namespace LoopBound::Util

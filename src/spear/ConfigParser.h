@@ -56,6 +56,9 @@ enum class Strategy {
 };
 
 
+/**
+ * Holds analysis-related configuration options parsed from the config file.
+ */
 struct AnalysisConfiguration {
     Mode mode;
     Format format;
@@ -64,23 +67,60 @@ struct AnalysisConfiguration {
     std::map<std::string, int64_t> fallback;
 };
 
+/**
+ * Holds profiling-related configuration options parsed from the config file.
+ */
 struct ProfilingConfiguration {
     int iterations;
 };
 
 class ConfigParser {
  public:
+    /**
+     * Construct a parser for the given configuration file path.
+     *
+     * @param path Path to the configuration file
+     */
     explicit ConfigParser(const std::string& path);
 
+    /**
+     * Read the configuration file into the parser.
+     *
+     * @param fileName Path to the configuration file
+     */
     void read(const std::string & fileName);
 
+    /**
+     * Check whether the currently loaded configuration is valid.
+     *
+     * @return True if valid, otherwise false
+     */
     bool configValid();
 
+    /**
+     * Get the raw JSON configuration.
+     *
+     * @return Parsed JSON object
+     */
     json getConfig();
 
+    /**
+     * Get the parsed analysis configuration.
+     *
+     * @return AnalysisConfiguration instance
+     */
     static AnalysisConfiguration getAnalysisConfiguration();
+
+    /**
+     * Get the parsed profiling configuration.
+     *
+     * @return ProfilingConfiguration instance
+     */
     static ProfilingConfiguration getProfilingConfiguration();
 
+    /**
+     * Parse the loaded JSON into typed configuration structs.
+     */
     void parse();
 
  private:
@@ -88,18 +128,58 @@ class ConfigParser {
     static AnalysisConfiguration analysisConfiguration;
     static ProfilingConfiguration profilingConfiguration;
 
+    /**
+     * Validate the profiling configuration section.
+     *
+     * @return True if valid, otherwise false
+     */
     bool profilingValid();
 
+    /**
+     * Validate the analysis configuration section.
+     *
+     * @return True if valid, otherwise false
+     */
     bool analysisValid();
 
+    /**
+     * Validate the fallback configuration section.
+     *
+     * @param object JSON object containing fallback data
+     * @return True if valid, otherwise false
+     */
     bool fallbackValid(json object);
 
+    /**
+     * Validate the analysis mode configuration section.
+     *
+     * @param object JSON object containing mode data
+     * @return True if valid, otherwise false
+     */
     bool modeValid(json object);
 
+    /**
+     * Validate the output format configuration section.
+     *
+     * @param object JSON object containing format data
+     * @return True if valid, otherwise false
+     */
     bool formatValid(json object);
 
+    /**
+     * Validate the analysis strategy configuration section.
+     *
+     * @param object JSON object containing strategy data
+     * @return True if valid, otherwise false
+     */
     bool strategyValid(json object);
 
+    /**
+     * Validate the profiling iterations configuration section.
+     *
+     * @param object JSON object containing iteration data
+     * @return True if valid, otherwise false
+     */
     bool iterationsValid(json object);
 
     /**
