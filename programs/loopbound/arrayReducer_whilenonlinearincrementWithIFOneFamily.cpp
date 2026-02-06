@@ -20,16 +20,20 @@ int main(){
     fillArrayRandom(searchroom, length, length*4);
 
     long sum = 0;
+    int i = 1;
 
-    for(int i=0; i < length; i = i + 1){
+    while(i < length){
         int a1 = searchroom[i];
 
         sum += a1;
+        if (sum < 12) {
+            i = i * 3;
+        }else {
+            i = i * 12;
+        }
     }
 
     std::cout << "Sum of array: " << sum << "\n";
-
-    return 0;
 
     return 0;
 }

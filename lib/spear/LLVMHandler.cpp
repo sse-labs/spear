@@ -12,13 +12,11 @@
 
 LLVMHandler::LLVMHandler(
     json energy,
-    int valueIfIndeterminable,
     bool useCallAnalysis,
     EnergyFunction *funcPool,
     int funcPoolSize) {
 
     this->energyValues = energy;
-    this->valueIfIndeterminable = valueIfIndeterminable;
     this->inefficient = 0;
     this->efficient = 0;
     this->useCallAnalysis = useCallAnalysis;

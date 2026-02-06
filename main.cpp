@@ -21,6 +21,7 @@
 #include "llvm/IRReader/IRReader.h"
 
 #include "CLIHandler.h"
+#include "ConfigParser.h"
 #include "profilers/CPUProfiler.h"
 #include "profilers/MetaProfiler.h"
 
@@ -29,8 +30,10 @@
 
 
 void runProfileRoutine(CLIOptions opts) {
+    auto proflingConfig = ConfigParser::getProfilingConfiguration();
+
     // Get the parameters from the arguments
-    int rep = opts.repeatAmount;
+    int rep = proflingConfig.iterations;
     std::string compiledPath = opts.codePath;
 
     CPUProfiler cpuprofiler = CPUProfiler(rep, compiledPath);
@@ -117,8 +120,7 @@ void runAnalysisRoutine(CLIOptions opts) {
 
     PhasarResultRegistry::get().store(PhasarResults);
 
-    modulePassManager.addPass(Energy(opts.profilePath, opts.mode, opts.format, opts.strategy, opts.loopBound,
-        opts.deepCalls, opts.forFunction));
+    modulePassManager.addPass(Energy(opts.profilePath));
     modulePassManager.run(*module_up, moduleAnalysisManager);
 }
 
@@ -137,51 +139,58 @@ int main(int argc, char *argv[]) {
 
     if (argc > 1) {
         CLIOptions opts = CLIHandler::parseCLI(argc, argv);
+        ConfigParser configParser(opts.configPath);
+        configParser.parse();
 
-        if (opts.operation == Operation::PROFILE) {
-            // Check if the parser returned valid options
-            if (!opts.codePath.empty() && opts.repeatAmount != -1 && !opts.saveLocation.empty()) {
-                // std::cout << "Options valid" << std::endl;
-                runProfileRoutine(opts);
-                return 0;
-            } else {
-                std::string profileHelpMsg =  "Usage: spear profile <arguments>\n===================="
-                                              "==========\nArguments:"
-                                              "\n\t Profile the system and generate the estimated energy usage of"
-                                              " the device. Used for any further analysis"
-                                              "\n\t\t --iterations Amount of measurement repetitions (int)"
-                                              "\n\t\t --model Path to the compiled profile programs"
-                                              "\n\t\t --savelocation Path the calculated profile will be saved to"
-                                              "\n\n";
-                std::cerr << profileHelpMsg << std::endl;
-                return 1;
+        if (!opts.configPath.empty()) {
+            if (configParser.configValid()) {
+                if (opts.operation == Operation::PROFILE) {
+                    // Check if the parser returned valid options
+                    if (!opts.codePath.empty() && !opts.saveLocation.empty()) {
+                        // std::cout << "Options valid" << std::endl;
+                        runProfileRoutine(opts);
+                        return 0;
+                    } else {
+                        std::string profileHelpMsg =  "Usage: spear profile <arguments>\n===================="
+                                                      "==========\nArguments:"
+                                                      "\n\t Profile the system and generate the estimated energy usage"
+                                                      " of the device. Used for any further analysis"
+                                                      "\n\t\t --iterations Amount of measurement repetitions (int)"
+                                                      "\n\t\t --model Path to the compiled profile programs"
+                                                      "\n\t\t --savelocation Path the calculated profile will be saved "
+                                                      "to \n\n";
+                        std::cerr << profileHelpMsg << std::endl;
+                        return 1;
+                    }
+                } else if (opts.operation == Operation::ANALYZE) {
+                    // Check if the parser returned valid options
+                    if (!opts.profilePath.empty() && !opts.programPath.empty()) {
+                        // std::cout << "Options valid" << std::endl;
+                        runAnalysisRoutine(opts);
+                        return 0;
+                    } else {
+                        std::string profileHelpMsg = "Usage: spear analyze <arguments>\n========================="
+                                                     "=====\nArguments:"
+                                                     "\n\tAnalyzes a given program. Further parameters are needed:"
+                                                     "\n\t\t --mode Type of analysis (program/function)"
+                                                     "\n\t\t --format Format of the result to print (plain/json)"
+                                                     "\n\t\t --strategy Type of analysis-strategy (worst/best/average)"
+                                                     "\n\t\t --loopbound Value with with which loops get approximed if "
+                                                     "their upper bound can't be calculated (0 - INT_MAX)"
+                                                     "\n\n";
+                        std::cerr << profileHelpMsg << std::endl;
+                        return 1;
+                    }
+                } else {
+                    return 1;
+                }
             }
-        } else if (opts.operation == Operation::ANALYZE) {
-            // Check if the parser returned valid options
-            if (!opts.profilePath.empty() &&
-                opts.mode != Mode::UNDEFINED &&
-                opts.format != Format::UNDEFINED &&
-                opts.strategy != Strategy::UNDEFINED &&
-                opts.loopBound != -1 && !opts.programPath.empty()) {
-                // std::cout << "Options valid" << std::endl;
-                runAnalysisRoutine(opts);
-                return 0;
-            } else {
-                std::string profileHelpMsg = "Usage: spear analyze <arguments>\n========================="
-                                             "=====\nArguments:"
-                                             "\n\tAnalyzes a given program. Further parameters are needed:"
-                                             "\n\t\t --mode Type of analysis (program/function)"
-                                             "\n\t\t --format Format of the result to print (plain/json)"
-                                             "\n\t\t --strategy Type of analysis-strategy (worst/best/average)"
-                                             "\n\t\t --loopbound Value with with which loops get approximed if "
-                                             "their upper bound can't be calculated (0 - INT_MAX)"
-                                             "\n\n";
-                std::cerr << profileHelpMsg << std::endl;
-                return 1;
-            }
+
         } else {
-            return 1;
+            std::cerr << "No config path specified. Please provide a path to config file." << std::endl;
         }
+
+
     } else {
         std::cout << helpString;
     }

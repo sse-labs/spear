@@ -14,22 +14,20 @@
 #include <string>
 #include <map>
 
+#include "ConfigParser.h"
+#include "../../src/spear/analyses/loopbound/LoopBound.h"
+
 LoopTree::LoopTree(
     llvm::Loop *main,
     const std::vector<llvm::Loop *>& subloops,
     LLVMHandler *handler,
-    llvm::ScalarEvolution *scalarEvolution,
-    std::map<std::string,
-        std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
-    > *variablemapping) {
+    llvm::ScalarEvolution *scalarEvolution) {
     this->mainloop = main;
     this->handler = handler;
 
     this->boundvars = {};
 
     this->findBoundVars(scalarEvolution);
-
-    this->_variablemapping = variablemapping;
 
     for (auto bv : this->boundvars) {
         llvm::errs() << "\t\tBound variable: " << *bv << "\n";
@@ -40,8 +38,7 @@ LoopTree::LoopTree(
         // For each subloop create a new LoopTree with parameters regarding this subloop
         auto *subLoopTree = new LoopTree(subLoop,
             subLoop->getSubLoops(),
-            this->handler, scalarEvolution,
-            variablemapping);
+            this->handler, scalarEvolution);
 
         // Add the subtree to the vector of subgraphs
         this->subTrees.push_back(subLoopTree);
@@ -219,7 +216,7 @@ uint64_t LoopTree::iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds>
 
 uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
                                  llvm::ScalarEvolution *scalarEvolution) {
-    uint64_t boundValue = this->handler->valueIfIndeterminable;
+    uint64_t boundValue = ConfigParser::getAnalysisConfiguration().fallback["UNKNOWN_LOOP"];
 
     // Query the loopbound with scalar evolution
     auto loopBound = loop->getBounds(*scalarEvolution);
@@ -241,47 +238,6 @@ uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
 
     std::string varName = "";
 
-    // Check the boundvars. If we have exactly one boundvar we can try to deduce this value
-    if (!this->boundvars.empty() && this->boundvars.size() == 1) {
-        if (this->boundvars[0] != nullptr && this->boundvars[0]->hasName()) {
-            llvm::errs() << "\t\t=> " << this->boundvars[0]->getName() << "\n";
-            varName = this->boundvars[0]->getName();
-
-            // Query the constant from the phasar block mapping
-            uint64_t endValue = this->handler->valueIfIndeterminable;
-
-            try {
-                auto &blockMap = this->_variablemapping->at(bbName);
-
-                if (blockMap.count(varName)) {
-                    auto &entry = blockMap[varName];
-                    endValue = entry.second.assertGetValue();
-
-                    llvm::errs() << "\t\tPHSR:(%"
-                                 << varName << " -> " << endValue
-                                 << ") in block " << bbName << "\n";
-                } else {
-                    llvm::errs() << "\t\tNo entry for " << varName
-                                 << " in block map for " << bbName << "\n";
-                }
-            } catch (...) {
-                llvm::errs() << "\tBlock " << bbName << " not found in variable mapping\n";
-            }
-
-            // Calculate iteration count
-            boundValue = iterationsFromLoopBound(&loopBound, endValue);
-
-            if (boundValue != -1) {
-                llvm::errs() << "\t\tComputed loop bound = " << boundValue << "\n";
-                return boundValue;
-            }
-        } else {
-            llvm::errs() << "\t\t =>" << "No boundvar determineable" << "\n";
-        }
-    }
-
-
-
     // --- Fallback: use ScalarEvolution trip count ----------------------------
     const llvm::SCEV *tripCount = scalarEvolution->getBackedgeTakenCount(loop);
 
@@ -293,7 +249,7 @@ uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
         tripCount->print(llvm::errs());
         llvm::errs() << "\n";
         llvm::errs() << "\t\t\t=> Fallback loop bound = " << boundValue << "\n";
-        boundValue = this->handler->valueIfIndeterminable;
+        boundValue = ConfigParser::getAnalysisConfiguration().fallback["UNKNOWN_LOOP"];
     }
 
     return boundValue;

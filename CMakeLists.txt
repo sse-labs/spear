@@ -40,6 +40,7 @@ file(GLOB_RECURSE SPEAR_HEADERS
     src/spear/*.h
     lib/spear/HLAC/*.h
     src/spear/profilers/*.h
+    src/spear/analyses/*.h
 )
 
 file(GLOB_RECURSE SPEAR_SOURCES
@@ -47,6 +48,7 @@ file(GLOB_RECURSE SPEAR_SOURCES
     lib/spear/profilers/*.cpp
     lib/spear/HLAC/*.cpp
     lib/passes/*.cpp
+    src/spear/analyses/*.cpp
 )
 
 
@@ -84,3 +86,54 @@ target_link_libraries(spear
 )
 
 enable_testing()
+
+# -----------------------
+# Catch2 test executable
+# -----------------------
+
+# Collect test sources (lib/test/*/*.cpp)
+file(GLOB_RECURSE SPEAR_TEST_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/test/*/*.cpp
+)
+
+if (SPEAR_TEST_SOURCES)
+    add_executable(spear_tests
+            lib/test/main.cpp
+            ${SPEAR_TEST_SOURCES}
+    )
+
+    target_link_libraries(spear_tests
+            PRIVATE
+            SpearLib
+            LLVM
+            nlohmann_json
+            phasar
+    )
+
+    # Ensure tests see your public headers like the main targets do
+    target_include_directories(spear_tests
+            PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/spear
+            ${CMAKE_CURRENT_SOURCE_DIR}/lib/passes
+            ${CMAKE_CURRENT_SOURCE_DIR}/lib/test
+    )
+
+    # Catch2 linking: prefer Catch2::Catch2WithMain if available.
+    target_link_libraries(spear_tests PRIVATE Catch2)
+
+    target_compile_definitions(spear_tests
+            PRIVATE
+            TEST_INPUT_DIR="${CMAKE_SOURCE_DIR}"
+    )
+
+    # Register with CTest
+    add_test(NAME spear_tests COMMAND spear_tests)
+
+    # (Optional) nicer output on failure
+    # set_tests_properties(spear_tests PROPERTIES
+    #     FAIL_REGULAR_EXPRESSION "FAILED"
+    # )
+
+else()
+    message(STATUS "No test sources found under lib/test/*/*.cpp; skipping spear_tests target.")
+endif()

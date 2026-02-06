@@ -16,6 +16,7 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node) {
     // Store the LLVM loop
     this->loop = loop;
     this->hasSubLoops = !loop->getSubLoops().empty();
+    this->bounds = std::make_pair(0, 0);
 
     // Create loop nodes recursively for subloops
     for (llvm::Loop *sub : loop->getSubLoops()) {
@@ -163,7 +164,7 @@ void LoopNode::printDotRepresentation(std::ostream &os) {
     os << "fontname=\"Courier\";";
     os << "tooltip=" << "\"" << "METDADATA" << "\";";
     os << "  labelloc=\"t\";\n";
-    os << "  label=\"" << this->getDotName() << "\\l\";\n";
+    os << "  label=\"" << this->getDotName() << " (min, max)\r\";\n";
     os << "  " << this->getAnchorDotName()
        << " [shape=point, width=0.01, label=\"\", style=invis];\n";
 

@@ -16,6 +16,11 @@
 #include <utility>
 #include <string>
 #include <memory>
+#include <catch2/internal/catch_unique_ptr.hpp>
+
+#include "../../src/spear/analyses/loopbound/LoopBound.h"
+#include "../../src/spear/analyses/loopbound/util.h"
+#include "analyses/loopbound/loopBoundWrapper.h"
 
 using llvm::Module;
 using llvm::PreservedAnalyses;
@@ -28,46 +33,38 @@ PhasarHandlerPass::PhasarHandlerPass()
       Entrypoints({std::string("main")}) {}
 
 PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
-  // Store module and build PhASAR helper.
   mod = &M;
   HA = std::make_unique<psr::HelperAnalyses>(&M, Entrypoints);
   AnalysisResult.reset();
 
-  // Actually run the IDELinearConstantAnalysis
-  runAnalysis();
+  auto &FAM =
+      AM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*mod).getManager();
 
-  // If this pass only computes information and doesn't modify the IR, we can
-  // conservatively say everything is preserved.
+  runAnalysis(&FAM);
+
   return PreservedAnalyses::all();
 }
 
 void PhasarHandlerPass::runOnModule(llvm::Module &M) {
-  // Create a dummy module analysis manager so the regular run() entry point works
-  ModuleAnalysisManager DummyAM;
-  run(M, DummyAM);
+  llvm::PassBuilder PB;
+
+  llvm::LoopAnalysisManager LAM;
+  llvm::FunctionAnalysisManager FAM;
+  llvm::CGSCCAnalysisManager CGAM;
+  llvm::ModuleAnalysisManager MAM;
+
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  run(M, MAM);
 }
 
-
-void PhasarHandlerPass::runAnalysis() {
-  if (!HA)
-    return;
-
-  // Ensure we actually have a 'main' entry point
-  if (!HA->getProjectIRDB().getFunctionDefinition("main"))
-    return;
-
-  // Build the analysis problem and solve it
-  auto Problem = psr::createAnalysisProblem<psr::IDELinearConstantAnalysis>(
-      *HA, Entrypoints);
-
-  // Alternative way of solving an IFDS/IDEProblem:
-  auto Result = psr::solveIDEProblem(Problem, HA->getICFG());
-
-  // Result.dumpResults(HA->getICFG(), llvm::outs());
-
-  AnalysisResult = std::make_unique<psr::OwningSolverResults<
-      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<int64_t>>>(
-      Result);
+void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
+  loopboundwrapper = make_unique<LoopBoundWrapper>((std::move(HA)), FAM);
 }
 
 void PhasarHandlerPass::dumpState() const {
@@ -83,37 +80,33 @@ PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
   if (!AnalysisResult || !Func)
     return ResultMap;
 
-  using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
+  using DomainVal = LoopBound::DeltaInterval;
 
-  // Result:  BB_name -> { var_name -> (Value*, domain_val) }
   for (const llvm::BasicBlock &BB : *Func) {
-    std::string BBName = BB.hasName()
-                             ? BB.getName().str()
-                             : "<unnamed_bb_" +
-                                   std::to_string(
-                                       reinterpret_cast<uintptr_t>(&BB)) +
-                                   ">";
+    std::string BBName =
+        BB.hasName()
+            ? BB.getName().str()
+            : "<unnamed_bb_" +
+                  std::to_string(reinterpret_cast<uintptr_t>(&BB)) + ">";
 
-    // Ensure block entry exists
     auto &BBEntry = ResultMap[BBName];
 
     for (const llvm::Instruction &Inst : BB) {
       if (!AnalysisResult->containsNode(&Inst))
         continue;
 
-      psr::LLVMAnalysisDomainDefault::d_t Bottom = nullptr;
+      const llvm::Value *Bottom = nullptr;
       auto Res = AnalysisResult->resultsAtInLLVMSSA(&Inst, Bottom);
 
       for (const auto &ResElement : Res) {
         const llvm::Value *Val = ResElement.first;
         const DomainVal &DomVal = ResElement.second;
 
-        std::string Key = Val->hasName()
-                              ? Val->getName().str()
-                              : "<unnamed_" +
-                                    std::to_string(
-                                        reinterpret_cast<uintptr_t>(Val)) +
-                                    ">";
+        std::string Key =
+            Val->hasName()
+                ? Val->getName().str()
+                : "<unnamed_" + std::to_string(reinterpret_cast<uintptr_t>(Val)) +
+                      ">";
 
         BBEntry[Key] = std::make_pair(Val, DomVal);
       }

@@ -8,12 +8,17 @@
 
 #include <phasar.h>
 #include <llvm/IR/PassManager.h>
+#include <analyses/loopbound/loopBoundWrapper.h>
+
 
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "analyses/loopbound/LoopBound.h"
+
 
 namespace llvm {
 class Module;
@@ -28,7 +33,7 @@ class Instruction;
 // This is written for the LLVM "new" pass manager (PassBuilder).
 class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
  public:
-  using DomainVal = psr::IDELinearConstantAnalysisDomain::l_t;
+  using DomainVal = LoopBound::DeltaInterval;
 
   // Result:  BB_name -> { var_name -> (Value*, domain_val) }
   using BoundVarMap =
@@ -51,6 +56,8 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
   // Requires that `run()` (and hence `runAnalysis()`) has been executed.
   BoundVarMap queryBoundVars(llvm::Function *Func) const;
 
+  std::unique_ptr<LoopBoundWrapper> loopboundwrapper = nullptr;
+
  private:
   // Backing module – only valid during/after `run()`.
   llvm::Module *mod;
@@ -60,14 +67,14 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
 
   // Solver results: PhASAR’s IDE solver result wrapper.
   std::unique_ptr<psr::OwningSolverResults<
-      const llvm::Instruction *, const llvm::Value *, psr::LatticeDomain<int64_t>>>
+      const llvm::Instruction *, const llvm::Value *, LoopBound::DeltaInterval>>
       AnalysisResult;
 
   // Function entrypoints
   std::vector<std::string> Entrypoints;
 
   // Internal: construct analysis problem and run PhASAR solver.
-  void runAnalysis();
+  void runAnalysis(llvm::FunctionAnalysisManager *FAM);
 };
 
 #endif  // SRC_SPEAR_PHASARHANDLER_H_

@@ -1,0 +1,17 @@
+{
+  "profiling": {
+    "iterations": 1000
+  },
+  "analysis": {
+    "mode": "program",
+    "format": "json",
+    "strategy": "worst",
+    "fallback": {
+      "MALFORMED_LOOP":  1000,
+      "SYMBOLIC_BOUND_LOOP":  2000,
+      "NON_COUNTING_LOOP":  3000,
+      "NESTED_LOOP":  4000,
+      "UNKNOWN_LOOP": 5000
+    }
+  }
+}

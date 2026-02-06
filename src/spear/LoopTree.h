@@ -17,6 +17,8 @@
 #include <utility>
 #include <map>
 
+#include "analyses/loopbound/LoopBound.h"
+
 class LLVMHandler;
 
 /**
@@ -64,11 +66,7 @@ class LoopTree {
         llvm::Loop *main,
         const std::vector<llvm::Loop *>& subloops,
         LLVMHandler *handler,
-        llvm::ScalarEvolution *scalarEvolution,
-        std::map<
-        std::string,
-        std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
-        > *variablemapping);
+        llvm::ScalarEvolution *scalarEvolution);
 
     /**
      * Prints this node in preorder
@@ -121,15 +119,6 @@ class LoopTree {
      * @param scalarEvolution
      */
     void findBoundVars(llvm::ScalarEvolution *scalarEvolution);
-
-    /**
-     * Phasar variable mapping
-     * Maps variable source name to constant value
-     */
-    std::map<
-        std::string,
-        std::map<std::string, std::pair<const llvm::Value*, psr::IDELinearConstantAnalysisDomain::l_t>>
-    > *_variablemapping;
 
     /**
      * Calculates the actual amount of iterations a loop runs with the given loop parameters
