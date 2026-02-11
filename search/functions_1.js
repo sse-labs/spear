@@ -1,20 +1,4 @@
 var searchData=
 [
-  ['calculatebound_0',['calculateBound',['../classLoopClassifier.html#a0adfbcf3f7e84aa2e0d2ea966c9ee449',1,'LoopClassifier']]],
-  ['calculatecheck_1',['calculateCheck',['../classCheckExpr.html#a6f65fd5ef85dbf36c843b3b05cdec8ea',1,'CheckExpr']]],
-  ['callnode_2',['CallNode',['../classHLAC_1_1CallNode.html#aaf0941549de75099dae6d3e79504a9c8',1,'HLAC::CallNode']]],
-  ['checkexpr_3',['CheckExpr',['../classCheckExpr.html#aa43bc33e1b274cb82fc2acdcfa67cb19',1,'CheckExpr']]],
-  ['clioptions_4',['CLIOptions',['../classCLIOptions.html#a4f74ae2e8115cdd2b5c7e2b618bf07e1',1,'CLIOptions']]],
-  ['collapsecalls_5',['collapseCalls',['../classHLAC_1_1CallNode.html#a63b8c60fc56eafbd6bf55f49505f94e6',1,'HLAC::CallNode']]],
-  ['collapseloop_6',['collapseLoop',['../classHLAC_1_1LoopNode.html#a0bcef023b44e0728df391e081256b715',1,'HLAC::LoopNode']]],
-  ['collectloops_7',['collectLoops',['../classLoopBoundWrapper.html#a64403e51b6805feb5c2a7505a21ba0e8',1,'LoopBoundWrapper']]],
-  ['color_8',['Color',['../classColor.html#a05db4332a7f68a7ba431968131d2b92c',1,'Color']]],
-  ['compose_9',['compose',['../structLoopBound_1_1DeltaIntervalBottom.html#a06109c3a70567dbd5abd227c65f4d1f3',1,'LoopBound::DeltaIntervalBottom::compose()'],['../structLoopBound_1_1DeltaIntervalTop.html#a0feeefaddccfac1b1257d3af37965388',1,'LoopBound::DeltaIntervalTop::compose()'],['../structLoopBound_1_1DeltaIntervalIdentity.html#ae63d6d094d3c83636d05efaea2ec5747',1,'LoopBound::DeltaIntervalIdentity::compose()'],['../structLoopBound_1_1DeltaIntervalMultiplicative.html#abcd0e927b30c8dc904760c42272b0f1b',1,'LoopBound::DeltaIntervalMultiplicative::compose()'],['../structLoopBound_1_1DeltaIntervalAdditive.html#a9b659709bc077df07321c03a48372e8c',1,'LoopBound::DeltaIntervalAdditive::compose()'],['../structLoopBound_1_1DeltaIntervalDivision.html#a896916ad314ed3e8402619e1017aaf47',1,'LoopBound::DeltaIntervalDivision::compose()']]],
-  ['computetarget_10',['computetarget',['../structLoopBound_1_1DeltaIntervalBottom.html#a98cbce882a58d932b09c18465767fe4a',1,'LoopBound::DeltaIntervalBottom::computeTarget()'],['../structLoopBound_1_1DeltaIntervalTop.html#acae35dbc2e659b61e1a8c0ab4400fabb',1,'LoopBound::DeltaIntervalTop::computeTarget()'],['../structLoopBound_1_1DeltaIntervalIdentity.html#af50c278c3b5864541d3123a7b9e2d186',1,'LoopBound::DeltaIntervalIdentity::computeTarget()'],['../structLoopBound_1_1DeltaIntervalDivision.html#af8a9bf8376c11bb5d9702e58896af465',1,'LoopBound::DeltaIntervalDivision::computeTarget()'],['../structLoopBound_1_1DeltaIntervalMultiplicative.html#a2cc41c8f0e31c11b9a515b3787301f35',1,'LoopBound::DeltaIntervalMultiplicative::computeTarget()'],['../structLoopBound_1_1DeltaIntervalAdditive.html#a8830c2df15e2381b9f94fbd833030b3f',1,'LoopBound::DeltaIntervalAdditive::computeTarget()']]],
-  ['configparser_11',['ConfigParser',['../classConfigParser.html#addfa4f0a896c3ad2a17ce4c984a60481',1,'ConfigParser']]],
-  ['configvalid_12',['configValid',['../classConfigParser.html#a88b05b9efa51aead604be7a6f4fd1ae9',1,'ConfigParser']]],
-  ['construct_13',['construct',['../classFunctionTree.html#a751509513fa28986d0c573d16ccef363',1,'FunctionTree::construct()'],['../classLoopNode.html#a767cfc348db0031f90df5fea4b6fe8c9',1,'LoopNode::construct()'],['../classProgramGraph.html#a79fb6e448801193a0114eaa41479a9a2',1,'ProgramGraph::construct()']]],
-  ['constructcallnodes_14',['constructCallNodes',['../classHLAC_1_1LoopNode.html#ab27886c6add0a7a5ebafdb4e720eaaa3',1,'HLAC::LoopNode']]],
-  ['containsloopnodes_15',['containsLoopNodes',['../classProgramGraph.html#a9acb2b3f9ecb3af4b87b7ff10398f3fa',1,'ProgramGraph']]],
-  ['cpuprofiler_16',['CPUProfiler',['../classCPUProfiler.html#ac941f07ad39d835856521e2b1b088f26',1,'CPUProfiler']]]
+  ['bottom_0',['bottom',['../classLoopBound_1_1DeltaInterval.html#a67bc590116be313803e29f33e4ba0007',1,'LoopBound::DeltaInterval']]]
 ];

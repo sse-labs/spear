@@ -1,8 +1,10 @@
 var searchData=
 [
-  ['makeedge_0',['makeEdge',['../classHLAC_1_1FunctionNode.html#a8a6270e0d3cd88253a4a4d156de8544e',1,'HLAC::FunctionNode']]],
-  ['makefunction_1',['makeFunction',['../classHLAC_1_1hlac.html#a2c0250ecb3687377b9634ea5aae25da4',1,'HLAC::hlac']]],
-  ['makehlac_2',['makeHLAC',['../classHLAC_1_1HLACWrapper.html#a68e0ed317fdfbe13e7f29caebfee3d9e',1,'HLAC::HLACWrapper']]],
-  ['makenode_3',['makenode',['../classHLAC_1_1Node.html#a6303371bfa6eaa5c08a40d0088c4c202',1,'HLAC::Node::makeNode()'],['../classHLAC_1_1LoopNode.html#adb7daba49e21597e9e89fddd5dc3c918',1,'HLAC::LoopNode::makeNode()'],['../classHLAC_1_1FunctionNode.html#a3b4e4a38c52925bd2afdc24ef6420a76',1,'HLAC::FunctionNode::makeNode()'],['../classHLAC_1_1CallNode.html#af91f342febbce6bed517757cdd7a1885',1,'HLAC::CallNode::makeNode()']]],
-  ['metaprofiler_4',['MetaProfiler',['../classMetaProfiler.html#a74e3e1e2dd423b066b17eb9c753642d7',1,'MetaProfiler']]]
+  ['leastupperbound_0',['leastUpperBound',['../classLoopBound_1_1DeltaInterval.html#a45090920c39f85817766cf0523e64ba3',1,'LoopBound::DeltaInterval']]],
+  ['llvmhandler_1',['LLVMHandler',['../classLLVMHandler.html#a5fa12d2aac33eb0249abc09bf0ee0a19',1,'LLVMHandler']]],
+  ['loopboundideanalysis_2',['LoopBoundIDEAnalysis',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a3cbc7e05129122f086e4926c7b3ef3fd',1,'LoopBound::LoopBoundIDEAnalysis']]],
+  ['loopboundwrapper_3',['LoopBoundWrapper',['../classLoopBoundWrapper.html#a897cec67e475e64078c299ab60dba5d5',1,'LoopBoundWrapper']]],
+  ['loopclassifier_4',['LoopClassifier',['../classLoopClassifier.html#a2162bf4957eae20203c903372ac2287f',1,'LoopClassifier']]],
+  ['loopnode_5',['loopnode',['../classHLAC_1_1LoopNode.html#a82e5a3daab7de12e54aecacf22d081a5',1,'HLAC::LoopNode::LoopNode()'],['../classLoopNode.html#a9ed8fbdf9af17f6c52f7ccd4bc0de458',1,'LoopNode::LoopNode()']]],
+  ['looptree_6',['LoopTree',['../classLoopTree.html#a45a0862b4849d3302b8a5d5b99e7a0f8',1,'LoopTree']]]
 ];

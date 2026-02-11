@@ -1,26 +1,10 @@
 var searchData=
 [
-  ['getaddress_0',['getAddress',['../classHLAC_1_1GenericNode.html#ac928ce42dd0feff4b1a450ab69a4bc7e',1,'HLAC::GenericNode']]],
-  ['getadjacentnodes_1',['getAdjacentNodes',['../classNode.html#a21b786612db6ab923a11a1b42ff27584',1,'Node']]],
-  ['getanalysisconfiguration_2',['getAnalysisConfiguration',['../classConfigParser.html#aa52b3f640c7a180b589744befaf972fe',1,'ConfigParser']]],
-  ['getanchordotname_3',['getAnchorDotName',['../classHLAC_1_1LoopNode.html#a63449f81242a880e8385a1603227e16a',1,'HLAC::LoopNode']]],
-  ['getcalledfunctionenergy_4',['getCalledFunctionEnergy',['../classInstructionCategory.html#a28f7c026829a0ab9e56dd102d25ddd70',1,'InstructionCategory']]],
-  ['getcategory_5',['getCategory',['../classInstructionCategory.html#abbdc1337646e110d8e2956409b03e8f7',1,'InstructionCategory']]],
-  ['getclassifiers_6',['getClassifiers',['../classLoopBoundWrapper.html#a7e1e1749f665960b761b6d758c5583cc',1,'LoopBoundWrapper']]],
-  ['getconfig_7',['getConfig',['../classConfigParser.html#acf1114e966661bd04ac3aff87ce231e2',1,'ConfigParser']]],
-  ['getdotname_8',['getdotname',['../classHLAC_1_1GenericNode.html#aff62bf8bd66c90ad3273ee70ab41edba',1,'HLAC::GenericNode::getDotName()'],['../classHLAC_1_1Node.html#a17d495e7405aef8f15a87bb94d48b7ed',1,'HLAC::Node::getDotName()'],['../classHLAC_1_1LoopNode.html#a90800614db4a169e64991122be352fbf',1,'HLAC::LoopNode::getDotName()'],['../classHLAC_1_1FunctionNode.html#ab8424c70f8f2fc1ccbdb496f0d56cab8',1,'HLAC::FunctionNode::getDotName()'],['../classHLAC_1_1CallNode.html#a0689d9d55933089f14aa35d532a0dd0d',1,'HLAC::CallNode::getDotName()']]],
-  ['getenergy_9',['getenergy',['../classRegisterReader.html#a6649a75a1a466543fab025c99452d555',1,'RegisterReader::getEnergy()'],['../classProgramGraph.html#a618f4338b78bad9c90b17309966fb689',1,'ProgramGraph::getEnergy()']]],
-  ['getlatches_10',['getLatches',['../classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa',1,'LoopTree']]],
-  ['getloopnodes_11',['getLoopNodes',['../classProgramGraph.html#aab2eb08f2095c8d35d33df3db97ab93e',1,'ProgramGraph']]],
-  ['getloopparameterdescriptions_12',['getLoopParameterDescriptions',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a4921d874815ca9d1976080b5f03a9cc5',1,'LoopBound::LoopBoundIDEAnalysis']]],
-  ['getlowerbound_13',['getLowerBound',['../classLoopBound_1_1DeltaInterval.html#ac680da3ace8f82b201b50f3867eec200',1,'LoopBound::DeltaInterval']]],
-  ['getnodeenergy_14',['getnodeenergy',['../classNode.html#a17d9e6c0fa7576a5166662b8fb0ece10',1,'Node::getNodeEnergy()'],['../classLoopNode.html#aade3bc5c606bb094f609d8741d2a1bea',1,'LoopNode::getNodeEnergy()']]],
-  ['getnodes_15',['getNodes',['../classProgramGraph.html#ab38e474d469d083b47faa90dc72f2d38',1,'ProgramGraph']]],
-  ['getnodesum_16',['getNodeSum',['../classLLVMHandler.html#a01a198ecdfee6b3e833715de3877107f',1,'LLVMHandler']]],
-  ['getpreordervector_17',['getPreOrderVector',['../classFunctionTree.html#a8bae3dc577cca9d2c0307ab93534e1a8',1,'FunctionTree']]],
-  ['getprofile_18',['getProfile',['../classProfileHandler.html#a558712f0df86372198addd412d928840',1,'ProfileHandler']]],
-  ['getprofilingconfiguration_19',['getProfilingConfiguration',['../classConfigParser.html#a417a74a75c7b89a7915e5dcee658ca5d',1,'ConfigParser']]],
-  ['getupperbound_20',['getUpperBound',['../classLoopBound_1_1DeltaInterval.html#a6973e1122100293315a192dc0812b7b0',1,'LoopBound::DeltaInterval']]],
-  ['getvaluetypeasstr_21',['getValueTypeAsStr',['../classLoopBound_1_1DeltaInterval.html#adc5150018674204477f1b07419839b38',1,'LoopBound::DeltaInterval']]],
-  ['greatestlowerbound_22',['greatestLowerBound',['../classLoopBound_1_1DeltaInterval.html#ac085cf1b44949f4de822d85d5d33fff8',1,'LoopBound::DeltaInterval']]]
+  ['feasibilitytostring_0',['feasibilityToString',['../classHLAC_1_1Util.html#a87c1ec938e8de600fbabaf052d12d199',1,'HLAC::Util']]],
+  ['findblock_1',['findBlock',['../classProgramGraph.html#a9450ec4e99c330c26535491056e8a639',1,'ProgramGraph']]],
+  ['findcounterfromicmp_2',['findCounterFromICMP',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a9d1f8d26a90d0ab769aabe56bfea055d',1,'LoopBound::LoopBoundIDEAnalysis']]],
+  ['findedgesstartingatnode_3',['findEdgesStartingAtNode',['../classProgramGraph.html#acef8229424136eb7f7cf35038d831e59',1,'ProgramGraph']]],
+  ['findloopcheckexpr_4',['findLoopCheckExpr',['../classLoopBoundWrapper.html#aa7732f83ae5ba36d1cbbe1786316b873',1,'LoopBoundWrapper']]],
+  ['functionnode_5',['FunctionNode',['../classHLAC_1_1FunctionNode.html#adaa52edd55f845de1337f0b0ebd19388',1,'HLAC::FunctionNode']]],
+  ['functiontree_6',['FunctionTree',['../classFunctionTree.html#a53962ae644f6cbfa614728aa09f32c5a',1,'FunctionTree']]]
 ];
