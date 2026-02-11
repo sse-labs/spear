@@ -34,7 +34,7 @@ PhasarHandlerPass::PhasarHandlerPass()
 
 PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   mod = &M;
-  HA = std::make_unique<psr::HelperAnalyses>(&M, Entrypoints);
+  HA = std::make_shared<psr::HelperAnalyses>(&M, Entrypoints);
   AnalysisResult.reset();
 
   auto &FAM =
@@ -64,7 +64,8 @@ void PhasarHandlerPass::runOnModule(llvm::Module &M) {
 }
 
 void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
-  loopboundwrapper = make_unique<LoopBoundWrapper>((std::move(HA)), FAM);
+  loopboundwrapper = make_unique<LoopBoundWrapper>(HA, FAM);
+  feasibilitywrapper = make_unique<FeasibilityWrapper>(HA, FAM);
 }
 
 void PhasarHandlerPass::dumpState() const {

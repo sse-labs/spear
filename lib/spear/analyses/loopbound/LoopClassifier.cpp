@@ -205,7 +205,9 @@ std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
 
         // If we have an additive interval just use the generic calculation method
         if (increment.value().isAdditive()) {
-            llvm::errs() << "CALCULATING ADDITIVE BOUND!!!!!" << "\n";
+            if (LoopBound::Util::LB_DebugEnabled) {
+                llvm::errs() << "CALCULATING ADDITIVE BOUND!!!!!" << "\n";
+            }
             int64_t lowerval = increment.value().getLowerBound();
             int64_t upperval = increment.value().getUpperBound();
 
@@ -225,7 +227,9 @@ std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
 
 
         if (increment.value().isMultiplicative()) {
-            llvm::errs() << "CALCULATING MULTIPLICATIVE BOUND!!!!!" << "\n";
+            if (LoopBound::Util::LB_DebugEnabled) {
+                llvm::errs() << "CALCULATING MULTIPLICATIVE BOUND!!!!!" << "\n";
+            }
 
             int64_t lowerval = increment.value().getLowerBound();
             int64_t upperval = increment.value().getUpperBound();
@@ -245,7 +249,9 @@ std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
         }
 
         if (increment.value().isDivision()) {
-            llvm::errs() << "CALCULATING DIVISION BOUND!!!!!" << "\n";
+            if (LoopBound::Util::LB_DebugEnabled) {
+                llvm::errs() << "CALCULATING DIVISION BOUND!!!!!" << "\n";
+            }
 
             int64_t lowerval = increment.value().getLowerBound();
             int64_t upperval = increment.value().getUpperBound();

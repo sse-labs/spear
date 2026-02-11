@@ -17,7 +17,7 @@
 #include "analyses/loopbound/util.h"
 
 LoopBoundWrapper::LoopBoundWrapper(
-    std::unique_ptr<psr::HelperAnalyses> helperAnalyses,
+    std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
     llvm::FunctionAnalysisManager *analysisManager) {
 
   if (!helperAnalyses) {
@@ -108,7 +108,9 @@ LoopBoundWrapper::LoopBoundWrapper(
     this->loopClassifiers.push_back(std::move(newLoopClassifier));  // Store classifier
   }
 
-  printClassifiers();  // Emit summary
+  if (LoopBound::Util::LB_DebugEnabled) {
+      printClassifiers();
+  }
 }
 
 std::optional<int64_t> CheckExpr::calculateCheck(
