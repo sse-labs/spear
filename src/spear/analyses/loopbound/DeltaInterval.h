@@ -213,7 +213,11 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 inline std::string toString(const std::optional<LoopBound::DeltaInterval>& DI) {
     std::string s;
     llvm::raw_string_ostream rso(s);
-    rso << DI;
+    if (DI.has_value()) {
+        rso << *DI;
+    } else {
+        rso << "nullopt";
+    }
     rso.flush();
     return s;
 }

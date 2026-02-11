@@ -126,23 +126,30 @@ void runAnalysisRoutine(CLIOptions opts) {
 
 
 int main(int argc, char *argv[]) {
-    std::string helpString = "Usage: spear option <arguments>\n==============================\nOptions:"
-                             "\n\tprofile\t Profile the system and generate the estimated energy usage of the device. "
-                             "Used for any further analysis"
-                             "\n\tanalyze\t Analyzes a given program. Further parameters are needed:"
-                             "\n\t\t\t --mode Type of analysis (program/function)"
-                             "\n\t\t\t --format Format of the result to print (plain/json)"
-                             "\n\t\t\t --strategy Type of analysis-strategy (worst/best/average)"
-                             "\n\t\t\t --loopbound Value with with which loops get approximed if their upper bound "
-                             "can't be calculated (0 - INT_MAX)"
-                             "\n\n";
+    std::string helpString = R"(Usage: spear <option> <arguments>
+    ==================================
+    Options:
+
+        profile    Profile the system and generate the estimated energy usage
+                   of the device. Used for any further analysis.
+                   --config        Configuration file for the analysis (path)
+                   --model         Path to the compiled profile programs
+                   --savelocation  Path to save the generated profile (path)
+
+        analyze    Analyze a given program. Further parameters are required:
+                   --profile       Path to the profile to use for the analysis (path)
+                   --program       Path to the program to analyze (path)
+                   --config        Configuration file for the analysis (path)
+
+    )";
 
     if (argc > 1) {
         CLIOptions opts = CLIHandler::parseCLI(argc, argv);
-        ConfigParser configParser(opts.configPath);
-        configParser.parse();
 
         if (!opts.configPath.empty()) {
+            ConfigParser configParser(opts.configPath);
+            configParser.parse();
+
             if (configParser.configValid()) {
                 if (opts.operation == Operation::PROFILE) {
                     // Check if the parser returned valid options
@@ -151,43 +158,68 @@ int main(int argc, char *argv[]) {
                         runProfileRoutine(opts);
                         return 0;
                     } else {
-                        std::string profileHelpMsg =  "Usage: spear profile <arguments>\n===================="
-                                                      "==========\nArguments:"
-                                                      "\n\t Profile the system and generate the estimated energy usage"
-                                                      " of the device. Used for any further analysis"
-                                                      "\n\t\t --iterations Amount of measurement repetitions (int)"
-                                                      "\n\t\t --model Path to the compiled profile programs"
-                                                      "\n\t\t --savelocation Path the calculated profile will be saved "
-                                                      "to \n\n";
+                        std::string profileHelpMsg =
+                        R"(Usage: spear profile <arguments>
+                        ========================================
+                        Arguments:
+                            Profile the system and generate the estimated energy usage of the device.
+                            Used for any further analysis.
+
+                                --config        Configuration file for the analysis (path)
+                                --model         Path to the compiled profile programs
+                                --savelocation  Path to save the generated profile (path)
+                        )";
+
+
                         std::cerr << profileHelpMsg << std::endl;
                         return 1;
                     }
                 } else if (opts.operation == Operation::ANALYZE) {
                     // Check if the parser returned valid options
-                    if (!opts.profilePath.empty() && !opts.programPath.empty()) {
+                    bool hasProfilePath = !opts.profilePath.empty();
+                    bool hasProgramPath = !opts.programPath.empty();
+
+                    if (hasProfilePath && hasProgramPath) {
                         // std::cout << "Options valid" << std::endl;
                         runAnalysisRoutine(opts);
                         return 0;
                     } else {
-                        std::string profileHelpMsg = "Usage: spear analyze <arguments>\n========================="
-                                                     "=====\nArguments:"
-                                                     "\n\tAnalyzes a given program. Further parameters are needed:"
-                                                     "\n\t\t --mode Type of analysis (program/function)"
-                                                     "\n\t\t --format Format of the result to print (plain/json)"
-                                                     "\n\t\t --strategy Type of analysis-strategy (worst/best/average)"
-                                                     "\n\t\t --loopbound Value with with which loops get approximed if "
-                                                     "their upper bound can't be calculated (0 - INT_MAX)"
-                                                     "\n\n";
-                        std::cerr << profileHelpMsg << std::endl;
+                        std::string profileHelpMsg =
+                        R"(Usage: spear analyze <arguments>
+                        =================================
+                        Arguments:
+
+                            Analyzes a given program. Further parameters are required:
+                                --profile        Path to the profile to use for the analysis (path)
+                                --program        Path to the program to analyze (path)
+                                --config         Configuration file for the analysis (path)
+
+                        )";
+
+
+                        std::cerr << profileHelpMsg;
+
+                        if (!hasProfilePath) {
+                            std::cerr << "Error: Profile path is missing. Please specify --profile <path>\n";
+                        }
+                        if (!hasProgramPath) {
+                            std::cerr << "Error: Program path is missing. Please specify --program <path>\n";
+                        }
+
+                        std::cerr << std::endl;
                         return 1;
                     }
                 } else {
                     return 1;
                 }
             }
-
         } else {
-            std::cerr << "No config path specified. Please provide a path to config file." << std::endl;
+            std::cerr << helpString;
+
+            std::cerr << "No config path specifed or config file can not be found! "
+                         "Please specify a valid config file with --config <path>"
+            << std::endl;
+            return 1;
         }
 
 
