@@ -38,10 +38,10 @@ LoopBoundWrapper::LoopBoundWrapper(
 
   for (llvm::Function &function : *module) {
     if (function.isDeclaration()) {
-      continue;  // Skip declarations
+      continue;
     }
-    if (function.getName().starts_with("llvm.")) {
-      continue;  // Skip llvm intrinsics
+    if (function.getName().startswith("llvm.")) {
+      continue;
     }
 
     auto &loopInfo = analysisManager->getResult<llvm::LoopAnalysis>(function);  // Loop analysis
@@ -73,7 +73,7 @@ LoopBoundWrapper::LoopBoundWrapper(
       continue;  // Missing parent function
     }
 
-    if (parentFunction->isDeclaration() || parentFunction->getName().starts_with("llvm.")) {
+    if (parentFunction->isDeclaration() || parentFunction->getName().startswith("llvm.")) {
       continue;  // Skip unsupported functions
     }
 
@@ -225,7 +225,7 @@ void LoopBoundWrapper::printClassifiers() {
     for (const auto &classifier : this->loopClassifiers) {
         llvm::errs() << "[LB] ==========================\n";
         llvm::errs() << "[LB] " << "Function: "
-                     << llvm::itaniumDemangle(classifier.function->getName()) << "\n";
+                     << classifier.function->getName() << "\n";
         llvm::errs() << "[LB] " << "Name: " << classifier.loop->getName() << "\n";
         llvm::errs() << "[LB] " << "Type: "
                      << LoopBound::Util::LoopTypeToString(classifier.type) << "\n";
