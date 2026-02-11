@@ -12,6 +12,7 @@ option(USE_EXTERNAL_JSON "Use external JSON lib" OFF)
 
 find_package(LLVM REQUIRED CONFIG)
 find_package(phasar REQUIRED)
+find_package(Z3 REQUIRED)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
