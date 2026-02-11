@@ -22,6 +22,7 @@
 
 #include "CLIHandler.h"
 #include "ConfigParser.h"
+#include "Modelchecker.h"
 #include "profilers/CPUProfiler.h"
 #include "profilers/MetaProfiler.h"
 
@@ -113,6 +114,15 @@ void runAnalysisRoutine(CLIOptions opts) {
 
     PhasarHandlerPass PH;
     PH.runOnModule(*module_up);
+
+    /*Modelchecker McheckerInstance;
+    auto mcheckercontext = McheckerInstance.getContext();
+    auto x = mcheckercontext->int_const("x");
+
+    McheckerInstance.addExpression(x < 5 && x > 5);
+    auto checkres = McheckerInstance.check();
+
+    std::cout << "Modelchecker result: " << checkres << "\n";*/
 
     // Store results for later use
     auto MainFn = module_up->getFunction("main");
