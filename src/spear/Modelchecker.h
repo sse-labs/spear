@@ -3,11 +3,12 @@
  * All rights reserved.
  */
 
-#ifndef SRC_SPEAR_MODELCHECKER_H
-#define SRC_SPEAR_MODELCHECKER_H
+#ifndef SRC_SPEAR_MODELCHECKER_H_
+#define SRC_SPEAR_MODELCHECKER_H_
 
 #include <z3++.h>
 #include <iostream>
+#include <vector>
 
 class Modelchecker {
  public:
@@ -47,6 +48,7 @@ class Modelchecker {
         if (s.check() == z3::sat) std::cout << s.get_model() << "\n";
         std::cout << "Hello from the Modelchecker!" << std::endl;
     }
+
  private:
     /**
      * The model context to create expressions in. All expressions added to the Modelchecker should be in this context.
@@ -57,9 +59,6 @@ class Modelchecker {
      * The expressions to check. These should be in the context of this Modelchecker.
      */
     std::vector<z3::expr> elements;
-
-
-
 };
 
-#endif  // SRC_SPEAR_MODELCHECKER_H
+#endif  // SRC_SPEAR_MODELCHECKER_H_
