@@ -164,7 +164,10 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (opts.operation == Operation::ANALYZE) {
                     // Check if the parser returned valid options
-                    if (!opts.profilePath.empty() && !opts.programPath.empty()) {
+                    bool hasProfilePath = !opts.profilePath.empty();
+                    bool hasProgramPath = !opts.programPath.empty();
+
+                    if (hasProfilePath && hasProgramPath) {
                         // std::cout << "Options valid" << std::endl;
                         runAnalysisRoutine(opts);
                         return 0;
@@ -178,16 +181,26 @@ int main(int argc, char *argv[]) {
                                                      "\n\t\t --loopbound Value with with which loops get approximed if "
                                                      "their upper bound can't be calculated (0 - INT_MAX)"
                                                      "\n\n";
-                        std::cerr << profileHelpMsg << std::endl;
+
+                        std::cerr << profileHelpMsg;
+
+                        if (!hasProfilePath) {
+                            std::cerr << "Error: Profile path is missing. Please specify --profile <path>\n";
+                        }
+                        if (!hasProgramPath) {
+                            std::cerr << "Error: Program path is missing. Please specify --program <path>\n";
+                        }
+
+                        std::cerr << std::endl;
                         return 1;
                     }
                 } else {
                     return 1;
                 }
             }
-
         } else {
-            std::cerr << "No config path specified. Please provide a path to config file." << std::endl;
+            std::cerr << "Config parsing failed! Ensure the path is accessible and the file is not empty!"
+            << std::endl;
         }
 
 

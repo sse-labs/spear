@@ -22,9 +22,13 @@ void ConfigParser::read(const std::string &fileName) {
 
     std::ifstream fileStream(fileName);
 
-    data = json::parse(fileStream);
-
-    config = data;;
+    try {
+        data = json::parse(fileStream);
+        config = data;
+    }catch (const json::parse_error& e) {
+        std::cout << "Failed to parse config file: " << e.what() << std::endl;
+        config = json();
+    }
 }
 
 json ConfigParser::getConfig() {
