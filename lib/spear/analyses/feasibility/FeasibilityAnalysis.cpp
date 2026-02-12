@@ -246,6 +246,25 @@ FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getNormalEdgeFunction
         return E;
     }
 
+    if (currNode != succNode) {
+        auto E = EF(std::in_place_type<FeasibilityIdentityEF>);
+        if (Feasibility::Util::F_DebugEnabled.load()) {
+            llvm::errs() << Feasibility::Util::F_TAG << "   reason=fact-changed(curr!=succ)  ";
+            Feasibility::Util::dumpEF(E);
+            llvm::errs() << "\n";
+        }
+        return E;
+    }
+
+    /**
+     * We need to deal with the instructions here.
+     * Deal with
+     * - store instructions
+     * - load instructions
+     * - br instructions
+     *
+     */
+
     auto E = EF(std::in_place_type<FeasibilityIdentityEF>);
     return E;
 }
