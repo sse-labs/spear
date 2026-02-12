@@ -33,7 +33,14 @@ class FeasibilityStateStore;
  * FeasibilityStateStore. This element only stores IDs + a raw store pointer.
  */
 struct FeasibilityElement final {
-  enum class Kind : std::uint8_t { Bottom = 0, Normal = 1, Top = 2 };
+  // IDE uses its own neutral/absorbing elements; keep domain top/bottom as well.
+  enum class Kind : std::uint8_t {
+    IdeAbsorbing = 0, // IDE bottom (absorbing for edge-function lifting)
+    IdeNeutral   = 1, // IDE top/neutral (identity for edge-function lifting)
+    Bottom       = 2, // Domain bottom
+    Normal       = 3, // Domain normal state
+    Top          = 4  // Domain top
+  };
 
   // Raw pointer is trivially copyable. Store must outlive all elements.
   FeasibilityStateStore *store = nullptr;
@@ -46,12 +53,19 @@ struct FeasibilityElement final {
   std::uint32_t memId = 0;
 
   // ---- factories ----
+  static FeasibilityElement ideNeutral(FeasibilityStateStore *S) noexcept;
+  static FeasibilityElement ideAbsorbing(FeasibilityStateStore *S) noexcept;
+
   static FeasibilityElement top(FeasibilityStateStore *S) noexcept;
   static FeasibilityElement bottom(FeasibilityStateStore *S) noexcept;
   static FeasibilityElement initial(FeasibilityStateStore *S) noexcept;
 
   // ---- queries ----
-  [[nodiscard]] Kind getKind() const noexcept;
+  [[nodiscard]] Kind getKind() const noexcept { return kind; }
+
+  [[nodiscard]] bool isIdeNeutral() const noexcept;
+  [[nodiscard]] bool isIdeAbsorbing() const noexcept;
+
   [[nodiscard]] bool isTop() const noexcept;
   [[nodiscard]] bool isBottom() const noexcept;
   [[nodiscard]] bool isNormal() const noexcept;

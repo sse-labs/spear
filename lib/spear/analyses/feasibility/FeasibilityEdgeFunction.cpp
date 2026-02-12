@@ -12,7 +12,13 @@
 namespace Feasibility {
 
 // --- FeasibilityIdentityEF ---
-l_t FeasibilityIdentityEF::computeTarget(const l_t &source) const { return source; }
+l_t FeasibilityIdentityEF::computeTarget(const l_t &source) const {
+    // Preserve IDE special elements exactly.
+    if (source.isIdeNeutral() || source.isIdeAbsorbing()) {
+        return source;
+    }
+    return source;
+}
 EF FeasibilityIdentityEF::compose(psr::EdgeFunctionRef<FeasibilityIdentityEF>, const EF &secondFunction) {
     return secondFunction;
 }
@@ -23,7 +29,8 @@ bool FeasibilityIdentityEF::isConstant() const noexcept { return false; }
 
 // --- FeasibilityAllTopEF ---
 l_t FeasibilityAllTopEF::computeTarget(const l_t &source) const {
-    return l_t::top(source.getStore());
+    // IDE all-top must map to the IDE-neutral element (identity for lifting).
+    return l_t::ideNeutral(source.getStore());
 }
 EF FeasibilityAllTopEF::compose(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFunc, const EF &) {
     return thisFunc; // Top overwrites everything
@@ -35,7 +42,8 @@ bool FeasibilityAllTopEF::isConstant() const noexcept { return true; }
 
 // --- FeasibilityAllBottomEF ---
 l_t FeasibilityAllBottomEF::computeTarget(const l_t &source) const {
-    return l_t::bottom(source.getStore());
+    // IDE bottom must be absorbing.
+    return l_t::ideAbsorbing(source.getStore());
 }
 EF FeasibilityAllBottomEF::compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF> thisFunc, const EF &) {
     return thisFunc; // Bottom overwrites everything (for your lattice semantics)
@@ -53,42 +61,33 @@ l_t FeasibilityAssumeEF::computeTarget(const l_t &source) const {
     return source.assume(Cond);
 }
 EF FeasibilityAssumeEF::compose(psr::EdgeFunctionRef<FeasibilityAssumeEF> thisFunc, const EF &secondFunction) {
-    // second ∘ thisFunc: apply thisFunc first, then second
-
     if (secondFunction.template isa<FeasibilityIdentityEF>() ||
         secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF{thisFunc};
     }
 
-    if (secondFunction.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
+    if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
     }
 
-    if (secondFunction.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
+    if (secondFunction.template isa<FeasibilityAllTopEF>()) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
 
-    // For other edge functions (Assume/SetSSA/SetMem), compose sequentially
-    // Conservative: return top if mixing different kinds
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
+
 EF FeasibilityAssumeEF::join(psr::EdgeFunctionRef<FeasibilityAssumeEF> thisFunc, const psr::EdgeFunction<l_t> &otherFunc) {
-    // Identity and Bottom are neutral for join
     if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(otherFunc) ||
         otherFunc.template isa<FeasibilityIdentityEF>() ||
         otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF{thisFunc};
     }
 
-    if (otherFunc.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(otherFunc)) {
+    if (otherFunc.template isa<FeasibilityAllTopEF>()) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
 
-    // Conservative: different assumptions => top
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 bool FeasibilityAssumeEF::operator==(const FeasibilityAssumeEF &Other) const {
@@ -105,34 +104,24 @@ EF FeasibilitySetSSAEF::compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFu
         secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF{thisFunc};
     }
-
-    if (secondFunction.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
+    if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
     }
-
-    if (secondFunction.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
+    if (secondFunction.template isa<FeasibilityAllTopEF>()) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
-
-    // Conservative: mixing different edge functions => top
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
+
 EF FeasibilitySetSSAEF::join(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFunc, const psr::EdgeFunction<l_t> &otherFunc) {
     if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(otherFunc) ||
         otherFunc.template isa<FeasibilityIdentityEF>() ||
         otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF{thisFunc};
     }
-
-    if (otherFunc.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(otherFunc)) {
+    if (otherFunc.template isa<FeasibilityAllTopEF>()) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
-
-    // Conservative: different SSA updates => top
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 bool FeasibilitySetSSAEF::isConstant() const noexcept { return false; }
@@ -146,34 +135,24 @@ EF FeasibilitySetMemEF::compose(psr::EdgeFunctionRef<FeasibilitySetMemEF> thisFu
         secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF{thisFunc};
     }
-
-    if (secondFunction.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
+    if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
     }
-
-    if (secondFunction.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
+    if (secondFunction.template isa<FeasibilityAllTopEF>()) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
-
-    // Conservative: mixing different edge functions => top
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
+
 EF FeasibilitySetMemEF::join(psr::EdgeFunctionRef<FeasibilitySetMemEF> thisFunc, const psr::EdgeFunction<l_t> &otherFunc) {
     if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(otherFunc) ||
         otherFunc.template isa<FeasibilityIdentityEF>() ||
         otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF{thisFunc};
     }
-
-    if (otherFunc.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(otherFunc)) {
+    if (otherFunc.template isa<FeasibilityAllTopEF>()) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
-
-    // Conservative: different memory updates => top
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 bool FeasibilitySetMemEF::isConstant() const noexcept { return false; }

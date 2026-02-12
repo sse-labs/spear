@@ -22,6 +22,14 @@ namespace Feasibility {
 // FeasibilityElement (handle) - trivial methods
 // ============================================================================
 
+FeasibilityElement FeasibilityElement::ideNeutral(FeasibilityStateStore *S) noexcept {
+  return FeasibilityElement{S, Kind::IdeNeutral, 0, 0, 0};
+}
+
+FeasibilityElement FeasibilityElement::ideAbsorbing(FeasibilityStateStore *S) noexcept {
+  return FeasibilityElement{S, Kind::IdeAbsorbing, 0, 0, 0};
+}
+
 FeasibilityElement FeasibilityElement::top(FeasibilityStateStore *S) noexcept {
   return FeasibilityElement{S, Kind::Top, 0, 0, 0};
 }
@@ -31,11 +39,16 @@ FeasibilityElement FeasibilityElement::bottom(FeasibilityStateStore *S) noexcept
 }
 
 FeasibilityElement FeasibilityElement::initial(FeasibilityStateStore *S) noexcept {
+  // "Normal empty state" (not IDE neutral).
   return FeasibilityElement{S, Kind::Normal, 0, 0, 0};
 }
 
-FeasibilityElement::Kind FeasibilityElement::getKind() const noexcept {
-  return kind;
+bool FeasibilityElement::isIdeNeutral() const noexcept {
+  return kind == Kind::IdeNeutral;
+}
+
+bool FeasibilityElement::isIdeAbsorbing() const noexcept {
+  return kind == Kind::IdeAbsorbing;
 }
 
 bool FeasibilityElement::isTop() const noexcept {
@@ -54,12 +67,13 @@ FeasibilityElement FeasibilityElement::assume(const z3::expr &cond) const {
   if (store == nullptr) {
     return *this;
   }
-  if (isBottom()) {
+  if (isBottom() || isIdeAbsorbing()) {
     return *this;
   }
 
   FeasibilityElement out = *this;
-  if (out.isTop()) {
+  // IDE-neutral should behave like "no information yet": materialize to empty normal.
+  if (out.isTop() || out.isIdeNeutral()) {
     out = initial(store);
   }
 
@@ -73,12 +87,12 @@ FeasibilityElement FeasibilityElement::setSSA(const llvm::Value *key,
   if (store == nullptr) {
     return *this;
   }
-  if (isBottom()) {
+  if (isBottom() || isIdeAbsorbing()) {
     return *this;
   }
 
   FeasibilityElement out = *this;
-  if (out.isTop()) {
+  if (out.isTop() || out.isIdeNeutral()) {
     out = initial(store);
   }
 
@@ -92,12 +106,12 @@ FeasibilityElement FeasibilityElement::setMem(const llvm::Value *loc,
   if (store == nullptr) {
     return *this;
   }
-  if (isBottom()) {
+  if (isBottom() || isIdeAbsorbing()) {
     return *this;
   }
 
   FeasibilityElement out = *this;
-  if (out.isTop()) {
+  if (out.isTop() || out.isIdeNeutral()) {
     out = initial(store);
   }
 
@@ -110,12 +124,12 @@ FeasibilityElement FeasibilityElement::forgetSSA(const llvm::Value *key) const {
   if (store == nullptr) {
     return *this;
   }
-  if (isBottom()) {
+  if (isBottom() || isIdeAbsorbing()) {
     return *this;
   }
 
   FeasibilityElement out = *this;
-  if (out.isTop()) {
+  if (out.isTop() || out.isIdeNeutral()) {
     out = initial(store);
   }
 
@@ -128,12 +142,12 @@ FeasibilityElement FeasibilityElement::forgetMem(const llvm::Value *loc) const {
   if (store == nullptr) {
     return *this;
   }
-  if (isBottom()) {
+  if (isBottom() || isIdeAbsorbing()) {
     return *this;
   }
 
   FeasibilityElement out = *this;
-  if (out.isTop()) {
+  if (out.isTop() || out.isIdeNeutral()) {
     out = initial(store);
   }
 
@@ -146,12 +160,12 @@ FeasibilityElement FeasibilityElement::clearPathConstraints() const {
   if (store == nullptr) {
     return *this;
   }
-  if (isBottom()) {
+  if (isBottom() || isIdeAbsorbing()) {
     return *this;
   }
 
   FeasibilityElement out = *this;
-  if (out.isTop()) {
+  if (out.isTop() || out.isIdeNeutral()) {
     out = initial(store);
   }
 
@@ -355,7 +369,22 @@ FeasibilityStateStore::id_t FeasibilityStateStore::memForget(id_t mem,
 
 bool FeasibilityStateStore::leq(const FeasibilityElement &A,
                                 const FeasibilityElement &B) {
-  // Bottom ⊑ X ⊑ Top
+  // IDE special elements: treat absorbing as least, neutral as greatest (for IDE usage).
+  // (They should mostly be handled by FeasibilityAnalysis::join, but keep this safe.)
+  if (A.isIdeAbsorbing()) {
+    return true;
+  }
+  if (B.isIdeNeutral()) {
+    return true;
+  }
+  if (B.isIdeAbsorbing()) {
+    return A.isIdeAbsorbing();
+  }
+  if (A.isIdeNeutral()) {
+    return B.isIdeNeutral();
+  }
+
+  // Bottom ⊑ X ⊑ Top (domain)
   if (A.isBottom()) {
     return true;
   }
@@ -521,6 +550,12 @@ bool FeasibilityStateStore::isSatisfiableWith(const FeasibilityElement &E,
 // ============================================================================
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FeasibilityElement &E) {
+  if (E.isIdeAbsorbing()) {
+    return OS << "IDE_⊥";
+  }
+  if (E.isIdeNeutral()) {
+    return OS << "IDE_⊤";
+  }
   if (E.isBottom()) {
     return OS << "⊥";
   }

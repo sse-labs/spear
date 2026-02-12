@@ -14,6 +14,9 @@ namespace Feasibility::Util {
 extern std::atomic<bool> F_DebugEnabled;
 inline constexpr const char *F_TAG = "[FDBG]";
 
+const llvm::Value *stripAddr(const llvm::Value *pointer);
+
+const llvm::Value *asValue(FeasibilityDomain::d_t fact);
 
 /**
  * Dump fact of the current analysis

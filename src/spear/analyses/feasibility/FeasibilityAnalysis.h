@@ -51,20 +51,22 @@ public:
     // New implementation uses a state store (owns z3::context and persistent state).
     std::unique_ptr<FeasibilityStateStore> store;
 
-    explicit FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB);
+    explicit FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, const psr::LLVMBasedICFG *ICFG);
 
     bool isZeroValue(d_t Fact) const noexcept override;
 
 private:
     [[nodiscard]] psr::InitialSeeds<n_t, d_t, l_t> initialSeeds() override;
 
-    d_t zeroValue();
+    [[nodiscard]] d_t zeroValue() const;
 
     l_t topElement() override;
 
     l_t bottomElement() override;
 
     l_t join(l_t Lhs, l_t Rhs) override;
+
+    const psr::LLVMBasedICFG *ICFG = nullptr;
 
     psr::EdgeFunction<l_t> allTopFunction() override;
 

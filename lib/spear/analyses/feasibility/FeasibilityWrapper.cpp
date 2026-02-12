@@ -13,9 +13,11 @@
 #include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>
 #include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
 #include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>
+#include <llvm/Support/raw_ostream.h>
 
 
 #include "analyses/feasibility/FeasibilityAnalysis.h"
+#include "analyses/feasibility/util.h"
 
 FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
                                        llvm::FunctionAnalysisManager *analysisManager) {
@@ -35,7 +37,15 @@ FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperAnalyses> help
     auto &PTImpl = helperAnalyses->getAliasInfo();
     psr::AliasInfoRef<const llvm::Value *, const llvm::Instruction *> PT(&PTImpl);
 
-    Feasibility::FeasibilityAnalysis analysisProblem(analysisManager, &IRDB);  // Build analysis
+    Feasibility::FeasibilityAnalysis analysisProblem(analysisManager, &IRDB, &interproceduralCFG);  // Build analysis
+
+    if (Feasibility::Util::F_DebugEnabled.load()) {
+        llvm::errs() << Feasibility::Util::F_TAG << " Starting IDESolver.solve()\n";
+    }
 
     auto analysisResult = psr::solveIDEProblem(analysisProblem, interproceduralCFG);  // Solve once
+
+    if (Feasibility::Util::F_DebugEnabled.load()) {
+        llvm::errs() << Feasibility::Util::F_TAG << " Finished IDESolver.solve()\n";
+    }
 }

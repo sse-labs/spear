@@ -5,10 +5,12 @@
 
 #include "analyses/feasibility/FeasibilityAnalysis.h"
 
+#include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>
 #include <phasar/PhasarLLVM/DataFlow/IfdsIde/LLVMZeroValue.h>
 
 #include "analyses/feasibility/util.h"
 #include "analyses/feasibility/FeasibilityEdgeFunction.h" // add
+#include "analyses/loopbound/LoopBoundEdgeFunction.h"
 
 namespace Feasibility {
 
@@ -69,44 +71,95 @@ public:
     ContainerT computeTargets(D Src) override { return ContainerT{Src}; }
 };
 
-FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB)
+template <typename D, typename ContainerT>
+class GenFromZeroFlow final : public psr::FlowFunction<D, ContainerT> {
+    Feasibility::FeasibilityAnalysis *A = nullptr;
+    Feasibility::FeasibilityAnalysis::n_t Curr = nullptr;
+
+public:
+    GenFromZeroFlow(Feasibility::FeasibilityAnalysis *A,
+                    Feasibility::FeasibilityAnalysis::n_t Curr)
+        : A(A), Curr(Curr) {}
+
+    ContainerT computeTargets(D Src) override {
+        ContainerT Out;
+        Out.insert(Src);
+
+        const auto Fact = static_cast<Feasibility::FeasibilityAnalysis::d_t>(Src);
+        if (A && A->isZeroValue(Fact)) {
+            // Generate ONE non-zero fact from zero so the analysis can actually propagate.
+            // Prefer the function object (stable across many edges) if available.
+            if (Curr) {
+                if (const auto *F = Curr->getFunction()) {
+                    Out.insert(static_cast<Feasibility::FeasibilityAnalysis::d_t>(F));
+                } else {
+                    Out.insert(static_cast<Feasibility::FeasibilityAnalysis::d_t>(Curr));
+                }
+            }
+        }
+        return Out;
+    }
+};
+
+FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, const psr::LLVMBasedICFG *ICFG)
 : base_t(IRDB, {"main"}, std::optional<d_t>(
     static_cast<d_t>(psr::LLVMZeroValue::getInstance()))) {
     (void)FAM;
     store = std::make_unique<FeasibilityStateStore>();
+    this->ICFG = ICFG;
 }
 
 
-psr::InitialSeeds<FeasibilityAnalysis::n_t, FeasibilityAnalysis::d_t, FeasibilityAnalysis::l_t>
+psr::InitialSeeds<FeasibilityAnalysis::n_t, FeasibilityAnalysis::d_t,
+                  FeasibilityAnalysis::l_t>
 FeasibilityAnalysis::initialSeeds() {
     psr::InitialSeeds<n_t, d_t, l_t> Seeds;
 
-    psr::Nullable<f_t> Main = this->getProjectIRDB()->getFunctionDefinition("main");
+    auto Main = this->getProjectIRDB()->getFunctionDefinition("main");
     if (!Main || Main->isDeclaration()) {
-        // No seeds => analysis yields TOP everywhere (or empty results)
+        return Seeds;
+    }
+    if (!ICFG) {
+        assert(false && "FeasibilityAnalysis: ICFG is null");
         return Seeds;
     }
 
-    // --- Pick a start statement/node ---
-    const llvm::BasicBlock *EntryBB = &Main->getEntryBlock();
+    // IMPORTANT: use the base-class zero value instance (like LoopBound does)
+    const d_t Zero = this->getZeroValue();
 
-    // Usually OK: first instruction in entry block
-    // (If you want: skip PHIs/Dbg, but entry typically has no PHIs)
-    n_t Start = &*EntryBB->begin();
-    if (!Start) return Seeds;
+    // IDE semantics: topElement() must be IDE-neutral
+    const l_t IdeNeutral = topElement();
 
-    // --- Seed only the zero fact with the initial lattice value ---
-    d_t Zero = this->zeroValue();
+    // Must be a non-neutral value for the non-zero seed
+    const l_t StartVal = l_t::initial(this->store.get());
 
-    // New FeasibilityElement API
-    l_t Init = l_t::initial(this->store.get());
+    if (Feasibility::Util::F_DebugEnabled.load()) {
+        llvm::errs() << "[FDBG] StartVal==IdeNeutral="
+                     << StartVal.equal_to(IdeNeutral) << "\n";
+        llvm::errs() << "[FDBG] Zero=" << (const void *)Zero
+                     << " isZero(Zero)=" << isZeroValue(Zero) << "\n";
+    }
 
-    Seeds.addSeed(Start, Zero, Init);
+    for (n_t SP : ICFG->getStartPointsOf(&*Main)) {
+        // Seed zero with IDE-neutral
+        Seeds.addSeed(SP, Zero, IdeNeutral);
+
+        // Seed a body-local, definitely-non-zero fact with a non-neutral value
+        const d_t Fact = static_cast<d_t>(SP);
+        Seeds.addSeed(SP, Fact, StartVal);
+
+        if (Feasibility::Util::F_DebugEnabled.load()) {
+            llvm::errs() << Feasibility::Util::F_TAG << " Seed(ICFG) @";
+            Feasibility::Util::dumpInst(SP);
+            llvm::errs() << "\n";
+        }
+    }
 
     return Seeds;
 }
 
-FeasibilityAnalysis::d_t FeasibilityAnalysis::zeroValue() {
+
+FeasibilityAnalysis::d_t FeasibilityAnalysis::zeroValue() const {
     return static_cast<d_t>(psr::LLVMZeroValue::getInstance());
 }
 
@@ -115,90 +168,103 @@ bool FeasibilityAnalysis::isZeroValue(d_t Fact) const noexcept{
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::topElement() {
-    return l_t::top(this->store.get());
+    // IDE "top" must be the neutral element (identity for edge function lifting).
+    return l_t::ideNeutral(this->store.get());
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::bottomElement() {
-    return l_t::bottom(this->store.get());
+    // IDE "bottom" must be the absorbing element.
+    return l_t::ideAbsorbing(this->store.get());
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
+    // IDE lattice join must respect neutral/absorbing.
+    if (Lhs.isIdeAbsorbing()) {
+        return Rhs;
+    }
+    if (Rhs.isIdeAbsorbing()) {
+        return Lhs;
+    }
+    if (Lhs.isIdeNeutral()) {
+        return Rhs;
+    }
+    if (Rhs.isIdeNeutral()) {
+        return Lhs;
+    }
+    // Delegate to your must-join semantics for "normal/domain" states.
     return Lhs.join(Rhs);
 }
 
 psr::EdgeFunction<FeasibilityAnalysis::l_t> FeasibilityAnalysis::allTopFunction() {
+    // Must map everything to IDE-neutral (not domain-top).
     // FeasibilityElement is not trivially copyable, so we must not use psr::AllTop<l_t>.
-    return Feasibility::edgeTop();
+    return psr::AllTop<l_t>{};
 }
 
-FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getNormalFlowFunction(n_t Curr, n_t Succ) {
+FeasibilityAnalysis::FlowFunctionPtrType
+FeasibilityAnalysis::getNormalFlowFunction(n_t Curr, n_t Succ) {
     auto Inner = std::make_shared<IdentityFlow<d_t, container_t>>();
-    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "Identity", this, Curr, Succ);
+    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "NormalIdentity", this, Curr, Succ);
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallFlowFunction(n_t CallSite, f_t Callee) {
-    (void)CallSite;
-    (void)Callee;
-    return std::make_shared<IdentityFlow<d_t, container_t>>();
+    auto Inner = std::make_shared<IdentityFlow<d_t, container_t>>();
+    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "CallIdentity", this, CallSite, CallSite);
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getRetFlowFunction(n_t CallSite, f_t Callee,
                                                                                 n_t ExitStmt, n_t RetSite) {
-    (void)CallSite;
-    (void)Callee;
-    (void)ExitStmt;
-    (void)RetSite;
-    return std::make_shared<IdentityFlow<d_t, container_t>>();
+    auto Inner = std::make_shared<IdentityFlow<d_t, container_t>>();
+    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "RetIdentity", this, CallSite, CallSite);
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFunction(n_t CallSite, n_t RetSite,
                                                                                        llvm::ArrayRef<f_t> Callees) {
-    (void)CallSite;
-    (void)RetSite;
-    (void)Callees;
-    return std::make_shared<KeepLocalOnCallToRet<d_t, container_t>>();
+    auto Inner = std::make_shared<KeepLocalOnCallToRet<d_t, container_t>>();
+    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "CallToRetKeepLocal", this, CallSite, RetSite);
 }
 
-// IMPORTANT: Define *all* edge-function hooks to avoid base defaults that may instantiate psr::AllTop<l_t>.
-FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getNormalEdgeFunction(n_t Curr, d_t CurrNode,
-                                                                                n_t Succ, d_t SuccNode) {
-    (void)Curr;
-    (void)CurrNode;
-    (void)Succ;
-    (void)SuccNode;
-    return Feasibility::edgeIdentity();
+FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
+                                                                                n_t succ, d_t succNode) {
+    if (Feasibility::Util::F_DebugEnabled.load()) {
+        llvm::errs() << Feasibility::Util::F_TAG << " EF normal @";
+        Feasibility::Util::dumpInst(curr);
+        llvm::errs() << "\n" << Feasibility::Util::F_TAG << "   currFact=";
+        Feasibility::Util::dumpFact(this, currNode);
+        llvm::errs() << "\n" << Feasibility::Util::F_TAG << "   succFact=";
+        Feasibility::Util::dumpFact(this, succNode);
+        llvm::errs() << "\n";
+    }
+
+    if (isZeroValue(currNode) || isZeroValue(succNode)) {
+        auto E = EF(std::in_place_type<FeasibilityIdentityEF>);
+        if (Feasibility::Util::F_DebugEnabled.load()) {
+            llvm::errs() << Feasibility::Util::F_TAG << "   reason=zero-involved  ";
+            Feasibility::Util::dumpEF(E);
+            llvm::errs() << "\n";
+        }
+        return E;
+    }
+
+    auto E = EF(std::in_place_type<FeasibilityIdentityEF>);
+    return E;
 }
 
 FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getCallEdgeFunction(n_t CallSite, d_t SrcNode,
                                                                               f_t DestFun, d_t DestNode) {
-    (void)CallSite;
-    (void)SrcNode;
-    (void)DestFun;
-    (void)DestNode;
-    return Feasibility::edgeIdentity();
+    return EF(std::in_place_type<FeasibilityIdentityEF>);
 }
 
 FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getReturnEdgeFunction(n_t CallSite, f_t Callee,
                                                                                 n_t ExitStmt, d_t ExitNode,
                                                                                 n_t RetSite, d_t RetNode) {
-    (void)CallSite;
-    (void)Callee;
-    (void)ExitStmt;
-    (void)ExitNode;
-    (void)RetSite;
-    (void)RetNode;
-    return Feasibility::edgeIdentity();
+    return EF(std::in_place_type<FeasibilityIdentityEF>);
 }
 
 FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getCallToRetEdgeFunction(n_t CallSite, d_t CallNode,
                                                                                    n_t RetSite, d_t RetSiteNode,
                                                                                    llvm::ArrayRef<f_t> Callees) {
-    (void)CallSite;
-    (void)CallNode;
-    (void)RetSite;
-    (void)RetSiteNode;
-    (void)Callees;
-    return Feasibility::edgeIdentity();
+    return EF(std::in_place_type<FeasibilityIdentityEF>);
 }
 
 
