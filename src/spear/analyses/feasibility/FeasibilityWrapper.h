@@ -30,12 +30,9 @@ class FeasibilityWrapper {
                        llvm::FunctionAnalysisManager *analysisManager);
 
  private:
-    // Internal storage of the analysis results calculated by phasar
-    std::unique_ptr<ResultsTy> cachedResults;
-
     // Internal storage of the analysis manager so we can access llvms analysis information later on without
     // passing it down to our functions
-    llvm::FunctionAnalysisManager *FAM;
+    llvm::FunctionAnalysisManager *FAM = nullptr;
 };
 
 #endif  // SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYWRAPPER_H_

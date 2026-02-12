@@ -10,8 +10,12 @@
 #include <phasar/PhasarLLVM/TypeHierarchy/DIBasedTypeHierarchy.h>
 #include "phasar/Pointer/AliasInfo.h"
 #include "phasar/PhasarLLVM/Pointer/LLVMAliasSet.h"
+#include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>
+#include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
+#include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>
 
-#include "analyses/feasibility/Feasibility.h"
+
+#include "analyses/feasibility/FeasibilityAnalysis.h"
 
 FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
                                        llvm::FunctionAnalysisManager *analysisManager) {
@@ -27,13 +31,11 @@ FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperAnalyses> help
     }
 
     auto &IRDB = helperAnalyses->getProjectIRDB();
-    auto &CFG  = helperAnalyses->getCFG();
-    const Feasibility::FeasibilityAnalysisDomain::th_t *TH = &helperAnalyses->getTypeHierarchy();
+    auto &interproceduralCFG = helperAnalyses->getICFG();  // Interprocedural CFG
     auto &PTImpl = helperAnalyses->getAliasInfo();
     psr::AliasInfoRef<const llvm::Value *, const llvm::Instruction *> PT(&PTImpl);
 
-    Feasibility::FeasibilityAnalysis analysisProblem(&IRDB, TH, &CFG, PT);
+    Feasibility::FeasibilityAnalysis analysisProblem(analysisManager, &IRDB);  // Build analysis
 
-    psr::IntraMonoSolver<Feasibility::FeasibilityAnalysisDomain> solver(analysisProblem);
-    solver.solve();
+    auto analysisResult = psr::solveIDEProblem(analysisProblem, interproceduralCFG);  // Solve once
 }
