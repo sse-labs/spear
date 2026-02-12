@@ -114,6 +114,21 @@ class FeasibilityAnalysis : public psr::IntraMonoProblem<FeasibilityAnalysisDoma
      * @param container The set of facts to print
      */
     void printContainer(llvm::raw_ostream &OS, mono_container_t container) const override;
+
+ private:
+    std::optional<z3::expr> createIntVal(const llvm::Value *val);
+
+    std::optional<z3::expr> createBitVal(const llvm::Value *V, const FeasibilityFact &Fact);
+
+    std::optional<z3::expr> resolve(const llvm::Value *variable, const FeasibilityFact &Fact);
+
+    z3::expr createFreshBitVal(const llvm::Value *key, unsigned bitwidth, const char *prefix);
+
+    mono_container_t allTop();
+
+    static bool equivUnderLess(const FeasibilityFact &a, const FeasibilityFact &b) {
+        return !(a < b) && !(b < a);
+    }
 };
 
 }  // namespace Feasibility
