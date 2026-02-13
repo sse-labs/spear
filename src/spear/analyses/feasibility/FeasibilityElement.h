@@ -11,6 +11,7 @@
 #include <ostream>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 namespace z3 {
 class context;
@@ -134,10 +135,15 @@ public:
   [[nodiscard]] id_t memSet(id_t mem, const llvm::Value *loc, const z3::expr &expr);
   [[nodiscard]] id_t memForget(id_t mem, const llvm::Value *loc);
 
+  [[nodiscard]] FeasibilityElement normalizeIdeKinds(const FeasibilityElement &E,
+                                                 FeasibilityStateStore *S);
+
   // ---- lattice ops on whole elements ----
   [[nodiscard]] bool leq(const FeasibilityElement &A, const FeasibilityElement &B);
   [[nodiscard]] FeasibilityElement join(const FeasibilityElement &A, const FeasibilityElement &B);
   [[nodiscard]] FeasibilityElement meet(const FeasibilityElement &A, const FeasibilityElement &B);
+
+  std::vector<z3::expr> getExpressions(id_t pcId) const;
 
   // ---- SMT ----
   [[nodiscard]] bool isSatisfiable(const FeasibilityElement &E);

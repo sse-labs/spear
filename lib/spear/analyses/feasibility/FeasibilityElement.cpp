@@ -23,11 +23,13 @@ namespace Feasibility {
 // ============================================================================
 
 FeasibilityElement FeasibilityElement::ideNeutral(FeasibilityStateStore *S) noexcept {
+  // Compatibility alias: IDE-neutral is "true / empty", NOT unknown.
   return FeasibilityElement{S, Kind::IdeNeutral, 0, 0, 0};
 }
 
 FeasibilityElement FeasibilityElement::ideAbsorbing(FeasibilityStateStore *S) noexcept {
-  return FeasibilityElement{S, Kind::IdeAbsorbing, 0, 0, 0};
+  // Compatibility alias: absorbing is infeasible.
+  return FeasibilityElement::top(S);
 }
 
 FeasibilityElement FeasibilityElement::top(FeasibilityStateStore *S) noexcept {
@@ -64,23 +66,29 @@ bool FeasibilityElement::isNormal() const noexcept {
 }
 
 FeasibilityElement FeasibilityElement::assume(const z3::expr &cond) const {
-  if (store == nullptr) {
-    return *this;
-  }
-  if (isBottom() || isIdeAbsorbing()) {
-    return *this;
-  }
+    if (store == nullptr) {
+      return *this;
+    }
+    if (isBottom() || isIdeAbsorbing()) {
+      return *this;
+    }
 
-  FeasibilityElement out = *this;
-  // IDE-neutral should behave like "no information yet": materialize to empty normal.
-  if (out.isTop() || out.isIdeNeutral()) {
-    out = initial(store);
-  }
+    FeasibilityElement out = *this;
+    if (out.isTop() || out.isIdeNeutral()) {
+      out = initial(store);
+    }
 
-  out.pcId = store->pcAssume(out.pcId, cond);
-  out.kind = Kind::Normal;
-  return out;
+    out.pcId = store->pcAssume(out.pcId, cond);
+
+    // ADD THE CHECK RIGHT HERE
+    if (!store->isSatisfiable(out)) {
+      return FeasibilityElement::bottom(store);
+    }
+
+    out.kind = Kind::Normal;
+    return out;
 }
+
 
 FeasibilityElement FeasibilityElement::setSSA(const llvm::Value *key,
                                               const z3::expr &expr) const {
@@ -318,7 +326,15 @@ z3::context &FeasibilityStateStore::ctx() noexcept {
 
 FeasibilityStateStore::id_t FeasibilityStateStore::pcAssume(id_t pc,
                                                             const z3::expr &cond) {
-  // Store node; id is index+1
+  // If the last constraint is identical, don't duplicate
+  if (pc != 0) {
+    const auto &last = PImpl->PcNodes[pc - 1];
+    if (last.prev == pc /* no */) { /* ignore */ }
+    if (z3::eq(last.constraint, cond)) {
+      return pc;
+    }
+  }
+
   PImpl->PcNodes.emplace_back(pc, cond);
   return static_cast<id_t>(PImpl->PcNodes.size());
 }
@@ -367,24 +383,12 @@ FeasibilityStateStore::id_t FeasibilityStateStore::memForget(id_t mem,
 
 // ---- lattice ops ----
 
-bool FeasibilityStateStore::leq(const FeasibilityElement &A,
-                                const FeasibilityElement &B) {
-  // IDE special elements: treat absorbing as least, neutral as greatest (for IDE usage).
-  // (They should mostly be handled by FeasibilityAnalysis::join, but keep this safe.)
-  if (A.isIdeAbsorbing()) {
-    return true;
-  }
-  if (B.isIdeNeutral()) {
-    return true;
-  }
-  if (B.isIdeAbsorbing()) {
-    return A.isIdeAbsorbing();
-  }
-  if (A.isIdeNeutral()) {
-    return B.isIdeNeutral();
-  }
+bool FeasibilityStateStore::leq(const FeasibilityElement &AIn,
+                                const FeasibilityElement &BIn) {
+  const FeasibilityElement A = normalizeIdeKinds(AIn, this);
+  const FeasibilityElement B = normalizeIdeKinds(BIn, this);
 
-  // Bottom ⊑ X ⊑ Top (domain)
+  // Bottom ⊑ X ⊑ Top
   if (A.isBottom()) {
     return true;
   }
@@ -398,7 +402,7 @@ bool FeasibilityStateStore::leq(const FeasibilityElement &A,
     return B.isTop();
   }
 
-  // both normal: require identical PC handle and must-store order
+  // Both normal: require identical PC handle and must-store order
   if (!PImpl->pcEq(A.pcId, B.pcId)) {
     return false;
   }
@@ -418,8 +422,11 @@ bool FeasibilityStateStore::leq(const FeasibilityElement &A,
   return true;
 }
 
-FeasibilityElement FeasibilityStateStore::join(const FeasibilityElement &A,
-                                               const FeasibilityElement &B) {
+FeasibilityElement FeasibilityStateStore::join(const FeasibilityElement &AIn,
+                                               const FeasibilityElement &BIn) {
+  const FeasibilityElement A = normalizeIdeKinds(AIn, this);
+  const FeasibilityElement B = normalizeIdeKinds(BIn, this);
+
   if (A.isTop() || B.isTop()) {
     return FeasibilityElement::top(this);
   }
@@ -455,8 +462,11 @@ FeasibilityElement FeasibilityStateStore::join(const FeasibilityElement &A,
   return R;
 }
 
-FeasibilityElement FeasibilityStateStore::meet(const FeasibilityElement &A,
-                                               const FeasibilityElement &B) {
+FeasibilityElement FeasibilityStateStore::meet(const FeasibilityElement &AIn,
+                                               const FeasibilityElement &BIn) {
+  const FeasibilityElement A = normalizeIdeKinds(AIn, this);
+  const FeasibilityElement B = normalizeIdeKinds(BIn, this);
+
   if (A.isBottom() || B.isBottom()) {
     return FeasibilityElement::bottom(this);
   }
@@ -522,6 +532,17 @@ bool FeasibilityStateStore::isSatisfiable(const FeasibilityElement &E) {
   return S.check() == z3::sat;
 }
 
+FeasibilityElement FeasibilityStateStore::normalizeIdeKinds(const FeasibilityElement &E,
+                                                   FeasibilityStateStore *S) {
+  if (E.isIdeNeutral()) {
+    return FeasibilityElement::initial(S);
+  }
+  if (E.isIdeAbsorbing()) {
+    return FeasibilityElement::bottom(S);
+  }
+  return E;
+}
+
 bool FeasibilityStateStore::isSatisfiableWith(const FeasibilityElement &E,
                                               const z3::expr &additionalConstraint) {
   if (E.isBottom()) {
@@ -545,16 +566,22 @@ bool FeasibilityStateStore::isSatisfiableWith(const FeasibilityElement &E,
   return S.check() == z3::sat;
 }
 
+std::vector<z3::expr> FeasibilityStateStore::getExpressions(id_t pcId) const {
+  std::vector<z3::expr> cs;
+  PImpl->collectPc(pcId, cs);
+  return cs;
+}
+
 // ============================================================================
 // Printing helpers
 // ============================================================================
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FeasibilityElement &E) {
   if (E.isIdeAbsorbing()) {
-    return OS << "IDE_⊥";
+    return OS << "⊥";  // treated as bottom
   }
   if (E.isIdeNeutral()) {
-    return OS << "IDE_⊤";
+    return OS << "init"; // treated as initial(true)
   }
   if (E.isBottom()) {
     return OS << "⊥";
@@ -562,9 +589,17 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FeasibilityElement &E
   if (E.isTop()) {
     return OS << "⊤";
   }
-  // Keep your existing minimalist formatting:
-  return OS << "[" << "" << "]";
+
+  // Get instructions from state store
+  auto expressions = E.getStore()->getExpressions(E.pcId);
+  std::string exprStr;
+  for (const auto &expr : expressions) {
+    exprStr += expr.to_string();
+  }
+
+  return OS << "[" << exprStr << "]";
 }
+
 
 std::string toString(const std::optional<FeasibilityElement> &E) {
   std::string s;

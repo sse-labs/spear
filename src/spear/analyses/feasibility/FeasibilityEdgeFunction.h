@@ -10,6 +10,8 @@
 #include <llvm/IR/Value.h>           // add if not already pulled transitively
 #include <z3++.h>                    // add if not already pulled transitively
 
+#include <utility>
+
 #include "FeasibilityElement.h"
 
 namespace Feasibility {
@@ -82,7 +84,9 @@ struct FeasibilityAssumeEF {
     using l_t = Feasibility::l_t;
 
     const z3::expr Cond;
-    bool Negate = false;
+
+    FeasibilityAssumeEF(z3::expr ValueExpr)
+        : Cond(ValueExpr) {}
 
     [[nodiscard]] l_t computeTarget(const l_t &source) const;
 
@@ -108,8 +112,8 @@ struct FeasibilitySetSSAEF {
     const llvm::Value *Key = nullptr;
     z3::expr ValueExpr;
 
-    FeasibilitySetSSAEF(const llvm::Value *Key, const z3::expr &ValueExpr)
-        : Key(Key), ValueExpr(ValueExpr) {}
+    FeasibilitySetSSAEF(const llvm::Value *Key, z3::expr ValueExpr)
+        : Key(Key), ValueExpr(std::move(ValueExpr)) {}
 
     [[nodiscard]] l_t computeTarget(const l_t &source) const;
 
@@ -134,8 +138,8 @@ struct FeasibilitySetMemEF {
     const llvm::Value *Loc = nullptr;
     z3::expr ValueExpr;
 
-    FeasibilitySetMemEF(const llvm::Value *Loc, const z3::expr &ValueExpr)
-        : Loc(Loc), ValueExpr(ValueExpr) {}
+    FeasibilitySetMemEF(const llvm::Value *Loc, z3::expr ValueExpr)
+        : Loc(Loc), ValueExpr(std::move(ValueExpr)) {}
 
 
     [[nodiscard]] l_t computeTarget(const l_t &source) const;

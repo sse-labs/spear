@@ -161,7 +161,7 @@ EF DeltaIntervalAdditive::join(psr::EdgeFunctionRef<DeltaIntervalAdditive> thisF
 
   if (other.template isa<DeltaIntervalMultiplicative>()) {
     return EF(std::in_place_type<DeltaIntervalTop>);
-      }
+  }
 
   if (auto *otherC = other.template dyn_cast<DeltaIntervalAdditive>()) {
     const int64_t L = std::min(thisFunc->lowerBound, otherC->lowerBound);
@@ -202,7 +202,6 @@ DeltaIntervalMultiplicative::computeTarget(const l_t &source) const {
 EF DeltaIntervalMultiplicative::compose(psr::EdgeFunctionRef<DeltaIntervalMultiplicative> self,
                                 const EF &second) {
   // second ∘ collect
-
   if (second.template isa<DeltaIntervalIdentity>() ||
       second.template isa<psr::EdgeIdentity<l_t>>()) {
     return EF(self);

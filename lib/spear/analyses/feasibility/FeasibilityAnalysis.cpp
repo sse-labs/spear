@@ -71,35 +71,6 @@ public:
     ContainerT computeTargets(D Src) override { return ContainerT{Src}; }
 };
 
-template <typename D, typename ContainerT>
-class GenFromZeroFlow final : public psr::FlowFunction<D, ContainerT> {
-    Feasibility::FeasibilityAnalysis *A = nullptr;
-    Feasibility::FeasibilityAnalysis::n_t Curr = nullptr;
-
-public:
-    GenFromZeroFlow(Feasibility::FeasibilityAnalysis *A,
-                    Feasibility::FeasibilityAnalysis::n_t Curr)
-        : A(A), Curr(Curr) {}
-
-    ContainerT computeTargets(D Src) override {
-        ContainerT Out;
-        Out.insert(Src);
-
-        const auto Fact = static_cast<Feasibility::FeasibilityAnalysis::d_t>(Src);
-        if (A && A->isZeroValue(Fact)) {
-            // Generate ONE non-zero fact from zero so the analysis can actually propagate.
-            // Prefer the function object (stable across many edges) if available.
-            if (Curr) {
-                if (const auto *F = Curr->getFunction()) {
-                    Out.insert(static_cast<Feasibility::FeasibilityAnalysis::d_t>(F));
-                } else {
-                    Out.insert(static_cast<Feasibility::FeasibilityAnalysis::d_t>(Curr));
-                }
-            }
-        }
-        return Out;
-    }
-};
 
 FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, const psr::LLVMBasedICFG *ICFG)
 : base_t(IRDB, {"main"}, std::optional<d_t>(
@@ -141,11 +112,9 @@ FeasibilityAnalysis::initialSeeds() {
     }
 
     for (n_t SP : ICFG->getStartPointsOf(&*Main)) {
-        // Seed zero with IDE-neutral
-        Seeds.addSeed(SP, Zero, IdeNeutral);
-
-        // Seed a body-local, definitely-non-zero fact with a non-neutral value
         const d_t Fact = static_cast<d_t>(SP);
+
+        Seeds.addSeed(SP, Zero, IdeNeutral);
         Seeds.addSeed(SP, Fact, StartVal);
 
         if (Feasibility::Util::F_DebugEnabled.load()) {
@@ -168,43 +137,49 @@ bool FeasibilityAnalysis::isZeroValue(d_t Fact) const noexcept{
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::topElement() {
-    // IDE "top" must be the neutral element (identity for edge function lifting).
+    // Value-lattice TOP: "unknown" (loss of precision).
     return l_t::ideNeutral(this->store.get());
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::bottomElement() {
-    // IDE "bottom" must be the absorbing element.
+    // Value-lattice BOTTOM: "infeasible".
     return l_t::ideAbsorbing(this->store.get());
 }
 
-FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
-    // IDE lattice join must respect neutral/absorbing.
-    if (Lhs.isIdeAbsorbing()) {
-        return Rhs;
-    }
-    if (Rhs.isIdeAbsorbing()) {
-        return Lhs;
-    }
-    if (Lhs.isIdeNeutral()) {
-        return Rhs;
-    }
-    if (Rhs.isIdeNeutral()) {
-        return Lhs;
-    }
-    // Delegate to your must-join semantics for "normal/domain" states.
-    return Lhs.join(Rhs);
+psr::EdgeFunction<FeasibilityAnalysis::l_t> FeasibilityAnalysis::allTopFunction() {
+    // Edge-function TOP in the EF lattice: maps any value to value-top ("unknown").
+    return psr::AllTop<l_t>{};
 }
 
-psr::EdgeFunction<FeasibilityAnalysis::l_t> FeasibilityAnalysis::allTopFunction() {
-    // Must map everything to IDE-neutral (not domain-top).
-    // FeasibilityElement is not trivially copyable, so we must not use psr::AllTop<l_t>.
-    return psr::AllTop<l_t>{};
+FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
+    // Value lattice join (may-merge / union)
+
+    l_t Res;
+
+    if (Lhs.isBottom()) {
+        Res = Rhs;
+    } else if (Rhs.isBottom()) {
+        Res = Lhs;
+    } else if (Lhs.isIdeAbsorbing() || Rhs.isIdeAbsorbing()) {
+        Res = l_t::ideAbsorbing(this->store.get());
+    } else if (Lhs.isIdeNeutral()) {
+        Res = Rhs;
+    } else if (Rhs.isIdeNeutral()) {
+        Res = Lhs;
+    } else {
+        Res = Lhs.join(Rhs);
+    }
+
+    if (Feasibility::Util::F_DebugEnabled.load()) {
+        llvm::errs() << "[FDBG] join: " << Lhs << " lub " << Rhs << " = " << Res << "\n";
+    }
+    return Res;
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType
 FeasibilityAnalysis::getNormalFlowFunction(n_t Curr, n_t Succ) {
     auto Inner = std::make_shared<IdentityFlow<d_t, container_t>>();
-    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "NormalIdentity", this, Curr, Succ);
+    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "Identity", this, Curr, Succ);
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallFlowFunction(n_t CallSite, f_t Callee) {
@@ -229,9 +204,9 @@ FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getNormalEdgeFunction
     if (Feasibility::Util::F_DebugEnabled.load()) {
         llvm::errs() << Feasibility::Util::F_TAG << " EF normal @";
         Feasibility::Util::dumpInst(curr);
-        llvm::errs() << "\n" << Feasibility::Util::F_TAG << "   currFact=";
+        llvm::errs() << "\n" << Feasibility::Util::F_TAG << "   currCond=";
         Feasibility::Util::dumpFact(this, currNode);
-        llvm::errs() << "\n" << Feasibility::Util::F_TAG << "   succFact=";
+        llvm::errs() << "\n" << Feasibility::Util::F_TAG << "   succCond=";
         Feasibility::Util::dumpFact(this, succNode);
         llvm::errs() << "\n";
     }
@@ -264,6 +239,133 @@ FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getNormalEdgeFunction
      * - br instructions
      *
      */
+
+    if (auto *storeinst = llvm::dyn_cast<llvm::StoreInst>(curr)) {
+        llvm::errs() << "Handling store instruction: " << *storeinst << "\n";
+
+        const llvm::Value *valOp = storeinst->getValueOperand();
+        const llvm::Value *ptrOp = storeinst->getPointerOperand()->stripPointerCasts(); // KEY
+
+        if (auto *constval = llvm::dyn_cast<llvm::ConstantInt>(valOp)) {
+            llvm::errs() << "Handling constant store: " << *constval << "\n";
+
+            // Create the BV constant with the correct bitwidth (supports >64 via string)
+            unsigned bw = constval->getBitWidth();
+            uint64_t bits = constval->getValue().getZExtValue();
+            z3::expr c = store->ctx().bv_val(bits, bw);
+
+            auto E = EF(std::in_place_type<FeasibilitySetMemEF>, ptrOp, c);
+            if (Feasibility::Util::F_DebugEnabled.load()) {
+                llvm::errs() << Feasibility::Util::F_TAG << "   reason=store-involved  ";
+                Feasibility::Util::dumpEF(E);
+                llvm::errs() << "\n";
+            }
+            return E;
+        }
+    }
+
+
+    if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(curr)) {
+        llvm::errs() << "Handling load instruction: " << *loadInst << "\n";
+
+        const llvm::Value *ptrOp = loadInst->getPointerOperand()->stripPointerCasts(); // KEY
+
+        auto E = EF(std::in_place_type<FeasibilitySetSSAEF>, ptrOp, store->ctx().bool_val(true));
+        if (Feasibility::Util::F_DebugEnabled.load()) {
+            llvm::errs() << Feasibility::Util::F_TAG << "   reason=load-involved  ";
+            Feasibility::Util::dumpEF(E);
+            llvm::errs() << "\n";
+        }
+        return E;
+    }
+
+
+    if (auto *brInst = llvm::dyn_cast<llvm::BranchInst>(curr)) {
+        llvm::errs() << "Handling branch instruction: " << *brInst << "\n";
+
+        if (brInst->isConditional()) {
+            llvm::errs() << "[FDBG] conditional branch seen\n";
+            llvm::Value *Cond = brInst->getCondition();
+
+            llvm::BasicBlock *TrueBB  = brInst->getSuccessor(0);
+            llvm::BasicBlock *FalseBB = brInst->getSuccessor(1);
+
+            const bool IsTrueEdge  = (succ && succ->getParent() == TrueBB);
+            const bool IsFalseEdge = (succ && succ->getParent() == FalseBB);
+
+            llvm::errs() << "Condition: " << *Cond << "\n";
+            llvm::errs() << "True successor: " << TrueBB->getName() << "\n";
+            llvm::errs() << "False successor: " << FalseBB->getName() << "\n";
+
+            if (!IsTrueEdge && !IsFalseEdge) {
+                return EF(std::in_place_type<FeasibilityIdentityEF>);
+            }
+
+            z3::expr ZCond = store->ctx().bool_val(true);
+
+            if (auto icmpinst = llvm::dyn_cast<llvm::ICmpInst>(Cond)) {
+                llvm::errs() << "Branch condition is an ICmp: " << *icmpinst << "\n";
+
+                auto lhs = Feasibility::Util::resolve(icmpinst->getOperand(0), store.get());
+                auto rhs = Feasibility::Util::resolve(icmpinst->getOperand(1), store.get());
+                if (!lhs || !rhs) {
+                    return EF(std::in_place_type<FeasibilityIdentityEF>);
+                }
+
+                switch (icmpinst->getPredicate()) {
+                    case llvm::CmpInst::Predicate::ICMP_EQ:
+                        ZCond = (lhs.value() == rhs.value());
+                        break;
+                    case llvm::CmpInst::Predicate::ICMP_NE:
+                        ZCond = (lhs.value() != rhs.value());
+                        break;
+                    case llvm::CmpInst::Predicate::ICMP_ULT:
+                        ZCond = z3::ult(lhs.value(), rhs.value());
+                        break;
+                    case llvm::CmpInst::Predicate::ICMP_ULE:
+                        ZCond = z3::ule(lhs.value(), rhs.value());
+                        break;
+                    case llvm::CmpInst::Predicate::ICMP_UGT:
+                        ZCond = z3::ugt(lhs.value(), rhs.value());
+                        break;
+                    case llvm::CmpInst::Predicate::ICMP_UGE:
+                        ZCond = z3::uge(lhs.value(), rhs.value());
+                        break;
+                    case llvm::CmpInst::Predicate::ICMP_SLT:
+                        ZCond = z3::slt(lhs.value(), rhs.value());
+                        break;
+                    case llvm::CmpInst::Predicate::ICMP_SLE:
+                        ZCond = z3::sle(lhs.value(), rhs.value());
+                        break;
+                    case llvm::CmpInst::Predicate::ICMP_SGT:
+                        ZCond = z3::sgt(lhs.value(), rhs.value());
+                        break;
+                    case llvm::CmpInst::Predicate::ICMP_SGE:
+                        ZCond = z3::sge(lhs.value(), rhs.value());
+                        break;
+                    default:
+                        return EF(std::in_place_type<FeasibilityIdentityEF>);
+                }
+
+                // Apply cond on true-edge, !cond on false-edge
+                const z3::expr EdgeCond = IsTrueEdge ? ZCond : !ZCond;
+
+                auto E = EF(std::in_place_type<FeasibilityAssumeEF>, EdgeCond);
+                if (Feasibility::Util::F_DebugEnabled.load()) {
+                    llvm::errs() << Feasibility::Util::F_TAG << "   reason=branch-assume("
+                                 << (IsTrueEdge ? "T" : "F") << ") -> " <<  EdgeCond.to_string() << "\n";
+                }
+                return E;
+            } else if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(Cond)) {
+                // br i1 true/false
+                ZCond = store->ctx().bool_val(!CI->isZero());
+            } else {
+                // Fallback: treat %cond as a boolean symbol (extend later if needed)
+                // Use a stable name helper; don't rely on pointer value.
+                ZCond = store->ctx().bool_const(Feasibility::Util::stableName(Cond).c_str());
+            }
+        }
+    }
 
     auto E = EF(std::in_place_type<FeasibilityIdentityEF>);
     return E;
