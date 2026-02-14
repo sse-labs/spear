@@ -134,7 +134,6 @@ void dumpEFKind(const EF &E) {
         llvm::errs() << "FeasibilitySetMemEF";
     }
 
-    // --- Phasar framework EFs ---
     else if (llvm::isa<psr::AllTop<FeasibilityAnalysis::l_t>>(E)) {
         llvm::errs() << "psr::AllTop";
     }
@@ -152,7 +151,6 @@ void dumpEFKind(const EF &E) {
     llvm::errs() << "]";
 }
 
-// Helper: stable-ish symbolic BV for a value.
 z3::expr mkSymBV(const llvm::Value *V, unsigned BW, const char *prefix, z3::context *Ctx) {
     std::string name;
     if (V && V->hasName()) {
@@ -170,8 +168,6 @@ z3::expr createFreshBitVal(const llvm::Value *key, unsigned bitwidth, const char
 std::optional<z3::expr> createIntVal(const llvm::Value *val, z3::context *context) {
     if (auto constval = llvm::dyn_cast<llvm::ConstantInt>(val)) {
         unsigned bitwidth = constval->getBitWidth();
-        // NOTE: zext to u64 is still fine for <=64bit; larger ints will get truncated here.
-        // If you need true >64, switch to string-based bv_val.
         uint64_t numval = constval->getValue().getZExtValue();
         return context->bv_val(numval, bitwidth);
     }
@@ -196,17 +192,14 @@ std::optional<z3::expr> createBitVal(const llvm::Value *V, z3::context *context)
 }
 
 std::optional<z3::expr> resolve(const llvm::Value *variable, FeasibilityStateStore *store) {
-
     if (!variable) {
         return std::nullopt;
     }
 
-    // Constants
     if (auto C = createIntVal(variable, &store->ctx())) {
         return C;
     }
 
-    // Loads: best-effort symbolic (until you wire store lookups by (memId, ptr) into the store API)
     if (const auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(variable)) {
         if (!loadInst->getType()->isIntegerTy()) {
             return std::nullopt;
@@ -215,7 +208,6 @@ std::optional<z3::expr> resolve(const llvm::Value *variable, FeasibilityStateSto
         return mkSymBV(loadInst, bw, "load", &store->ctx());
     }
 
-    // Casts on integer types (BV modeling)
     if (const auto *Cast = llvm::dyn_cast<llvm::CastInst>(variable)) {
         auto op = resolve(Cast->getOperand(0), store);
         if (!op) return std::nullopt;
@@ -247,7 +239,6 @@ std::optional<z3::expr> resolve(const llvm::Value *variable, FeasibilityStateSto
         return std::nullopt;
     }
 
-    // Binary operators on integer types
     if (const auto *BO = llvm::dyn_cast<llvm::BinaryOperator>(variable)) {
         if (!BO->getType()->isIntegerTy()) return std::nullopt;
 
@@ -270,90 +261,12 @@ std::optional<z3::expr> resolve(const llvm::Value *variable, FeasibilityStateSto
         return std::nullopt;
     }
 
-    // Generic integer value => symbolic
     if (variable->getType()->isIntegerTy()) {
         unsigned bw = llvm::cast<llvm::IntegerType>(variable->getType())->getBitWidth();
         return mkSymBV(variable, bw, "v", &store->ctx());
     }
 
     return std::nullopt;
-}
-
-std::string stableName(const llvm::Value *V) {
-    if (!V) {
-        return "null";
-    }
-
-    // 1) Named values (best case)
-    if (V->hasName()) {
-        return V->getName().str();
-    }
-
-    // 2) Instructions without name → use function + instruction index
-    if (auto *I = llvm::dyn_cast<llvm::Instruction>(V)) {
-        const llvm::Function *F = I->getFunction();
-
-        std::string S;
-        llvm::raw_string_ostream OS(S);
-
-        if (F) {
-            OS << F->getName() << "_";
-        }
-
-        // Use psr.id metadata if available (more stable than numbering)
-        if (I->hasMetadata("psr.id")) {
-            if (auto *MD = I->getMetadata("psr.id")) {
-                if (auto *CMD = llvm::dyn_cast<llvm::ConstantAsMetadata>(MD->getOperand(0))) {
-                    if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(CMD->getValue())) {
-                        OS << "id" << CI->getZExtValue();
-                        return OS.str();
-                    }
-                }
-            }
-        }
-
-        // Fallback: instruction index in function
-        unsigned idx = 0;
-        for (const auto &BB : *F) {
-            for (const auto &Inst : BB) {
-                if (&Inst == I) {
-                    OS << "inst" << idx;
-                    return OS.str();
-                }
-                ++idx;
-            }
-        }
-
-        OS << "inst_unknown";
-        return OS.str();
-    }
-
-    // 3) Constants
-    if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(V)) {
-        std::string S;
-        llvm::raw_string_ostream OS(S);
-        OS << "c_" << CI->getValue();
-        return OS.str();
-    }
-
-    if (llvm::isa<llvm::ConstantPointerNull>(V)) {
-        return "null_ptr";
-    }
-
-    // 4) Fallback: print IR representation (stable across runs)
-    std::string S;
-    llvm::raw_string_ostream OS(S);
-    V->print(OS);
-    OS.flush();
-
-    // Remove spaces/newlines (Z3 symbol must be clean)
-    for (char &c : S) {
-        if (c == ' ' || c == '\n' || c == '\t') {
-            c = '_';
-        }
-    }
-
-    return S;
 }
 
 } // namespace Feasibility::Util

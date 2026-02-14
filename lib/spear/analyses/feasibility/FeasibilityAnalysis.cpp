@@ -356,13 +356,6 @@ FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getNormalEdgeFunction
                                  << (IsTrueEdge ? "T" : "F") << ") -> " <<  EdgeCond.to_string() << "\n";
                 }
                 return E;
-            } else if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(Cond)) {
-                // br i1 true/false
-                ZCond = store->ctx().bool_val(!CI->isZero());
-            } else {
-                // Fallback: treat %cond as a boolean symbol (extend later if needed)
-                // Use a stable name helper; don't rely on pointer value.
-                ZCond = store->ctx().bool_const(Feasibility::Util::stableName(Cond).c_str());
             }
         }
     }
