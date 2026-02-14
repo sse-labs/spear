@@ -169,9 +169,7 @@ FeasibilityStateStore::id_t FeasibilityStateStore::pcAssume(id_t pc, const z3::e
   const z3::expr &existingPathConstraint = baseConstraints[pc];
   z3::expr newPathConstrains = (existingPathConstraint && cond);
 
-  std::string key = newPathConstrains.to_string();
-
-  auto It = pathConditions.find(key);
+  auto It = pathConditions.find(newPathConstrains);
   if (It != pathConditions.end()) {
     return It->second;
   }
@@ -179,7 +177,7 @@ FeasibilityStateStore::id_t FeasibilityStateStore::pcAssume(id_t pc, const z3::e
   id_t newid = static_cast<id_t>(baseConstraints.size());
   baseConstraints.push_back(newPathConstrains);
   pcSatCache.push_back(-1);
-  pathConditions.emplace(std::move(key), newid);
+  pathConditions.emplace(newPathConstrains, newid);
 
   return newid;
 }
@@ -299,8 +297,7 @@ FeasibilityStateStore::join(const FeasibilityElement &AIn, const FeasibilityElem
     return FeasibilityElement::bottom(this);
   }
 
-  std::string Key = Joined.to_string();
-  auto It = pathConditions.find(Key);
+  auto It = pathConditions.find(Joined);
   if (It != pathConditions.end()) {
     FeasibilityElement R = FeasibilityElement::initial(this);
     R.kind = FeasibilityElement::Kind::Normal;
@@ -310,7 +307,7 @@ FeasibilityStateStore::join(const FeasibilityElement &AIn, const FeasibilityElem
 
   const id_t NewId = static_cast<id_t>(baseConstraints.size());
   baseConstraints.push_back(Joined);
-  pathConditions.emplace(std::move(Key), NewId);
+  pathConditions.emplace(Joined, NewId);
 
   FeasibilityElement R = FeasibilityElement::initial(this);
   R.kind = FeasibilityElement::Kind::Normal;

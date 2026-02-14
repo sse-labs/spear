@@ -119,7 +119,7 @@ private:
   z3::solver  solver;
 
   std::vector<z3::expr> baseConstraints;
-  std::unordered_map<std::string, id_t> pathConditions;
+  std::unordered_map<Z3_ast, id_t> pathConditions;
 
   std::vector<int8_t> pcSatCache;
 };
