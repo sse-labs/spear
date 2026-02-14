@@ -95,13 +95,10 @@ FeasibilityAnalysis::initialSeeds() {
         return Seeds;
     }
 
-    // IMPORTANT: use the base-class zero value instance (like LoopBound does)
     const d_t Zero = this->getZeroValue();
 
-    // IDE semantics: topElement() must be IDE-neutral
     const l_t IdeNeutral = topElement();
 
-    // Must be a non-neutral value for the non-zero seed
     const l_t StartVal = l_t::initial(this->store.get());
 
     if (Feasibility::Util::F_DebugEnabled.load()) {
@@ -137,23 +134,18 @@ bool FeasibilityAnalysis::isZeroValue(d_t Fact) const noexcept{
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::topElement() {
-    // Value-lattice TOP: "unknown" (loss of precision).
     return l_t::ideNeutral(this->store.get());
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::bottomElement() {
-    // Value-lattice BOTTOM: "infeasible".
     return l_t::ideAbsorbing(this->store.get());
 }
 
 psr::EdgeFunction<FeasibilityAnalysis::l_t> FeasibilityAnalysis::allTopFunction() {
-    // Edge-function TOP in the EF lattice: maps any value to value-top ("unknown").
     return psr::AllTop<l_t>{};
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
-    // Value lattice join (may-merge / union)
-
     l_t Res;
 
     if (Lhs.isBottom()) {

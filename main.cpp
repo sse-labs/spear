@@ -126,9 +126,10 @@ void runAnalysisRoutine(CLIOptions opts) {
 
     // Store results for later use
     auto MainFn = module_up->getFunction("main");
-    auto PhasarResults = PH.queryBoundVars(MainFn);
+    auto loopboundResults = PH.queryBoundVars(MainFn);
+    auto feasibilityResults = PH.queryFeasibility(MainFn);
 
-    PhasarResultRegistry::get().store(PhasarResults);
+    PhasarResultRegistry::get().store(loopboundResults);
 
     modulePassManager.addPass(Energy(opts.profilePath));
     modulePassManager.run(*module_up, moduleAnalysisManager);
