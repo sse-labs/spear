@@ -6,6 +6,7 @@
 #include "analyses/feasibility/FeasibilityElement.h"
 
 #include <algorithm>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -14,22 +15,28 @@
 
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/raw_os_ostream.h>
-#include <llvm/Support/raw_ostream.h>
 
 namespace Feasibility {
 
-// ============================================================================
-// FeasibilityElement (handle) - trivial methods
-// ============================================================================
+FeasibilityElement::Kind FeasibilityElement::getKind() const noexcept { return kind; }
+
+FeasibilityStateStore *FeasibilityElement::getStore() const noexcept { return store; }
+
+bool operator==(const FeasibilityElement &A, const FeasibilityElement &B) noexcept {
+  return A.equal_to(B);
+}
+
+bool operator!=(const FeasibilityElement &A, const FeasibilityElement &B) noexcept {
+  return !A.equal_to(B);
+}
 
 FeasibilityElement FeasibilityElement::ideNeutral(FeasibilityStateStore *S) noexcept {
-  // Compatibility alias: IDE-neutral is "true / empty", NOT unknown.
   return FeasibilityElement{S, Kind::IdeNeutral, 0, 0, 0};
 }
 
 FeasibilityElement FeasibilityElement::ideAbsorbing(FeasibilityStateStore *S) noexcept {
   // Compatibility alias: absorbing is infeasible.
-  return FeasibilityElement::top(S);
+  return FeasibilityElement{S, Kind::IdeAbsorbing, 0, 0, 0};
 }
 
 FeasibilityElement FeasibilityElement::top(FeasibilityStateStore *S) noexcept {
@@ -41,7 +48,6 @@ FeasibilityElement FeasibilityElement::bottom(FeasibilityStateStore *S) noexcept
 }
 
 FeasibilityElement FeasibilityElement::initial(FeasibilityStateStore *S) noexcept {
-  // "Normal empty state" (not IDE neutral).
   return FeasibilityElement{S, Kind::Normal, 0, 0, 0};
 }
 
@@ -66,32 +72,6 @@ bool FeasibilityElement::isNormal() const noexcept {
 }
 
 FeasibilityElement FeasibilityElement::assume(const z3::expr &cond) const {
-    if (store == nullptr) {
-      return *this;
-    }
-    if (isBottom() || isIdeAbsorbing()) {
-      return *this;
-    }
-
-    FeasibilityElement out = *this;
-    if (out.isTop() || out.isIdeNeutral()) {
-      out = initial(store);
-    }
-
-    out.pcId = store->pcAssume(out.pcId, cond);
-
-    // ADD THE CHECK RIGHT HERE
-    if (!store->isSatisfiable(out)) {
-      return FeasibilityElement::bottom(store);
-    }
-
-    out.kind = Kind::Normal;
-    return out;
-}
-
-
-FeasibilityElement FeasibilityElement::setSSA(const llvm::Value *key,
-                                              const z3::expr &expr) const {
   if (store == nullptr) {
     return *this;
   }
@@ -104,62 +84,12 @@ FeasibilityElement FeasibilityElement::setSSA(const llvm::Value *key,
     out = initial(store);
   }
 
-  out.ssaId = store->ssaSet(out.ssaId, key, expr);
-  out.kind = Kind::Normal;
-  return out;
-}
+  out.pcId = store->pcAssume(out.pcId, cond);
 
-FeasibilityElement FeasibilityElement::setMem(const llvm::Value *loc,
-                                              const z3::expr &expr) const {
-  if (store == nullptr) {
-    return *this;
-  }
-  if (isBottom() || isIdeAbsorbing()) {
-    return *this;
+  if (!store->isSatisfiable(out)) {
+    return FeasibilityElement::bottom(store);
   }
 
-  FeasibilityElement out = *this;
-  if (out.isTop() || out.isIdeNeutral()) {
-    out = initial(store);
-  }
-
-  out.memId = store->memSet(out.memId, loc, expr);
-  out.kind = Kind::Normal;
-  return out;
-}
-
-FeasibilityElement FeasibilityElement::forgetSSA(const llvm::Value *key) const {
-  if (store == nullptr) {
-    return *this;
-  }
-  if (isBottom() || isIdeAbsorbing()) {
-    return *this;
-  }
-
-  FeasibilityElement out = *this;
-  if (out.isTop() || out.isIdeNeutral()) {
-    out = initial(store);
-  }
-
-  out.ssaId = store->ssaForget(out.ssaId, key);
-  out.kind = Kind::Normal;
-  return out;
-}
-
-FeasibilityElement FeasibilityElement::forgetMem(const llvm::Value *loc) const {
-  if (store == nullptr) {
-    return *this;
-  }
-  if (isBottom() || isIdeAbsorbing()) {
-    return *this;
-  }
-
-  FeasibilityElement out = *this;
-  if (out.isTop() || out.isIdeNeutral()) {
-    out = initial(store);
-  }
-
-  out.memId = store->memForget(out.memId, loc);
   out.kind = Kind::Normal;
   return out;
 }
@@ -182,25 +112,11 @@ FeasibilityElement FeasibilityElement::clearPathConstraints() const {
   return out;
 }
 
-bool FeasibilityElement::leq(const FeasibilityElement &other) const {
-  if (store == nullptr) {
-    return false;
-  }
-  return store->leq(*this, other);
-}
-
 FeasibilityElement FeasibilityElement::join(const FeasibilityElement &other) const {
   if (store == nullptr) {
     return *this;
   }
   return store->join(*this, other);
-}
-
-FeasibilityElement FeasibilityElement::meet(const FeasibilityElement &other) const {
-  if (store == nullptr) {
-    return *this;
-  }
-  return store->meet(*this, other);
 }
 
 bool FeasibilityElement::equal_to(const FeasibilityElement &other) const noexcept {
@@ -215,217 +131,129 @@ bool FeasibilityElement::isSatisfiable() const {
   return store->isSatisfiable(*this);
 }
 
-bool FeasibilityElement::isSatisfiableWith(const z3::expr &additionalConstraint) const {
-  if (store == nullptr) {
-    return false;
-  }
-  return store->isSatisfiableWith(*this, additionalConstraint);
+bool FeasibilityStateStore::isValid(const z3::expr &e) {
+  solver.push();
+  solver.add(!e);
+  const bool ok = solver.check() == z3::unsat;
+  solver.pop();
+  return ok;
 }
 
-// ============================================================================
-// FeasibilityStateStore::Impl (heavy state)
-// ============================================================================
-
-struct FeasibilityStateStore::Impl final {
-  z3::context Ctx;
-
-  // Persistent PC as a linked list of constraints:
-  // pcId == 0 means empty (true).
-  struct PcNode {
-    id_t prev = 0;
-    z3::expr constraint;
-
-    PcNode(id_t p, const z3::expr &c) : prev(p), constraint(c) {}
-  };
-
-  std::vector<PcNode> PcNodes; // index+1 == id (so id 0 is reserved)
-
-  using Map = std::unordered_map<const llvm::Value *, z3::expr>;
-
-  // Very simple persistent maps by full-copy per update:
-  // id 0 is empty map.
-  std::vector<Map> SsaStates;
-  std::vector<Map> MemStates;
-
-  Impl() {
-    SsaStates.emplace_back(); // id 0
-    MemStates.emplace_back(); // id 0
-  }
-
-  [[nodiscard]] const Map &ssa(id_t id) const {
-    if (id == 0) {
-      return SsaStates[0];
-    }
-    return SsaStates[id];
-  }
-
-  [[nodiscard]] const Map &mem(id_t id) const {
-    if (id == 0) {
-      return MemStates[0];
-    }
-    return MemStates[id];
-  }
-
-  // Collect constraints of a pcId into a vector (from oldest to newest).
-  void collectPc(id_t pc, std::vector<z3::expr> &out) const {
-    out.clear();
-    // pcId refers to PcNodes[pc-1]
-    while (pc != 0) {
-      const PcNode &N = PcNodes[pc - 1];
-      out.push_back(N.constraint);
-      pc = N.prev;
-    }
-    std::reverse(out.begin(), out.end());
-  }
-
-  bool pcEq(id_t a, id_t b) const {
-    return a == b;
-  }
-
-  static bool storeLeqMust(const Map &A, const Map &B) {
-    // A ⊑ B (must): A has at least all bindings of B with identical expr
-    for (const auto &KV : B) {
-      auto it = A.find(KV.first);
-      if (it == A.end()) {
-        return false;
-      }
-      if (!z3::eq(it->second, KV.second)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  static void mustJoinInto(Map &out, const Map &A, const Map &B) {
-    out.clear();
-    for (const auto &KV : A) {
-      auto it = B.find(KV.first);
-      if (it != B.end()) {
-        if (z3::eq(KV.second, it->second)) {
-          out.emplace(KV.first, KV.second);
-        }
-      }
-    }
-  }
-};
-
-FeasibilityStateStore::FeasibilityStateStore() {
-  PImpl = new Impl();
+bool FeasibilityStateStore::isUnsat(const z3::expr &e) {
+  solver.push();
+  solver.add(e);
+  const bool ok = solver.check() == z3::unsat;
+  solver.pop();
+  return ok;
 }
 
-FeasibilityStateStore::~FeasibilityStateStore() {
-  delete PImpl;
-  PImpl = nullptr;
+bool FeasibilityStateStore::isEquivalent(const z3::expr &A, const z3::expr &B) {
+  solver.push();
+  solver.add(A ^ B);
+  const bool ok = solver.check() == z3::unsat;
+  solver.pop();
+  return ok;
 }
 
-z3::context &FeasibilityStateStore::ctx() noexcept {
-  return PImpl->Ctx;
+FeasibilityStateStore::FeasibilityStateStore(): solver(context) {
+  // We enforce our first element of the constrains to always be "true" (empty path constraint) to simplify the logic of pcAssume.
+  baseConstraints.push_back(context.bool_val(true));
 }
 
-// ---- PC ops ----
+FeasibilityStateStore::~FeasibilityStateStore() {}
 
-FeasibilityStateStore::id_t FeasibilityStateStore::pcAssume(id_t pc,
-                                                            const z3::expr &cond) {
-  // If the last constraint is identical, don't duplicate
-  if (pc != 0) {
-    const auto &last = PImpl->PcNodes[pc - 1];
-    if (last.prev == pc /* no */) { /* ignore */ }
-    if (z3::eq(last.constraint, cond)) {
-      return pc;
-    }
+z3::context &FeasibilityStateStore::ctx() noexcept { return context; }
+
+
+FeasibilityStateStore::id_t FeasibilityStateStore::pcAssume(id_t pc, const z3::expr &cond) {
+  const z3::expr &existingPathConstraint = baseConstraints[pc];
+  z3::expr newPathConstrains = (existingPathConstraint && cond);
+
+  std::string key = newPathConstrains.to_string();
+
+  auto It = pathConditions.find(key);
+  if (It != pathConditions.end()) {
+    return It->second;
   }
 
-  PImpl->PcNodes.emplace_back(pc, cond);
-  return static_cast<id_t>(PImpl->PcNodes.size());
+  id_t newid = static_cast<id_t>(baseConstraints.size());
+  baseConstraints.push_back(newPathConstrains);
+  pcSatCache.push_back(-1);
+  pathConditions.emplace(std::move(key), newid);
+
+  return newid;
 }
 
 FeasibilityStateStore::id_t FeasibilityStateStore::pcClear() {
+  pathConditions.clear();
+  pcSatCache.resize(1);
   return 0;
 }
 
-// ---- SSA ops ----
-
-FeasibilityStateStore::id_t FeasibilityStateStore::ssaSet(id_t ssa,
-                                                          const llvm::Value *key,
-                                                          const z3::expr &expr) {
-  Impl::Map next = (ssa == 0) ? PImpl->SsaStates[0] : PImpl->SsaStates[ssa];
-  next.insert_or_assign(key, expr);
-  PImpl->SsaStates.push_back(std::move(next));
-  return static_cast<id_t>(PImpl->SsaStates.size() - 1);
+z3::expr FeasibilityStateStore::getPathConstraint(id_t pcId) const {
+  return baseConstraints[pcId];
 }
 
-FeasibilityStateStore::id_t FeasibilityStateStore::ssaForget(id_t ssa,
-                                                             const llvm::Value *key) {
-  Impl::Map next = (ssa == 0) ? PImpl->SsaStates[0] : PImpl->SsaStates[ssa];
-  next.erase(key);
-  PImpl->SsaStates.push_back(std::move(next));
-  return static_cast<id_t>(PImpl->SsaStates.size() - 1);
+bool FeasibilityStateStore::isNotOf(const z3::expr &A, const z3::expr &B) {
+  if (!A.is_app()) {
+    return false;
+  }
+  if (A.decl().decl_kind() != Z3_OP_NOT) {
+    return false;
+  }
+  return z3::eq(A.arg(0), B);
 }
 
-// ---- Mem ops ----
-
-FeasibilityStateStore::id_t FeasibilityStateStore::memSet(id_t mem,
-                                                          const llvm::Value *loc,
-                                                          const z3::expr &expr) {
-  Impl::Map next = (mem == 0) ? PImpl->MemStates[0] : PImpl->MemStates[mem];
-  next.insert_or_assign(loc, expr);
-  PImpl->MemStates.push_back(std::move(next));
-  return static_cast<id_t>(PImpl->MemStates.size() - 1);
+bool FeasibilityStateStore::isAnd2(const z3::expr &E) {
+  return E.is_app() && E.decl().decl_kind() == Z3_OP_AND && E.num_args() == 2;
 }
 
-FeasibilityStateStore::id_t FeasibilityStateStore::memForget(id_t mem,
-                                                             const llvm::Value *loc) {
-  Impl::Map next = (mem == 0) ? PImpl->MemStates[0] : PImpl->MemStates[mem];
-  next.erase(loc);
-  PImpl->MemStates.push_back(std::move(next));
-  return static_cast<id_t>(PImpl->MemStates.size() - 1);
+bool FeasibilityStateStore::isOr2(const z3::expr &E) {
+  return E.is_app() && E.decl().decl_kind() == Z3_OP_OR && E.num_args() == 2;
 }
 
-// ---- lattice ops ----
+z3::expr FeasibilityStateStore::factor_or_and_not(const z3::expr &E) {
+  if (!isOr2(E)) {
+    return E;
+  }
 
-bool FeasibilityStateStore::leq(const FeasibilityElement &AIn,
-                                const FeasibilityElement &BIn) {
+  const z3::expr A = E.arg(0);
+  const z3::expr B = E.arg(1);
+
+  if (!isAnd2(A) || !isAnd2(B)) {
+    return E;
+  }
+
+  const z3::expr a0 = A.arg(0);
+  const z3::expr a1 = A.arg(1);
+  const z3::expr b0 = B.arg(0);
+  const z3::expr b1 = B.arg(1);
+
+  if (z3::eq(a0, b0) && isNotOf(b1, a1)) {
+    return a0;
+  }
+  if (z3::eq(a0, b0) && isNotOf(a1, b1)) {
+    return a0;
+  }
+
+  if (z3::eq(a0, b1) && isNotOf(b0, a1)) {
+    return a0;
+  }
+  if (z3::eq(a1, b0) && isNotOf(b1, a0)) {
+    return a1;
+  }
+  if (z3::eq(a1, b1) && isNotOf(b0, a0)) {
+    return a1;
+  }
+
+  return E;
+}
+
+FeasibilityElement
+FeasibilityStateStore::join(const FeasibilityElement &AIn, const FeasibilityElement &BIn) {
   const FeasibilityElement A = normalizeIdeKinds(AIn, this);
   const FeasibilityElement B = normalizeIdeKinds(BIn, this);
 
-  // Bottom ⊑ X ⊑ Top
-  if (A.isBottom()) {
-    return true;
-  }
-  if (B.isTop()) {
-    return true;
-  }
-  if (B.isBottom()) {
-    return A.isBottom();
-  }
-  if (A.isTop()) {
-    return B.isTop();
-  }
-
-  // Both normal: require identical PC handle and must-store order
-  if (!PImpl->pcEq(A.pcId, B.pcId)) {
-    return false;
-  }
-
-  const auto &ASsa = PImpl->ssa(A.ssaId);
-  const auto &BSsa = PImpl->ssa(B.ssaId);
-  if (!Impl::storeLeqMust(ASsa, BSsa)) {
-    return false;
-  }
-
-  const auto &AMem = PImpl->mem(A.memId);
-  const auto &BMem = PImpl->mem(B.memId);
-  if (!Impl::storeLeqMust(AMem, BMem)) {
-    return false;
-  }
-
-  return true;
-}
-
-FeasibilityElement FeasibilityStateStore::join(const FeasibilityElement &AIn,
-                                               const FeasibilityElement &BIn) {
-  const FeasibilityElement A = normalizeIdeKinds(AIn, this);
-  const FeasibilityElement B = normalizeIdeKinds(BIn, this);
 
   if (A.isTop() || B.isTop()) {
     return FeasibilityElement::top(this);
@@ -436,104 +264,84 @@ FeasibilityElement FeasibilityStateStore::join(const FeasibilityElement &AIn,
   if (B.isBottom()) {
     return A;
   }
-
-  // MUST join:
-  //  - keep PC only if equal, else drop (pcId=0 means true/unknown)
-  //  - intersect identical bindings
-  FeasibilityElement R = FeasibilityElement::initial(this);
-  R.kind = FeasibilityElement::Kind::Normal;
-
-  if (PImpl->pcEq(A.pcId, B.pcId)) {
-    R.pcId = A.pcId;
-  } else {
-    R.pcId = 0;
-  }
-
-  Impl::Map joinedSsa;
-  Impl::mustJoinInto(joinedSsa, PImpl->ssa(A.ssaId), PImpl->ssa(B.ssaId));
-  PImpl->SsaStates.push_back(std::move(joinedSsa));
-  R.ssaId = static_cast<id_t>(PImpl->SsaStates.size() - 1);
-
-  Impl::Map joinedMem;
-  Impl::mustJoinInto(joinedMem, PImpl->mem(A.memId), PImpl->mem(B.memId));
-  PImpl->MemStates.push_back(std::move(joinedMem));
-  R.memId = static_cast<id_t>(PImpl->MemStates.size() - 1);
-
-  return R;
-}
-
-FeasibilityElement FeasibilityStateStore::meet(const FeasibilityElement &AIn,
-                                               const FeasibilityElement &BIn) {
-  const FeasibilityElement A = normalizeIdeKinds(AIn, this);
-  const FeasibilityElement B = normalizeIdeKinds(BIn, this);
-
-  if (A.isBottom() || B.isBottom()) {
-    return FeasibilityElement::bottom(this);
-  }
-  if (A.isTop()) {
-    return B;
-  }
-  if (B.isTop()) {
+  if (A == B) {
     return A;
   }
 
-  // Meet:
-  //  - PC := concatenate constraints of A then B (creates new pcId chain)
-  //  - stores: must-intersection (same as join)
+  if ((A.isNormal() && A.pcId == 0) || (B.isNormal() && B.pcId == 0)) {
+    FeasibilityElement R = FeasibilityElement::initial(this);
+    R.kind = FeasibilityElement::Kind::Normal;
+    R.pcId = 0;
+    return R;
+  }
+
+  const z3::expr &PcA = baseConstraints[A.pcId];
+  const z3::expr &PcB = baseConstraints[B.pcId];
+
+  z3::expr Joined = (PcA || PcB).simplify();
+  Joined = factor_or_and_not(Joined).simplify();
+
+  if (this->isEquivalent(Joined, PcA)) {
+    return A;
+  }
+  if (this->isEquivalent(Joined, PcB)) {
+    return B;
+  }
+
+  if (this->isValid(Joined)) {
+    FeasibilityElement R = FeasibilityElement::initial(this);
+    R.kind = FeasibilityElement::Kind::Normal;
+    R.pcId = 0;
+    return R;
+  }
+
+  if (this->isUnsat(Joined)) {
+    return FeasibilityElement::bottom(this);
+  }
+
+  std::string Key = Joined.to_string();
+  auto It = pathConditions.find(Key);
+  if (It != pathConditions.end()) {
+    FeasibilityElement R = FeasibilityElement::initial(this);
+    R.kind = FeasibilityElement::Kind::Normal;
+    R.pcId = It->second;
+    return R;
+  }
+
+  const id_t NewId = static_cast<id_t>(baseConstraints.size());
+  baseConstraints.push_back(Joined);
+  pathConditions.emplace(std::move(Key), NewId);
+
   FeasibilityElement R = FeasibilityElement::initial(this);
   R.kind = FeasibilityElement::Kind::Normal;
-
-  std::vector<z3::expr> ca;
-  std::vector<z3::expr> cb;
-  PImpl->collectPc(A.pcId, ca);
-  PImpl->collectPc(B.pcId, cb);
-
-  id_t pc = 0;
-  for (const auto &c : ca) {
-    pc = pcAssume(pc, c);
-  }
-  for (const auto &c : cb) {
-    pc = pcAssume(pc, c);
-  }
-  R.pcId = pc;
-
-  Impl::Map meetSsa;
-  Impl::mustJoinInto(meetSsa, PImpl->ssa(A.ssaId), PImpl->ssa(B.ssaId));
-  PImpl->SsaStates.push_back(std::move(meetSsa));
-  R.ssaId = static_cast<id_t>(PImpl->SsaStates.size() - 1);
-
-  Impl::Map meetMem;
-  Impl::mustJoinInto(meetMem, PImpl->mem(A.memId), PImpl->mem(B.memId));
-  PImpl->MemStates.push_back(std::move(meetMem));
-  R.memId = static_cast<id_t>(PImpl->MemStates.size() - 1);
-
+  R.pcId = NewId;
   return R;
 }
-
-// ---- SMT ----
 
 bool FeasibilityStateStore::isSatisfiable(const FeasibilityElement &E) {
   if (E.isBottom()) {
     return false;
   }
-  // Top: satisfiable by convention
   if (E.isTop()) {
     return true;
   }
 
-  z3::solver S(PImpl->Ctx);
-
-  std::vector<z3::expr> cs;
-  PImpl->collectPc(E.pcId, cs);
-  for (const auto &c : cs) {
-    S.add(c);
+  auto &c = pcSatCache[E.pcId];
+  if (c != -1) {
+    return c == 1;
   }
 
-  return S.check() == z3::sat;
+  solver.push();
+  solver.add(baseConstraints[E.pcId]);
+  const bool sat = solver.check() == z3::sat;
+  solver.pop();
+
+  c = sat ? 1 : 0;
+  return sat;
 }
 
 FeasibilityElement FeasibilityStateStore::normalizeIdeKinds(const FeasibilityElement &E,
-                                                   FeasibilityStateStore *S) {
+                                                            FeasibilityStateStore *S) {
   if (E.isIdeNeutral()) {
     return FeasibilityElement::initial(S);
   }
@@ -543,45 +351,12 @@ FeasibilityElement FeasibilityStateStore::normalizeIdeKinds(const FeasibilityEle
   return E;
 }
 
-bool FeasibilityStateStore::isSatisfiableWith(const FeasibilityElement &E,
-                                              const z3::expr &additionalConstraint) {
-  if (E.isBottom()) {
-    return false;
-  }
-  if (E.isTop()) {
-    z3::solver S(PImpl->Ctx);
-    S.add(additionalConstraint);
-    return S.check() == z3::sat;
-  }
-
-  z3::solver S(PImpl->Ctx);
-
-  std::vector<z3::expr> cs;
-  PImpl->collectPc(E.pcId, cs);
-  for (const auto &c : cs) {
-    S.add(c);
-  }
-  S.add(additionalConstraint);
-
-  return S.check() == z3::sat;
-}
-
-std::vector<z3::expr> FeasibilityStateStore::getExpressions(id_t pcId) const {
-  std::vector<z3::expr> cs;
-  PImpl->collectPc(pcId, cs);
-  return cs;
-}
-
-// ============================================================================
-// Printing helpers
-// ============================================================================
-
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FeasibilityElement &E) {
   if (E.isIdeAbsorbing()) {
-    return OS << "⊥";  // treated as bottom
+    return OS << "⊥";
   }
   if (E.isIdeNeutral()) {
-    return OS << "init"; // treated as initial(true)
+    return OS << "init";
   }
   if (E.isBottom()) {
     return OS << "⊥";
@@ -590,16 +365,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FeasibilityElement &E
     return OS << "⊤";
   }
 
-  // Get instructions from state store
-  auto expressions = E.getStore()->getExpressions(E.pcId);
-  std::string exprStr;
-  for (const auto &expr : expressions) {
-    exprStr += expr.to_string();
-  }
-
-  return OS << "[" << exprStr << "]";
+  auto expression = E.getStore()->getPathConstraint(E.pcId);
+  return OS << "[" << expression.to_string() << "]";
 }
-
 
 std::string toString(const std::optional<FeasibilityElement> &E) {
   std::string s;

@@ -9,9 +9,11 @@
 #include <cstdint>
 #include <optional>
 #include <ostream>
+#include <set>
 #include <string>
-#include <type_traits>
+#include <unordered_map>
 #include <vector>
+#include <z3++.h>
 
 namespace z3 {
 class context;
@@ -27,33 +29,21 @@ namespace Feasibility {
 
 class FeasibilityStateStore;
 
-/**
- * Trivially copyable lattice element (HANDLE).
- *
- * Heavy data (PC constraints, SSA store, Mem store, z3 objects) lives inside
- * FeasibilityStateStore. This element only stores IDs + a raw store pointer.
- */
 struct FeasibilityElement final {
-  // IDE uses its own neutral/absorbing elements; keep domain top/bottom as well.
   enum class Kind : std::uint8_t {
-    IdeAbsorbing = 0, // IDE bottom (absorbing for edge-function lifting)
-    IdeNeutral   = 1, // IDE top/neutral (identity for edge-function lifting)
-    Bottom       = 2, // Domain bottom
-    Normal       = 3, // Domain normal state
-    Top          = 4  // Domain top
+    IdeAbsorbing = 0,
+    IdeNeutral   = 1,
+    Bottom       = 2,
+    Normal       = 3,
+    Top          = 4
   };
 
-  // Raw pointer is trivially copyable. Store must outlive all elements.
   FeasibilityStateStore *store = nullptr;
-
   Kind kind = Kind::Top;
-
-  // Interned handles into store. 0 means "empty": PC=true, SSA={}, Mem={}
   std::uint32_t pcId = 0;
   std::uint32_t ssaId = 0;
   std::uint32_t memId = 0;
 
-  // ---- factories ----
   static FeasibilityElement ideNeutral(FeasibilityStateStore *S) noexcept;
   static FeasibilityElement ideAbsorbing(FeasibilityStateStore *S) noexcept;
 
@@ -61,8 +51,7 @@ struct FeasibilityElement final {
   static FeasibilityElement bottom(FeasibilityStateStore *S) noexcept;
   static FeasibilityElement initial(FeasibilityStateStore *S) noexcept;
 
-  // ---- queries ----
-  [[nodiscard]] Kind getKind() const noexcept { return kind; }
+  [[nodiscard]] Kind getKind() const noexcept;
 
   [[nodiscard]] bool isIdeNeutral() const noexcept;
   [[nodiscard]] bool isIdeAbsorbing() const noexcept;
@@ -70,47 +59,25 @@ struct FeasibilityElement final {
   [[nodiscard]] bool isTop() const noexcept;
   [[nodiscard]] bool isBottom() const noexcept;
   [[nodiscard]] bool isNormal() const noexcept;
-  [[nodiscard]] FeasibilityStateStore *getStore() const noexcept { return store; }
+  [[nodiscard]] FeasibilityStateStore *getStore() const noexcept;
 
-  // ---- updates (functional style) ----
   [[nodiscard]] FeasibilityElement assume(const z3::expr &cond) const;
-  [[nodiscard]] FeasibilityElement setSSA(const llvm::Value *key,
-                                          const z3::expr &expr) const;
-  [[nodiscard]] FeasibilityElement setMem(const llvm::Value *loc,
-                                          const z3::expr &expr) const;
-  [[nodiscard]] FeasibilityElement forgetSSA(const llvm::Value *key) const;
-  [[nodiscard]] FeasibilityElement forgetMem(const llvm::Value *loc) const;
   [[nodiscard]] FeasibilityElement clearPathConstraints() const;
 
-  // ---- lattice operations ----
-  [[nodiscard]] bool leq(const FeasibilityElement &other) const;
   [[nodiscard]] FeasibilityElement join(const FeasibilityElement &other) const;
-  [[nodiscard]] FeasibilityElement meet(const FeasibilityElement &other) const;
 
   [[nodiscard]] bool equal_to(const FeasibilityElement &other) const noexcept;
 
   friend bool operator==(const FeasibilityElement &A,
-                         const FeasibilityElement &B) noexcept {
-    return A.equal_to(B);
-  }
+                         const FeasibilityElement &B) noexcept;
 
   friend bool operator!=(const FeasibilityElement &A,
-                         const FeasibilityElement &B) noexcept {
-    return !A.equal_to(B);
-  }
+                         const FeasibilityElement &B) noexcept;
 
-  // ---- SMT helpers (delegate to store) ----
   [[nodiscard]] bool isSatisfiable() const;
-  [[nodiscard]] bool isSatisfiableWith(const z3::expr &additionalConstraint) const;
 };
 
-// Enforce requirement
-static_assert(std::is_trivially_copyable_v<FeasibilityElement>,
-              "FeasibilityElement must be trivially copyable!");
 
-// ---------------------------
-// Store (heavy state container)
-// ---------------------------
 
 class FeasibilityStateStore final {
 public:
@@ -122,42 +89,40 @@ public:
   FeasibilityStateStore(const FeasibilityStateStore &) = delete;
   FeasibilityStateStore &operator=(const FeasibilityStateStore &) = delete;
 
-  // One shared Z3 context for all expr managed by this store.
   [[nodiscard]] z3::context &ctx() noexcept;
 
-  // ---- updates on handles ----
   [[nodiscard]] id_t pcAssume(id_t pc, const z3::expr &cond);
   [[nodiscard]] id_t pcClear();
 
-  [[nodiscard]] id_t ssaSet(id_t ssa, const llvm::Value *key, const z3::expr &expr);
-  [[nodiscard]] id_t ssaForget(id_t ssa, const llvm::Value *key);
-
-  [[nodiscard]] id_t memSet(id_t mem, const llvm::Value *loc, const z3::expr &expr);
-  [[nodiscard]] id_t memForget(id_t mem, const llvm::Value *loc);
-
   [[nodiscard]] FeasibilityElement normalizeIdeKinds(const FeasibilityElement &E,
-                                                 FeasibilityStateStore *S);
+                                                    FeasibilityStateStore *S);
 
-  // ---- lattice ops on whole elements ----
-  [[nodiscard]] bool leq(const FeasibilityElement &A, const FeasibilityElement &B);
-  [[nodiscard]] FeasibilityElement join(const FeasibilityElement &A, const FeasibilityElement &B);
-  [[nodiscard]] FeasibilityElement meet(const FeasibilityElement &A, const FeasibilityElement &B);
+  [[nodiscard]] z3::expr getPathConstraint(id_t pcId) const;
 
-  std::vector<z3::expr> getExpressions(id_t pcId) const;
+  [[nodiscard]] FeasibilityElement join(const FeasibilityElement &A,
+                                       const FeasibilityElement &B);
 
-  // ---- SMT ----
   [[nodiscard]] bool isSatisfiable(const FeasibilityElement &E);
-  [[nodiscard]] bool isSatisfiableWith(const FeasibilityElement &E,
-                                       const z3::expr &additionalConstraint);
+
+  [[nodiscard]] bool isValid(const z3::expr &e);
+  [[nodiscard]] bool isUnsat(const z3::expr &e);
+  [[nodiscard]] bool isEquivalent(const z3::expr &A, const z3::expr &B);
+
+  static bool isNotOf(const z3::expr &A, const z3::expr &B);
+  static bool isAnd2(const z3::expr &E);
+  static bool isOr2(const z3::expr &E);
+
+  static z3::expr factor_or_and_not(const z3::expr &E);
 
 private:
-  struct Impl;
-  Impl *PImpl = nullptr;
-};
+  z3::context context;
+  z3::solver  solver;
 
-// ---------------------------
-// Printing helpers
-// ---------------------------
+  std::vector<z3::expr> baseConstraints;
+  std::unordered_map<std::string, id_t> pathConditions;
+
+  std::vector<int8_t> pcSatCache;
+};
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FeasibilityElement &E);
 
