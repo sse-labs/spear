@@ -110,20 +110,35 @@ struct FeasibilitySetSSAEF {
     using l_t = Feasibility::l_t;
 
     const llvm::Value *Key = nullptr;
-    z3::expr ValueExpr;
 
+    // Either set SSA directly (ValueExpr), or read from memory (FromMemLoc).
+    const llvm::Value *FromMemLoc = nullptr;
+    z3::expr ValueExpr; // used only if FromMemLoc == nullptr
+
+    // Direct set: SSA[Key] := ValueExpr
     FeasibilitySetSSAEF(const llvm::Value *Key, z3::expr ValueExpr)
-        : Key(Key), ValueExpr(std::move(ValueExpr)) {}
+        : Key(Key), FromMemLoc(nullptr), ValueExpr(std::move(ValueExpr)) {}
+
+    // Load: SSA[Key] := MEM[FromMemLoc]
+    FeasibilitySetSSAEF(const llvm::Value *Key, const llvm::Value *FromMemLoc, z3::expr Dummy)
+        : Key(Key), FromMemLoc(FromMemLoc), ValueExpr(std::move(Dummy)) {}
 
     [[nodiscard]] l_t computeTarget(const l_t &source) const;
+    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF>, const EF &secondFunction);
+    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilitySetSSAEF>, const psr::EdgeFunction<l_t> &otherFunc);
 
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF>,
-                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFunc,
-                   const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilitySetSSAEF &) const = default;
+    bool operator==(const FeasibilitySetSSAEF &O) const {
+        if (Key != O.Key) {
+            return false;
+        }
+        if (FromMemLoc != O.FromMemLoc) {
+            return false;
+        }
+        if (FromMemLoc != nullptr) {
+            return true; // load form: only key+loc matter
+        }
+        return z3::eq(ValueExpr, O.ValueExpr);
+    }
 
     bool isConstant() const noexcept;
 };

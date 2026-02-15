@@ -175,8 +175,7 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
 
     Info.ZeroAtEntry = L;
     Info.HasZeroAtEntry = true;
-    Info.Feasible =
-        (L.getKind() != Feasibility::FeasibilityElement::Kind::IdeAbsorbing);
+    Info.Feasible = !L.isBottom() && !L.isIdeAbsorbing();
   }
 
   return ResultMap;

@@ -41,8 +41,28 @@ EF FeasibilityIdentityEF::compose(psr::EdgeFunctionRef<FeasibilityIdentityEF>,
     return secondFunction;
 }
 
-EF FeasibilityIdentityEF::join(psr::EdgeFunctionRef<FeasibilityIdentityEF>, const psr::EdgeFunction<l_t> &otherFunc) {
-    return otherFunc;
+EF FeasibilityIdentityEF::join(psr::EdgeFunctionRef<FeasibilityIdentityEF> thisFunc,
+                               const psr::EdgeFunction<l_t> &otherFunc) {
+  // Id ⊔ ⊥ = Id   (since x ⊔ ⊥ = x)
+  if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
+      llvm::isa<psr::AllBottom<l_t>>(otherFunc)) {
+    return EF(thisFunc);
+  }
+
+  // Id ⊔ Id = Id
+  if (otherFunc.template isa<FeasibilityIdentityEF>() ||
+      otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
+    return EF(thisFunc);
+  }
+
+  // Id ⊔ AllTop = AllTop   (since x ⊔ ⊤ = ⊤)
+  if (otherFunc.template isa<FeasibilityAllTopEF>() ||
+      llvm::isa<psr::AllTop<l_t>>(otherFunc)) {
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+
+  // Otherwise, keep the more precise representation (join node).
+  return makeJoin(EF(thisFunc), EF(otherFunc));
 }
 
 bool FeasibilityIdentityEF::isConstant() const noexcept {

@@ -5,8 +5,6 @@
 
 #include "analyses/feasibility/FeasibilityElement.h"
 
-#include <algorithm>
-#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -18,9 +16,13 @@
 
 namespace Feasibility {
 
-FeasibilityElement::Kind FeasibilityElement::getKind() const noexcept { return kind; }
+FeasibilityElement::Kind FeasibilityElement::getKind() const noexcept {
+  return kind;
+}
 
-FeasibilityStateStore *FeasibilityElement::getStore() const noexcept { return store; }
+FeasibilityStateStore *FeasibilityElement::getStore() const noexcept {
+  return store;
+}
 
 bool operator==(const FeasibilityElement &A, const FeasibilityElement &B) noexcept {
   return A.equal_to(B);
@@ -159,11 +161,14 @@ bool FeasibilityStateStore::isEquivalent(const z3::expr &A, const z3::expr &B) {
 FeasibilityStateStore::FeasibilityStateStore(): solver(context) {
   // We enforce our first element of the constrains to always be "true" (empty path constraint) to simplify the logic of pcAssume.
   baseConstraints.push_back(context.bool_val(true));
+
 }
 
 FeasibilityStateStore::~FeasibilityStateStore() {}
 
-z3::context &FeasibilityStateStore::ctx() noexcept { return context; }
+z3::context &FeasibilityStateStore::ctx() noexcept {
+  return context;
+}
 
 
 FeasibilityStateStore::id_t FeasibilityStateStore::pcAssume(id_t pc, const z3::expr &cond) {
@@ -186,6 +191,11 @@ FeasibilityStateStore::id_t FeasibilityStateStore::pcAssume(id_t pc, const z3::e
 FeasibilityStateStore::id_t FeasibilityStateStore::pcClear() {
   pathConditions.clear();
   pcSatCache.resize(1);
+
+  // Reset baseConstraints
+  baseConstraints.clear();
+  baseConstraints.push_back(context.bool_val(true));
+
   return 0;
 }
 
