@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(spear VERSION 0.2.0 LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(USE_EXTERNAL_JSON "Use external JSON lib" OFF)
@@ -27,6 +27,7 @@ llvm_map_components_to_libnames(llvm_libs support core irreader passes)
 add_subdirectory(external)
 
 set(Z3_TARGET "")
+set(Z3_RPATH_DIR "")
 
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
@@ -58,6 +59,8 @@ if(Z3_TARGET STREQUAL "")
 
     message(STATUS "Found Z3 include: ${Z3_INCLUDE_DIR}")
     message(STATUS "Found Z3 library: ${Z3_LIBRARY}")
+
+    get_filename_component(Z3_RPATH_DIR "${Z3_LIBRARY}" DIRECTORY)
 endif()
 
 # -----------------------
@@ -92,11 +95,15 @@ target_link_libraries(SpearLib
 )
 
 if(Z3_TARGET STREQUAL "")
-    target_include_directories(SpearLib PRIVATE ${Z3_INCLUDE_DIR})
+    target_include_directories(SpearLib PUBLIC ${Z3_INCLUDE_DIR})
     target_link_libraries(SpearLib PRIVATE ${Z3_LIBRARY})
+
+    get_filename_component(Z3_RPATH_DIR "${Z3_LIBRARY}" DIRECTORY)
+    target_link_options(SpearLib PUBLIC "-Wl,-rpath,${Z3_RPATH_DIR}")
 else()
     target_link_libraries(SpearLib PRIVATE ${Z3_TARGET})
 endif()
+
 
 target_include_directories(SpearLib
         PUBLIC
