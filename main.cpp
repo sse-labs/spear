@@ -129,6 +129,12 @@ void runAnalysisRoutine(CLIOptions opts) {
     auto loopboundResults = PH.queryBoundVars(MainFn);
     auto feasibilityResults = PH.queryFeasibility(MainFn);
 
+    for (const auto &entry : feasibilityResults) {
+        std::string feasStr = entry.second.Feasible? "FEASIBLE": "INFEASIBLE";
+
+        std::cout << "Feasibility results for block: " << entry.first << " => " << feasStr << "\n";
+    }
+
     PhasarResultRegistry::get().store(loopboundResults);
 
     modulePassManager.addPass(Energy(opts.profilePath));

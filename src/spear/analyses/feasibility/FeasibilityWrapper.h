@@ -9,8 +9,13 @@
 #include <llvm/IR/PassManager.h>
 #include <phasar/PhasarLLVM/HelperAnalyses.h>
 #include <memory>
+#include <phasar/DataFlow/IfdsIde/SolverResults.h>
 
-#include "analyses/loopbound/loopBoundWrapper.h"
+#include "FeasibilityAnalysis.h"
+
+namespace Feasibility {
+
+using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *, const llvm::Value *, Feasibility::FeasibilityElement>;
 
 /**
  * FeasibilityWrapper class
@@ -19,7 +24,7 @@
  * querying.
  */
 class FeasibilityWrapper {
- public:
+public:
     /**
      * FeasibiltyWrapper constructor. That creates a new wrapper that executes the feasibility analysis
      * and stores the results for later querying.
@@ -29,10 +34,23 @@ class FeasibilityWrapper {
     FeasibilityWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
                        llvm::FunctionAnalysisManager *analysisManager);
 
- private:
+    /**
+     * Return the internal list of LoopClassifier objects
+     * @return
+     */
+    std::unique_ptr<ResultsTy> getResults() const;
+
+    std::shared_ptr<Feasibility::FeasibilityAnalysis> problem;
+
+private:
+    // Internal storage of the analysis results calculated by phasar
+    std::unique_ptr<ResultsTy> cachedResults;
+
     // Internal storage of the analysis manager so we can access llvms analysis information later on without
     // passing it down to our functions
     llvm::FunctionAnalysisManager *FAM = nullptr;
 };
+
+}
 
 #endif  // SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYWRAPPER_H_

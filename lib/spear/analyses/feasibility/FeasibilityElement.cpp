@@ -31,24 +31,24 @@ bool operator!=(const FeasibilityElement &A, const FeasibilityElement &B) noexce
 }
 
 FeasibilityElement FeasibilityElement::ideNeutral(FeasibilityStateStore *S) noexcept {
-  return FeasibilityElement{S, Kind::IdeNeutral, 0, 0, 0};
+  return FeasibilityElement{S, true, Kind::IdeNeutral, 0, 0, 0};
 }
 
 FeasibilityElement FeasibilityElement::ideAbsorbing(FeasibilityStateStore *S) noexcept {
   // Compatibility alias: absorbing is infeasible.
-  return FeasibilityElement{S, Kind::IdeAbsorbing, 0, 0, 0};
+  return FeasibilityElement{S,true, Kind::IdeAbsorbing, 0, 0, 0};
 }
 
 FeasibilityElement FeasibilityElement::top(FeasibilityStateStore *S) noexcept {
-  return FeasibilityElement{S, Kind::Top, 0, 0, 0};
+  return FeasibilityElement{S,true, Kind::Top, 0, 0, 0};
 }
 
 FeasibilityElement FeasibilityElement::bottom(FeasibilityStateStore *S) noexcept {
-  return FeasibilityElement{S, Kind::Bottom, 0, 0, 0};
+  return FeasibilityElement{S,true, Kind::Bottom, 0, 0, 0};
 }
 
 FeasibilityElement FeasibilityElement::initial(FeasibilityStateStore *S) noexcept {
-  return FeasibilityElement{S, Kind::Normal, 0, 0, 0};
+  return FeasibilityElement{S,true, Kind::Normal, 0, 0, 0};
 }
 
 bool FeasibilityElement::isIdeNeutral() const noexcept {
@@ -87,7 +87,8 @@ FeasibilityElement FeasibilityElement::assume(const z3::expr &cond) const {
   out.pcId = store->pcAssume(out.pcId, cond);
 
   if (!store->isSatisfiable(out)) {
-    return FeasibilityElement::bottom(store);
+    out.isSAT = false;
+    return out;
   }
 
   out.kind = Kind::Normal;

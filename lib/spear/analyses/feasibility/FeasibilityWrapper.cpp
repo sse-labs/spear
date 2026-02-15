@@ -19,33 +19,38 @@
 #include "analyses/feasibility/FeasibilityAnalysis.h"
 #include "analyses/feasibility/util.h"
 
-FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
-                                       llvm::FunctionAnalysisManager *analysisManager) {
+Feasibility::FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
+                                                    llvm::FunctionAnalysisManager *analysisManager) {
     if (!helperAnalyses) {
-        return;  // Missing helper analyses
+        return; // Missing helper analyses
     }
-    this->FAM = analysisManager;  // Store analysis manager
+    this->FAM = analysisManager; // Store analysis manager
 
-    llvm::Module *module = helperAnalyses->getProjectIRDB().getModule();  // Project module
+    llvm::Module *module = helperAnalyses->getProjectIRDB().getModule(); // Project module
     if (!module) {
         llvm::errs() << "[LB] module not found\n";
-        return;  // Abort if module is missing
+        return; // Abort if module is missing
     }
 
     auto &IRDB = helperAnalyses->getProjectIRDB();
-    auto &interproceduralCFG = helperAnalyses->getICFG();  // Interprocedural CFG
+    auto &interproceduralCFG = helperAnalyses->getICFG(); // Interprocedural CFG
     auto &PTImpl = helperAnalyses->getAliasInfo();
     psr::AliasInfoRef<const llvm::Value *, const llvm::Instruction *> PT(&PTImpl);
 
-    Feasibility::FeasibilityAnalysis analysisProblem(analysisManager, &IRDB, &interproceduralCFG);  // Build analysis
+    this->problem = std::make_shared<Feasibility::FeasibilityAnalysis>(Feasibility::FeasibilityAnalysis(analysisManager, &IRDB, &interproceduralCFG));
 
     if (Feasibility::Util::F_DebugEnabled.load()) {
         llvm::errs() << Feasibility::Util::F_TAG << " Starting IDESolver.solve()\n";
     }
 
-    auto analysisResult = psr::solveIDEProblem(analysisProblem, interproceduralCFG);  // Solve once
+    auto analysisResult = psr::solveIDEProblem(*this->problem.get(), interproceduralCFG);
+    this->cachedResults = std::make_unique<ResultsTy>(std::move(analysisResult));
 
     if (Feasibility::Util::F_DebugEnabled.load()) {
         llvm::errs() << Feasibility::Util::F_TAG << " Finished IDESolver.solve()\n";
     }
+}
+
+std::unique_ptr<Feasibility::ResultsTy> Feasibility::FeasibilityWrapper::getResults() const {
+    return std::make_unique<ResultsTy>(*this->cachedResults);
 }

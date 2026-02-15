@@ -39,6 +39,9 @@ struct FeasibilityElement final {
   };
 
   FeasibilityStateStore *store = nullptr;
+
+  bool isSAT = true;
+
   Kind kind = Kind::Top;
   std::uint32_t pcId = 0;
   std::uint32_t ssaId = 0;

@@ -6,10 +6,10 @@
 #include <iostream>
 
 int main(){
-    int length = 9000;
+    int length = 9;
 
-    if (length < 10000) {
-        if (length > 9000) {
+    if (length < 10) {
+        if (length > 10) {
             std::cout << "This will never be printed\n";
         }
     }

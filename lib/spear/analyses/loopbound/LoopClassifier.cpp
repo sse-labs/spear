@@ -10,7 +10,7 @@
 #include "analyses/loopbound/util.h"
 
 
-std::optional<int64_t> LoopClassifier::solveAdditiveBound(llvm::CmpInst::Predicate pred,
+std::optional<int64_t> LoopBound::LoopClassifier::solveAdditiveBound(llvm::CmpInst::Predicate pred,
     int64_t init, int64_t check, int64_t increment) {
     int64_t delta = check - init;
     if (increment < 0) {
@@ -51,7 +51,7 @@ std::optional<int64_t> LoopClassifier::solveAdditiveBound(llvm::CmpInst::Predica
     }
 }
 
-std::optional<int64_t> LoopClassifier::solveMultiplicativeBound(
+std::optional<int64_t> LoopBound::LoopClassifier::solveMultiplicativeBound(
 llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
     // We do not deal with == or !=
     // Only calculate check o init * increment^k
@@ -103,7 +103,7 @@ llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
     return iterations;
 }
 
-std::optional<int64_t> LoopClassifier::solveDivisionBound(
+std::optional<int64_t> LoopBound::LoopClassifier::solveDivisionBound(
 llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
     // We do not deal with == or !=
     // Only calculate check o init * increment^k
@@ -160,7 +160,7 @@ llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
     return iterations;
 }
 
-std::optional<LoopBound::DeltaInterval> LoopClassifier::calculateBound() {
+std::optional<LoopBound::DeltaInterval> LoopBound::LoopClassifier::calculateBound() {
     auto fallback = ConfigParser::getAnalysisConfiguration().fallback;
 
     // Handle fallback values for bounding first
