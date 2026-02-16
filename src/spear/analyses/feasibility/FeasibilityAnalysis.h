@@ -12,6 +12,7 @@
 
 #include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>
 #include <phasar/DataFlow/IfdsIde/EdgeFunctions.h>
+#include <phasar/DataFlow/IfdsIde/FlowFunctions.h>
 
 #include <llvm/Analysis/LoopInfo.h>
 
@@ -56,6 +57,22 @@ public:
 
     bool isZeroValue(d_t Fact) const noexcept override;
 
+    /**
+ * Normal edge function
+ *
+ * Performs the detection of the relevant instructions for our analysis.
+ *
+ * Emits a DeltaIntervalIdentity for every case except if we encounter a store instruction.
+ * In this case a DeltaIntervalCollect is emitted.
+ *
+ * @param Curr Current node
+ * @param CurrNode Fact of the current node
+ * @param Succ Next node
+ * @param SuccNode Fact of the next node
+ * @return EdgeFunction with either DeltaIntervalIdentity or DeltaIntervalCollect
+ */
+    EdgeFunctionType getNormalEdgeFunction(n_t Curr, d_t CurrNode, n_t Succ, d_t SuccNode) override;
+
 private:
     [[nodiscard]] psr::InitialSeeds<n_t, d_t, l_t> initialSeeds() override;
 
@@ -73,7 +90,7 @@ private:
 
     /**
      * Normal flow function.
-     * Just returns the IdentityFlow.
+     * Propagates only the ZeroValue to keep the analysis strictly scoped.
      *
      * @param Curr Current node
      * @param Succ Next node
@@ -113,22 +130,6 @@ private:
      * @return Return the KeepLocalOnCallToRet flow
      */
     FlowFunctionPtrType getCallToRetFlowFunction(n_t CallSite, n_t RetSite, llvm::ArrayRef<f_t> Callees) override;
-
-    /**
-     * Normal edge function
-     *
-     * Performs the detection of the relevant instructions for our analysis.
-     *
-     * Emits a DeltaIntervalIdentity for every case except if we encounter a store instruction.
-     * In this case a DeltaIntervalCollect is emitted.
-     *
-     * @param Curr Current node
-     * @param CurrNode Fact of the current node
-     * @param Succ Next node
-     * @param SuccNode Fact of the next node
-     * @return EdgeFunction with either DeltaIntervalIdentity or DeltaIntervalCollect
-     */
-    EdgeFunctionType getNormalEdgeFunction(n_t Curr, d_t CurrNode, n_t Succ, d_t SuccNode) override;
 
     static const llvm::BasicBlock *getSuccBB(n_t Succ);
 

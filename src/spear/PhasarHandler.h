@@ -65,9 +65,9 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
 
      std::unique_ptr<LoopBound::LoopBoundWrapper> loopboundwrapper = nullptr;
      std::unique_ptr<Feasibility::FeasibilityWrapper> feasibilitywrapper = nullptr;
+    std::shared_ptr<Feasibility::FeasibilityAnalysis> feasibilityProblem;
 
  private:
-    std::shared_ptr<Feasibility::FeasibilityAnalysis> feasibilityProblem;
 
     // Backing module – only valid during/after `run()`.
     llvm::Module *mod;
@@ -87,6 +87,22 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
 
     // Internal: construct analysis problem and run PhASAR solver.
     void runAnalysis(llvm::FunctionAnalysisManager *FAM);
+
+    static std::string blockName(const llvm::BasicBlock &BB);
+    static const llvm::Instruction *pickQueryInst(const llvm::BasicBlock &BB);
+
+    bool isNodeFeasibleForZero(const llvm::Instruction *I,
+                               const llvm::Value *Zero) const;
+
+    std::optional<Feasibility::FeasibilityAnalysis::l_t> getLatticeAtNodeForZero(
+        const llvm::Instruction *I, const llvm::Value *Zero) const;
+
+    const llvm::Instruction *pickSuccNodeFromICFG(const llvm::Instruction *PredTerm,
+                                                  const llvm::BasicBlock *SuccBB) const;
+
+    bool isEdgeFeasible(const llvm::BasicBlock *PredBB,
+                        const llvm::BasicBlock *SuccBB,
+                        const llvm::Value *Zero) const;
 };
 
 #endif  // SRC_SPEAR_PHASARHANDLER_H_

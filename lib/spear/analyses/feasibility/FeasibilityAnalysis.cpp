@@ -35,9 +35,9 @@ public:
 
         if (F_DEBUG_ENABLED) {
             llvm::errs() << F_TAG << " FF " << Name << "  ";
-            Feasibility::Util::dumpInst(Curr);
+            if (Curr) { Feasibility::Util::dumpInst(Curr); } else { llvm::errs() << "<null>"; }
             llvm::errs() << "  ->  ";
-            Feasibility::Util::dumpInst(Succ);
+            if (Succ) { Feasibility::Util::dumpInst(Succ); } else { llvm::errs() << "<null>"; }
             llvm::errs() << "\n" << F_TAG << "   Src=";
             Feasibility::Util::dumpFact(A,
                                 static_cast<Feasibility::FeasibilityAnalysis ::d_t>(Src));
@@ -72,6 +72,26 @@ public:
 };
 
 
+template <typename D, typename ContainerT>
+class EmptyFlow final : public psr::FlowFunction<D, ContainerT> {
+public:
+    ContainerT computeTargets(D /*Src*/) override { return ContainerT{}; }
+};
+
+
+template <typename D, typename ContainerT>
+class ZeroOnlyFlow final : public psr::FlowFunction<D, ContainerT> {
+    Feasibility::FeasibilityAnalysis *A;
+public:
+    explicit ZeroOnlyFlow(Feasibility::FeasibilityAnalysis *A) : A(A) {}
+    ContainerT computeTargets(D Src) override {
+        return A->isZeroValue(static_cast<Feasibility::FeasibilityAnalysis::d_t>(Src))
+                   ? ContainerT{Src}
+                   : ContainerT{};
+    }
+};
+
+
 FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, const psr::LLVMBasedICFG *ICFG)
 : base_t(IRDB, {"main"}, std::optional<d_t>(
     static_cast<d_t>(psr::LLVMZeroValue::getInstance()))) {
@@ -96,23 +116,10 @@ FeasibilityAnalysis::initialSeeds() {
     }
 
     const d_t Zero = this->getZeroValue();
-
     const l_t IdeNeutral = topElement();
 
-    const l_t StartVal = l_t::initial(this->store.get());
-
-    if (F_DEBUG_ENABLED) {
-        llvm::errs() << "[FDBG] StartVal==IdeNeutral="
-                     << StartVal.equal_to(IdeNeutral) << "\n";
-        llvm::errs() << "[FDBG] Zero=" << (const void *)Zero
-                     << " isZero(Zero)=" << isZeroValue(Zero) << "\n";
-    }
-
     for (n_t SP : ICFG->getStartPointsOf(&*Main)) {
-        const d_t Fact = static_cast<d_t>(SP);
-
         Seeds.addSeed(SP, Zero, IdeNeutral);
-        //Seeds.addSeed(SP, Fact, StartVal);
 
         if (F_DEBUG_ENABLED) {
             llvm::errs() << F_TAG << " Seed(ICFG) @";
@@ -123,7 +130,6 @@ FeasibilityAnalysis::initialSeeds() {
 
     return Seeds;
 }
-
 
 FeasibilityAnalysis::d_t FeasibilityAnalysis::zeroValue() const {
     return static_cast<d_t>(psr::LLVMZeroValue::getInstance());
@@ -170,23 +176,28 @@ FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
 
 FeasibilityAnalysis::FlowFunctionPtrType
 FeasibilityAnalysis::getNormalFlowFunction(n_t Curr, n_t Succ) {
-    auto Inner = std::make_shared<IdentityFlow<d_t, container_t>>();
-    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "Identity", this, Curr, Succ);
+    // Only propagate the Zero fact. This prevents any non-zero facts from
+    // reaching "weird" functions/blocks via the ICFG.
+    auto Inner = std::make_shared<ZeroOnlyFlow<d_t, container_t>>(this);
+    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "ZeroOnly", this, Curr, Succ);
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallFlowFunction(n_t CallSite, f_t Callee) {
-    auto Inner = std::make_shared<IdentityFlow<d_t, container_t>>();
-    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "CallIdentity", this, CallSite, CallSite);
+    // Intraprocedural: do not propagate any facts into the callee.
+    auto Inner = std::make_shared<EmptyFlow<d_t, container_t>>();
+    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "CallEmpty", this, CallSite, CallSite);
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getRetFlowFunction(n_t CallSite, f_t Callee,
                                                                                 n_t ExitStmt, n_t RetSite) {
-    auto Inner = std::make_shared<IdentityFlow<d_t, container_t>>();
-    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "RetIdentity", this, CallSite, CallSite);
+    // Intraprocedural: do not propagate any facts back from the callee.
+    auto Inner = std::make_shared<EmptyFlow<d_t, container_t>>();
+    return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "RetEmpty", this, CallSite, RetSite);
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFunction(n_t CallSite, n_t RetSite,
                                                                                        llvm::ArrayRef<f_t> Callees) {
+    // Intraprocedural: keep facts within the caller across a call site.
     auto Inner = std::make_shared<KeepLocalOnCallToRet<d_t, container_t>>();
     return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "CallToRetKeepLocal", this, CallSite, RetSite);
 }
@@ -209,23 +220,16 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
   // ---------------------------------------------------------------------------
     if (auto *Br = llvm::dyn_cast<llvm::BranchInst>(curr)) {
         if (Br->isConditional()) {
-            const llvm::Instruction *TEntry = Feasibility::Util::firstRealInst(Br->getSuccessor(0));
-            const llvm::Instruction *FEntry = Feasibility::Util::firstRealInst(Br->getSuccessor(1));
 
-            const bool TakeTrue  = (succ == TEntry);
-            const bool TakeFalse = (succ == FEntry);
+            const llvm::BasicBlock *SuccBB = succ ? succ->getParent() : nullptr;
+            const llvm::BasicBlock *TrueBB = Br->getSuccessor(0);
+            const llvm::BasicBlock *FalseBB = Br->getSuccessor(1);
+
+            const bool TakeTrue  = (SuccBB == TrueBB);
+            const bool TakeFalse = (SuccBB == FalseBB);
 
             if (!TakeTrue && !TakeFalse) {
-                if (F_DEBUG_ENABLED) {
-                    llvm::errs() << F_TAG << "   branch-succ-match: succ=";
-                    Feasibility::Util::dumpInst(succ);
-                    llvm::errs() << "  trueEntry=";
-                    Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(TEntry));
-                    llvm::errs() << "  falseEntry=";
-                    Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(FEntry));
-                    llvm::errs() << "  TakeTrue=" << TakeTrue << " TakeFalse=" << TakeFalse << "\n";
-                }
-
+                // Not a CFG successor edge we understand -> don't constrain
                 return EF(std::in_place_type<FeasibilityIdentityEF>);
             }
 
@@ -234,29 +238,16 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
                 CondV = CastI->getOperand(0);
             }
 
-            if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
-
-                if (F_DEBUG_ENABLED) {
-                    llvm::errs() << F_TAG << "   branch-succ-match: succ=";
-                    Feasibility::Util::dumpInst(succ);
-                    llvm::errs() << "  trueEntry=";
-                    Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(TEntry));
-                    llvm::errs() << "  falseEntry=";
-                    Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(FEntry));
-                    llvm::errs() << "  TakeTrue=" << TakeTrue << " TakeFalse=" << TakeFalse << "\n";
-                }
-
-                return EF(std::in_place_type<FeasibilityAssumeIcmpEF>, ICmp, /*TakeTrueEdge=*/TakeTrue);
+            // Constant condition fast path (important for your loop example too)
+            if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(CondV)) {
+                const bool CondTrue = !CI->isZero();
+                const bool EdgeTaken = TakeTrue ? CondTrue : !CondTrue;
+                return EdgeTaken ? EF(std::in_place_type<FeasibilityIdentityEF>)
+                                 : EF(std::in_place_type<FeasibilityAllBottomEF>); // or your "make infeasible" EF
             }
 
-            if (F_DEBUG_ENABLED) {
-                llvm::errs() << F_TAG << "   branch-succ-match: succ=";
-                Feasibility::Util::dumpInst(succ);
-                llvm::errs() << "  trueEntry=";
-                Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(TEntry));
-                llvm::errs() << "  falseEntry=";
-                Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(FEntry));
-                llvm::errs() << "  TakeTrue=" << TakeTrue << " TakeFalse=" << TakeFalse << "\n";
+            if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
+                return EF(std::in_place_type<FeasibilityAssumeIcmpEF>, ICmp, /*TakeTrueEdge=*/TakeTrue);
             }
 
             return EF(std::in_place_type<FeasibilityIdentityEF>);

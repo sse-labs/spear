@@ -4,6 +4,8 @@
 */
 
 #include <llvm/Analysis/ScalarEvolution.h>
+#include <llvm/Analysis/LoopInfo.h>
+#include <llvm/IR/Dominators.h>
 #include <phasar/DataFlow/IfdsIde/Solver/IDESolver.h>
 #include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
 #include <phasar.h>
@@ -23,42 +25,42 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(
     llvm::FunctionAnalysisManager *analysisManager) {
 
   if (!helperAnalyses) {
-    return;  // Missing helper analyses
+    return;
   }
-  this->FAM = analysisManager;  // Store analysis manager
 
-  auto &interproceduralCFG = helperAnalyses->getICFG();  // Interprocedural CFG
+  // Keep pointer for other components that might still expect it, but do not
+  // use it to query LoopAnalysis/DT analyses (may be a different/unregistered FAM).
+  this->FAM = analysisManager;
 
-  llvm::Module *module = helperAnalyses->getProjectIRDB().getModule();  // Project module
+  auto &interproceduralCFG = helperAnalyses->getICFG();
+  llvm::Module *module = helperAnalyses->getProjectIRDB().getModule();
   if (!module) {
     llvm::errs() << "[LB] module not found\n";
-    return;  // Abort if module is missing
+    return;
   }
 
-  this->loops.clear();  // Reset loop cache
-  this->loopClassifiers.clear();  // Reset classifier cache
+  this->loops.clear();
+  this->loopClassifiers.clear();
 
   for (llvm::Function &function : *module) {
-    if (function.isDeclaration()) {
-      continue;
-    }
-    if (function.getName().startswith("llvm.")) {
-      continue;
-    }
+    if (function.isDeclaration()) continue;
+    if (function.getName().startswith("llvm.")) continue;
 
-    auto &loopInfo = analysisManager->getResult<llvm::LoopAnalysis>(function);  // Loop analysis
+    // Build DT + LoopInfo locally => no FAM registration required.
+    llvm::DominatorTree DT(function);
+    llvm::LoopInfo LI(DT);
 
-    for (llvm::Loop *topLevelLoop : loopInfo.getTopLevelLoops()) {
-      collectLoops(topLevelLoop, this->loops);  // Collect nested loops
+    for (llvm::Loop *topLevelLoop : LI.getTopLevelLoops()) {
+      collectLoops(topLevelLoop, this->loops);
     }
   }
 
   LoopBound::LoopBoundIDEAnalysis analysisProblem(
-      analysisManager, &helperAnalyses->getProjectIRDB(), &this->loops);  // Build analysis
-  auto analysisResult = psr::solveIDEProblem(analysisProblem, interproceduralCFG);  // Solve once
-  this->cachedResults = std::make_unique<ResultsTy>(std::move(analysisResult));  // Cache results
+      analysisManager, &helperAnalyses->getProjectIRDB(), &this->loops);
+  auto analysisResult = psr::solveIDEProblem(analysisProblem, interproceduralCFG);
+  this->cachedResults = std::make_unique<ResultsTy>(std::move(analysisResult));
 
-  const auto loopDescriptions = analysisProblem.getLoopParameterDescriptions();  // Get loop params
+  const auto loopDescriptions = analysisProblem.getLoopParameterDescriptions();
 
   for (const auto &description : loopDescriptions) {
     if (!description.loop || !description.counterRoot || !description.icmp) {
@@ -71,32 +73,25 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(
     }
 
     llvm::Function *parentFunction = headerBlock->getParent();
-    if (!parentFunction) {
-      continue;  // Missing parent function
-    }
+    if (!parentFunction) continue;
+    if (parentFunction->isDeclaration() || parentFunction->getName().startswith("llvm.")) continue;
 
-    if (parentFunction->isDeclaration() || parentFunction->getName().startswith("llvm.")) {
-      continue;  // Skip unsupported functions
-    }
-
-    auto &loopInfo =
-        analysisManager->getResult<llvm::LoopAnalysis>(*parentFunction);  // Loop info for parent
+    // Local DT + LoopInfo for the current parent function.
+    llvm::DominatorTree DT(*parentFunction);
+    llvm::LoopInfo loopInfo(DT);
 
     const llvm::Value *counterRoot =
-        LoopBound::Util::stripAddr(description.counterRoot);  // Normalize counter root
-    if (!counterRoot) {
-      continue;  // Skip if counter root is invalid
-    }
+        LoopBound::Util::stripAddr(description.counterRoot);
+    if (!counterRoot) continue;
 
-    const llvm::StoreInst *incrementStore = this->findStoreIncOfLoop(description);  // Find inc store
+    const llvm::StoreInst *incrementStore = this->findStoreIncOfLoop(description);
 
-    auto incrementInterval = queryIntervalAtInstuction(incrementStore, counterRoot);  // Query inc
-    auto predicate = description.icmp->getPredicate();  // Extract predicate
+    auto incrementInterval = queryIntervalAtInstuction(incrementStore, counterRoot);
+    auto predicate = description.icmp->getPredicate();
 
-    auto checkExpression = findLoopCheckExpr(description, analysisManager, loopInfo);  // Find check
-    if (!checkExpression) {
-      continue;  // Skip if no check expression
-    }
+    // Pass local DT+LoopInfo into helpers that need them.
+    auto checkExpression = findLoopCheckExpr(description, analysisManager, loopInfo);
+    if (!checkExpression) continue;
 
     LoopClassifier newLoopClassifier(
         parentFunction,
@@ -107,7 +102,7 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(
         checkExpression->calculateCheck(analysisManager, loopInfo),
         description.type);
 
-    this->loopClassifiers.push_back(std::move(newLoopClassifier));  // Store classifier
+    this->loopClassifiers.push_back(std::move(newLoopClassifier));
   }
 
   if (LoopBound::Util::LB_DebugEnabled) {
@@ -117,33 +112,29 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(
 
 std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(
     llvm::FunctionAnalysisManager *analysisManager, llvm::LoopInfo &loopInfo) {
+    (void)analysisManager; // may be null / unconfigured; don't depend on it here.
+
     if (!this->isConstant && this->BaseLoad) {
-        const llvm::Function *currentFunction = this->BaseLoad->getFunction();  // Load owner
+        const llvm::Function *currentFunction = this->BaseLoad->getFunction();
         if (currentFunction) {
-            auto &dominatorTree = analysisManager->getResult<llvm::DominatorTreeAnalysis>(
-            *const_cast<llvm::Function *>(currentFunction));  // Dominator tree
+            // Build dominator tree locally (no FAM).
+            llvm::DominatorTree dominatorTree(*const_cast<llvm::Function *>(currentFunction));
 
             if (auto constValue =
                 LoopBound::Util::tryDeduceConstFromLoad(this->BaseLoad, dominatorTree, loopInfo)) {
-                auto combinedValue = *constValue + this->Offset;  // Add offset
-                if (MulBy) {
-                    return combinedValue * MulBy.value();  // Apply scaling
-                }
-
-                if (DivBy) {
-                    return combinedValue / DivBy.value();  // Apply division
-                }
-
-                return combinedValue;  // Final value
+                auto combinedValue = *constValue + this->Offset;
+                if (MulBy) return combinedValue * MulBy.value();
+                if (DivBy) return combinedValue / DivBy.value();
+                return combinedValue;
             }
         }
     }
 
     if (this->isConstant) {
-        return this->Offset;  // Constant check value
+        return this->Offset;
     }
 
-    return std::nullopt;  // No constant derivation
+    return std::nullopt;
 }
 
 void LoopBound::LoopBoundWrapper::collectLoops(
@@ -278,6 +269,8 @@ void LoopBound::LoopBoundWrapper::printClassifiers() {
 std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::findLoopCheckExpr(
 const LoopBound::LoopParameterDescription &description,
 llvm::FunctionAnalysisManager *analysisManager, llvm::LoopInfo &loopInfo) {
+    (void)analysisManager; // do not depend on FAM registration here
+
     if (!description.loop || !description.icmp) return std::nullopt;  // Missing loop or compare
 
     const llvm::Value *leftOperand  = description.icmp->getOperand(0);  // Left operand
@@ -318,8 +311,7 @@ llvm::FunctionAnalysisManager *analysisManager, llvm::LoopInfo &loopInfo) {
 
     if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(otherSideValue)) {
         if (auto *functionPtr = const_cast<llvm::Function *>(loadInst->getFunction())) {
-            auto &dominatorTree =
-                analysisManager->getResult<llvm::DominatorTreeAnalysis>(*functionPtr);
+            llvm::DominatorTree dominatorTree(*functionPtr);
             if (auto constValue =
                 LoopBound::Util::tryDeduceConstFromLoad(loadInst, dominatorTree, loopInfo)) {
                 return LoopBound::CheckExpr{nullptr, nullptr, *constValue, false};  // Fallback constant

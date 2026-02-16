@@ -77,11 +77,12 @@ void runAnalysisRoutine(CLIOptions opts) {
     llvm::CGSCCAnalysisManager cGSCCAnalysisManager;
     llvm::ModuleAnalysisManager moduleAnalysisManager;
     llvm::ModulePassManager modulePassManager;
-    llvm::FunctionPassManager functionPassManager;
-    llvm::CGSCCPassManager callgraphPassManager;
-
 
     auto module_up = llvm::parseIRFile(opts.programPath, error, context).release();
+    if (!module_up) {
+        llvm::errs() << "Failed to parse IR file: " << opts.programPath << "\n";
+        return;
+    }
 
     passBuilder.registerModuleAnalyses(moduleAnalysisManager);
     passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
@@ -91,26 +92,20 @@ void runAnalysisRoutine(CLIOptions opts) {
             loopAnalysisManager, functionAnalysisManager, cGSCCAnalysisManager,
             moduleAnalysisManager);
 
-    // instname
+    // Build function pipeline once, then move it exactly once.
+    llvm::FunctionPassManager functionPassManager;
     functionPassManager.addPass(llvm::InstructionNamerPass());
-    // mem2reg
-
-    /**
-     * Disabled to allow phasar to infer more variables
-    */
-
     functionPassManager.addPass(llvm::PromotePass());
-
-    // loop-simplify
     functionPassManager.addPass(llvm::LoopSimplifyPass());
-
     functionPassManager.addPass(llvm::LCSSAPass());
-
-    // loop-rotate
     functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::LoopRotatePass()));
+    functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::IndVarSimplifyPass()));
+
     modulePassManager.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(functionPassManager)));
 
-    functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::IndVarSimplifyPass()));
+    // IMPORTANT: actually run the NewPM pipeline to materialize proxies/analysis state
+    // before any external code queries analyses from a FAM.
+    modulePassManager.run(*module_up, moduleAnalysisManager);
 
     PhasarHandlerPass PH;
     PH.runOnModule(*module_up);
@@ -137,8 +132,9 @@ void runAnalysisRoutine(CLIOptions opts) {
 
     PhasarResultRegistry::get().store(loopboundResults);
 
-    modulePassManager.addPass(Energy(opts.profilePath));
-    modulePassManager.run(*module_up, moduleAnalysisManager);
+    // modulePassManager already ran above (don't run twice unless you intend to).
+    // modulePassManager.addPass(Energy(opts.profilePath));
+    // modulePassManager.run(*module_up, moduleAnalysisManager);
 }
 
 

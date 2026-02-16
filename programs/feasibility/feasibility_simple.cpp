@@ -3,16 +3,14 @@
  * All rights reserved.
  */
 
-#include <iostream>
-
 int main(){
     int length = 9;
 
     if (length > 10) {
-        std::cout << "This will never be printed\n";
+        length++;
     }
 
-    std::cout << "Sum of array: " << length++ << "\n";
+    length--;
 
     return 0;
 }

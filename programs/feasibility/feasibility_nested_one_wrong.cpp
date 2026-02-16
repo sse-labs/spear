@@ -10,11 +10,11 @@ int main(){
 
     if (length < 10) {
         if (length > 20) {
-            std::cout << "This will never be printed\n";
+            length = 20;
         }
     }
 
-    std::cout << "Sum of array: " << length++ << "\n";
+    length--;
 
     return 0;
 }

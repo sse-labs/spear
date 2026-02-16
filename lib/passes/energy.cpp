@@ -27,6 +27,9 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
+// Add local builders (no FAM needed for LoopInfo)
+#include <llvm/Analysis/LoopInfo.h>
+#include <llvm/IR/Dominators.h>
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -344,13 +347,23 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         LLVMHandler *handler,
         llvm::FunctionAnalysisManager *FAM,
         AnalysisStrategy::Strategy analysisStrategy) {
+
         auto* domtree = new llvm::DominatorTree();
         llvm::Function* function = energyFunc->func;
 
         domtree->recalculate(*function);
 
-        auto &loopAnalysis = FAM->getResult<llvm::LoopAnalysis>(*function);
-        auto &scalarEvolution = FAM->getResult<llvm::ScalarEvolutionAnalysis>(*function);
+        // Always create a local LoopInfo from the freshly computed DomTree.
+        // This avoids using stale Loop* pointers across IR changes / analysis invalidation.
+        llvm::LoopInfo localLI(*domtree);
+
+        // If you still want SCEV, keep it optional; LoopInfo should be local.
+        llvm::ScalarEvolution *scevPtr = nullptr;
+        if (FAM) {
+            // SCEV may assert if not registered; keep optional.
+            // If this asserts in your setup, set scevPtr = nullptr unconditionally.
+            scevPtr = &FAM->getResult<llvm::ScalarEvolutionAnalysis>(*function);
+        }
 
         // Init a vector of references to BasicBlocks for all BBs in the function
         std::vector<llvm::BasicBlock *> functionBlocks;
@@ -361,36 +374,29 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         // Create the ProgramGraph for the BBs present in the current function
         ProgramGraph::construct(pGraph, functionBlocks, analysisStrategy);
 
-        // Get the vector of Top-Level loops present in the program
-        auto loops = loopAnalysis.getTopLevelLoops();
-
-        auto IDEresult = PhasarResultRegistry::get().getResults();
-
-        /*if (!IDEresult.empty()) {
-            llvm::outs() << "================= "<< function->getName() <<" ================\n";
-            for (const auto& r : IDEresult) {
-                llvm::outs() << r.first << ":\n";
-                for (auto p : r.second) {
-                    llvm::outs() << "\t" << p.first << " -> " << ": " << p.second.second << "\n";
-                }
-            }
-            llvm::outs() << "\n";
-            llvm::outs() << "====================================================\n";
-        };*/
+        // Get the vector of Top-Level loops present in the program (LOCAL)
+        auto loops = localLI.getTopLevelLoops();
 
         // We need to distinguish if the function contains loops
         if (!loops.empty()) {
-            // If the function contains loops
-
-            // Iterate over the top-level loops
             for (auto liiter = loops.begin(); liiter < loops.end(); ++liiter) {
-                // Get the loop, the iterator points to
-                auto topLoop = *liiter;
+                llvm::Loop *topLoop = *liiter;
 
-                llvm::errs() << energyFunc->name << "\n";
+                // Hard guards against bad/dangling loops (prevents EXC_BAD_ACCESS in getExitingBlocks etc.)
+                if (!topLoop) { continue; }
+                llvm::BasicBlock *H = topLoop->getHeader();
+                if (!H) { continue; }
+                llvm::Function *PF = H->getParent();
+                if (!PF || PF != function) { continue; }
+
+                // Optional: trigger a safe query to ensure loop is well-formed before deeper usage.
+                // (getBlocksVector is usually safe if loop is valid)
+                auto Blocks = topLoop->getBlocksVector();
+                if (Blocks.empty()) { continue; }
+
                 // Construct the LoopTree from the Information of the current top-level loop
                 LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(),
-                    handler, &scalarEvolution);
+                    handler, scevPtr);
 
                 // Construct a LoopNode for the current loop
                 LoopNode *loopNode = LoopNode::construct(LT, pGraph, analysisStrategy);

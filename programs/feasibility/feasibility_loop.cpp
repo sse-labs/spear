@@ -3,18 +3,15 @@
  * All rights reserved.
  */
 
-#include <iostream>
-
 int main(){
     int length = 9;
+    int cheese = 1;
 
-    if (length > 10) {
-        if (length > 20) {
-            length = 10;
-        }
+    for (int i = 1; i <= length; i++) {
+        cheese++;
     }
 
-    length++;
+    cheese--;
 
     return 0;
 }
