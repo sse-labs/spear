@@ -21,10 +21,12 @@
 #ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUND_H_
 #define SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUND_H_
 
+#include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>   // must come early
+#include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>          // also must be complete
+#include <phasar/PhasarLLVM/Domain/LLVMAnalysisDomain.h>
+
 #include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>
 #include <phasar/DataFlow/IfdsIde/EdgeFunctions.h>
-#include <phasar/PhasarLLVM/Domain/LLVMAnalysisDomain.h>
-#include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
 
 #include <llvm/IR/Instructions.h>
 #include <llvm/Analysis/LoopInfo.h>
