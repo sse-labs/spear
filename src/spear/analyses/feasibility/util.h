@@ -51,6 +51,8 @@ class Util {
     static z3::expr mkSymBV(const llvm::Value *V, unsigned BW, const char *prefix, z3::context *Ctx);
 
     static std::string stableName(const llvm::Value *V);
+
+    static const llvm::Instruction* firstRealInst(const llvm::BasicBlock *BB);
 };
 
 }

@@ -303,4 +303,21 @@ std::optional<z3::expr> resolve(const llvm::Value *V, const FeasibilityElement &
   return Store->exprOf(SymId);
 }
 
+const llvm::Instruction* firstRealInst(const llvm::BasicBlock *BB) {
+    if (!BB) {
+        return nullptr;
+    }
+#if LLVM_VERSION_MAJOR >= 14
+    return BB->getFirstNonPHIOrDbgOrLifetime();
+#else
+    // Fallback: skip PHI and dbg
+    for (const llvm::Instruction &I : *BB) {
+        if (!llvm::isa<llvm::PHINode>(&I) && !llvm::isa<llvm::DbgInfoIntrinsic>(&I)) {
+            return &I;
+        }
+    }
+    return nullptr;
+#endif
+}
+
 } // namespace Feasibility::Util

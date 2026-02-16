@@ -130,6 +130,8 @@ private:
      */
     EdgeFunctionType getNormalEdgeFunction(n_t Curr, d_t CurrNode, n_t Succ, d_t SuccNode) override;
 
+    static const llvm::BasicBlock *getSuccBB(n_t Succ);
+
     /**
      * Call edge function
      *

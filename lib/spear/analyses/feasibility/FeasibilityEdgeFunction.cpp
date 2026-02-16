@@ -499,9 +499,16 @@ bool FeasibilityJoinEF::isConstant() const noexcept {
 }
 
 l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
-    if (source.isBottom() || source.isIdeAbsorbing()) {
+    // ⊥ = unreached: must stay ⊥ (do NOT turn it into infeasible)
+    if (source.isBottom()) {
         return source;
     }
+
+    // absorbing = already infeasible: stays infeasible
+    if (source.isIdeAbsorbing()) {
+        return source;
+    }
+
     if (!Cmp) {
         return source;
     }
@@ -511,11 +518,14 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
         return source;
     }
 
-    // Resolve operands using SSA/MEM of *source*
+    // Resolve operands in the state of *source*
     auto L = Feasibility::Util::resolve(Cmp->getOperand(0), source, S);
     auto R = Feasibility::Util::resolve(Cmp->getOperand(1), source, S);
+
+    // If we can't resolve the condition, we must not constrain anything.
+    // IMPORTANT: do NOT mark infeasible, do NOT drop to ⊥.
     if (!L || !R) {
-        return source; // no constraint if we can't resolve
+        return source;
     }
 
     z3::expr Cond = S->ctx().bool_val(true);
@@ -533,29 +543,47 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
         case llvm::CmpInst::ICMP_SGT: Cond = z3::sgt(*L, *R); break;
         case llvm::CmpInst::ICMP_SGE: Cond = z3::sge(*L, *R); break;
 
-        default:
+        default: {
             return source; // unsupported predicate => no constraint
+        }
     }
 
-    // Apply correct polarity for THIS edge
+    // Apply edge polarity
     if (!TakeTrueEdge) {
         Cond = !Cond;
     }
 
-    // IMPORTANT: simplify so constants become true/false immediately
+    // Simplify: catch constant cases early
     Cond = Cond.simplify();
 
-    // If this edge condition is definitely false, kill the path right here.
+    // Edge condition is definitely false => reached-but-infeasible
     if (Cond.is_false()) {
         return l_t::ideAbsorbing(S);
     }
 
-    // If definitely true, don't add noise.
+    // Definitely true => no constraint added
     if (Cond.is_true()) {
         return source;
     }
 
-    return source.assume(Cond);
+    // Add the constraint
+    l_t out = source.assume(Cond);
+
+    // CRITICAL: if the added constraint makes it UNSAT,
+    // represent that as "infeasible", NOT ⊥ and NOT "source".
+    if (out.isBottom()) {
+        // Bottom must only mean unreached; reaching here means your assume()
+        // is using ⊥ incorrectly for UNSAT.
+        return l_t::ideAbsorbing(S);
+    }
+    if (out.isIdeAbsorbing()) {
+        return out;
+    }
+    if (!out.isSatisfiable()) {
+        return l_t::ideAbsorbing(S);
+    }
+
+    return out;
 }
 
 

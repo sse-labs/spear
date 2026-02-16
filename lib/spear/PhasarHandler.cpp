@@ -20,6 +20,7 @@
 
 #include "../../src/spear/analyses/loopbound/LoopBound.h"
 #include "../../src/spear/analyses/loopbound/util.h"
+#include "analyses/feasibility/util.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
 
 using llvm::Module;
@@ -149,7 +150,14 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
       continue;
     }
 
-    const llvm::Instruction *EntryI = &BB.front();
+    const llvm::Instruction *EntryI = Feasibility::Util::firstRealInst(&BB);
+    if (!EntryI) continue;
+
+    // If block is just a trampoline (terminator-only), don't decide feasibility here
+    if (EntryI->isTerminator()) {
+      Info.Feasible = false; // or compute via predecessors (recommended)
+      continue;
+    }
 
     if (!FeasibilityResult->containsNode(EntryI)) {
       continue;
@@ -167,24 +175,17 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
       }
     }
 
-    // Correct feasibility criterion:
-    // "exists a satisfiable, non-bottom state at entry", across ALL facts.
-    bool AnyFeasible = false;
-    for (const auto &KV : ResMap) {
-      const Feasibility::FeasibilityElement &L = KV.second;
+    bool Feasible = false;
 
-      if (L.isBottom() || L.isIdeAbsorbing()) {
-        continue;
-      }
-
-      // If your element caches SAT, this is cheap; otherwise it queries Z3.
-      if (L.isSatisfiable()) {
-        AnyFeasible = true;
-        break;
+    if (Zero) {
+      auto It = ResMap.find(Zero);
+      if (It != ResMap.end()) {
+        const auto &L = It->second;
+        Feasible = !L.isBottom() && !L.isIdeAbsorbing() && L.isSatisfiable();
       }
     }
 
-    Info.Feasible = AnyFeasible;
+    Info.Feasible = Feasible;
   }
 
   return ResultMap;

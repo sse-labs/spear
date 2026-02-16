@@ -112,7 +112,7 @@ FeasibilityAnalysis::initialSeeds() {
         const d_t Fact = static_cast<d_t>(SP);
 
         Seeds.addSeed(SP, Zero, IdeNeutral);
-        Seeds.addSeed(SP, Fact, StartVal);
+        //Seeds.addSeed(SP, Fact, StartVal);
 
         if (F_DEBUG_ENABLED) {
             llvm::errs() << F_TAG << " Seed(ICFG) @";
@@ -137,8 +137,8 @@ FeasibilityAnalysis::l_t FeasibilityAnalysis::topElement() {
     return l_t::ideNeutral(this->store.get());
 }
 
-FeasibilityAnalysis::l_t FeasibilityAnalysis::bottomElement() {
-    return l_t::ideAbsorbing(this->store.get());
+FeasibilityElement FeasibilityAnalysis::bottomElement() {
+    return l_t::bottom(this->store.get());
 }
 
 psr::EdgeFunction<FeasibilityAnalysis::l_t> FeasibilityAnalysis::allTopFunction() {
@@ -146,26 +146,26 @@ psr::EdgeFunction<FeasibilityAnalysis::l_t> FeasibilityAnalysis::allTopFunction(
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
-    l_t Res;
-
     if (Lhs.isBottom()) {
-        Res = Rhs;
-    } else if (Rhs.isBottom()) {
-        Res = Lhs;
-    } else if (Lhs.isIdeAbsorbing() || Rhs.isIdeAbsorbing()) {
-        Res = l_t::ideAbsorbing(this->store.get());
-    } else if (Lhs.isIdeNeutral()) {
-        Res = Rhs;
-    } else if (Rhs.isIdeNeutral()) {
-        Res = Lhs;
-    } else {
-        Res = Lhs.join(Rhs);
+        return Rhs;
+    }
+    if (Rhs.isBottom()) {
+        return Lhs;
     }
 
-    if (F_DEBUG_ENABLED) {
-        llvm::errs() << "[FDBG] join: " << Lhs << " lub " << Rhs << " = " << Res << "\n";
+    // reached-but-infeasible should dominate
+    if (Lhs.isIdeAbsorbing() || Rhs.isIdeAbsorbing()) {
+        return l_t::ideAbsorbing(this->store.get());
     }
-    return Res;
+
+    if (Lhs.isIdeNeutral()) {
+        return Rhs;
+    }
+    if (Rhs.isIdeNeutral()) {
+        return Lhs;
+    }
+
+    return Lhs.join(Rhs);
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType
@@ -207,42 +207,60 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
   // ---------------------------------------------------------------------------
   // 1) Handle conditional branches FIRST (must constrain Zero too!)
   // ---------------------------------------------------------------------------
-    if (auto *br = llvm::dyn_cast<llvm::BranchInst>(curr)) {
-        if (!br->isConditional()) {
+    if (auto *Br = llvm::dyn_cast<llvm::BranchInst>(curr)) {
+        if (Br->isConditional()) {
+            const llvm::Instruction *TEntry = Feasibility::Util::firstRealInst(Br->getSuccessor(0));
+            const llvm::Instruction *FEntry = Feasibility::Util::firstRealInst(Br->getSuccessor(1));
+
+            const bool TakeTrue  = (succ == TEntry);
+            const bool TakeFalse = (succ == FEntry);
+
+            if (!TakeTrue && !TakeFalse) {
+                if (F_DEBUG_ENABLED) {
+                    llvm::errs() << F_TAG << "   branch-succ-match: succ=";
+                    Feasibility::Util::dumpInst(succ);
+                    llvm::errs() << "  trueEntry=";
+                    Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(TEntry));
+                    llvm::errs() << "  falseEntry=";
+                    Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(FEntry));
+                    llvm::errs() << "  TakeTrue=" << TakeTrue << " TakeFalse=" << TakeFalse << "\n";
+                }
+
+                return EF(std::in_place_type<FeasibilityIdentityEF>);
+            }
+
+            llvm::Value *CondV = Br->getCondition();
+            while (auto *CastI = llvm::dyn_cast<llvm::CastInst>(CondV)) {
+                CondV = CastI->getOperand(0);
+            }
+
+            if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
+
+                if (F_DEBUG_ENABLED) {
+                    llvm::errs() << F_TAG << "   branch-succ-match: succ=";
+                    Feasibility::Util::dumpInst(succ);
+                    llvm::errs() << "  trueEntry=";
+                    Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(TEntry));
+                    llvm::errs() << "  falseEntry=";
+                    Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(FEntry));
+                    llvm::errs() << "  TakeTrue=" << TakeTrue << " TakeFalse=" << TakeFalse << "\n";
+                }
+
+                return EF(std::in_place_type<FeasibilityAssumeIcmpEF>, ICmp, /*TakeTrueEdge=*/TakeTrue);
+            }
+
+            if (F_DEBUG_ENABLED) {
+                llvm::errs() << F_TAG << "   branch-succ-match: succ=";
+                Feasibility::Util::dumpInst(succ);
+                llvm::errs() << "  trueEntry=";
+                Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(TEntry));
+                llvm::errs() << "  falseEntry=";
+                Feasibility::Util::dumpInst(const_cast<llvm::Instruction*>(FEntry));
+                llvm::errs() << "  TakeTrue=" << TakeTrue << " TakeFalse=" << TakeFalse << "\n";
+            }
+
             return EF(std::in_place_type<FeasibilityIdentityEF>);
         }
-
-        llvm::Value *CondV = br->getCondition();
-
-        // Follow through trivial casts (zext/trunc/bitcast etc.) just in case
-        while (auto *castI = llvm::dyn_cast<llvm::CastInst>(CondV)) {
-            CondV = castI->getOperand(0);
-        }
-
-        const llvm::BasicBlock *TrueBB  = br->getSuccessor(0);
-        const llvm::BasicBlock *FalseBB = br->getSuccessor(1);
-
-        const llvm::BasicBlock *SuccBB = succ ? succ->getParent() : nullptr;
-        const bool IsTrueEdge  = (SuccBB == TrueBB);
-        const bool IsFalseEdge = (SuccBB == FalseBB);
-
-        if (!IsTrueEdge && !IsFalseEdge) {
-            return EF(std::in_place_type<FeasibilityIdentityEF>);
-        }
-
-        if (auto *icmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
-            // IMPORTANT: applies to *all facts*, including ZERO
-            return EF(std::in_place_type<FeasibilityAssumeIcmpEF>,
-                      icmp, /*TakeTrueEdge=*/IsTrueEdge);
-        }
-
-        // If we can't interpret the condition, don't constrain.
-        return EF(std::in_place_type<FeasibilityIdentityEF>);
-    }
-
-    // 2) facts changed => ID (keep)
-    if (currNode != succNode) {
-        return EF(std::in_place_type<FeasibilityIdentityEF>);
     }
 
     // 3) STORE / LOAD effects (MUST run for Zero too)
@@ -269,13 +287,21 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
 
     // 4) now you may keep the "zero-involved => ID" fast path,
     // but it no longer blocks store/load.
+    if (currNode != succNode) {
+        return EF(std::in_place_type<FeasibilityIdentityEF>);
+    }
     if (isZeroValue(currNode) || isZeroValue(succNode)) {
         return EF(std::in_place_type<FeasibilityIdentityEF>);
     }
-
     return EF(std::in_place_type<FeasibilityIdentityEF>);
 }
 
+const llvm::BasicBlock* FeasibilityAnalysis::getSuccBB(FeasibilityAnalysis::n_t Succ) {
+    if (!Succ) {
+        return nullptr;
+    }
+    return Succ->getParent();
+}
 
 FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getCallEdgeFunction(n_t CallSite, d_t SrcNode,
                                                                               f_t DestFun, d_t DestNode) {
