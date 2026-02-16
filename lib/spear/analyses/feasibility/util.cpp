@@ -17,6 +17,16 @@ namespace Feasibility::Util {
 
 std::atomic<bool> F_DebugEnabled{true};
 
+z3::expr mkSymBV(const llvm::Value *V, unsigned BW, const char *prefix, z3::context *Ctx) {
+    std::string name;
+    if (V && V->hasName()) {
+        name = std::string(prefix) + "_" + V->getName().str();
+    } else {
+        name = std::string(prefix) + "_" + std::to_string(reinterpret_cast<uintptr_t>(V));
+    }
+    return Ctx->bv_const(name.c_str(), BW);
+}
+
 const llvm::Value *asValue(FeasibilityDomain::d_t fact) {
     return static_cast<const llvm::Value *>(fact);
 }
@@ -100,12 +110,12 @@ void dumpEF(const Feasibility::FeasibilityAnalysis::EdgeFunctionType &edgeFuncti
     }
 
     if (auto *ssaset = edgeFunction.template dyn_cast<Feasibility::FeasibilitySetSSAEF>()) {
-        llvm::errs() << "EF=SETSSA[" << ssaset->ValueExpr.to_string() << "]";
+        llvm::errs() << "EF=SETSSA[" << ssaset->Key << "]";
         return;
     }
 
     if (auto *memsset = edgeFunction.template dyn_cast<Feasibility::FeasibilitySetMemEF>()) {
-        llvm::errs() << "EF=SETMEM[" << memsset->ValueExpr.to_string() << "]";
+        llvm::errs() << "EF=SETMEM[" << memsset->Loc << "]";
         return;
     }
 
@@ -151,16 +161,6 @@ void dumpEFKind(const EF &E) {
     llvm::errs() << "]";
 }
 
-z3::expr mkSymBV(const llvm::Value *V, unsigned BW, const char *prefix, z3::context *Ctx) {
-    std::string name;
-    if (V && V->hasName()) {
-        name = std::string(prefix) + "_" + V->getName().str();
-    } else {
-        name = std::string(prefix) + "_" + std::to_string(reinterpret_cast<uintptr_t>(V));
-    }
-    return Ctx->bv_const(name.c_str(), BW);
-}
-
 z3::expr createFreshBitVal(const llvm::Value *key, unsigned bitwidth, const char *prefix, z3::context *context) {
     return mkSymBV(key, bitwidth, prefix, context);
 }
@@ -191,82 +191,116 @@ std::optional<z3::expr> createBitVal(const llvm::Value *V, z3::context *context)
     return std::nullopt;
 }
 
-std::optional<z3::expr> resolve(const llvm::Value *variable, FeasibilityStateStore *store) {
-    if (!variable) {
-        return std::nullopt;
+std::optional<z3::expr> resolve(const llvm::Value *V, const FeasibilityElement &St, FeasibilityStateStore *Store) {
+    if (!V || !Store) {
+    return std::nullopt;
+  }
+
+  // ------------------------------------------------------------
+  // 0) Constants
+  // ------------------------------------------------------------
+  if (auto C = createIntVal(V, &Store->ctx())) {
+    return C;
+  }
+
+  if (!V->getType()->isIntegerTy()) {
+    return std::nullopt;
+  }
+
+  const unsigned Bw =
+      llvm::cast<llvm::IntegerType>(V->getType())->getBitWidth();
+
+  // ------------------------------------------------------------
+  // 1) SSA lookup for *any* integer-typed Value
+  //    (this includes LoadInst results, BinaryOperator results, args, etc.)
+  // ------------------------------------------------------------
+  if (auto SsaId = Store->Ssa.getValue(St.ssaId, V)) {
+    return Store->exprOf(*SsaId);
+  }
+
+  // ------------------------------------------------------------
+  // 2) Load fallback: if SSA doesn't have the load result yet,
+  //    read from MEM using the load's pointer operand.
+  // ------------------------------------------------------------
+  if (const auto *LI = llvm::dyn_cast<llvm::LoadInst>(V)) {
+    const llvm::Value *Loc = LI->getPointerOperand()->stripPointerCasts();
+
+    if (auto MemId = Store->Mem.getValue(St.memId, Loc)) {
+      return Store->exprOf(*MemId);
     }
 
-    if (auto C = createIntVal(variable, &store->ctx())) {
-        return C;
+    // Unknown memory -> stable symbol for this *location* (not for the load!)
+    // This is crucial: two loads from the same Loc must resolve to the same thing.
+    const auto SymId = Store->getOrCreateSym(Loc, Bw, "mem");
+    return Store->exprOf(SymId);
+  }
+
+  // ------------------------------------------------------------
+  // 3) Casts
+  // ------------------------------------------------------------
+  if (const auto *Cast = llvm::dyn_cast<llvm::CastInst>(V)) {
+    auto Op = resolve(Cast->getOperand(0), St, Store);
+    if (!Op) {
+      return std::nullopt;
     }
 
-    if (const auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(variable)) {
-        if (!loadInst->getType()->isIntegerTy()) {
-            return std::nullopt;
-        }
-        unsigned bw = llvm::cast<llvm::IntegerType>(loadInst->getType())->getBitWidth();
-        return mkSymBV(loadInst, bw, "load", &store->ctx());
+    const unsigned DstBW =
+        llvm::cast<llvm::IntegerType>(Cast->getType())->getBitWidth();
+    const unsigned SrcBW = Op->get_sort().bv_size();
+
+    if (llvm::isa<llvm::ZExtInst>(Cast)) {
+      if (DstBW > SrcBW) return z3::zext(*Op, DstBW - SrcBW);
+      if (DstBW < SrcBW) return Op->extract(DstBW - 1, 0);
+      return *Op;
     }
-
-    if (const auto *Cast = llvm::dyn_cast<llvm::CastInst>(variable)) {
-        auto op = resolve(Cast->getOperand(0), store);
-        if (!op) return std::nullopt;
-
-        if (!Cast->getType()->isIntegerTy()) return std::nullopt;
-        unsigned dstBW = llvm::cast<llvm::IntegerType>(Cast->getType())->getBitWidth();
-        unsigned srcBW = op->get_sort().bv_size();
-
-        if (llvm::isa<llvm::ZExtInst>(Cast)) {
-            if (dstBW > srcBW) return z3::zext(*op, dstBW - srcBW);
-            if (dstBW < srcBW) return op->extract(dstBW - 1, 0);
-            return *op;
-        }
-        if (llvm::isa<llvm::SExtInst>(Cast)) {
-            if (dstBW > srcBW) return z3::sext(*op, dstBW - srcBW);
-            if (dstBW < srcBW) return op->extract(dstBW - 1, 0);
-            return *op;
-        }
-        if (llvm::isa<llvm::TruncInst>(Cast)) {
-            if (dstBW <= srcBW) return op->extract(dstBW - 1, 0);
-            return z3::zext(*op, dstBW - srcBW);
-        }
-        if (llvm::isa<llvm::BitCastInst>(Cast)) {
-            if (dstBW == srcBW) return *op;
-            if (dstBW < srcBW) return op->extract(dstBW - 1, 0);
-            return z3::zext(*op, dstBW - srcBW);
-        }
-
-        return std::nullopt;
+    if (llvm::isa<llvm::SExtInst>(Cast)) {
+      if (DstBW > SrcBW) return z3::sext(*Op, DstBW - SrcBW);
+      if (DstBW < SrcBW) return Op->extract(DstBW - 1, 0);
+      return *Op;
     }
-
-    if (const auto *BO = llvm::dyn_cast<llvm::BinaryOperator>(variable)) {
-        if (!BO->getType()->isIntegerTy()) return std::nullopt;
-
-        auto lhs = resolve(BO->getOperand(0), store);
-        auto rhs = resolve(BO->getOperand(1), store);
-        if (!lhs || !rhs) return std::nullopt;
-
-        switch (BO->getOpcode()) {
-            case llvm::Instruction::Add:  return (*lhs) + (*rhs);
-            case llvm::Instruction::Sub:  return (*lhs) - (*rhs);
-            case llvm::Instruction::Mul:  return (*lhs) * (*rhs);
-            case llvm::Instruction::And:  return (*lhs) & (*rhs);
-            case llvm::Instruction::Or:   return (*lhs) | (*rhs);
-            case llvm::Instruction::Xor:  return (*lhs) ^ (*rhs);
-            case llvm::Instruction::Shl:  return z3::shl(*lhs, *rhs);
-            case llvm::Instruction::LShr: return z3::lshr(*lhs, *rhs);
-            case llvm::Instruction::AShr: return z3::ashr(*lhs, *rhs);
-            default: break;
-        }
-        return std::nullopt;
+    if (llvm::isa<llvm::TruncInst>(Cast)) {
+      if (DstBW <= SrcBW) return Op->extract(DstBW - 1, 0);
+      return z3::zext(*Op, DstBW - SrcBW);
     }
-
-    if (variable->getType()->isIntegerTy()) {
-        unsigned bw = llvm::cast<llvm::IntegerType>(variable->getType())->getBitWidth();
-        return mkSymBV(variable, bw, "v", &store->ctx());
+    if (llvm::isa<llvm::BitCastInst>(Cast)) {
+      if (DstBW == SrcBW) return *Op;
+      if (DstBW < SrcBW) return Op->extract(DstBW - 1, 0);
+      return z3::zext(*Op, DstBW - SrcBW);
     }
 
     return std::nullopt;
+  }
+
+  // ------------------------------------------------------------
+  // 4) Binary operators
+  // ------------------------------------------------------------
+  if (const auto *BO = llvm::dyn_cast<llvm::BinaryOperator>(V)) {
+    auto L = resolve(BO->getOperand(0), St, Store);
+    auto R = resolve(BO->getOperand(1), St, Store);
+    if (!L || !R) {
+      return std::nullopt;
+    }
+
+    switch (BO->getOpcode()) {
+      case llvm::Instruction::Add:  return (*L) + (*R);
+      case llvm::Instruction::Sub:  return (*L) - (*R);
+      case llvm::Instruction::Mul:  return (*L) * (*R);
+      case llvm::Instruction::And:  return (*L) & (*R);
+      case llvm::Instruction::Or:   return (*L) | (*R);
+      case llvm::Instruction::Xor:  return (*L) ^ (*R);
+      case llvm::Instruction::Shl:  return z3::shl(*L, *R);
+      case llvm::Instruction::LShr: return z3::lshr(*L, *R);
+      case llvm::Instruction::AShr: return z3::ashr(*L, *R);
+      default: break;
+    }
+    return std::nullopt;
+  }
+
+  // ------------------------------------------------------------
+  // 5) Fallback: stable symbol for the SSA value itself
+  // ------------------------------------------------------------
+  const auto SymId = Store->getOrCreateSym(V, Bw, "v");
+  return Store->exprOf(SymId);
 }
 
 } // namespace Feasibility::Util

@@ -81,7 +81,7 @@ l_t FeasibilityAllTopEF::computeTarget(const l_t &source) const {
 
 EF FeasibilityAllTopEF::compose(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFunc, const EF &second) {
 
-    if (Feasibility::Util::F_DebugEnabled.load()) {
+    if (F_DEBUG_ENABLED) {
         llvm::errs() << "[FDBG] AllTop::compose second=";
         Feasibility::Util::dumpEF(second);
         llvm::errs() << " kind=";
@@ -144,20 +144,17 @@ bool FeasibilityAllBottomEF::isConstant() const noexcept {
 // ========================= FeasibilityAssumeEF =================================
 
 l_t FeasibilityAssumeEF::computeTarget(const l_t &source) const {
-    if (source.isBottom()) {
+    if (source.isBottom() || source.isIdeAbsorbing()) {
         return source;
     }
-
-    if (source.isTop()) {
-        return source;
-    }
-
+    // IMPORTANT: do NOT special-case Top/IdeNeutral here.
+    // assume() already normalizes Top/IdeNeutral -> initial(...) and applies the constraint.
     return source.assume(Cond);
 }
 
 EF FeasibilityAssumeEF::compose(psr::EdgeFunctionRef<FeasibilityAssumeEF> thisFunc, const EF &secondFunction) {
 
-    if (Feasibility::Util::F_DebugEnabled.load()) {
+    if (F_DEBUG_ENABLED) {
         llvm::errs() << "[FDBG] AssumeEF::compose second=";
         Feasibility::Util::dumpEF(secondFunction);
         llvm::errs() << " kind=";
@@ -225,15 +222,30 @@ bool FeasibilityAssumeEF::isConstant() const noexcept {
 // ========================= FeasibilitySetSSAEF =================================
 
 l_t FeasibilitySetSSAEF::computeTarget(const l_t &source) const {
-    if (source.isBottom()) {
+    if (source.isBottom() || source.isIdeAbsorbing()) {
         return source;
     }
 
-    if (source.isTop()) {
-        return source;
+    auto *S = source.getStore();
+    l_t out = source;
+
+    if (out.isTop() || out.isIdeNeutral()) {
+        out = l_t::initial(S);
     }
 
-    return source;
+    // 1) try read memory
+    if (auto mv = S->Mem.getValue(out.memId, Loc)) {
+        out.ssaId = S->Ssa.set(out.ssaId, Key, *mv);
+        return out;
+    }
+
+    unsigned bw = 32;
+    z3::expr sym = Feasibility::Util::mkSymBV(Loc, bw, "mem", &S->ctx());
+    auto eid = S->internExpr(sym);
+
+    out.memId = S->Mem.set(out.memId, Loc, eid);
+    out.ssaId = S->Ssa.set(out.ssaId, Key, eid);
+    return out;
 }
 
 EF FeasibilitySetSSAEF::compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFunc, const EF &secondFunction) {
@@ -309,15 +321,15 @@ bool FeasibilitySetSSAEF::isConstant() const noexcept {
 // ========================= FeasibilitySetMemEF =================================
 
 l_t FeasibilitySetMemEF::computeTarget(const l_t &source) const {
-    if (source.isBottom()) {
+    if (source.isBottom() || source.isIdeAbsorbing()) {
         return source;
     }
-
-    if (source.isTop()) {
-        return source;
+    l_t out = source;
+    if (out.isTop() || out.isIdeNeutral()) {
+        out = l_t::initial(source.getStore());
     }
-
-    return source;
+    out.memId = source.getStore()->Mem.set(out.memId, Loc, ValueId);
+    return out;
 }
 
 EF FeasibilitySetMemEF::compose(psr::EdgeFunctionRef<FeasibilitySetMemEF> self,
@@ -485,6 +497,105 @@ EF FeasibilityJoinEF::join(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc, con
 bool FeasibilityJoinEF::isConstant() const noexcept {
     return false;
 }
+
+l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
+    if (source.isBottom() || source.isIdeAbsorbing()) {
+        return source;
+    }
+    if (!Cmp) {
+        return source;
+    }
+
+    auto *S = source.getStore();
+    if (!S) {
+        return source;
+    }
+
+    // Resolve operands using SSA/MEM of *source*
+    auto L = Feasibility::Util::resolve(Cmp->getOperand(0), source, S);
+    auto R = Feasibility::Util::resolve(Cmp->getOperand(1), source, S);
+    if (!L || !R) {
+        return source; // no constraint if we can't resolve
+    }
+
+    z3::expr Cond = S->ctx().bool_val(true);
+    switch (Cmp->getPredicate()) {
+        case llvm::CmpInst::ICMP_EQ:  Cond = (*L == *R); break;
+        case llvm::CmpInst::ICMP_NE:  Cond = (*L != *R); break;
+
+        case llvm::CmpInst::ICMP_ULT: Cond = z3::ult(*L, *R); break;
+        case llvm::CmpInst::ICMP_ULE: Cond = z3::ule(*L, *R); break;
+        case llvm::CmpInst::ICMP_UGT: Cond = z3::ugt(*L, *R); break;
+        case llvm::CmpInst::ICMP_UGE: Cond = z3::uge(*L, *R); break;
+
+        case llvm::CmpInst::ICMP_SLT: Cond = z3::slt(*L, *R); break;
+        case llvm::CmpInst::ICMP_SLE: Cond = z3::sle(*L, *R); break;
+        case llvm::CmpInst::ICMP_SGT: Cond = z3::sgt(*L, *R); break;
+        case llvm::CmpInst::ICMP_SGE: Cond = z3::sge(*L, *R); break;
+
+        default:
+            return source; // unsupported predicate => no constraint
+    }
+
+    // Apply correct polarity for THIS edge
+    if (!TakeTrueEdge) {
+        Cond = !Cond;
+    }
+
+    // IMPORTANT: simplify so constants become true/false immediately
+    Cond = Cond.simplify();
+
+    // If this edge condition is definitely false, kill the path right here.
+    if (Cond.is_false()) {
+        return l_t::ideAbsorbing(S);
+    }
+
+    // If definitely true, don't add noise.
+    if (Cond.is_true()) {
+        return source;
+    }
+
+    return source.assume(Cond);
+}
+
+
+EF FeasibilityAssumeIcmpEF::compose(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF> self,
+                                    const EF &second) {
+  if (second.template isa<FeasibilityIdentityEF>() ||
+      second.template isa<psr::EdgeIdentity<l_t>>()) {
+    return EF(self);
+  }
+  if (second.template isa<FeasibilityAllTopEF>()) {
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+  if (second.template isa<FeasibilityAllBottomEF>()) {
+    return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  }
+  // keep order: (assumeIcmp);(other)
+  return EF(std::in_place_type<FeasibilitySeqEF>, EF(self), second);
+}
+
+EF FeasibilityAssumeIcmpEF::join(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF> self,
+                                 const psr::EdgeFunction<l_t> &other) {
+  if (other.template isa<FeasibilityAllBottomEF>() ||
+      llvm::isa<psr::AllBottom<l_t>>(other) ||
+      other.template isa<FeasibilityIdentityEF>() ||
+      other.template isa<psr::EdgeIdentity<l_t>>()) {
+    return EF(self);
+  }
+  if (other.template isa<FeasibilityAllTopEF>() ||
+      llvm::isa<psr::AllTop<l_t>>(other)) {
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+  if (other.template isa<FeasibilityAssumeIcmpEF>()) {
+    const auto &O = other.template cast<FeasibilityAssumeIcmpEF>();
+    if (*self == *O) {
+      return EF(self);
+    }
+  }
+  return EF(std::in_place_type<FeasibilityJoinEF>, EF(self), EF(other));
+}
+
 
 
 EF edgeIdentity() { return EF(std::in_place_type<FeasibilityIdentityEF>); }

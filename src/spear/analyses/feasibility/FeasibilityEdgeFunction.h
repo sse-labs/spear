@@ -11,6 +11,7 @@
 #include <z3++.h>                    // add if not already pulled transitively
 
 #include <utility>
+#include <llvm/IR/Instructions.h>
 
 #include "FeasibilityElement.h"
 
@@ -110,35 +111,17 @@ struct FeasibilitySetSSAEF {
     using l_t = Feasibility::l_t;
 
     const llvm::Value *Key = nullptr;
-
-    // Either set SSA directly (ValueExpr), or read from memory (FromMemLoc).
-    const llvm::Value *FromMemLoc = nullptr;
-    z3::expr ValueExpr; // used only if FromMemLoc == nullptr
+    const llvm::Value *Loc = nullptr;
 
     // Direct set: SSA[Key] := ValueExpr
-    FeasibilitySetSSAEF(const llvm::Value *Key, z3::expr ValueExpr)
-        : Key(Key), FromMemLoc(nullptr), ValueExpr(std::move(ValueExpr)) {}
-
-    // Load: SSA[Key] := MEM[FromMemLoc]
-    FeasibilitySetSSAEF(const llvm::Value *Key, const llvm::Value *FromMemLoc, z3::expr Dummy)
-        : Key(Key), FromMemLoc(FromMemLoc), ValueExpr(std::move(Dummy)) {}
+    FeasibilitySetSSAEF(const llvm::Value *Key, const llvm::Value *Loc)
+        : Key(Key), Loc(Loc) {}
 
     [[nodiscard]] l_t computeTarget(const l_t &source) const;
     [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF>, const EF &secondFunction);
     [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilitySetSSAEF>, const psr::EdgeFunction<l_t> &otherFunc);
 
-    bool operator==(const FeasibilitySetSSAEF &O) const {
-        if (Key != O.Key) {
-            return false;
-        }
-        if (FromMemLoc != O.FromMemLoc) {
-            return false;
-        }
-        if (FromMemLoc != nullptr) {
-            return true; // load form: only key+loc matter
-        }
-        return z3::eq(ValueExpr, O.ValueExpr);
-    }
+    bool operator==(const FeasibilitySetSSAEF &O) const = default;
 
     bool isConstant() const noexcept;
 };
@@ -151,10 +134,10 @@ struct FeasibilitySetMemEF {
     using l_t = Feasibility::l_t;
 
     const llvm::Value *Loc = nullptr;
-    z3::expr ValueExpr;
+    FeasibilityStateStore::ExprId ValueId = 0;
 
-    FeasibilitySetMemEF(const llvm::Value *Loc, z3::expr ValueExpr)
-        : Loc(Loc), ValueExpr(std::move(ValueExpr)) {}
+    FeasibilitySetMemEF(const llvm::Value *Loc, FeasibilityStateStore::ExprId ValueExpr)
+        : Loc(Loc), ValueId(ValueExpr) {}
 
 
     [[nodiscard]] l_t computeTarget(const l_t &source) const;
@@ -222,6 +205,30 @@ struct FeasibilityJoinEF {
     bool operator==(const FeasibilityJoinEF &) const = default;
 
     bool isConstant() const noexcept;
+};
+
+struct FeasibilityAssumeIcmpEF {
+    using l_t = Feasibility::l_t;
+
+    const llvm::ICmpInst *Cmp = nullptr;
+    bool TakeTrueEdge = true; // if false => use !cond
+
+    FeasibilityAssumeIcmpEF(const llvm::ICmpInst *C, bool T)
+        : Cmp(C), TakeTrueEdge(T) {}
+
+    [[nodiscard]] l_t computeTarget(const l_t &source) const;
+
+    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF>,
+                                    const EF &secondFunction);
+
+    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF> thisFunc,
+                                 const psr::EdgeFunction<l_t> &otherFunc);
+
+    bool operator==(const FeasibilityAssumeIcmpEF &O) const {
+        return Cmp == O.Cmp && TakeTrueEdge == O.TakeTrueEdge;
+    }
+
+    bool isConstant() const noexcept { return false; }
 };
 
 EF edgeIdentity();

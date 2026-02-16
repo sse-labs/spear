@@ -33,12 +33,12 @@ public:
     ContainerT computeTargets(D Src) override {
         ContainerT Out = Inner->computeTargets(Src);
 
-        if (Feasibility::Util::F_DebugEnabled.load()) {
-            llvm::errs() << Feasibility::Util::F_TAG << " FF " << Name << "  ";
+        if (F_DEBUG_ENABLED) {
+            llvm::errs() << F_TAG << " FF " << Name << "  ";
             Feasibility::Util::dumpInst(Curr);
             llvm::errs() << "  ->  ";
             Feasibility::Util::dumpInst(Succ);
-            llvm::errs() << "\n" << Feasibility::Util::F_TAG << "   Src=";
+            llvm::errs() << "\n" << F_TAG << "   Src=";
             Feasibility::Util::dumpFact(A,
                                 static_cast<Feasibility::FeasibilityAnalysis ::d_t>(Src));
             llvm::errs() << "   Targets={";
@@ -101,7 +101,7 @@ FeasibilityAnalysis::initialSeeds() {
 
     const l_t StartVal = l_t::initial(this->store.get());
 
-    if (Feasibility::Util::F_DebugEnabled.load()) {
+    if (F_DEBUG_ENABLED) {
         llvm::errs() << "[FDBG] StartVal==IdeNeutral="
                      << StartVal.equal_to(IdeNeutral) << "\n";
         llvm::errs() << "[FDBG] Zero=" << (const void *)Zero
@@ -114,8 +114,8 @@ FeasibilityAnalysis::initialSeeds() {
         Seeds.addSeed(SP, Zero, IdeNeutral);
         Seeds.addSeed(SP, Fact, StartVal);
 
-        if (Feasibility::Util::F_DebugEnabled.load()) {
-            llvm::errs() << Feasibility::Util::F_TAG << " Seed(ICFG) @";
+        if (F_DEBUG_ENABLED) {
+            llvm::errs() << F_TAG << " Seed(ICFG) @";
             Feasibility::Util::dumpInst(SP);
             llvm::errs() << "\n";
         }
@@ -162,7 +162,7 @@ FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
         Res = Lhs.join(Rhs);
     }
 
-    if (Feasibility::Util::F_DebugEnabled.load()) {
+    if (F_DEBUG_ENABLED) {
         llvm::errs() << "[FDBG] join: " << Lhs << " lub " << Rhs << " = " << Res << "\n";
     }
     return Res;
@@ -194,12 +194,12 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFu
 FeasibilityAnalysis::EdgeFunctionType
 FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
                                            n_t succ, d_t succNode) {
-  if (Feasibility::Util::F_DebugEnabled.load()) {
-    llvm::errs() << Feasibility::Util::F_TAG << " EF normal @";
+  if (F_DEBUG_ENABLED) {
+    llvm::errs() << F_TAG << " EF normal @";
     Feasibility::Util::dumpInst(curr);
-    llvm::errs() << "\n" << Feasibility::Util::F_TAG << "   currCond=";
+    llvm::errs() << "\n" << F_TAG << "   currCond=";
     Feasibility::Util::dumpFact(this, currNode);
-    llvm::errs() << "\n" << Feasibility::Util::F_TAG << "   succCond=";
+    llvm::errs() << "\n" << F_TAG << "   succCond=";
     Feasibility::Util::dumpFact(this, succNode);
     llvm::errs() << "\n";
   }
@@ -207,131 +207,73 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
   // ---------------------------------------------------------------------------
   // 1) Handle conditional branches FIRST (must constrain Zero too!)
   // ---------------------------------------------------------------------------
-  if (auto *brInst = llvm::dyn_cast<llvm::BranchInst>(curr)) {
-    llvm::errs() << "Handling branch instruction: " << *brInst << "\n";
+    if (auto *br = llvm::dyn_cast<llvm::BranchInst>(curr)) {
+        if (!br->isConditional()) {
+            return EF(std::in_place_type<FeasibilityIdentityEF>);
+        }
 
-    if (brInst->isConditional()) {
-      llvm::errs() << "[FDBG] conditional branch seen\n";
-      llvm::Value *Cond = brInst->getCondition();
+        llvm::Value *CondV = br->getCondition();
 
-      llvm::BasicBlock *TrueBB  = brInst->getSuccessor(0);
-      llvm::BasicBlock *FalseBB = brInst->getSuccessor(1);
+        // Follow through trivial casts (zext/trunc/bitcast etc.) just in case
+        while (auto *castI = llvm::dyn_cast<llvm::CastInst>(CondV)) {
+            CondV = castI->getOperand(0);
+        }
 
-      const bool IsTrueEdge  = (succ && succ->getParent() == TrueBB);
-      const bool IsFalseEdge = (succ && succ->getParent() == FalseBB);
+        const llvm::BasicBlock *TrueBB  = br->getSuccessor(0);
+        const llvm::BasicBlock *FalseBB = br->getSuccessor(1);
 
-      if (!IsTrueEdge && !IsFalseEdge) {
+        const llvm::BasicBlock *SuccBB = succ ? succ->getParent() : nullptr;
+        const bool IsTrueEdge  = (SuccBB == TrueBB);
+        const bool IsFalseEdge = (SuccBB == FalseBB);
+
+        if (!IsTrueEdge && !IsFalseEdge) {
+            return EF(std::in_place_type<FeasibilityIdentityEF>);
+        }
+
+        if (auto *icmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
+            // IMPORTANT: applies to *all facts*, including ZERO
+            return EF(std::in_place_type<FeasibilityAssumeIcmpEF>,
+                      icmp, /*TakeTrueEdge=*/IsTrueEdge);
+        }
+
+        // If we can't interpret the condition, don't constrain.
         return EF(std::in_place_type<FeasibilityIdentityEF>);
-      }
-
-      z3::expr ZCond = store->ctx().bool_val(true);
-
-      if (auto *icmpinst = llvm::dyn_cast<llvm::ICmpInst>(Cond)) {
-        llvm::errs() << "Branch condition is an ICmp: " << *icmpinst << "\n";
-
-        auto lhs = Feasibility::Util::resolve(icmpinst->getOperand(0), store.get());
-        auto rhs = Feasibility::Util::resolve(icmpinst->getOperand(1), store.get());
-        if (!lhs || !rhs) {
-          return EF(std::in_place_type<FeasibilityIdentityEF>);
-        }
-
-        switch (icmpinst->getPredicate()) {
-        case llvm::CmpInst::Predicate::ICMP_EQ:  ZCond = (lhs.value() == rhs.value()); break;
-        case llvm::CmpInst::Predicate::ICMP_NE:  ZCond = (lhs.value() != rhs.value()); break;
-        case llvm::CmpInst::Predicate::ICMP_ULT: ZCond = z3::ult(lhs.value(), rhs.value()); break;
-        case llvm::CmpInst::Predicate::ICMP_ULE: ZCond = z3::ule(lhs.value(), rhs.value()); break;
-        case llvm::CmpInst::Predicate::ICMP_UGT: ZCond = z3::ugt(lhs.value(), rhs.value()); break;
-        case llvm::CmpInst::Predicate::ICMP_UGE: ZCond = z3::uge(lhs.value(), rhs.value()); break;
-        case llvm::CmpInst::Predicate::ICMP_SLT: ZCond = z3::slt(lhs.value(), rhs.value()); break;
-        case llvm::CmpInst::Predicate::ICMP_SLE: ZCond = z3::sle(lhs.value(), rhs.value()); break;
-        case llvm::CmpInst::Predicate::ICMP_SGT: ZCond = z3::sgt(lhs.value(), rhs.value()); break;
-        case llvm::CmpInst::Predicate::ICMP_SGE: ZCond = z3::sge(lhs.value(), rhs.value()); break;
-        default:
-          return EF(std::in_place_type<FeasibilityIdentityEF>);
-        }
-
-        const z3::expr EdgeCond = IsTrueEdge ? ZCond : !ZCond;
-
-        auto E = EF(std::in_place_type<FeasibilityAssumeEF>, EdgeCond);
-        if (Feasibility::Util::F_DebugEnabled.load()) {
-          llvm::errs() << Feasibility::Util::F_TAG << "   reason=branch-assume("
-                       << (IsTrueEdge ? "T" : "F") << ") -> "
-                       << EdgeCond.to_string() << "\n";
-        }
-        return E;
-      }
-
-      // Non-ICmp conditions not handled => no constraint
-      return EF(std::in_place_type<FeasibilityIdentityEF>);
     }
 
-    // Unconditional branch: no constraint
+    // 2) facts changed => ID (keep)
+    if (currNode != succNode) {
+        return EF(std::in_place_type<FeasibilityIdentityEF>);
+    }
+
+    // 3) STORE / LOAD effects (MUST run for Zero too)
+    if (auto *storeinst = llvm::dyn_cast<llvm::StoreInst>(curr)) {
+        const llvm::Value *valOp = storeinst->getValueOperand();
+        const llvm::Value *ptrOp = storeinst->getPointerOperand()->stripPointerCasts();
+
+        if (auto *constval = llvm::dyn_cast<llvm::ConstantInt>(valOp)) {
+            unsigned bw = constval->getBitWidth();
+            uint64_t bits = constval->getValue().getZExtValue();
+            z3::expr c = store->ctx().bv_val(bits, bw);
+            const auto valueId = store->internExpr(c);
+            return EF(std::in_place_type<FeasibilitySetMemEF>, ptrOp, valueId);
+        }
+
+        return EF(std::in_place_type<FeasibilityIdentityEF>);
+    }
+
+    if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(curr)) {
+        const llvm::Value *loc = loadInst->getPointerOperand()->stripPointerCasts();
+        const llvm::Value *key = loadInst;
+        return EF(std::in_place_type<FeasibilitySetSSAEF>, key, loc);
+    }
+
+    // 4) now you may keep the "zero-involved => ID" fast path,
+    // but it no longer blocks store/load.
+    if (isZeroValue(currNode) || isZeroValue(succNode)) {
+        return EF(std::in_place_type<FeasibilityIdentityEF>);
+    }
+
     return EF(std::in_place_type<FeasibilityIdentityEF>);
-  }
-
-  // ---------------------------------------------------------------------------
-  // 2) For non-branches: keep your fast-path handling
-  // ---------------------------------------------------------------------------
-
-  if (isZeroValue(currNode) || isZeroValue(succNode)) {
-    auto E = EF(std::in_place_type<FeasibilityIdentityEF>);
-    if (Feasibility::Util::F_DebugEnabled.load()) {
-      llvm::errs() << Feasibility::Util::F_TAG << "   reason=zero-involved  ";
-      Feasibility::Util::dumpEF(E);
-      llvm::errs() << "\n";
-    }
-    return E;
-  }
-
-  if (currNode != succNode) {
-    auto E = EF(std::in_place_type<FeasibilityIdentityEF>);
-    if (Feasibility::Util::F_DebugEnabled.load()) {
-      llvm::errs() << Feasibility::Util::F_TAG << "   reason=fact-changed(curr!=succ)  ";
-      Feasibility::Util::dumpEF(E);
-      llvm::errs() << "\n";
-    }
-    return E;
-  }
-
-  if (auto *storeinst = llvm::dyn_cast<llvm::StoreInst>(curr)) {
-    llvm::errs() << "Handling store instruction: " << *storeinst << "\n";
-
-    const llvm::Value *valOp = storeinst->getValueOperand();
-    const llvm::Value *ptrOp = storeinst->getPointerOperand()->stripPointerCasts();
-
-    if (auto *constval = llvm::dyn_cast<llvm::ConstantInt>(valOp)) {
-      llvm::errs() << "Handling constant store: " << *constval << "\n";
-
-      unsigned bw = constval->getBitWidth();
-      uint64_t bits = constval->getValue().getZExtValue();
-      z3::expr c = store->ctx().bv_val(bits, bw);
-
-      auto E = EF(std::in_place_type<FeasibilitySetMemEF>, ptrOp, c);
-      if (Feasibility::Util::F_DebugEnabled.load()) {
-        llvm::errs() << Feasibility::Util::F_TAG << "   reason=store-involved  ";
-        Feasibility::Util::dumpEF(E);
-        llvm::errs() << "\n";
-      }
-      return E;
-    }
-  }
-
-  if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(curr)) {
-    llvm::errs() << "Handling load instruction: " << *loadInst << "\n";
-
-    const llvm::Value *ptrOp = loadInst->getPointerOperand()->stripPointerCasts();
-
-    auto E = EF(std::in_place_type<FeasibilitySetSSAEF>, ptrOp,
-                store->ctx().bool_val(true));
-    if (Feasibility::Util::F_DebugEnabled.load()) {
-      llvm::errs() << Feasibility::Util::F_TAG << "   reason=load-involved  ";
-      Feasibility::Util::dumpEF(E);
-      llvm::errs() << "\n";
-    }
-    return E;
-  }
-
-  return EF(std::in_place_type<FeasibilityIdentityEF>);
 }
 
 

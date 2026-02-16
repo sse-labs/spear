@@ -89,8 +89,7 @@ FeasibilityElement FeasibilityElement::assume(const z3::expr &cond) const {
   out.pcId = store->pcAssume(out.pcId, cond);
 
   if (!store->isSatisfiable(out)) {
-    out.isSAT = false;
-    return out;
+    return FeasibilityElement::bottom(store);
   }
 
   out.kind = Kind::Normal;
@@ -158,10 +157,9 @@ bool FeasibilityStateStore::isEquivalent(const z3::expr &A, const z3::expr &B) {
   return ok;
 }
 
-FeasibilityStateStore::FeasibilityStateStore(): solver(context) {
-  // We enforce our first element of the constrains to always be "true" (empty path constraint) to simplify the logic of pcAssume.
-  baseConstraints.push_back(context.bool_val(true));
-
+FeasibilityStateStore::FeasibilityStateStore() : solver(context) {
+  baseConstraints.push_back(context.bool_val(true)); // pcId 0
+  pcSatCache.push_back(-1);                          // cache for pcId 0
 }
 
 FeasibilityStateStore::~FeasibilityStateStore() {}
@@ -190,11 +188,12 @@ FeasibilityStateStore::id_t FeasibilityStateStore::pcAssume(id_t pc, const z3::e
 
 FeasibilityStateStore::id_t FeasibilityStateStore::pcClear() {
   pathConditions.clear();
-  pcSatCache.resize(1);
 
-  // Reset baseConstraints
   baseConstraints.clear();
   baseConstraints.push_back(context.bool_val(true));
+
+  pcSatCache.clear();
+  pcSatCache.push_back(-1);
 
   return 0;
 }
@@ -277,13 +276,6 @@ FeasibilityStateStore::join(const FeasibilityElement &AIn, const FeasibilityElem
     return A;
   }
 
-  if ((A.isNormal() && A.pcId == 0) || (B.isNormal() && B.pcId == 0)) {
-    FeasibilityElement R = FeasibilityElement::initial(this);
-    R.kind = FeasibilityElement::Kind::Normal;
-    R.pcId = 0;
-    return R;
-  }
-
   const z3::expr &PcA = baseConstraints[A.pcId];
   const z3::expr &PcB = baseConstraints[B.pcId];
 
@@ -318,11 +310,16 @@ FeasibilityStateStore::join(const FeasibilityElement &AIn, const FeasibilityElem
 
   const id_t NewId = static_cast<id_t>(baseConstraints.size());
   baseConstraints.push_back(Joined);
+  pcSatCache.push_back(-1);
   pathConditions.emplace(Joined, NewId);
 
   FeasibilityElement R = FeasibilityElement::initial(this);
   R.kind = FeasibilityElement::Kind::Normal;
   R.pcId = NewId;
+
+  R.memId = Mem.joinKeepEqual(A.memId, B.memId);
+  R.ssaId = Ssa.joinKeepEqual(A.ssaId, B.ssaId);
+
   return R;
 }
 
@@ -333,6 +330,9 @@ bool FeasibilityStateStore::isSatisfiable(const FeasibilityElement &E) {
   if (E.isTop()) {
     return true;
   }
+
+  assert(E.pcId < baseConstraints.size());
+  assert(E.pcId < pcSatCache.size());
 
   auto &c = pcSatCache[E.pcId];
   if (c != -1) {
@@ -391,6 +391,49 @@ std::string toString(const std::optional<FeasibilityElement> &E) {
 
 std::ostream &operator<<(std::ostream &os, const std::optional<FeasibilityElement> &E) {
   return os << toString(E);
+}
+
+FeasibilityStateStore::ExprId FeasibilityStateStore::internExpr(const z3::expr &E) {
+  // Stable hash from Z3 AST (fast)
+  const unsigned h = Z3_get_ast_hash(ctx(), E);
+
+  auto &bucket = ExprIntern[h];
+  for (ExprId id : bucket) {
+    if (z3::eq(ExprTable[id], E)) {
+      return id;
+    }
+  }
+
+  const ExprId newId = static_cast<ExprId>(ExprTable.size());
+  ExprTable.push_back(E);
+  bucket.push_back(newId);
+  return newId;
+}
+
+const z3::expr &FeasibilityStateStore::exprOf(ExprId Id) const {
+  return ExprTable[Id];
+}
+
+FeasibilityStateStore::ExprId
+FeasibilityStateStore::getOrCreateSym(const llvm::Value *V,
+                                      unsigned Bw,
+                                      llvm::StringRef Prefix) {
+  auto It = SymCache.find(V);
+  if (It != SymCache.end()) {
+    return It->second;
+  }
+
+  // Make a stable name (pointer-stable is fine for one run; you can swap in a stableName() later)
+  std::string Name;
+  {
+    llvm::raw_string_ostream OS(Name);
+    OS << Prefix << "_" << (const void *)V;
+  }
+
+  z3::expr Sym = ctx().bv_const(Name.c_str(), Bw);
+  ExprId Id = internExpr(Sym);
+  SymCache[V] = Id;
+  return Id;
 }
 
 } // namespace Feasibility

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Maximilian Krebs
+* Copyright (c) 2026 Maximilian Krebs
  * All rights reserved.
  */
 
@@ -9,7 +9,9 @@ int main(){
     int length = 9;
 
     if (length > 10) {
-        std::cout << "This will never be printed\n";
+        if (length > 20) {
+            std::cout << "This will never be printed\n";
+        }
     }
 
     std::cout << "Sum of array: " << length++ << "\n";

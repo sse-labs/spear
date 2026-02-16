@@ -14,6 +14,9 @@
 #include <unordered_map>
 #include <vector>
 #include <z3++.h>
+#include <llvm/ADT/DenseMap.h>
+#include <llvm/ADT/Hashing.h>
+#include <llvm/ADT/SmallVector.h>
 
 namespace z3 {
 class context;
@@ -26,6 +29,168 @@ class raw_ostream;
 } // namespace llvm
 
 namespace Feasibility {
+
+template <typename KeyT, typename ValueT, unsigned PoolReserve = 256>
+class EnvPool final {
+ public:
+  using Env = llvm::DenseMap<KeyT, ValueT>;
+  using EnvId = std::uint32_t;
+
+  EnvPool() {
+    pool.emplace_back(); // reserve ID 0 for the empty environment
+  }
+
+  /**
+   * Return the environment associated with the given id.
+   * The returned reference is valid as long as the pool is not modified.
+   * @param id ID of the environment to retrieve
+   * @return environment associated with the given id
+   */
+  [[nodiscard]] const Env &get(EnvId id) const {
+    return pool[id];
+  }
+
+  /**
+   * Dummy
+   * @return
+   */
+  EnvId empty() const noexcept {
+    return 0;
+  }
+
+  /**
+   * Set the value of the given key to the given value in the environment associated with the given id.
+   * @param base Environment ID to update
+   * @param key Key to update
+   * @param val Value to set for the given key
+   * @return ID of the updated environment
+   */
+  EnvId set(EnvId base, KeyT key, ValueT val) {
+    Env reffedEnv = pool[base];
+    reffedEnv[key] = val;
+    return insert(std::move(reffedEnv));
+  }
+
+  /**
+   * Erase the given key from the environment associated with the given id.
+   * @param base Environment ID to update
+   * @param key Key to erase
+   * @return ID of the updated environment
+   */
+  EnvId erase(EnvId base, KeyT key) {
+    Env reffedEnv = pool[base];
+    reffedEnv.erase(key);
+    return insert(std::move(reffedEnv));
+  }
+
+  /**
+   * Retrieve the value of the given key in the environment associated with the given id.
+   * @param base Environment ID to query
+   * @param key Key to query
+   * @return Value of the given key in the environment associated with the given id,
+   * or std::nullopt if the key is not present
+   */
+  std::optional<ValueT> getValue(EnvId base, KeyT key) {
+    const Env &env = pool[base];
+    auto It = env.find(key);
+    if (It == env.end()) {
+      return std::nullopt;
+    }
+    return It->second;
+  }
+
+  /**
+   * Join the environments associated with the given ids by keeping only the key-value pairs that
+   * are equal in both environments.
+   * @param A Environment ID of the first environment to join
+   * @param B Environment ID of the second environment to join
+   * @return Join of the environments associated with the given ids,
+   * containing only the key-value pairs that are equal in both environments
+   */
+  EnvId joinKeepEqual(EnvId A, EnvId B) {
+    const Env &envA = pool[A];
+    const Env &envB = pool[B];
+
+    Env result;
+    result.reserve(std::min(envA.size(), envB.size()));
+
+    const Env *Small = &envA;
+    const Env *Large = &envB;
+    if (envA.size() > envB.size()) {
+      Small = &envB;
+      Large = &envA;
+    }
+
+    for (const auto &KV : *Small) {
+      auto It = Large->find(KV.first);
+      if (It != Large->end() && It->second == KV.second) {
+        result.insert({KV.first, KV.second});
+      }
+    }
+
+    return insert(std::move(result));
+  }
+
+  /**
+   * Insert the given environment into the pool and return its ID.
+   * @param env Environment to insert into the pool
+   * @return Id of the inserted environment
+   */
+  EnvId insert(Env &&env) {
+    const llvm::hash_code hash = hashEnv(env);
+    auto &bucket = internalMap[hash];
+
+    for (EnvId id : bucket) {
+      if (envEqual(pool[id], env)) {
+        return id;
+      }
+    }
+
+    const EnvId newId = static_cast<EnvId>(pool.size());
+    pool.push_back(env);
+    bucket.push_back(newId);
+    return newId;
+  }
+
+ private:
+  llvm::SmallVector<Env, PoolReserve> pool;
+
+  llvm::DenseMap<llvm::hash_code, llvm::SmallVector<EnvId, 2>> internalMap;
+
+  /**
+   * Compute the hash of the given environment.
+   * @param env Environment to compute the hash for
+   * @return hash of the given environment
+   */
+  static llvm::hash_code hashEnv(const Env &env) {
+    llvm::hash_code hash = llvm::hash_combine(env.size());
+    for (const auto &KV : env) {
+      hash = llvm::hash_combine(hash, KV.first, KV.second);
+    }
+    return hash;
+  }
+
+  /**
+   * Compare the given environments for equality.
+   * @param A First environment to compare
+   * @param B Second environment to compare
+   * @return true if the given environments are equal, false otherwise
+   */
+  static bool envEqual(const Env &A, const Env &B) {
+    if (A.size() != B.size()) {
+      return false;
+    }
+    for (const auto &KV : A) {
+      auto It = B.find(KV.first);
+      if (It == B.end() || It->second != KV.second) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+};
+
 
 class FeasibilityStateStore;
 
@@ -85,6 +250,8 @@ struct FeasibilityElement final {
 class FeasibilityStateStore final {
 public:
   using id_t = std::uint32_t;
+  using ExprId = std::uint32_t;
+  using EnvKey = const llvm::Value *;
 
   FeasibilityStateStore();
   ~FeasibilityStateStore();
@@ -117,14 +284,28 @@ public:
 
   static z3::expr factor_or_and_not(const z3::expr &E);
 
+  [[nodiscard]] ExprId internExpr(const z3::expr &E);
+  [[nodiscard]] const z3::expr &exprOf(ExprId Id) const;
+
+
+  [[nodiscard]] ExprId getOrCreateSym(const llvm::Value *V, unsigned Bw, llvm::StringRef Prefix);
+
+  llvm::DenseMap<const llvm::Value *, ExprId> SymCache;
+
+  EnvPool<EnvKey, ExprId> Mem;
+  EnvPool<EnvKey, ExprId> Ssa;
+
 private:
   z3::context context;
   z3::solver  solver;
 
   std::vector<z3::expr> baseConstraints;
   std::unordered_map<Z3_ast, id_t> pathConditions;
-
   std::vector<int8_t> pcSatCache;
+
+
+  llvm::SmallVector<z3::expr, 1024> ExprTable;
+  llvm::DenseMap<unsigned, llvm::SmallVector<ExprId, 2>> ExprIntern;
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FeasibilityElement &E);

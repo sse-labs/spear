@@ -133,10 +133,6 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
   const llvm::Value *Zero =
       feasibilityProblem ? feasibilityProblem->getZeroValue() : nullptr;
 
-  if (!Zero) {
-    return ResultMap;
-  }
-
   for (const llvm::BasicBlock &BB : *Func) {
     const std::string BBName =
         BB.hasName()
@@ -146,36 +142,49 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
 
     BlockFeasInfo &Info = ResultMap[BBName];
 
+    Info.Feasible = false;
+    Info.HasZeroAtEntry = false;
+
     if (BB.empty()) {
-      Info.Feasible = false;
-      Info.HasZeroAtEntry = false;
       continue;
     }
 
     const llvm::Instruction *EntryI = &BB.front();
 
     if (!FeasibilityResult->containsNode(EntryI)) {
-      Info.Feasible = false;
-      Info.HasZeroAtEntry = false;
       continue;
     }
 
-    // IMPORTANT: use the full map at the node so we can detect "missing zero".
-    const auto ResMap = FeasibilityResult->resultsAt(EntryI); // fact -> l_t
+    // fact -> l_t
+    const auto ResMap = FeasibilityResult->resultsAt(EntryI);
 
-    const auto It = ResMap.find(Zero);
-    if (It == ResMap.end()) {
-      // Missing zero-value entry => unreachable/infeasible.
-      Info.Feasible = false;
-      Info.HasZeroAtEntry = false;
-      continue;
+    // Diagnostics: do we have zero at entry?
+    if (Zero) {
+      const auto ItZ = ResMap.find(Zero);
+      if (ItZ != ResMap.end()) {
+        Info.ZeroAtEntry = ItZ->second;
+        Info.HasZeroAtEntry = true;
+      }
     }
 
-    const Feasibility::FeasibilityElement &L = It->second;
+    // Correct feasibility criterion:
+    // "exists a satisfiable, non-bottom state at entry", across ALL facts.
+    bool AnyFeasible = false;
+    for (const auto &KV : ResMap) {
+      const Feasibility::FeasibilityElement &L = KV.second;
 
-    Info.ZeroAtEntry = L;
-    Info.HasZeroAtEntry = true;
-    Info.Feasible = !L.isBottom() && !L.isIdeAbsorbing();
+      if (L.isBottom() || L.isIdeAbsorbing()) {
+        continue;
+      }
+
+      // If your element caches SAT, this is cheap; otherwise it queries Z3.
+      if (L.isSatisfiable()) {
+        AnyFeasible = true;
+        break;
+      }
+    }
+
+    Info.Feasible = AnyFeasible;
   }
 
   return ResultMap;

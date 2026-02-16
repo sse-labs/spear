@@ -39,15 +39,15 @@ Feasibility::FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperA
 
     this->problem = std::make_shared<Feasibility::FeasibilityAnalysis>(Feasibility::FeasibilityAnalysis(analysisManager, &IRDB, &interproceduralCFG));
 
-    if (Feasibility::Util::F_DebugEnabled.load()) {
-        llvm::errs() << Feasibility::Util::F_TAG << " Starting IDESolver.solve()\n";
+    if (F_DEBUG_ENABLED) {
+        llvm::errs() << F_TAG << " Starting IDESolver.solve()\n";
     }
 
     auto analysisResult = psr::solveIDEProblem(*this->problem.get(), interproceduralCFG);
     this->cachedResults = std::make_unique<ResultsTy>(std::move(analysisResult));
 
-    if (Feasibility::Util::F_DebugEnabled.load()) {
-        llvm::errs() << Feasibility::Util::F_TAG << " Finished IDESolver.solve()\n";
+    if (F_DEBUG_ENABLED) {
+        llvm::errs() << F_TAG << " Finished IDESolver.solve()\n";
     }
 }
 
