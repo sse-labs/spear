@@ -3,8 +3,6 @@
  * All rights reserved.
  */
 
-#include <iostream>
-
 int main(){
     int length = 9;
 

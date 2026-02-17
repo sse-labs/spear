@@ -258,68 +258,39 @@ z3::expr FeasibilityStateStore::factor_or_and_not(const z3::expr &E) {
 }
 
 FeasibilityElement
-FeasibilityStateStore::join(const FeasibilityElement &AIn, const FeasibilityElement &BIn) {
-  const FeasibilityElement A = normalizeIdeKinds(AIn, this);
-  const FeasibilityElement B = normalizeIdeKinds(BIn, this);
+FeasibilityStateStore::join(const FeasibilityElement &AIn,
+                            const FeasibilityElement &BIn) {
+  FeasibilityElement A = normalizeIdeKinds(AIn, this);
+  FeasibilityElement B = normalizeIdeKinds(BIn, this);
 
+  // Top / Bottom handling (keep yours)
+  if (A.isTop() || B.isTop()) return FeasibilityElement::top(this);
+  if (A.isBottom()) return B;
+  if (B.isBottom()) return A;
+  if (A == B) return A;
 
-  if (A.isTop() || B.isTop()) {
-    return FeasibilityElement::top(this);
-  }
-  if (A.isBottom()) {
-    return B;
-  }
-  if (B.isBottom()) {
-    return A;
-  }
-  if (A == B) {
-    return A;
-  }
+  FeasibilityElement R = FeasibilityElement::initial(this);
+  R.kind  = FeasibilityElement::Kind::Normal;
 
-  const z3::expr &PcA = baseConstraints[A.pcId];
-  const z3::expr &PcB = baseConstraints[B.pcId];
+  // Join SSA/memory information as before
+  R.memId = Mem.joinKeepEqual(A.memId, B.memId);
+  R.ssaId = Ssa.joinKeepEqual(A.ssaId, B.ssaId);
 
-  z3::expr Joined = (PcA || PcB).simplify();
-  Joined = factor_or_and_not(Joined).simplify();
-
-  if (this->isEquivalent(Joined, PcA)) {
-    return A;
-  }
-  if (this->isEquivalent(Joined, PcB)) {
-    return B;
+  // ---- Path condition join: SSA-friendly widening ----
+  // If PCs are identical, keep them (free precision)
+  if (A.pcId == B.pcId) {
+    R.pcId = A.pcId;
+    return R;
   }
 
-  if (this->isValid(Joined)) {
-    FeasibilityElement R = FeasibilityElement::initial(this);
-    R.kind = FeasibilityElement::Kind::Normal;
+  // If either is already "true", merged PC is "true"
+  if (A.pcId == 0 || B.pcId == 0) {
     R.pcId = 0;
     return R;
   }
 
-  if (this->isUnsat(Joined)) {
-    return FeasibilityElement::bottom(this);
-  }
-
-  auto It = pathConditions.find(Joined);
-  if (It != pathConditions.end()) {
-    FeasibilityElement R = FeasibilityElement::initial(this);
-    R.kind = FeasibilityElement::Kind::Normal;
-    R.pcId = It->second;
-    return R;
-  }
-
-  const id_t NewId = static_cast<id_t>(baseConstraints.size());
-  baseConstraints.push_back(Joined);
-  pcSatCache.push_back(-1);
-  pathConditions.emplace(Joined, NewId);
-
-  FeasibilityElement R = FeasibilityElement::initial(this);
-  R.kind = FeasibilityElement::Kind::Normal;
-  R.pcId = NewId;
-
-  R.memId = Mem.joinKeepEqual(A.memId, B.memId);
-  R.ssaId = Ssa.joinKeepEqual(A.ssaId, B.ssaId);
-
+  // Otherwise: real merge of different feasible paths -> forget disjunction
+  R.pcId = 0;
   return R;
 }
 

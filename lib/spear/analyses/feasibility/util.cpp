@@ -104,11 +104,6 @@ void dumpEF(const Feasibility::FeasibilityAnalysis::EdgeFunctionType &edgeFuncti
         return;
     }
 
-    if (auto *assume = edgeFunction.template dyn_cast<Feasibility::FeasibilityAssumeEF>()) {
-        llvm::errs() << "EF=ASSUME[" << assume->Cond.to_string() << "]";
-        return;
-    }
-
     if (auto *ssaset = edgeFunction.template dyn_cast<Feasibility::FeasibilitySetSSAEF>()) {
         llvm::errs() << "EF=SETSSA[" << ssaset->Key << "]";
         return;
@@ -133,9 +128,6 @@ void dumpEFKind(const EF &E) {
     }
     else if (E.template isa<FeasibilityAllBottomEF>()) {
         llvm::errs() << "FeasibilityAllBottomEF";
-    }
-    else if (E.template isa<FeasibilityAssumeEF>()) {
-        llvm::errs() << "FeasibilityAssumeEF";
     }
     else if (E.template isa<FeasibilitySetSSAEF>()) {
         llvm::errs() << "FeasibilitySetSSAEF";

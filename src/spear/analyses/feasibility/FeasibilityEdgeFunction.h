@@ -78,32 +78,6 @@ struct FeasibilityAllBottomEF {
 };
 
 /**
- * Assume edge function for the FeasibilityAnalysis. Maps any input to the result of assuming a condition.
- * The condition is stored as a z3::expr in the edge function and is applied to the input element when computeTarget is called.
- */
-struct FeasibilityAssumeEF {
-    using l_t = Feasibility::l_t;
-
-    const z3::expr Cond;
-
-    FeasibilityAssumeEF(z3::expr ValueExpr)
-        : Cond(ValueExpr) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAssumeEF>,
-                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAssumeEF> thisFunc,
-                   const psr::EdgeFunction<l_t> &otherFunc);
-
-    // Required by psr::EdgeFunction: must be equality comparable (unless empty).
-    bool operator==(const FeasibilityAssumeEF &Other) const;
-
-    bool isConstant() const noexcept;
-};
-
-/**
  * SSA edge function to manipulate SSA store of the FeasibilityElement.
  * Maps any input to the result of updating the SSA store with a new binding.
  */

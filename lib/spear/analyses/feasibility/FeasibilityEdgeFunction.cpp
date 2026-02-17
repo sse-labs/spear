@@ -43,25 +43,18 @@ EF FeasibilityIdentityEF::compose(psr::EdgeFunctionRef<FeasibilityIdentityEF>,
 
 EF FeasibilityIdentityEF::join(psr::EdgeFunctionRef<FeasibilityIdentityEF> thisFunc,
                                const psr::EdgeFunction<l_t> &otherFunc) {
-  // Id ⊔ ⊥ = Id   (since x ⊔ ⊥ = x)
   if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
       llvm::isa<psr::AllBottom<l_t>>(otherFunc)) {
     return EF(thisFunc);
   }
-
-  // Id ⊔ Id = Id
-  if (otherFunc.template isa<FeasibilityIdentityEF>() ||
-      otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
-    return EF(thisFunc);
-  }
-
-  // Id ⊔ AllTop = AllTop   (since x ⊔ ⊤ = ⊤)
   if (otherFunc.template isa<FeasibilityAllTopEF>() ||
       llvm::isa<psr::AllTop<l_t>>(otherFunc)) {
     return EF(std::in_place_type<FeasibilityAllTopEF>);
   }
-
-  // Otherwise, keep the more precise representation (join node).
+  if (otherFunc.template isa<FeasibilityIdentityEF>() ||
+      otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
+    return EF(thisFunc);
+  }
   return makeJoin(EF(thisFunc), EF(otherFunc));
 }
 
@@ -104,9 +97,6 @@ EF FeasibilityAllTopEF::compose(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFu
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
 
-    if (second.template isa<FeasibilityAssumeEF>()) {
-        return EF{second};
-    }
 
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
@@ -139,83 +129,6 @@ EF FeasibilityAllBottomEF::join(psr::EdgeFunctionRef<FeasibilityAllBottomEF>, co
 
 bool FeasibilityAllBottomEF::isConstant() const noexcept {
     return true;
-}
-
-// ========================= FeasibilityAssumeEF =================================
-
-l_t FeasibilityAssumeEF::computeTarget(const l_t &source) const {
-    if (source.isBottom() || source.isIdeAbsorbing()) {
-        return source;
-    }
-    // IMPORTANT: do NOT special-case Top/IdeNeutral here.
-    // assume() already normalizes Top/IdeNeutral -> initial(...) and applies the constraint.
-    return source.assume(Cond);
-}
-
-EF FeasibilityAssumeEF::compose(psr::EdgeFunctionRef<FeasibilityAssumeEF> thisFunc, const EF &secondFunction) {
-
-    if (F_DEBUG_ENABLED) {
-        llvm::errs() << "[FDBG] AssumeEF::compose second=";
-        Feasibility::Util::dumpEF(secondFunction);
-        llvm::errs() << " kind=";
-        Feasibility::Util::dumpEFKind(secondFunction);
-        llvm::errs() << "\n";
-    }
-
-    if (secondFunction.template isa<FeasibilityIdentityEF>() ||
-        secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF{thisFunc};
-    }
-    if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-        // assume then allTop => allTop overwrites
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
-    if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-        return EF(std::in_place_type<FeasibilityAllBottomEF>);
-    }
-    if (secondFunction.template isa<FeasibilityAssumeEF>()) {
-        const auto &other = secondFunction.template cast<FeasibilityAssumeEF>();
-        z3::expr composed = (thisFunc->Cond && other->Cond).simplify();
-        return EF(std::in_place_type<FeasibilityAssumeEF>, composed);
-    }
-
-    return makeSeq(EF(thisFunc), secondFunction);
-}
-
-EF FeasibilityAssumeEF::join(psr::EdgeFunctionRef<FeasibilityAssumeEF> thisFunc, const psr::EdgeFunction<l_t> &other) {
-    if (other.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(other) ||
-        other.template isa<FeasibilityIdentityEF>() ||
-        other.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(thisFunc);
-    }
-
-    if (other.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(other)) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
-
-    if (other.template isa<FeasibilitySetSSAEF>() || other.template isa<FeasibilitySetMemEF>()) {
-        return makeJoin(EF(thisFunc), EF(other));
-    }
-
-    if (other.template isa<FeasibilityAssumeEF>()) {
-        const auto &otherFunc = other.template cast<FeasibilityAssumeEF>();
-        if (z3::eq(thisFunc->Cond, otherFunc->Cond)) {
-            return EF(thisFunc);
-        }
-        return makeJoin(EF(thisFunc), EF(other));
-    }
-
-    return makeJoin(EF(thisFunc), EF(other));
-}
-
-bool FeasibilityAssumeEF::operator==(const FeasibilityAssumeEF &Other) const {
-    return z3::eq(Cond, Other.Cond);
-}
-
-bool FeasibilityAssumeEF::isConstant() const noexcept {
-    return false;
 }
 
 
@@ -262,10 +175,6 @@ EF FeasibilitySetSSAEF::compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFu
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
     }
 
-    if (secondFunction.template isa<FeasibilityAssumeEF>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
-
     if (secondFunction.template isa<FeasibilitySetMemEF>()) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
@@ -296,10 +205,6 @@ EF FeasibilitySetSSAEF::join(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFunc,
         }
 
     if (other.template isa<FeasibilitySetMemEF>()) {
-        return makeJoin(EF(thisFunc), EF(other));
-    }
-
-    if (other.template isa<FeasibilityAssumeEF>()) {
         return makeJoin(EF(thisFunc), EF(other));
     }
 
@@ -349,10 +254,6 @@ EF FeasibilitySetMemEF::compose(psr::EdgeFunctionRef<FeasibilitySetMemEF> self,
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
 
-    if (second.template isa<FeasibilityAssumeEF>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
-
     if (second.template isa<FeasibilitySetSSAEF>()) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
@@ -379,10 +280,6 @@ EF FeasibilitySetMemEF::join(psr::EdgeFunctionRef<FeasibilitySetMemEF> thisFunc,
     if (other.template isa<FeasibilityAllTopEF>() ||
         llvm::isa<psr::AllTop<l_t>>(other)) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
-
-    if (other.template isa<FeasibilityAssumeEF>()) {
-        return makeJoin(EF(thisFunc), EF(other));
     }
 
     if (other.template isa<FeasibilitySetSSAEF>()) {
@@ -436,12 +333,11 @@ EF FeasibilitySeqEF::join(psr::EdgeFunctionRef<FeasibilitySeqEF> thisFunc, const
         llvm::isa<psr::AllBottom<l_t>>(otherFunc)) {
         return EF(thisFunc);
     }
-
     if (otherFunc.template isa<FeasibilityAllTopEF>() ||
         llvm::isa<psr::AllTop<l_t>>(otherFunc)) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
-
+    // No "|| construction" here: keep a join node.
     return makeJoin(EF(thisFunc), EF(otherFunc));
 }
 
@@ -485,12 +381,11 @@ EF FeasibilityJoinEF::join(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc, con
         llvm::isa<psr::AllBottom<l_t>>(otherFunc)) {
         return EF(thisFunc);
     }
-
     if (otherFunc.template isa<FeasibilityAllTopEF>() ||
         llvm::isa<psr::AllTop<l_t>>(otherFunc)) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
-
+    // No "|| construction": keep structure.
     return makeJoin(EF(thisFunc), EF(otherFunc));
 }
 
@@ -499,14 +394,14 @@ bool FeasibilityJoinEF::isConstant() const noexcept {
 }
 
 l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
-    // ⊥ = unreached: must stay ⊥ (do NOT turn it into infeasible)
+    // ⊥ = killed/unreachable: must stay ⊥
     if (source.isBottom()) {
         return source;
     }
 
-    // absorbing = already infeasible: stays infeasible
+    // If you still have IdeAbsorbing around, treat it like ⊥ (old behavior).
     if (source.isIdeAbsorbing()) {
-        return source;
+        return l_t::bottom(source.getStore());
     }
 
     if (!Cmp) {
@@ -554,11 +449,11 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
     }
 
     // Simplify: catch constant cases early
-    Cond = Cond.simplify();
+    //Cond = Cond;
 
-    // Edge condition is definitely false => reached-but-infeasible
+    // Edge condition is definitely false => killed path (Bottom)
     if (Cond.is_false()) {
-        return l_t::ideAbsorbing(S);
+        return l_t::bottom(S);
     }
 
     // Definitely true => no constraint added
@@ -569,18 +464,12 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
     // Add the constraint
     l_t out = source.assume(Cond);
 
-    // CRITICAL: if the added constraint makes it UNSAT,
-    // represent that as "infeasible", NOT ⊥ and NOT "source".
-    if (out.isBottom()) {
-        // Bottom must only mean unreached; reaching here means your assume()
-        // is using ⊥ incorrectly for UNSAT.
-        return l_t::ideAbsorbing(S);
-    }
+    // Old behavior: UNSAT is represented as Bottom.
     if (out.isIdeAbsorbing()) {
-        return out;
+        return l_t::bottom(S);
     }
     if (!out.isSatisfiable()) {
-        return l_t::ideAbsorbing(S);
+        return l_t::bottom(S);
     }
 
     return out;

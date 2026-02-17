@@ -108,7 +108,12 @@ void runAnalysisRoutine(CLIOptions opts) {
     modulePassManager.run(*module_up, moduleAnalysisManager);
 
     PhasarHandlerPass PH;
+    auto start = std::chrono::high_resolution_clock::now();
     PH.runOnModule(*module_up);
+    auto end = std::chrono::high_resolution_clock::now();
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Runtime: " << duration.count() << " ms\n";
 
     /*Modelchecker McheckerInstance;
     auto mcheckercontext = McheckerInstance.getContext();
