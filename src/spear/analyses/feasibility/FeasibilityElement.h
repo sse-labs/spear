@@ -18,6 +18,7 @@
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/Hashing.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/IR/Instructions.h>
 
 namespace z3 {
 class context;
@@ -56,6 +57,11 @@ struct AnalysisMetrics {
   // Store metrics
   std::atomic<uint64_t> maxSsaEnvSize{0};
   std::atomic<uint64_t> maxMemEnvSize{0};
+
+  // Interning debug counters
+  std::atomic<uint64_t> internCalls{0};
+  std::atomic<uint64_t> internInserted{0};
+  std::atomic<uint64_t> internHits{0};
 
   void reset();
   void report(llvm::raw_ostream &OS) const;
@@ -345,12 +351,68 @@ public:
   z3::solver  solver;
 
   std::vector<z3::expr> baseConstraints;
-  std::unordered_map<Z3_ast, id_t> pathConditions;
+  std::unordered_map<ExprId, id_t> pathConditions;
   std::vector<int8_t> pcSatCache;
 
 
   llvm::SmallVector<z3::expr, 1024> ExprTable;
   llvm::DenseMap<unsigned, llvm::SmallVector<ExprId, 2>> ExprIntern;
+
+  struct ResolveKey {
+    id_t ssaId;
+    id_t memId;
+    const llvm::Value *V;
+
+    bool operator==(const ResolveKey &O) const noexcept {
+      return ssaId == O.ssaId && memId == O.memId && V == O.V;
+    }
+  };
+
+  struct ResolveKeyHash {
+    size_t operator()(const ResolveKey &K) const noexcept {
+      // Cheap pointer+ids hash
+      size_t h = 0xcbf29ce484222325ULL;
+      auto mix = [&](size_t x) {
+        h ^= x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+      };
+      mix(static_cast<size_t>(K.ssaId));
+      mix(static_cast<size_t>(K.memId));
+      mix(reinterpret_cast<size_t>(K.V));
+      return h;
+    }
+  };
+
+  // Cache: (ssaId, memId, llvm::Value*) -> ExprId
+  std::unordered_map<ResolveKey, ExprId, ResolveKeyHash> ResolveCache;
+
+  // Optional metrics
+  std::atomic<uint64_t> resolveCalls{0};
+  std::atomic<uint64_t> resolveHits{0};
+  std::atomic<uint64_t> resolveMisses{0};
+
+  struct CmpCondKey {
+    id_t ssaId;
+    id_t memId;
+    const llvm::ICmpInst *Cmp;
+    bool TakeTrueEdge;
+
+    bool operator==(const CmpCondKey &o) const noexcept {
+      return ssaId == o.ssaId && memId == o.memId && Cmp == o.Cmp && TakeTrueEdge == o.TakeTrueEdge;
+    }
+  };
+
+  struct CmpCondKeyHash {
+    size_t operator()(const CmpCondKey &k) const noexcept {
+      size_t h = 0;
+      h ^= (size_t)k.ssaId + 0x9e3779b97f4a7c15ULL + (h<<6) + (h>>2);
+      h ^= (size_t)k.memId + 0x9e3779b97f4a7c15ULL + (h<<6) + (h>>2);
+      h ^= (size_t)k.Cmp   + 0x9e3779b97f4a7c15ULL + (h<<6) + (h>>2);
+      h ^= (size_t)k.TakeTrueEdge + 0x9e3779b97f4a7c15ULL + (h<<6) + (h>>2);
+      return h;
+    }
+  };
+
+  std::unordered_map<CmpCondKey, ExprId, CmpCondKeyHash> CmpCondCache;
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FeasibilityElement &E);

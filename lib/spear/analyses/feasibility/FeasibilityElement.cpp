@@ -35,24 +35,28 @@ void AnalysisMetrics::reset() {
   pcClearCalls = 0;
   maxSsaEnvSize = 0;
   maxMemEnvSize = 0;
+  internCalls = 0;
+  internInserted = 0;
+  internHits = 0;
 }
 
 void AnalysisMetrics::report(llvm::raw_ostream &OS) const {
   OS << "\n========== Feasibility Analysis Metrics ==========\n";
 
   OS << "\n--- Timing (microseconds) ---\n";
-  OS << "  SAT checks:        " << totalSatCheckTime.load() << " µs";
+  OS << "  SAT checks:        " << totalSatCheckTime.load() << " ns";
   if (satCheckCount.load() > 0) {
-    OS << " (avg: " << (totalSatCheckTime.load() / satCheckCount.load()) << " µs/check)";
+    OS << " (avg: " << (totalSatCheckTime.load() / satCheckCount.load()) << " ns/check)";
   }
   OS << "\n";
-  OS << "  Joins:             " << totalJoinTime.load() << " µs\n";
-  OS << "  Assumes:           " << totalAssumeTime.load() << " µs\n";
-  OS << "  Edge functions:    " << totalEdgeFunctionTime.load() << " µs\n";
+  OS << "  Joins:             " << totalJoinTime.load() << " ns\n";
+  OS << "  Assumes:           " << totalAssumeTime.load() << " ns\n";
+  OS << "  Edge functions:    " << totalEdgeFunctionTime.load() << " ns\n";
 
   uint64_t totalTime = totalSatCheckTime.load() + totalJoinTime.load() +
                        totalAssumeTime.load() + totalEdgeFunctionTime.load();
-  OS << "  TOTAL:             " << totalTime << " µs\n";
+  OS << "  TOTAL:             " << totalTime << " ns ("
+     << (totalTime / 1000.0) << " µs)\n";
 
   OS << "\n--- Operation Counts ---\n";
   OS << "  SAT checks:        " << satCheckCount.load() << "\n";
@@ -77,6 +81,15 @@ void AnalysisMetrics::report(llvm::raw_ostream &OS) const {
   OS << "\n--- Store Metrics ---\n";
   OS << "  Max SSA env size:  " << maxSsaEnvSize.load() << "\n";
   OS << "  Max Mem env size:  " << maxMemEnvSize.load() << "\n";
+
+  OS << "\n--- Interning Debug ---\n";
+  OS << "  Intern calls:      " << internCalls.load() << "\n";
+  OS << "  Intern inserted:   " << internInserted.load() << "\n";
+  OS << "  Intern cache hits: " << internHits.load() << "\n";
+  if (internCalls.load() > 0) {
+    OS << "  Intern hit rate:   "
+       << (100.0 * internHits.load() / internCalls.load()) << "%\n";
+  }
 
   OS << "\n==================================================\n\n";
 }
@@ -174,6 +187,22 @@ FeasibilityElement FeasibilityElement::assume(const z3::expr &cond) const {
     return *this;
   }
 
+  // Early exit: if cond is trivially true, nothing to add
+  if (cond.is_true()) {
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    store->metrics.totalAssumeTime += duration.count();
+    return *this;
+  }
+
+  // Early exit: if cond is trivially false, path is infeasible
+  if (cond.is_false()) {
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    store->metrics.totalAssumeTime += duration.count();
+    return FeasibilityElement::bottom(store);
+  }
+
   FeasibilityElement out = *this;
   if (out.isTop() || out.isIdeNeutral()) {
     out = initial(store);
@@ -183,7 +212,7 @@ FeasibilityElement FeasibilityElement::assume(const z3::expr &cond) const {
 
   if (!store->isSatisfiable(out)) {
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     store->metrics.totalAssumeTime += duration.count();
     return FeasibilityElement::bottom(store);
   }
@@ -191,7 +220,7 @@ FeasibilityElement FeasibilityElement::assume(const z3::expr &cond) const {
   out.kind = Kind::Normal;
 
   auto end = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
   store->metrics.totalAssumeTime += duration.count();
 
   return out;
@@ -226,7 +255,7 @@ FeasibilityElement FeasibilityElement::join(const FeasibilityElement &other) con
   auto result = store->join(*this, other);
 
   auto end = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
   store->metrics.totalJoinTime += duration.count();
 
   return result;
@@ -281,42 +310,49 @@ z3::context &FeasibilityStateStore::ctx() noexcept {
 
 
 FeasibilityStateStore::id_t FeasibilityStateStore::pcAssume(id_t pc, const z3::expr &cond) {
-  const z3::expr &existingPathConstraint = baseConstraints[pc];
-  z3::expr newPathConstrains = (existingPathConstraint && cond);
+  // Build new constraint efficiently
+  z3::expr newPc = (pc == 0) ? cond : (baseConstraints[pc] && cond);
 
-  // Track constraint size
-  uint64_t depth = computeAstDepth(newPathConstrains);
-  uint64_t nodes = computeAstNodes(newPathConstrains);
+  // Intern expression and use ExprId as cache key
+  const ExprId eid = internExpr(newPc);
 
-  uint64_t currentMaxDepth = metrics.maxPcAstDepth.load();
-  while (depth > currentMaxDepth &&
-         !metrics.maxPcAstDepth.compare_exchange_weak(currentMaxDepth, depth)) {}
-
-  uint64_t currentMaxNodes = metrics.maxPcAstNodes.load();
-  while (nodes > currentMaxNodes &&
-         !metrics.maxPcAstNodes.compare_exchange_weak(currentMaxNodes, nodes)) {}
-
-  auto It = pathConditions.find(newPathConstrains);
-  if (It != pathConditions.end()) {
+  if (auto It = pathConditions.find(eid); It != pathConditions.end()) {
     return It->second;
   }
 
-  // ONLY increment when we actually create a NEW PC
+  // NEW PC created
   metrics.totalPcCreated++;
 
-  id_t newid = static_cast<id_t>(baseConstraints.size());
-  baseConstraints.push_back(newPathConstrains);
+  const id_t newid = static_cast<id_t>(baseConstraints.size());
+  baseConstraints.push_back(newPc);
   pcSatCache.push_back(-1);
-  pathConditions.emplace(newPathConstrains, newid);
+  pathConditions.emplace(eid, newid);
 
   // Track pool size
-  uint64_t poolSize = baseConstraints.size();
-  uint64_t currentMaxPool = metrics.maxPcPoolSize.load();
-  while (poolSize > currentMaxPool &&
-         !metrics.maxPcPoolSize.compare_exchange_weak(currentMaxPool, poolSize)) {}
+  {
+    const uint64_t poolSize = baseConstraints.size();
+    uint64_t currentMaxPool = metrics.maxPcPoolSize.load();
+    while (poolSize > currentMaxPool &&
+           !metrics.maxPcPoolSize.compare_exchange_weak(currentMaxPool, poolSize)) {}
+  }
+
+  // Track AST size ONLY for newly created PCs (much cheaper overall)
+  {
+    const uint64_t depth = computeAstDepth(newPc);
+    const uint64_t nodes = computeAstNodes(newPc);
+
+    uint64_t currentMaxDepth = metrics.maxPcAstDepth.load();
+    while (depth > currentMaxDepth &&
+           !metrics.maxPcAstDepth.compare_exchange_weak(currentMaxDepth, depth)) {}
+
+    uint64_t currentMaxNodes = metrics.maxPcAstNodes.load();
+    while (nodes > currentMaxNodes &&
+           !metrics.maxPcAstNodes.compare_exchange_weak(currentMaxNodes, nodes)) {}
+  }
 
   return newid;
 }
+
 
 FeasibilityStateStore::id_t FeasibilityStateStore::pcClear() {
   // FIXED: Don't clear caches! Just return id 0 (= true)
@@ -435,7 +471,6 @@ FeasibilityStateStore::join(const FeasibilityElement &AIn,
 
 bool FeasibilityStateStore::isSatisfiable(const FeasibilityElement &E) {
   auto start = std::chrono::high_resolution_clock::now();
-  metrics.satCheckCount++;
 
   if (E.isBottom()) {
     return false;
@@ -444,6 +479,9 @@ bool FeasibilityStateStore::isSatisfiable(const FeasibilityElement &E) {
     return true;
   }
 
+  // ONLY count checks that actually consult the pcSatCache
+  metrics.satCheckCount++;
+
   assert(E.pcId < baseConstraints.size());
   assert(E.pcId < pcSatCache.size());
 
@@ -451,12 +489,11 @@ bool FeasibilityStateStore::isSatisfiable(const FeasibilityElement &E) {
   if (c != -1) {
     metrics.satCacheHits++;
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     metrics.totalSatCheckTime += duration.count();
     return c == 1;
   }
 
-  // ONLY increment miss when we actually call Z3
   metrics.satCacheMisses++;
 
   solver.push();
@@ -467,7 +504,7 @@ bool FeasibilityStateStore::isSatisfiable(const FeasibilityElement &E) {
   c = sat ? 1 : 0;
 
   auto end = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
   metrics.totalSatCheckTime += duration.count();
 
   return sat;
@@ -519,6 +556,17 @@ std::ostream &operator<<(std::ostream &os, const std::optional<FeasibilityElemen
 }
 
 FeasibilityStateStore::ExprId FeasibilityStateStore::internExpr(const z3::expr &E) {
+  // Track every call
+  metrics.internCalls++;
+
+  // Debug: print on first call to verify we're in the right code
+  static std::atomic<bool> firstCall{true};
+  if (firstCall.exchange(false)) {
+    llvm::errs() << "[DEBUG] internExpr called for first time, store @ " << this << "\n";
+    llvm::errs() << "[DEBUG] ExprTable @ " << &ExprTable << "\n";
+    llvm::errs() << "[DEBUG] ExprIntern @ " << &ExprIntern << "\n";
+  }
+
   // Stable hash from Z3 AST (fast)
   const unsigned h = Z3_get_ast_hash(ctx(), E);
 
@@ -526,14 +574,20 @@ FeasibilityStateStore::ExprId FeasibilityStateStore::internExpr(const z3::expr &
 
   for (ExprId id : bucket) {
     if (z3::eq(ExprTable[id], E)) {
+      // Cache hit
+      metrics.internHits++;
       return id;
     }
   }
 
-  // NEW expression
+  // NEW expression - actually insert it
   const ExprId newId = static_cast<ExprId>(ExprTable.size());
   ExprTable.push_back(E);
   bucket.push_back(newId);
+
+  // Track insertion
+  metrics.internInserted++;
+
   return newId;
 }
 

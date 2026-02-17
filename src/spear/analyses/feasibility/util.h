@@ -59,6 +59,8 @@ class Util {
      * @param Store FeasibilityStateStore containing metrics
      */
     static void reportMetrics(FeasibilityStateStore *Store);
+
+    static std::optional<FeasibilityStateStore::ExprId> resolveId(const llvm::Value *V, const FeasibilityElement &St, FeasibilityStateStore *S);
 };
 
 }

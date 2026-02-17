@@ -210,13 +210,12 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFu
 FeasibilityAnalysis::EdgeFunctionType
 FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
                                            n_t succ, d_t succNode) {
-  // Track edge function creation
-  store->metrics.edgeFunctionCount++;
+  // DON'T increment edgeFunctionCount here - count executions not creations
 
   // Periodic metrics reporting (every 10000 edge functions)
   static std::atomic<uint64_t> efCounter{0};
   if (++efCounter % 10000 == 0) {
-    llvm::errs() << "\n[METRICS] Progress at " << efCounter.load() << " EFs:\n";
+    llvm::errs() << "\n[METRICS] Progress at " << efCounter.load() << " EF creations:\n";
     llvm::errs() << "  PC pool:      " << store->baseConstraints.size()
                  << " (created: " << store->metrics.totalPcCreated.load() << ")\n";
     llvm::errs() << "  Max PC depth: " << store->metrics.maxPcAstDepth.load() << "\n";
@@ -225,7 +224,10 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
                  << " (hits: " << store->metrics.satCacheHits.load()
                  << ", misses: " << store->metrics.satCacheMisses.load() << ")\n";
     llvm::errs() << "  PC clears:    " << store->metrics.pcClearCalls.load() << "\n";
-    llvm::errs() << "  Expr table:   " << store->ExprTable.size() << "\n\n";
+    llvm::errs() << "  Expr table:   " << store->ExprTable.size() << "\n";
+    llvm::errs() << "  Intern:       calls=" << store->metrics.internCalls.load()
+                 << " inserted=" << store->metrics.internInserted.load()
+                 << " hits=" << store->metrics.internHits.load() << "\n\n";
   }
 
   if (F_DEBUG_ENABLED) {
@@ -238,43 +240,46 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
     llvm::errs() << "\n";
   }
 
+    if (!isZeroValue(currNode) || !isZeroValue(succNode)) {
+        return EF(std::in_place_type<FeasibilityAllBottomEF>); // or EdgeIdentity, depending on PhASAR expectations
+    }
+
   // ---------------------------------------------------------------------------
   // 1) Handle conditional branches FIRST (must constrain Zero too!)
   // ---------------------------------------------------------------------------
+    // Fast gate: only ZERO facts matter
+    if (!isZeroValue(currNode) || !isZeroValue(succNode)) {
+        return EF(std::in_place_type<FeasibilityAllBottomEF>);
+    }
+
     if (auto *Br = llvm::dyn_cast<llvm::BranchInst>(curr)) {
-        if (Br->isConditional()) {
+        if (!Br->isConditional()) return EF(std::in_place_type<FeasibilityIdentityEF>);
 
-            const llvm::BasicBlock *SuccBB = succ ? succ->getParent() : nullptr;
-            const llvm::BasicBlock *TrueBB = Br->getSuccessor(0);
-            const llvm::BasicBlock *FalseBB = Br->getSuccessor(1);
+        const llvm::BasicBlock *TrueBB = Br->getSuccessor(0);
+        const llvm::BasicBlock *FalseBB = Br->getSuccessor(1);
 
-            const bool TakeTrue  = (SuccBB == TrueBB);
-            const bool TakeFalse = (SuccBB == FalseBB);
+        const llvm::Instruction *SuccI = succ; // adjust if n_t is wrapper
+        const llvm::BasicBlock *SuccBB = SuccI ? SuccI->getParent() : nullptr;
 
-            if (!TakeTrue && !TakeFalse) {
-                // Not a CFG successor edge we understand -> don't constrain
-                return EF(std::in_place_type<FeasibilityIdentityEF>);
-            }
-
-            llvm::Value *CondV = Br->getCondition();
-            while (auto *CastI = llvm::dyn_cast<llvm::CastInst>(CondV)) {
-                CondV = CastI->getOperand(0);
-            }
-
-            // Constant condition fast path (important for your loop example too)
-            if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(CondV)) {
-                const bool CondTrue = !CI->isZero();
-                const bool EdgeTaken = TakeTrue ? CondTrue : !CondTrue;
-                return EdgeTaken ? EF(std::in_place_type<FeasibilityIdentityEF>)
-                                 : EF(std::in_place_type<FeasibilityAllBottomEF>); // or your "make infeasible" EF
-            }
-
-            if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
-                return EF(std::in_place_type<FeasibilityAssumeIcmpEF>, ICmp, /*TakeTrueEdge=*/TakeTrue);
-            }
-
+        if (SuccBB != TrueBB && SuccBB != FalseBB) {
             return EF(std::in_place_type<FeasibilityIdentityEF>);
         }
+        const bool TakeTrue = (SuccBB == TrueBB);
+
+        llvm::Value *CondV = Br->getCondition();
+        while (auto *CastI = llvm::dyn_cast<llvm::CastInst>(CondV)) CondV = CastI->getOperand(0);
+
+        if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(CondV)) {
+            const bool CondTrue = !CI->isZero();
+            const bool EdgeTaken = TakeTrue ? CondTrue : !CondTrue;
+            return EdgeTaken ? EF(std::in_place_type<FeasibilityIdentityEF>)
+                             : EF(std::in_place_type<FeasibilityAllBottomEF>);
+        }
+
+        auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(CondV);
+        if (!ICmp) return EF(std::in_place_type<FeasibilityIdentityEF>);
+
+        return EF(std::in_place_type<FeasibilityAssumeIcmpEF>, ICmp, TakeTrue);
     }
 
     // 3) STORE / LOAD effects (MUST run for Zero too)
@@ -304,9 +309,8 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
     if (currNode != succNode) {
         return EF(std::in_place_type<FeasibilityIdentityEF>);
     }
-    if (isZeroValue(currNode) || isZeroValue(succNode)) {
-        return EF(std::in_place_type<FeasibilityIdentityEF>);
-    }
+
+
     return EF(std::in_place_type<FeasibilityIdentityEF>);
 }
 

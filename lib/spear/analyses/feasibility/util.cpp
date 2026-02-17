@@ -183,6 +183,66 @@ std::optional<z3::expr> createBitVal(const llvm::Value *V, z3::context *context)
     return std::nullopt;
 }
 
+std::optional<FeasibilityStateStore::ExprId> resolveId(const llvm::Value *V,
+                             const FeasibilityElement &St,
+                             FeasibilityStateStore *S) {
+    if (!S || !V) return std::nullopt;
+
+    S->resolveCalls++;
+
+    FeasibilityStateStore::ResolveKey K{St.ssaId, St.memId, V};
+
+    if (auto It = S->ResolveCache.find(K); It != S->ResolveCache.end()) {
+        S->resolveHits++;
+        return It->second;
+    }
+
+    S->resolveMisses++;
+
+    // 1) Constant
+    if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(V)) {
+        unsigned bw = CI->getBitWidth();
+        z3::expr c = S->ctx().bv_val(CI->getZExtValue(), bw);
+        auto id = S->internExpr(c);
+        S->ResolveCache.emplace(K, id);
+        return id;
+    }
+
+    // 2) SSA environment lookup
+    if (auto ssav = S->Ssa.getValue(St.ssaId, V)) {
+        S->ResolveCache.emplace(K, *ssav);
+        return *ssav;
+    }
+
+    // 3) Load instruction → memory environment
+    if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(V)) {
+        const llvm::Value *Ptr = LI->getPointerOperand();
+
+        if (auto mv = S->Mem.getValue(St.memId, Ptr)) {
+            S->ResolveCache.emplace(K, *mv);
+            return *mv;
+        }
+
+        // Fresh symbol if unknown
+        unsigned bw = LI->getType()->getIntegerBitWidth();
+        std::string name;
+        {
+            llvm::raw_string_ostream OS(name);
+            OS << "load_" << (const void*)LI
+               << "_ssa" << St.ssaId
+               << "_mem" << St.memId;
+        }
+
+        z3::expr sym = S->ctx().bv_const(name.c_str(), bw);
+        auto id = S->internExpr(sym);
+
+        S->ResolveCache.emplace(K, id);
+        return id;
+    }
+
+    return std::nullopt;
+}
+
 std::optional<z3::expr> resolve(const llvm::Value *V, const FeasibilityElement &St, FeasibilityStateStore *Store) {
     if (!V || !Store) {
     return std::nullopt;
@@ -322,13 +382,15 @@ void reportMetrics(FeasibilityStateStore *Store) {
 
     // Additional detailed reporting with ACTUAL sizes
     llvm::errs() << "--- Store State (actual sizes) ---\n";
-    llvm::errs() << "  PC pool size:          " << Store->baseConstraints.size() << "\n";
-    llvm::errs() << "  PC sat cache size:     " << Store->pcSatCache.size() << "\n";
-    llvm::errs() << "  PC map size:           " << Store->pathConditions.size() << "\n";
-    llvm::errs() << "  Expression table size: " << Store->ExprTable.size() << "\n";
-    llvm::errs() << "  Symbol cache size:     " << Store->SymCache.size() << "\n";
-    llvm::errs() << "  SSA pool size:         " << Store->Ssa.poolSize() << "\n";
-    llvm::errs() << "  Mem pool size:         " << Store->Mem.poolSize() << "\n";
+    llvm::errs() << "  Store instance @   " << Store << "\n";
+    llvm::errs() << "  PC pool size:      " << Store->baseConstraints.size() << "\n";
+    llvm::errs() << "  PC sat cache size: " << Store->pcSatCache.size() << "\n";
+    llvm::errs() << "  PC map size:       " << Store->pathConditions.size() << "\n";
+    llvm::errs() << "  Expression table size: " << Store->ExprTable.size()
+                 << " @ " << &Store->ExprTable << "\n";
+    llvm::errs() << "  Symbol cache size: " << Store->SymCache.size() << "\n";
+    llvm::errs() << "  SSA pool size:     " << Store->Ssa.poolSize() << "\n";
+    llvm::errs() << "  Mem pool size:     " << Store->Mem.poolSize() << "\n";
 
     // Sanity checks
     llvm::errs() << "\n--- Sanity Checks ---\n";
@@ -336,27 +398,46 @@ void reportMetrics(FeasibilityStateStore *Store) {
 
     if (Store->metrics.satCacheHits.load() + Store->metrics.satCacheMisses.load() !=
         Store->metrics.satCheckCount.load()) {
-        llvm::errs() << "  WARNING: SAT check count mismatch!\n";
+        llvm::errs() << "  ✗ WARNING: SAT check count mismatch!\n";
+        llvm::errs() << "    Checks: " << Store->metrics.satCheckCount.load() << "\n";
+        llvm::errs() << "    Hits:   " << Store->metrics.satCacheHits.load() << "\n";
+        llvm::errs() << "    Misses: " << Store->metrics.satCacheMisses.load() << "\n";
+        llvm::errs() << "    Sum:    " << (Store->metrics.satCacheHits.load() + Store->metrics.satCacheMisses.load()) << "\n";
         ok = false;
     }
 
     if (Store->metrics.totalPcCreated.load() != Store->baseConstraints.size() - 1) {
-        llvm::errs() << "  WARNING: PC creation count doesn't match pool size!\n";
+        llvm::errs() << "  ✗ WARNING: PC creation count doesn't match pool size!\n";
         llvm::errs() << "    PCs created: " << Store->metrics.totalPcCreated.load() << "\n";
         llvm::errs() << "    Pool size-1: " << (Store->baseConstraints.size() - 1) << "\n";
         ok = false;
     }
 
-    if (Store->ExprTable.size() < 2 && Store->metrics.assumeCount.load() > 0) {
-        llvm::errs() << "  WARNING: Expression table suspiciously small!\n";
+    if (Store->ExprTable.size() <= 1 && Store->metrics.internCalls.load() > 0) {
+        llvm::errs() << "  ✗ WARNING: Expression table suspiciously small!\n";
+        llvm::errs() << "    ExprTable.size(): " << Store->ExprTable.size() << "\n";
+        llvm::errs() << "    internCalls:      " << Store->metrics.internCalls.load() << "\n";
+        llvm::errs() << "    internInserted:   " << Store->metrics.internInserted.load() << "\n";
+        ok = false;
+    }
+
+    if (Store->metrics.internCalls.load() > 0 &&
+        Store->metrics.internCalls.load() !=
+        Store->metrics.internHits.load() + Store->metrics.internInserted.load()) {
+        llvm::errs() << "  ✗ WARNING: Interning count mismatch!\n";
+        llvm::errs() << "    Calls:    " << Store->metrics.internCalls.load() << "\n";
+        llvm::errs() << "    Hits:     " << Store->metrics.internHits.load() << "\n";
+        llvm::errs() << "    Inserted: " << Store->metrics.internInserted.load() << "\n";
+        llvm::errs() << "    Sum:      " << (Store->metrics.internHits.load() + Store->metrics.internInserted.load()) << "\n";
         ok = false;
     }
 
     if (ok) {
-        llvm::errs() << "  All checks passed ✓\n";
+        llvm::errs() << "  ✓ All checks passed\n";
     }
 
     llvm::errs() << "\n";
 }
+
 
 } // namespace Feasibility::Util

@@ -22,6 +22,7 @@ int main() {
         }
     }
 
+
     length--;
 
     return 0;

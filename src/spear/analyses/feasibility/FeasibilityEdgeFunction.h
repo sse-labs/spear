@@ -127,60 +127,6 @@ struct FeasibilitySetMemEF {
     bool isConstant() const noexcept;
 };
 
-/**
- * Sequential composition edge function.
- * Represents Second ∘ First, i.e., computeTarget(x) = Second(First(x)).
- */
-struct FeasibilitySeqEF {
-    using l_t = Feasibility::l_t;
-
-    EF First;
-    EF Second;
-
-    FeasibilitySeqEF(EF First, EF Second)
-        : First(std::move(First)), Second(std::move(Second)) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilitySeqEF> thisFunc,
-                                    const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilitySeqEF> thisFunc,
-                                 const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilitySeqEF &) const = default;
-
-    bool isConstant() const noexcept;
-};
-
-/**
- * Pointwise join edge function.
- * Represents (First ⊔ Second), i.e., computeTarget(x) = First(x) ⊔ Second(x).
- *
- * This is necessary because the IDE solver joins edge functions, not lattice values.
- */
-struct FeasibilityJoinEF {
-    using l_t = Feasibility::l_t;
-
-    EF Left;
-    EF Right;
-
-    FeasibilityJoinEF(EF Left, EF Right)
-        : Left(std::move(Left)), Right(std::move(Right)) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc,
-                                    const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc,
-                                 const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityJoinEF &) const = default;
-
-    bool isConstant() const noexcept;
-};
-
 struct FeasibilityAssumeIcmpEF {
     using l_t = Feasibility::l_t;
 
