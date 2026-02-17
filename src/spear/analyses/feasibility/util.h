@@ -10,7 +10,7 @@
 #include "FeasibilityAnalysis.h"
 
 #define F_TAG "[FDBG]"
-#define F_DEBUG_ENABLED true
+#define F_DEBUG_ENABLED false
 
 namespace Feasibility {
 
@@ -53,6 +53,12 @@ class Util {
     static std::string stableName(const llvm::Value *V);
 
     static const llvm::Instruction* firstRealInst(const llvm::BasicBlock *BB);
+
+    /**
+     * Report analysis metrics to stderr
+     * @param Store FeasibilityStateStore containing metrics
+     */
+    static void reportMetrics(FeasibilityStateStore *Store);
 };
 
 }

@@ -5,6 +5,7 @@
 
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
 #include "analyses/feasibility/util.h"
+#include <chrono>
 
 namespace Feasibility {
 
@@ -394,6 +395,8 @@ bool FeasibilityJoinEF::isConstant() const noexcept {
 }
 
 l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
+    auto start = std::chrono::high_resolution_clock::now();
+
     // ⊥ = killed/unreachable: must stay ⊥
     if (source.isBottom()) {
         return source;
@@ -413,6 +416,10 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
         return source;
     }
 
+    // DON'T increment edgeFunctionCount here - that should be done
+    // when edge functions are CREATED, not executed
+    // S->metrics.edgeFunctionCount++;  // REMOVED
+
     // Resolve operands in the state of *source*
     auto L = Feasibility::Util::resolve(Cmp->getOperand(0), source, S);
     auto R = Feasibility::Util::resolve(Cmp->getOperand(1), source, S);
@@ -420,6 +427,9 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
     // If we can't resolve the condition, we must not constrain anything.
     // IMPORTANT: do NOT mark infeasible, do NOT drop to ⊥.
     if (!L || !R) {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        S->metrics.totalEdgeFunctionTime += duration.count();
         return source;
     }
 
@@ -439,6 +449,9 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
         case llvm::CmpInst::ICMP_SGE: Cond = z3::sge(*L, *R); break;
 
         default: {
+            auto end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            S->metrics.totalEdgeFunctionTime += duration.count();
             return source; // unsupported predicate => no constraint
         }
     }
@@ -453,11 +466,17 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
 
     // Edge condition is definitely false => killed path (Bottom)
     if (Cond.is_false()) {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        S->metrics.totalEdgeFunctionTime += duration.count();
         return l_t::bottom(S);
     }
 
     // Definitely true => no constraint added
     if (Cond.is_true()) {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        S->metrics.totalEdgeFunctionTime += duration.count();
         return source;
     }
 
@@ -466,11 +485,21 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
 
     // Old behavior: UNSAT is represented as Bottom.
     if (out.isIdeAbsorbing()) {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        S->metrics.totalEdgeFunctionTime += duration.count();
         return l_t::bottom(S);
     }
     if (!out.isSatisfiable()) {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        S->metrics.totalEdgeFunctionTime += duration.count();
         return l_t::bottom(S);
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    S->metrics.totalEdgeFunctionTime += duration.count();
 
     return out;
 }

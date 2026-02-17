@@ -98,6 +98,11 @@ FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, con
     (void)FAM;
     store = std::make_unique<FeasibilityStateStore>();
     this->ICFG = ICFG;
+
+    // Reset metrics at start
+    store->metrics.reset();
+
+    llvm::errs() << "[METRICS] FeasibilityAnalysis initialized - metrics tracking enabled\n";
 }
 
 
@@ -205,6 +210,24 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFu
 FeasibilityAnalysis::EdgeFunctionType
 FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
                                            n_t succ, d_t succNode) {
+  // Track edge function creation
+  store->metrics.edgeFunctionCount++;
+
+  // Periodic metrics reporting (every 10000 edge functions)
+  static std::atomic<uint64_t> efCounter{0};
+  if (++efCounter % 10000 == 0) {
+    llvm::errs() << "\n[METRICS] Progress at " << efCounter.load() << " EFs:\n";
+    llvm::errs() << "  PC pool:      " << store->baseConstraints.size()
+                 << " (created: " << store->metrics.totalPcCreated.load() << ")\n";
+    llvm::errs() << "  Max PC depth: " << store->metrics.maxPcAstDepth.load() << "\n";
+    llvm::errs() << "  Max PC nodes: " << store->metrics.maxPcAstNodes.load() << "\n";
+    llvm::errs() << "  SAT:          " << store->metrics.satCheckCount.load()
+                 << " (hits: " << store->metrics.satCacheHits.load()
+                 << ", misses: " << store->metrics.satCacheMisses.load() << ")\n";
+    llvm::errs() << "  PC clears:    " << store->metrics.pcClearCalls.load() << "\n";
+    llvm::errs() << "  Expr table:   " << store->ExprTable.size() << "\n\n";
+  }
+
   if (F_DEBUG_ENABLED) {
     llvm::errs() << F_TAG << " EF normal @";
     Feasibility::Util::dumpInst(curr);

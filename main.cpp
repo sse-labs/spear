@@ -23,6 +23,7 @@
 #include "CLIHandler.h"
 #include "ConfigParser.h"
 #include "Modelchecker.h"
+#include "analyses/feasibility/util.h"
 #include "profilers/CPUProfiler.h"
 #include "profilers/MetaProfiler.h"
 
@@ -136,6 +137,12 @@ void runAnalysisRoutine(CLIOptions opts) {
     }
 
     PhasarResultRegistry::get().store(loopboundResults);
+
+    // Report final metrics summary
+    if (PH.feasibilityProblem && PH.feasibilityProblem->store) {
+        std::cout << "\n=== Final Analysis Metrics ===\n";
+        Feasibility::Util::reportMetrics(PH.feasibilityProblem->store.get());
+    }
 
     // modulePassManager already ran above (don't run twice unless you intend to).
     // modulePassManager.addPass(Energy(opts.profilePath));

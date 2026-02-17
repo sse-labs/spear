@@ -22,14 +22,6 @@ int main() {
         }
     }
 
-    if (length < 10) {                 // 1  -> true
-        if (length > 0) {              // 2  -> true
-            if (length == 5) {         // 3  -> true
-                length = 20;
-            }
-        }
-    }
-
     length--;
 
     return 0;

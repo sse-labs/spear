@@ -312,4 +312,51 @@ const llvm::Instruction* firstRealInst(const llvm::BasicBlock *BB) {
 #endif
 }
 
+void reportMetrics(FeasibilityStateStore *Store) {
+    if (!Store) {
+        llvm::errs() << "Cannot report metrics: null store\n";
+        return;
+    }
+
+    Store->metrics.report(llvm::errs());
+
+    // Additional detailed reporting with ACTUAL sizes
+    llvm::errs() << "--- Store State (actual sizes) ---\n";
+    llvm::errs() << "  PC pool size:          " << Store->baseConstraints.size() << "\n";
+    llvm::errs() << "  PC sat cache size:     " << Store->pcSatCache.size() << "\n";
+    llvm::errs() << "  PC map size:           " << Store->pathConditions.size() << "\n";
+    llvm::errs() << "  Expression table size: " << Store->ExprTable.size() << "\n";
+    llvm::errs() << "  Symbol cache size:     " << Store->SymCache.size() << "\n";
+    llvm::errs() << "  SSA pool size:         " << Store->Ssa.poolSize() << "\n";
+    llvm::errs() << "  Mem pool size:         " << Store->Mem.poolSize() << "\n";
+
+    // Sanity checks
+    llvm::errs() << "\n--- Sanity Checks ---\n";
+    bool ok = true;
+
+    if (Store->metrics.satCacheHits.load() + Store->metrics.satCacheMisses.load() !=
+        Store->metrics.satCheckCount.load()) {
+        llvm::errs() << "  WARNING: SAT check count mismatch!\n";
+        ok = false;
+    }
+
+    if (Store->metrics.totalPcCreated.load() != Store->baseConstraints.size() - 1) {
+        llvm::errs() << "  WARNING: PC creation count doesn't match pool size!\n";
+        llvm::errs() << "    PCs created: " << Store->metrics.totalPcCreated.load() << "\n";
+        llvm::errs() << "    Pool size-1: " << (Store->baseConstraints.size() - 1) << "\n";
+        ok = false;
+    }
+
+    if (Store->ExprTable.size() < 2 && Store->metrics.assumeCount.load() > 0) {
+        llvm::errs() << "  WARNING: Expression table suspiciously small!\n";
+        ok = false;
+    }
+
+    if (ok) {
+        llvm::errs() << "  All checks passed ✓\n";
+    }
+
+    llvm::errs() << "\n";
+}
+
 } // namespace Feasibility::Util

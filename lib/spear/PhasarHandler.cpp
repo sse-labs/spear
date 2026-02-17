@@ -73,6 +73,12 @@ void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
 
   //LoopBoundResult = loopboundwrapper->getResults();
   FeasibilityResult = feasibilitywrapper->getResults();
+
+  // Report metrics after analysis completes
+  if (feasibilityProblem && feasibilityProblem->store) {
+    llvm::errs() << "\n=== Feasibility Analysis Complete ===\n";
+    Feasibility::Util::reportMetrics(feasibilityProblem->store.get());
+  }
 }
 
 void PhasarHandlerPass::dumpState() const {

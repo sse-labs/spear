@@ -6,6 +6,7 @@
 #ifndef SPEAR_FEASIBILITYELEMENT_H
 #define SPEAR_FEASIBILITYELEMENT_H
 
+#include <atomic>
 #include <cstdint>
 #include <optional>
 #include <ostream>
@@ -29,6 +30,36 @@ class raw_ostream;
 } // namespace llvm
 
 namespace Feasibility {
+
+struct AnalysisMetrics {
+  // Timing metrics (microseconds)
+  std::atomic<uint64_t> totalSatCheckTime{0};
+  std::atomic<uint64_t> totalJoinTime{0};
+  std::atomic<uint64_t> totalAssumeTime{0};
+  std::atomic<uint64_t> totalEdgeFunctionTime{0};
+
+  // Counters
+  std::atomic<uint64_t> satCheckCount{0};
+  std::atomic<uint64_t> satCacheHits{0};
+  std::atomic<uint64_t> satCacheMisses{0};
+  std::atomic<uint64_t> joinCount{0};
+  std::atomic<uint64_t> assumeCount{0};
+  std::atomic<uint64_t> edgeFunctionCount{0};
+
+  // Path constraint metrics
+  std::atomic<uint64_t> maxPcAstDepth{0};
+  std::atomic<uint64_t> maxPcAstNodes{0};
+  std::atomic<uint64_t> totalPcCreated{0};
+  std::atomic<uint64_t> maxPcPoolSize{0};
+  std::atomic<uint64_t> pcClearCalls{0};
+
+  // Store metrics
+  std::atomic<uint64_t> maxSsaEnvSize{0};
+  std::atomic<uint64_t> maxMemEnvSize{0};
+
+  void reset();
+  void report(llvm::raw_ostream &OS) const;
+};
 
 template <typename KeyT, typename ValueT, unsigned PoolReserve = 256>
 class EnvPool final {
@@ -150,6 +181,15 @@ class EnvPool final {
     pool.push_back(env);
     bucket.push_back(newId);
     return newId;
+  }
+
+  [[nodiscard]] size_t poolSize() const { return pool.size(); }
+  [[nodiscard]] size_t largestEnvSize() const {
+    size_t max = 0;
+    for (const auto &env : pool) {
+      max = std::max(max, env.size());
+    }
+    return max;
   }
 
  private:
@@ -295,7 +335,12 @@ public:
   EnvPool<EnvKey, ExprId> Mem;
   EnvPool<EnvKey, ExprId> Ssa;
 
-private:
+  AnalysisMetrics metrics;
+
+  [[nodiscard]] size_t getPathConstraintCount() const { return baseConstraints.size(); }
+  [[nodiscard]] uint64_t computeAstDepth(const z3::expr &E) const;
+  [[nodiscard]] uint64_t computeAstNodes(const z3::expr &E) const;
+
   z3::context context;
   z3::solver  solver;
 
