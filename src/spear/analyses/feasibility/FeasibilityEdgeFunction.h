@@ -198,6 +198,15 @@ struct PackedOp {
     PackedOp O; O.K = SetMem; O.Loc = L; O.Val = V; return O;
   }
 
+  static PackedOp mkSetSSA(const llvm::Value *Loc, const llvm::Value *Key) {
+    PackedOp O;
+    O.K   = SetSSA;
+    O.Loc = Loc;   // memory location to read/create symbol for
+    O.Key = Key;   // SSA variable to assign
+    return O;
+  }
+
+
   static PackedOp mkAssume(const llvm::ICmpInst *C, bool T) {
     PackedOp O; O.K = AssumeIcmp; O.Cmp = C; O.TakeTrue = T; return O;
   }
@@ -228,9 +237,6 @@ struct FeasibilityPackedEF {
     if (!S || source.isBottom()) return source;
 
     l_t out = source;
-    if (out.isTop() || out.isIdeNeutral()) {
-      out = l_t::initial(S);
-    }
 
     for (uint8_t i = 0; i < N; ++i) {
       const auto &Op = Ops[i];

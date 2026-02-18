@@ -117,9 +117,6 @@ l_t FeasibilitySetSSAEF::computeTarget(const l_t &source) const {
     auto *S = source.getStore();
     l_t out = source;
 
-    if (out.isTop() || out.isIdeNeutral()) {
-        out = l_t::initial(S);
-    }
 
     // 1) try read memory
     if (auto mv = S->Mem.getValue(out.memId, Loc)) {
@@ -161,7 +158,34 @@ EF FeasibilitySetSSAEF::compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFu
         }
     }
 
-    return secondFunction;
+    // in FeasibilitySetSSAEF::compose(...)
+    if (secondFunction.template isa<FeasibilityAssumeIcmpEF>()) {
+        const auto &A = secondFunction.template cast<FeasibilityAssumeIcmpEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkSetSSA(thisFunc->Loc, thisFunc->Key));
+        R.pushBack(PackedOp::mkAssume(A->Cmp, A->TakeTrueEdge));
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
+    if (secondFunction.template isa<FeasibilityPhiEF>()) {
+        const auto &P = secondFunction.template cast<FeasibilityPhiEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkSetSSA(thisFunc->Loc, thisFunc->Key));
+        R.pushBack(PackedOp::mkPhi(P->phinode, P->incomingVal));
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
+    if (secondFunction.template isa<FeasibilityPackedEF>()) {
+        const auto &P2 = secondFunction.template cast<FeasibilityPackedEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkSetSSA(thisFunc->Loc, thisFunc->Key));
+        for (unsigned i = 0; i < P2->N; ++i)
+            if (!R.pushBack(P2->Ops[i])) return EF(std::in_place_type<FeasibilityAllTopEF>);
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
+    // otherwise: if you truly can't represent it, THEN AllTop is safe
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
 
@@ -198,35 +222,70 @@ l_t FeasibilitySetMemEF::computeTarget(const l_t &source) const {
         return source;
     }
     l_t out = source;
-    if (out.isTop() || out.isIdeNeutral()) {
-        out = l_t::initial(source.getStore());
-    }
+
     out.memId = source.getStore()->Mem.set(out.memId, Loc, ValueId);
     return out;
 }
 
-EF FeasibilitySetMemEF::compose(psr::EdgeFunctionRef<FeasibilitySetMemEF> self,
-                                const EF &second) {
-    if (second.template isa<FeasibilityIdentityEF>() || second.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(self);
-    }
+EF FeasibilitySetMemEF::compose(psr::EdgeFunctionRef<FeasibilitySetMemEF> thisFunc,
+                                const EF &secondFunction) {
+  // Keep existing fast paths if you want:
+  if (secondFunction.template isa<FeasibilityIdentityEF>() ||
+      secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+    return EF(thisFunc);
+  }
+  if (secondFunction.template isa<FeasibilityAllBottomEF>() ||
+      llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
+    return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  }
+  if (secondFunction.template isa<FeasibilityAllTopEF>() ||
+      llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
 
-    if (second.template isa<FeasibilityAllBottomEF>() || llvm::isa<psr::AllBottom<l_t>>(second)) {
-        return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  // Optional: collapse consecutive SetMem on same location (later wins)
+  if (secondFunction.template isa<FeasibilitySetMemEF>()) {
+    const auto &other = secondFunction.template cast<FeasibilitySetMemEF>();
+    if (thisFunc->Loc == other->Loc) {
+      return EF{secondFunction}; // later write wins
     }
+  }
 
-    if (second.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(second)) {
+  // --- Packing cases (analog to SetSSAEF::compose) ---
+
+  // SetMem ∘ Assume => Packed[SetMem, Assume]
+  if (secondFunction.template isa<FeasibilityAssumeIcmpEF>()) {
+    const auto &A = secondFunction.template cast<FeasibilityAssumeIcmpEF>();
+    FeasibilityPackedEF R;
+    R.pushBack(PackedOp::mkSetMem(thisFunc->Loc, thisFunc->ValueId));
+    R.pushBack(PackedOp::mkAssume(A->Cmp, A->TakeTrueEdge));
+    return EF(std::in_place_type<FeasibilityPackedEF>, R);
+  }
+
+  // SetMem ∘ Phi => Packed[SetMem, Phi]
+  if (secondFunction.template isa<FeasibilityPhiEF>()) {
+    const auto &P = secondFunction.template cast<FeasibilityPhiEF>();
+    FeasibilityPackedEF R;
+    R.pushBack(PackedOp::mkSetMem(thisFunc->Loc, thisFunc->ValueId));
+    R.pushBack(PackedOp::mkPhi(P->phinode, P->incomingVal));
+    return EF(std::in_place_type<FeasibilityPackedEF>, R);
+  }
+
+  // SetMem ∘ Packed => prepend SetMem
+  if (secondFunction.template isa<FeasibilityPackedEF>()) {
+    const auto &P2 = secondFunction.template cast<FeasibilityPackedEF>();
+    FeasibilityPackedEF R;
+    R.pushBack(PackedOp::mkSetMem(thisFunc->Loc, thisFunc->ValueId));
+    for (unsigned i = 0; i < P2->N; ++i) {
+      if (!R.pushBack(P2->Ops[i])) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
+      }
     }
+    return EF(std::in_place_type<FeasibilityPackedEF>, R);
+  }
 
-    if (second.template isa<FeasibilitySetMemEF>()) {
-        const auto &other = second.template cast<FeasibilitySetMemEF>();
-        if (self->Loc == other->Loc) {
-            return EF{second};
-        }
-    }
-
-    return second;
+  // If you can't represent the composition precisely, be safe:
+  return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
 EF FeasibilitySetMemEF::join(psr::EdgeFunctionRef<FeasibilitySetMemEF> thisFunc,
@@ -291,7 +350,7 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
         // already have boolean condition expr id
         const z3::expr &Cond = S->exprOf(it->second);
 
-        if (source.pcId == 0 && Cond.is_true()) return source;
+        if (source.pcId == S->PcTrueId && Cond.is_true()) return source;
 
         l_t out = source.assume(Cond);
         return out;
@@ -402,6 +461,24 @@ EF FeasibilityAssumeIcmpEF::compose(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF
         return EF(std::in_place_type<FeasibilityPackedEF>, R);
     }
 
+    // Assume ∘ SetSSA => Packed[Assume, SetSSA]
+    if (second.template isa<FeasibilitySetSSAEF>()) {
+        const auto &S = second.template cast<FeasibilitySetSSAEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkAssume(self->Cmp, self->TakeTrueEdge));
+        R.pushBack(PackedOp::mkSetSSA(S->Loc, S->Key));
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
+    // Assume ∘ SetMem => Packed[Assume, SetMem]
+    if (second.template isa<FeasibilitySetMemEF>()) {
+        const auto &M = second.template cast<FeasibilitySetMemEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkAssume(self->Cmp, self->TakeTrueEdge));
+        R.pushBack(PackedOp::mkSetMem(M->Loc, M->ValueId));
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
@@ -498,6 +575,23 @@ EF FeasibilityPhiEF::compose(psr::EdgeFunctionRef<FeasibilityPhiEF> self,
         FeasibilityPackedEF R;
         R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
         R.pushBack(PackedOp::mkPhi(P->phinode, P->incomingVal));
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
+    if (second.template isa<FeasibilitySetSSAEF>()) {
+        const auto &S = second.template cast<FeasibilitySetSSAEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
+        R.pushBack(PackedOp::mkSetSSA(S->Loc, S->Key));
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
+    // Phi ∘ SetMem => Packed[Phi, SetMem]
+    if (second.template isa<FeasibilitySetMemEF>()) {
+        const auto &M = second.template cast<FeasibilitySetMemEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
+        R.pushBack(PackedOp::mkSetMem(M->Loc, M->ValueId));
         return EF(std::in_place_type<FeasibilityPackedEF>, R);
     }
 

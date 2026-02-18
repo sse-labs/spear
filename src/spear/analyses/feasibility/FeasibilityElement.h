@@ -223,7 +223,6 @@ struct FeasibilityElement final {
   std::uint32_t memId = 0;
 
   static FeasibilityElement ideNeutral(FeasibilityStateStore *S) noexcept;
-  static FeasibilityElement ideAbsorbing(FeasibilityStateStore *S) noexcept;
 
   static FeasibilityElement top(FeasibilityStateStore *S) noexcept;
   static FeasibilityElement bottom(FeasibilityStateStore *S) noexcept;
@@ -261,6 +260,14 @@ public:
   using id_t = std::uint32_t;
   using ExprId = std::uint32_t;
   using EnvKey = const llvm::Value *;
+
+  // Convention (must match FeasibilityStateStore ctor):
+  //   0 = PcInit (distinct from true, but treated SAT)
+  //   1 = PcTrue
+  //   2 = PcFalse
+  unsigned PcInit   = 0;
+  unsigned PcTrueId = 1;
+  unsigned PcFalseId = 2;    // set in ctor after interning
 
   FeasibilityStateStore();
   ~FeasibilityStateStore();

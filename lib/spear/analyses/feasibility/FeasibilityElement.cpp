@@ -58,19 +58,19 @@ bool operator!=(const FeasibilityElement &A, const FeasibilityElement &B) noexce
 }
 
 FeasibilityElement FeasibilityElement::ideNeutral(FeasibilityStateStore *S) noexcept {
-  return FeasibilityElement{S, true, Kind::IdeNeutral, 0, 0, 0};
+  return FeasibilityElement{S, true, Kind::IdeNeutral, S->PcInit, 0, 0};
 }
 
 FeasibilityElement FeasibilityElement::top(FeasibilityStateStore *S) noexcept {
-  return FeasibilityElement{S,true, Kind::Top, 0, 0, 0};
+  return FeasibilityElement{S, true, Kind::Top, S->PcTrueId, 0, 0};
 }
 
 FeasibilityElement FeasibilityElement::bottom(FeasibilityStateStore *S) noexcept {
-  return FeasibilityElement{S,true, Kind::Bottom, 0, 0, 0};
+  return FeasibilityElement{S, true, Kind::Bottom, S->PcFalseId, 0, 0};
 }
 
 FeasibilityElement FeasibilityElement::initial(FeasibilityStateStore *S) noexcept {
-  return FeasibilityElement{S,true, Kind::Normal, 0, 0, 0};
+  return FeasibilityElement{S, true, Kind::Normal, S->PcInit, 0, 0};
 }
 
 bool FeasibilityElement::isIdeNeutral() const noexcept {
@@ -111,11 +111,22 @@ FeasibilityElement FeasibilityElement::assume(const z3::expr &cond) const {
   }
 
   FeasibilityElement out = *this;
-  if (out.isTop() || out.isIdeNeutral()) {
-    out = initial(store);
-  }
 
+  auto oldId = out.pcId;
   out.pcId = store->pcAssume(out.pcId, cond);
+
+  auto pcExpr = store->getPathConstraint(out.pcId);
+  llvm::errs() << "[ASSUME] out.pcId=" << out.pcId
+               << " expr=" << pcExpr.to_string() << "\n";
+  llvm::errs() << "[ASSUME] decl_kind=" << (pcExpr.is_app() ? pcExpr.decl().decl_kind() : -1) << "\n";
+
+
+  llvm::errs() << "[ASSUME] oldPcId=" << oldId
+               << " newPcId=" << out.pcId
+               << " cond=" << cond.to_string() << "\n";
+
+  llvm::errs() << "[ASSUME] oldPc=" << store->getPathConstraint(oldId).to_string() << "\n";
+  llvm::errs() << "[ASSUME] newPc=" << store->getPathConstraint(out.pcId).to_string() << "\n";
 
   if (!store->isSatisfiable(out)) {
     return FeasibilityElement::bottom(store);
@@ -167,8 +178,32 @@ bool FeasibilityElement::isSatisfiable() const {
 }
 
 FeasibilityStateStore::FeasibilityStateStore() : solver(context) {
-  baseConstraints.push_back(context.bool_val(true)); // pcId 0
-  pcSatCache.push_back(-1);                          // cache for pcId 0
+  // Reserve:
+  // 0 = initial (treated like true, but distinct id)
+  // 1 = true
+  // 2 = false
+  baseConstraints.reserve(3);
+  pcSatCache.reserve(3);
+
+  baseConstraints.push_back(context.bool_val(true));   // id 0: initial
+  baseConstraints.push_back(context.bool_val(true));   // id 1: true
+  baseConstraints.push_back(context.bool_val(false));  // id 2: false
+
+  pcSatCache.push_back(1); // initial is SAT
+  pcSatCache.push_back(1); // true is SAT
+  pcSatCache.push_back(0); // false is UNSAT
+
+  // Fail fast if ids drift
+  assert(PcInit == 0 && "PcInit must be 0");
+  assert(PcTrueId == 1 && "PcTrueId must be 1");
+  assert(PcFalseId == 2 && "PcFalseId must be 2");
+
+  // Seed interning -> path id mapping so "true" resolves to PcTrueId (1),
+  // and "false" resolves to PcFalseId (2). Do NOT map true -> 0.
+  ExprId tId = internExpr(baseConstraints[PcTrueId]);
+  ExprId fId = internExpr(baseConstraints[PcFalseId]);
+  pathConditions.emplace(tId, PcTrueId);
+  pathConditions.emplace(fId, PcFalseId);
 }
 
 FeasibilityStateStore::~FeasibilityStateStore() {}
@@ -180,7 +215,11 @@ z3::context &FeasibilityStateStore::ctx() noexcept {
 
 FeasibilityStateStore::id_t FeasibilityStateStore::pcAssume(id_t pc, const z3::expr &cond) {
   // Build new constraint efficiently
-  z3::expr newPc = (pc == 0) ? cond : (baseConstraints[pc] && cond);
+  z3::expr newPc = baseConstraints[pc] && cond;
+  newPc = newPc.simplify();
+
+  if (newPc.is_true())  return PcTrueId;
+  if (newPc.is_false()) return PcFalseId;
 
   // Intern expression and use ExprId as cache key
   const ExprId eid = internExpr(newPc);
@@ -264,8 +303,11 @@ z3::expr FeasibilityStateStore::factor_or_and_not(const z3::expr &E) {
 FeasibilityElement
 FeasibilityStateStore::join(const FeasibilityElement &AIn,
                             const FeasibilityElement &BIn) {
-  FeasibilityElement A = normalizeIdeKinds(AIn, this);
-  FeasibilityElement B = normalizeIdeKinds(BIn, this);
+  if (AIn.isIdeNeutral()) return BIn;
+  if (BIn.isIdeNeutral()) return AIn;
+
+  FeasibilityElement A = AIn;
+  FeasibilityElement B = BIn;
 
   // Top / Bottom handling (keep yours)
   if (A.isTop() || B.isTop()) return FeasibilityElement::top(this);
@@ -275,6 +317,8 @@ FeasibilityStateStore::join(const FeasibilityElement &AIn,
 
   FeasibilityElement R = FeasibilityElement::initial(this);
   R.kind  = FeasibilityElement::Kind::Normal;
+
+  llvm::errs() << "[JOIN] " << A.pcId << " U " << B.pcId << " -> " << R.pcId << "\n";
 
   // Join SSA/memory information as before
   R.memId = Mem.joinKeepEqual(A.memId, B.memId);
@@ -292,8 +336,8 @@ FeasibilityStateStore::join(const FeasibilityElement &AIn,
   }
 
   // If either is already "true", merged PC is "true"
-  if (A.pcId == 0 || B.pcId == 0) {
-    R.pcId = 0;
+  if (A.pcId == PcTrueId || B.pcId == PcTrueId) {
+    R.pcId = PcTrueId;
     return R;
   }
 
@@ -303,31 +347,30 @@ FeasibilityStateStore::join(const FeasibilityElement &AIn,
 }
 
 bool FeasibilityStateStore::isSatisfiable(const FeasibilityElement &E) {
-  if (E.isBottom()) {
+  if (E.isBottom()) return false;
+  if (E.isTop())    return true;
+
+  if (E.pcId == PcInit || E.pcId == PcTrueId) return true;
+  if (E.pcId == PcFalseId) return false;
+
+  if (E.pcId >= pcSatCache.size() || E.pcId >= baseConstraints.size()) {
+    llvm::errs() << "[BUG] pcId out of range: " << E.pcId
+                 << " pcSatCache=" << pcSatCache.size()
+                 << " base=" << baseConstraints.size() << "\n";
     return false;
-  }
-  if (E.isTop()) {
-    return true;
   }
 
   auto &c = pcSatCache[E.pcId];
-  if (c != -1) {
-    return c == 1;
-  }
+  if (c != -1) return c == 1;
 
-  auto eq = baseConstraints[E.pcId];
-
-  llvm::errs() << "Checking satisfiability of PC " << E.pcId
-               << " with constraint: " << eq.to_string() << "\n";
-
+  z3::expr eq = baseConstraints[E.pcId];
 
   solver.push();
   solver.add(eq);
-  const bool sat = solver.check() == z3::sat;
+  bool sat = solver.check() == z3::sat;
   solver.pop();
 
   c = sat ? 1 : 0;
-
   return sat;
 }
 
@@ -401,12 +444,12 @@ FeasibilityStateStore::ExprId FeasibilityStateStore::internExpr(const z3::expr &
 
 FeasibilityStateStore::id_t FeasibilityStateStore::pcOr(id_t a, id_t b) {
   if (a == b) return a;
-  if (a == 0) return 0; // true OR X = true
-  if (b == 0) return 0;
+  if (a == PcTrueId || a == PcInit) return PcTrueId; // <-- was 0
+  if (b == PcTrueId || b == PcInit) return PcTrueId; // <-- was 0
+  if (a == PcFalseId) return b;
+  if (b == PcFalseId) return a;
 
   z3::expr e = baseConstraints[a] || baseConstraints[b];
-
-  // optional: simplify + factor
   e = e.simplify();
   e = factor_or_and_not(e);
 

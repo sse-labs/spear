@@ -306,14 +306,14 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
   };
 
   // Fast gate: only ZERO facts matter
-  if (!isZeroValue(currNode) || !isZeroValue(succNode)) {
+  /*if (!isZeroValue(currNode) || !isZeroValue(succNode)) {
     auto Ret = EF(std::in_place_type<FeasibilityAllBottomEF>);
     llvm::errs() << F_TAG << " EF normal @"; Feasibility::Util::dumpInst(curr);
     llvm::errs() << "\n" << F_TAG << "   currCond="; Feasibility::Util::dumpFact(this, currNode);
     llvm::errs() << "\n" << F_TAG << "   succCond="; Feasibility::Util::dumpFact(this, succNode);
     llvm::errs() << "\n" << F_TAG << "   retEF=AllBottom (non-zero fact)\n";
     return Ret;
-  }
+  }*/
 
   EF Ret(std::in_place_type<FeasibilityIdentityEF>);
   const char *RetName = "Identity";
@@ -335,12 +335,14 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
       const bool Interesting = llvm::isa<llvm::BranchInst>(curr) ||
                                !Ret.template isa<FeasibilityIdentityEF>();
 
+      /*
       if (Interesting) {
         llvm::errs() << F_TAG << "   Br=" << *Br << "\n";
         llvm::errs() << F_TAG << "   SuccBB=" << (SuccBB ? SuccBB->getName() : "<null>") << "\n";
         llvm::errs() << F_TAG << "   TrueBB=" << TrueBB->getName()
                      << " FalseBB=" << FalseBB->getName() << "\n";
       }
+      */
 
       if (SuccBB != TrueBB && SuccBB != FalseBB) {
         Ret = EF(std::in_place_type<FeasibilityIdentityEF>);
@@ -449,10 +451,10 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
     }
 
     // unified logging + return for branch case
-    llvm::errs() << F_TAG << " EF normal @"; Feasibility::Util::dumpInst(curr);
+    /*llvm::errs() << F_TAG << " EF normal @"; Feasibility::Util::dumpInst(curr);
     llvm::errs() << "\n" << F_TAG << "   currCond="; Feasibility::Util::dumpFact(this, currNode);
     llvm::errs() << "\n" << F_TAG << "   succCond="; Feasibility::Util::dumpFact(this, succNode);
-    llvm::errs() << "\n" << F_TAG << "   retEF=" << RetName << "\n";
+    llvm::errs() << "\n" << F_TAG << "   retEF=" << RetName << "\n";*/
     return Ret;
   }
 
@@ -531,10 +533,10 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
   }
 
   // unified logging
-  llvm::errs() << F_TAG << " EF normal @"; Feasibility::Util::dumpInst(curr);
+  /*llvm::errs() << F_TAG << " EF normal @"; Feasibility::Util::dumpInst(curr);
   llvm::errs() << "\n" << F_TAG << "   currCond="; Feasibility::Util::dumpFact(this, currNode);
   llvm::errs() << "\n" << F_TAG << "   succCond="; Feasibility::Util::dumpFact(this, succNode);
-  llvm::errs() << "\n" << F_TAG << "   retEF=" << RetName << "\n";
+  llvm::errs() << "\n" << F_TAG << "   retEF=" << RetName << "\n";*/
 
   return Ret;
 }
