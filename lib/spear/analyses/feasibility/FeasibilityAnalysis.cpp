@@ -205,6 +205,106 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFu
 FeasibilityAnalysis::EdgeFunctionType
 FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t succNode) {
 
+    auto packBoundaryPhisIfAny =
+  [&](EF &Ret, const char *&RetName) -> void {
+
+    // If Ret is already dead, do not generate PHI constraints.
+    if (Ret.template isa<FeasibilityAllBottomEF>() ||
+        llvm::isa<psr::AllBottom<l_t>>(Ret)) {
+      llvm::errs() << "[PHI-PACK] skip PHIs because edge is AllBottom\n";
+      return;
+    }
+
+    const llvm::BasicBlock *PredBB = curr ? curr->getParent() : nullptr;
+    const llvm::BasicBlock *SuccBB = succ ? succ->getParent() : nullptr;
+    if (!PredBB || !SuccBB || PredBB == SuccBB) return;
+
+    const llvm::Instruction *PredTerm  = PredBB->getTerminator();
+    const llvm::Instruction *SuccFirst = Util::firstInst(SuccBB);
+
+    // Only pack on the precise boundary edge in the ICFG
+    if (curr != PredTerm || succ != SuccFirst) return;
+
+    FeasibilityPackedEF PhiPack;
+    bool Any = false;
+
+    for (const auto &I : *SuccBB) {
+      auto *PHI = llvm::dyn_cast<llvm::PHINode>(&I);
+      if (!PHI) break;
+      if (auto *InV = PHI->getIncomingValueForBlock(PredBB)) {
+        Any = true;
+        if (!PhiPack.pushBack(PackedOp::mkPhi(PHI, InV))) {
+          Ret = EF(std::in_place_type<FeasibilityAllTopEF>);
+          RetName = "AllTop (phi pack overflow)";
+          return;
+        }
+      }
+    }
+
+    llvm::errs() << "[PHI-PACK] edge " << PredBB->getName() << " -> " << SuccBB->getName()
+                 << " Curr=" << *curr << "\n"
+                 << " Succ=" << *succ << "\n"
+                 << " packed=" << (int)PhiPack.N << "\n";
+
+    if (!Any) return;
+
+    // Build Combined = (Base then PHIs) i.e. PhiPack ∘ Base
+    FeasibilityPackedEF Combined;
+
+    // 1) encode Base into PackedOps (when possible)
+    if (Ret.template isa<FeasibilityIdentityEF>() ||
+        Ret.template isa<psr::EdgeIdentity<l_t>>()) {
+      // no base-op
+    } else if (Ret.template isa<FeasibilityAssumeIcmpEF>()) {
+      const auto &A = Ret.template cast<FeasibilityAssumeIcmpEF>();
+      if (!Combined.pushBack(PackedOp::mkAssume(A->Cmp, A->TakeTrueEdge))) {
+        Ret = EF(std::in_place_type<FeasibilityAllTopEF>);
+        RetName = "AllTop (pack overflow)";
+        return;
+      }
+    } else if (Ret.template isa<FeasibilitySetMemEF>()) {
+      const auto &M = Ret.template cast<FeasibilitySetMemEF>();
+      if (!Combined.pushBack(PackedOp::mkSetMem(M->Loc, M->ValueId))) {
+        Ret = EF(std::in_place_type<FeasibilityAllTopEF>);
+        RetName = "AllTop (pack overflow)";
+        return;
+      }
+    } else if (Ret.template isa<FeasibilityPackedEF>()) {
+      // Base is already packed: copy its ops
+      const auto &B = Ret.template cast<FeasibilityPackedEF>();
+      for (uint8_t i = 0; i < B->N; ++i) {
+        if (!Combined.pushBack(B->Ops[i])) {
+          Ret = EF(std::in_place_type<FeasibilityAllTopEF>);
+          RetName = "AllTop (pack overflow)";
+          return;
+        }
+      }
+    } else if (Ret.template isa<FeasibilityAllTopEF>() ||
+               llvm::isa<psr::AllTop<l_t>>(Ret)) {
+      // If base is ⊤, we can just keep ⊤ (PHIs won't recover precision)
+      Ret = EF(std::in_place_type<FeasibilityAllTopEF>);
+      RetName = "AllTop";
+      return;
+    } else {
+      // Unknown base EF kind => safest widen
+      Ret = EF(std::in_place_type<FeasibilityAllTopEF>);
+      RetName = "AllTop (cannot pack base)";
+      return;
+    }
+
+    // 2) append PHIs (must happen after base)
+    for (uint8_t i = 0; i < PhiPack.N; ++i) {
+      if (!Combined.pushBack(PhiPack.Ops[i])) {
+        Ret = EF(std::in_place_type<FeasibilityAllTopEF>);
+        RetName = "AllTop (pack overflow)";
+        return;
+      }
+    }
+
+    Ret = EF(std::in_place_type<FeasibilityPackedEF>, Combined);
+    RetName = "Packed(Base then PHIs)";
+  };
+
   // Fast gate: only ZERO facts matter
   if (!isZeroValue(currNode) || !isZeroValue(succNode)) {
     auto Ret = EF(std::in_place_type<FeasibilityAllBottomEF>);
@@ -217,27 +317,6 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
 
   EF Ret(std::in_place_type<FeasibilityIdentityEF>);
   const char *RetName = "Identity";
-
-    const llvm::BasicBlock *PredBB = curr ? curr->getParent() : nullptr;
-    const llvm::BasicBlock *SuccBB = succ ? succ->getParent() : nullptr;
-
-    if (PredBB && SuccBB && PredBB != SuccBB) {
-        // We are traversing the block boundary inside another block...
-        llvm::errs() << F_TAG << " Crossed block boundary!" << "\n";
-        // Iterate over the instructions in the successor block we are trying to reach
-        for (auto &genInst : *SuccBB) {
-            auto *PHI = llvm::dyn_cast<llvm::PHINode>(&genInst);
-            if (!PHI) break;
-
-            if (llvm::Value *InV = PHI->getIncomingValueForBlock(PredBB)) {
-                llvm::errs() << F_TAG << "   SuccBB has PHI: " << *PHI << "\n";
-                llvm::errs() << "\n" << F_TAG << "   PHI incoming val: " << InV << "\n";
-
-                return EF(std::in_place_type<FeasibilityPhiEF>, PHI, InV);
-            }
-            // add the phi and the incoming value as an condition to our path
-        }
-    }
 
   // ---------------------------------------------------------------------------
   // 1) Conditional branches
@@ -253,14 +332,14 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
       const llvm::Instruction *SuccI = succ; // n_t assumed Instruction*
       const llvm::BasicBlock  *SuccBB = SuccI ? SuccI->getParent() : nullptr;
 
-        const bool Interesting = llvm::isa<llvm::BranchInst>(curr) || !Ret.template isa<FeasibilityIdentityEF>();
+      const bool Interesting = llvm::isa<llvm::BranchInst>(curr) ||
+                               !Ret.template isa<FeasibilityIdentityEF>();
 
-      // (optional debug)
       if (Interesting) {
-          llvm::errs() << F_TAG << "   Br=" << *Br << "\n";
-          llvm::errs() << F_TAG << "   SuccBB=" << (SuccBB ? SuccBB->getName() : "<null>") << "\n";
-          llvm::errs() << F_TAG << "   TrueBB=" << TrueBB->getName()
-                       << " FalseBB=" << FalseBB->getName() << "\n";
+        llvm::errs() << F_TAG << "   Br=" << *Br << "\n";
+        llvm::errs() << F_TAG << "   SuccBB=" << (SuccBB ? SuccBB->getName() : "<null>") << "\n";
+        llvm::errs() << F_TAG << "   TrueBB=" << TrueBB->getName()
+                     << " FalseBB=" << FalseBB->getName() << "\n";
       }
 
       if (SuccBB != TrueBB && SuccBB != FalseBB) {
@@ -284,12 +363,14 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
             Ret = EF(std::in_place_type<FeasibilityAllBottomEF>);
             RetName = "AllBottom (const br not taken)";
           }
+
         } else if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
 
           if (auto *C0 = llvm::dyn_cast<llvm::ConstantInt>(ICmp->getOperand(0))) {
             if (auto *C1 = llvm::dyn_cast<llvm::ConstantInt>(ICmp->getOperand(1))) {
 
-              const bool CmpTrue = llvm::ICmpInst::compare(C0->getValue(), C1->getValue(), ICmp->getPredicate());
+              const bool CmpTrue =
+                llvm::ICmpInst::compare(C0->getValue(), C1->getValue(), ICmp->getPredicate());
 
               const bool EdgeTaken = TakeTrue ? CmpTrue : !CmpTrue;
               if (EdgeTaken) {
@@ -313,6 +394,58 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
           RetName = "Identity (non-icmp cond)";
         }
       }
+    }
+
+    // ---- PHI PACKING (BOUNDARY-ONLY) AFTER BASE EF IS KNOWN ----
+    // If the edge is dead, do NOT pack PHIs.
+    if (!(Ret.template isa<FeasibilityAllBottomEF>() ||
+          llvm::isa<psr::AllBottom<l_t>>(Ret))) {
+
+      const llvm::BasicBlock *PredBB = curr ? curr->getParent() : nullptr;
+      const llvm::BasicBlock *SuccBB = succ ? succ->getParent() : nullptr;
+
+      if (PredBB && SuccBB && PredBB != SuccBB) {
+        const llvm::Instruction *PredTerm  = PredBB->getTerminator();
+        const llvm::Instruction *SuccFirst = Util::firstInst(SuccBB);
+
+        // IMPORTANT: match exactly the ICFG boundary edge
+        if (curr == PredTerm && succ == SuccFirst) {
+
+          FeasibilityPackedEF Pack;
+          bool Any = false;
+
+          // Pack *all* PHIs in SuccBB for this incoming edge
+          for (const auto &I : *SuccBB) {
+            auto *PHI = llvm::dyn_cast<llvm::PHINode>(&I);
+            if (!PHI) break;
+
+            if (auto *InV = PHI->getIncomingValueForBlock(PredBB)) {
+              Any = true;
+              if (!Pack.pushBack(PackedOp::mkPhi(PHI, InV))) {
+                Ret = EF(std::in_place_type<FeasibilityAllTopEF>);
+                RetName = "AllTop (phi pack overflow)";
+                Any = false;
+                break;
+              }
+            }
+          }
+
+          llvm::errs() << "[PHI-PACK] edge " << PredBB->getName() << " -> " << SuccBB->getName()
+                       << " Curr=" << *curr << "\n"
+                       << " Succ=" << *succ << "\n"
+                       << " packed=" << (int)Pack.N << "\n";
+
+          if (Any) {
+            // We want: result(x) = Pack( Ret(x) )
+            // i.e., Pack ∘ Ret
+            EF PhiEF(std::in_place_type<FeasibilityPackedEF>, Pack);
+            packBoundaryPhisIfAny(Ret, RetName);
+            RetName = "PackedPHI ∘ Base";
+          }
+        }
+      }
+    } else {
+      llvm::errs() << "[PHI-PACK] skip PHIs because edge is AllBottom\n";
     }
 
     // unified logging + return for branch case
@@ -341,15 +474,60 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
       Ret = EF(std::in_place_type<FeasibilityIdentityEF>);
       RetName = "Identity (store non-const)";
     }
+
   } else if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(curr)) {
     const llvm::Value *loc = loadInst->getPointerOperand()->stripPointerCasts();
     const llvm::Value *key = loadInst;
     Ret = EF(std::in_place_type<FeasibilitySetSSAEF>, key, loc);
     RetName = "SetSSA(load)";
   } else {
-    // keep your fast path
     Ret = EF(std::in_place_type<FeasibilityIdentityEF>);
     RetName = "Identity";
+  }
+
+  // ---- PHI PACKING FOR NON-BRANCH CASES TOO (AFTER BASE EF) ----
+  if (!(Ret.template isa<FeasibilityAllBottomEF>() ||
+        llvm::isa<psr::AllBottom<l_t>>(Ret))) {
+
+    const llvm::BasicBlock *PredBB = curr ? curr->getParent() : nullptr;
+    const llvm::BasicBlock *SuccBB = succ ? succ->getParent() : nullptr;
+
+    if (PredBB && SuccBB && PredBB != SuccBB) {
+      const llvm::Instruction *PredTerm  = PredBB->getTerminator();
+      const llvm::Instruction *SuccFirst = Util::firstInst(SuccBB);
+
+      if (curr == PredTerm && succ == SuccFirst) {
+        FeasibilityPackedEF Pack;
+        bool Any = false;
+
+        for (const auto &I : *SuccBB) {
+          auto *PHI = llvm::dyn_cast<llvm::PHINode>(&I);
+          if (!PHI) break;
+          if (auto *InV = PHI->getIncomingValueForBlock(PredBB)) {
+            Any = true;
+            if (!Pack.pushBack(PackedOp::mkPhi(PHI, InV))) {
+              Ret = EF(std::in_place_type<FeasibilityAllTopEF>);
+              RetName = "AllTop (phi pack overflow)";
+              Any = false;
+              break;
+            }
+          }
+        }
+
+        llvm::errs() << "[PHI-PACK] edge " << PredBB->getName() << " -> " << SuccBB->getName()
+                     << " Curr=" << *curr << "\n"
+                     << " Succ=" << *succ << "\n"
+                     << " packed=" << (int)Pack.N << "\n";
+
+        if (Any) {
+          EF PhiEF(std::in_place_type<FeasibilityPackedEF>, Pack);
+          packBoundaryPhisIfAny(Ret, RetName);
+          RetName = "PackedPHI ∘ Base";
+        }
+      }
+    }
+  } else {
+    llvm::errs() << "[PHI-PACK] skip PHIs because edge is AllBottom\n";
   }
 
   // unified logging
@@ -360,6 +538,7 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
 
   return Ret;
 }
+
 
 
 const llvm::BasicBlock* FeasibilityAnalysis::getSuccBB(FeasibilityAnalysis::n_t Succ) {

@@ -465,5 +465,15 @@ void reportMetrics(FeasibilityStateStore *Store) {
     llvm::errs() << "\n";*/
 }
 
+const llvm::Instruction *firstNonPhi(const llvm::BasicBlock *BB) {
+    for (const auto &I : *BB) {
+        if (!llvm::isa<llvm::PHINode>(&I)) return &I;
+    }
+    return nullptr;
+}
+
+const llvm::Instruction *firstInst(const llvm::BasicBlock *BB) {
+    return BB && !BB->empty() ? &BB->front() : nullptr;
+}
 
 } // namespace Feasibility::Util

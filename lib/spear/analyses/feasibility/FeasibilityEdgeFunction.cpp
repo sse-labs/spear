@@ -366,17 +366,43 @@ EF FeasibilityAssumeIcmpEF::compose(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF
         second.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF(self);
         }
-    if (second.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(second)) {
+    if (second.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(second)) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
-    if (second.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(second)) {
+    }
+    if (second.template isa<FeasibilityAllBottomEF>() || llvm::isa<psr::AllBottom<l_t>>(second)) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
+    }
+
+    // Assume ∘ Packed => prepend Assume
+    if (second.template isa<FeasibilityPackedEF>()) {
+        const auto &P2 = second.template cast<FeasibilityPackedEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkAssume(self->Cmp, self->TakeTrueEdge));
+        for (unsigned i = 0; i < P2->N; ++i) {
+            if (!R.pushBack(P2->Ops[i])) return EF(std::in_place_type<FeasibilityAllTopEF>);
         }
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
 
+    // Assume ∘ Phi => Packed[Assume, Phi]
+    if (second.template isa<FeasibilityPhiEF>()) {
+        const auto &P = second.template cast<FeasibilityPhiEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkAssume(self->Cmp, self->TakeTrueEdge));
+        R.pushBack(PackedOp::mkPhi(P->phinode, P->incomingVal));
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
 
-    return second;
+    // Assume ∘ Assume => Packed[Assume, Assume] (keeps both constraints!)
+    if (second.template isa<FeasibilityAssumeIcmpEF>()) {
+        const auto &A = second.template cast<FeasibilityAssumeIcmpEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkAssume(self->Cmp, self->TakeTrueEdge));
+        R.pushBack(PackedOp::mkAssume(A->Cmp, A->TakeTrueEdge));
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
 
@@ -402,33 +428,27 @@ EF FeasibilityAssumeIcmpEF::join(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF> s
 
 l_t FeasibilityPhiEF::computeTarget(const l_t &source) const {
     auto *S = source.getStore();
-    if (source.isBottom()) return source;
-    if (!phinode || !incomingVal) return source;
-
     l_t out = source;
+    if (out.isBottom() || !phinode || !incomingVal) return out;
 
-    // pick bitwidth from PHI type
     unsigned bw = 32;
     if (phinode->getType()->isIntegerTy())
         bw = phinode->getType()->getIntegerBitWidth();
 
+    // Stable across all preds:
     auto PhiSymId = S->getOrCreateSym(phinode, bw, "phi");
+
+    // Resolve incoming under current SSA/mem:
     auto InId = Util::resolveId(incomingVal, out, S);
     if (!InId) return out;
 
-    // Bind: PHI -> phi_sym (stable)
+    // SSA: PHI result always maps to the same symbol
     out.ssaId = S->Ssa.set(out.ssaId, phinode, PhiSymId);
 
-    // Edge constraint: phi_sym == incoming_value
+    // PC: edge-specific link
     const z3::expr &PhiSym = S->exprOf(PhiSymId);
-    const z3::expr &InExpr  = S->exprOf(*InId);
-
-    if (PhiSym.is_bv() && InExpr.is_bv() &&
-        PhiSym.get_sort().bv_size() == InExpr.get_sort().bv_size()) {
-        out = out.assume(PhiSym == InExpr);
-        } else {
-            // (optional) handle non-bv / mismatch if your domain supports it
-        }
+    const z3::expr &InExpr = S->exprOf(*InId);
+    out = out.assume(PhiSym == InExpr);
 
     llvm::errs() << "AssumeIcmp: out pcId=" << out.pcId
                  << " ssaId=" << out.ssaId
@@ -438,21 +458,50 @@ l_t FeasibilityPhiEF::computeTarget(const l_t &source) const {
     return out;
 }
 
-EF FeasibilityPhiEF::compose(psr::EdgeFunctionRef<FeasibilityPhiEF> self, const EF &second) {
+EF FeasibilityPhiEF::compose(psr::EdgeFunctionRef<FeasibilityPhiEF> self,
+                             const EF &second) {
     if (second.template isa<FeasibilityIdentityEF>() ||
         second.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF(self);
         }
-    if (second.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(second)) {
+    if (second.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(second)) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
-    if (second.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(second)) {
+    }
+    if (second.template isa<FeasibilityAllBottomEF>() || llvm::isa<psr::AllBottom<l_t>>(second)) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
-        }
+    }
 
-    return second;
+    // Phi ∘ Packed => prepend Phi
+    if (second.template isa<FeasibilityPackedEF>()) {
+        const auto &P2 = second.template cast<FeasibilityPackedEF>();
+        FeasibilityPackedEF R;
+        // prepend Phi then copy packed
+        R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
+        for (unsigned i = 0; i < P2->N; ++i) {
+            if (!R.pushBack(P2->Ops[i])) return EF(std::in_place_type<FeasibilityAllTopEF>);
+        }
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
+    // Phi ∘ Assume => Packed[Phi, Assume]
+    if (second.template isa<FeasibilityAssumeIcmpEF>()) {
+        const auto &A = second.template cast<FeasibilityAssumeIcmpEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
+        R.pushBack(PackedOp::mkAssume(A->Cmp, A->TakeTrueEdge));
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
+    // Phi ∘ Phi => Packed[Phi, Phi] (rare but legal)
+    if (second.template isa<FeasibilityPhiEF>()) {
+        const auto &P = second.template cast<FeasibilityPhiEF>();
+        FeasibilityPackedEF R;
+        R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
+        R.pushBack(PackedOp::mkPhi(P->phinode, P->incomingVal));
+        return EF(std::in_place_type<FeasibilityPackedEF>, R);
+    }
+
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
 EF FeasibilityPhiEF::join(psr::EdgeFunctionRef<FeasibilityPhiEF> self, const psr::EdgeFunction<l_t> &other) {

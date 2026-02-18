@@ -290,6 +290,9 @@ public:
   static z3::expr factor_or_and_not(const z3::expr &E);
 
   [[nodiscard]] ExprId internExpr(const z3::expr &E);
+
+  id_t pcOr(id_t a, id_t b);
+
   [[nodiscard]] const z3::expr &exprOf(ExprId Id) const;
 
 

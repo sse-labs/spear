@@ -298,7 +298,7 @@ FeasibilityStateStore::join(const FeasibilityElement &AIn,
   }
 
   // Otherwise: real merge of different feasible paths -> forget disjunction
-  R.pcId = 0;
+  R.pcId = pcOr(A.pcId, B.pcId);
   return R;
 }
 
@@ -398,6 +398,29 @@ FeasibilityStateStore::ExprId FeasibilityStateStore::internExpr(const z3::expr &
 
   return newId;
 }
+
+FeasibilityStateStore::id_t FeasibilityStateStore::pcOr(id_t a, id_t b) {
+  if (a == b) return a;
+  if (a == 0) return 0; // true OR X = true
+  if (b == 0) return 0;
+
+  z3::expr e = baseConstraints[a] || baseConstraints[b];
+
+  // optional: simplify + factor
+  e = e.simplify();
+  e = factor_or_and_not(e);
+
+  ExprId eid = internExpr(e);
+  if (auto it = pathConditions.find(eid); it != pathConditions.end())
+    return it->second;
+
+  id_t id = (id_t)baseConstraints.size();
+  baseConstraints.push_back(e);
+  pcSatCache.push_back(-1);
+  pathConditions.emplace(eid, id);
+  return id;
+}
+
 
 const z3::expr &FeasibilityStateStore::exprOf(ExprId Id) const {
   return ExprTable[Id];

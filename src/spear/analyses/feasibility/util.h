@@ -61,6 +61,10 @@ class Util {
     static void reportMetrics(FeasibilityStateStore *Store);
 
     static std::optional<FeasibilityStateStore::ExprId> resolveId(const llvm::Value *V, const FeasibilityElement &St, FeasibilityStateStore *S);
+
+    static const llvm::Instruction *firstNonPhi(const llvm::BasicBlock *BB);
+
+    static const llvm::Instruction *firstInst(const llvm::BasicBlock *BB);
 };
 
 }
