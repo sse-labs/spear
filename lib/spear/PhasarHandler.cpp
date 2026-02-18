@@ -76,8 +76,8 @@ void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
 
   // Report metrics after analysis completes
   if (feasibilityProblem && feasibilityProblem->store) {
-    llvm::errs() << "\n=== Feasibility Analysis Complete ===\n";
-    Feasibility::Util::reportMetrics(feasibilityProblem->store.get());
+    // llvm::errs() << "\n=== Feasibility Analysis Complete ===\n";
+    // Feasibility::Util::reportMetrics(feasibilityProblem->store.get());
   }
 }
 

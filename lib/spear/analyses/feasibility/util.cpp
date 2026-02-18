@@ -373,7 +373,7 @@ const llvm::Instruction* firstRealInst(const llvm::BasicBlock *BB) {
 }
 
 void reportMetrics(FeasibilityStateStore *Store) {
-    if (!Store) {
+    /*if (!Store) {
         llvm::errs() << "Cannot report metrics: null store\n";
         return;
     }
@@ -436,7 +436,7 @@ void reportMetrics(FeasibilityStateStore *Store) {
         llvm::errs() << "  ✓ All checks passed\n";
     }
 
-    llvm::errs() << "\n";
+    llvm::errs() << "\n";*/
 }
 
 

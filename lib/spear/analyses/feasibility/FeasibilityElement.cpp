@@ -41,7 +41,7 @@ void AnalysisMetrics::reset() {
 }
 
 void AnalysisMetrics::report(llvm::raw_ostream &OS) const {
-  OS << "\n========== Feasibility Analysis Metrics ==========\n";
+  /*OS << "\n========== Feasibility Analysis Metrics ==========\n";
 
   OS << "\n--- Timing (microseconds) ---\n";
   OS << "  SAT checks:        " << totalSatCheckTime.load() << " ns";
@@ -91,7 +91,7 @@ void AnalysisMetrics::report(llvm::raw_ostream &OS) const {
        << (100.0 * internHits.load() / internCalls.load()) << "%\n";
   }
 
-  OS << "\n==================================================\n\n";
+  OS << "\n==================================================\n\n";*/
 }
 
 uint64_t FeasibilityStateStore::computeAstDepth(const z3::expr &E) const {
