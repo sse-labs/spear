@@ -175,6 +175,9 @@ FeasibilityAnalysis::FlowFunctionPtrType
 FeasibilityAnalysis::getNormalFlowFunction(n_t Curr, n_t Succ) {
     // Only propagate the Zero fact. This prevents any non-zero facts from
     // reaching "weird" functions/blocks via the ICFG.
+
+
+
     auto Inner = std::make_shared<ZeroOnlyFlow<d_t, container_t>>(this);
     return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "ZeroOnly", this, Curr, Succ);
 }
@@ -202,89 +205,162 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFu
 FeasibilityAnalysis::EdgeFunctionType
 FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t succNode) {
 
-  if (F_DEBUG_ENABLED) {
-    llvm::errs() << F_TAG << " EF normal @";
-    Feasibility::Util::dumpInst(curr);
-    llvm::errs() << "\n" << F_TAG << "   currCond=";
-    Feasibility::Util::dumpFact(this, currNode);
-    llvm::errs() << "\n" << F_TAG << "   succCond=";
-    Feasibility::Util::dumpFact(this, succNode);
-    llvm::errs() << "\n";
+  // Fast gate: only ZERO facts matter
+  if (!isZeroValue(currNode) || !isZeroValue(succNode)) {
+    auto Ret = EF(std::in_place_type<FeasibilityAllBottomEF>);
+    llvm::errs() << F_TAG << " EF normal @"; Feasibility::Util::dumpInst(curr);
+    llvm::errs() << "\n" << F_TAG << "   currCond="; Feasibility::Util::dumpFact(this, currNode);
+    llvm::errs() << "\n" << F_TAG << "   succCond="; Feasibility::Util::dumpFact(this, succNode);
+    llvm::errs() << "\n" << F_TAG << "   retEF=AllBottom (non-zero fact)\n";
+    return Ret;
   }
 
-    if (!isZeroValue(currNode) || !isZeroValue(succNode)) {
-        return EF(std::in_place_type<FeasibilityAllBottomEF>); // or EdgeIdentity, depending on PhASAR expectations
-    }
+  EF Ret(std::in_place_type<FeasibilityIdentityEF>);
+  const char *RetName = "Identity";
 
-  // ---------------------------------------------------------------------------
-  // 1) Handle conditional branches FIRST (must constrain Zero too!)
-  // ---------------------------------------------------------------------------
-    // Fast gate: only ZERO facts matter
-    if (!isZeroValue(currNode) || !isZeroValue(succNode)) {
-        return EF(std::in_place_type<FeasibilityAllBottomEF>);
-    }
+    const llvm::BasicBlock *PredBB = curr ? curr->getParent() : nullptr;
+    const llvm::BasicBlock *SuccBB = succ ? succ->getParent() : nullptr;
 
-    if (auto *Br = llvm::dyn_cast<llvm::BranchInst>(curr)) {
-        if (!Br->isConditional()) return EF(std::in_place_type<FeasibilityIdentityEF>);
+    if (PredBB && SuccBB && PredBB != SuccBB) {
+        // We are traversing the block boundary inside another block...
+        llvm::errs() << F_TAG << " Crossed block boundary!" << "\n";
+        // Iterate over the instructions in the successor block we are trying to reach
+        for (auto &genInst : *SuccBB) {
+            auto *PHI = llvm::dyn_cast<llvm::PHINode>(&genInst);
+            if (!PHI) break;
 
-        const llvm::BasicBlock *TrueBB = Br->getSuccessor(0);
-        const llvm::BasicBlock *FalseBB = Br->getSuccessor(1);
+            if (llvm::Value *InV = PHI->getIncomingValueForBlock(PredBB)) {
+                llvm::errs() << F_TAG << "   SuccBB has PHI: " << *PHI << "\n";
+                llvm::errs() << "\n" << F_TAG << "   PHI incoming val: " << InV << "\n";
 
-        const llvm::Instruction *SuccI = succ; // adjust if n_t is wrapper
-        const llvm::BasicBlock *SuccBB = SuccI ? SuccI->getParent() : nullptr;
-
-        if (SuccBB != TrueBB && SuccBB != FalseBB) {
-            return EF(std::in_place_type<FeasibilityIdentityEF>);
+                return EF(std::in_place_type<FeasibilityPhiEF>, PHI, InV);
+            }
+            // add the phi and the incoming value as an condition to our path
         }
+    }
+
+  // ---------------------------------------------------------------------------
+  // 1) Conditional branches
+  // ---------------------------------------------------------------------------
+  if (auto *Br = llvm::dyn_cast<llvm::BranchInst>(curr)) {
+    if (!Br->isConditional()) {
+      Ret = EF(std::in_place_type<FeasibilityIdentityEF>);
+      RetName = "Identity (uncond br)";
+    } else {
+      const llvm::BasicBlock *TrueBB  = Br->getSuccessor(0);
+      const llvm::BasicBlock *FalseBB = Br->getSuccessor(1);
+
+      const llvm::Instruction *SuccI = succ; // n_t assumed Instruction*
+      const llvm::BasicBlock  *SuccBB = SuccI ? SuccI->getParent() : nullptr;
+
+        const bool Interesting = llvm::isa<llvm::BranchInst>(curr) || !Ret.template isa<FeasibilityIdentityEF>();
+
+      // (optional debug)
+      if (Interesting) {
+          llvm::errs() << F_TAG << "   Br=" << *Br << "\n";
+          llvm::errs() << F_TAG << "   SuccBB=" << (SuccBB ? SuccBB->getName() : "<null>") << "\n";
+          llvm::errs() << F_TAG << "   TrueBB=" << TrueBB->getName()
+                       << " FalseBB=" << FalseBB->getName() << "\n";
+      }
+
+      if (SuccBB != TrueBB && SuccBB != FalseBB) {
+        Ret = EF(std::in_place_type<FeasibilityIdentityEF>);
+        RetName = "Identity (not a succ edge)";
+      } else {
         const bool TakeTrue = (SuccBB == TrueBB);
 
         llvm::Value *CondV = Br->getCondition();
-        while (auto *CastI = llvm::dyn_cast<llvm::CastInst>(CondV)) CondV = CastI->getOperand(0);
+        while (auto *CastI = llvm::dyn_cast<llvm::CastInst>(CondV))
+          CondV = CastI->getOperand(0);
 
+        // br i1 true/false
         if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(CondV)) {
-            const bool CondTrue = !CI->isZero();
-            const bool EdgeTaken = TakeTrue ? CondTrue : !CondTrue;
-            return EdgeTaken ? EF(std::in_place_type<FeasibilityIdentityEF>)
-                             : EF(std::in_place_type<FeasibilityAllBottomEF>);
+          const bool CondTrue = !CI->isZero();
+          const bool EdgeTaken = TakeTrue ? CondTrue : !CondTrue;
+          if (EdgeTaken) {
+            Ret = EF(std::in_place_type<FeasibilityIdentityEF>);
+            RetName = "Identity (const br taken)";
+          } else {
+            Ret = EF(std::in_place_type<FeasibilityAllBottomEF>);
+            RetName = "AllBottom (const br not taken)";
+          }
+        } else if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
+
+          if (auto *C0 = llvm::dyn_cast<llvm::ConstantInt>(ICmp->getOperand(0))) {
+            if (auto *C1 = llvm::dyn_cast<llvm::ConstantInt>(ICmp->getOperand(1))) {
+
+              const bool CmpTrue = llvm::ICmpInst::compare(C0->getValue(), C1->getValue(), ICmp->getPredicate());
+
+              const bool EdgeTaken = TakeTrue ? CmpTrue : !CmpTrue;
+              if (EdgeTaken) {
+                Ret = EF(std::in_place_type<FeasibilityIdentityEF>);
+                RetName = "Identity (folded icmp edge taken)";
+              } else {
+                Ret = EF(std::in_place_type<FeasibilityAllBottomEF>);
+                RetName = "AllBottom (folded icmp edge not taken)";
+              }
+            } else {
+              Ret = EF(std::in_place_type<FeasibilityAssumeIcmpEF>, ICmp, TakeTrue);
+              RetName = TakeTrue ? "AssumeIcmp(true)" : "AssumeIcmp(false)";
+            }
+          } else {
+            Ret = EF(std::in_place_type<FeasibilityAssumeIcmpEF>, ICmp, TakeTrue);
+            RetName = TakeTrue ? "AssumeIcmp(true)" : "AssumeIcmp(false)";
+          }
+
+        } else {
+          Ret = EF(std::in_place_type<FeasibilityIdentityEF>);
+          RetName = "Identity (non-icmp cond)";
         }
-
-        auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(CondV);
-        if (!ICmp) return EF(std::in_place_type<FeasibilityIdentityEF>);
-
-        return EF(std::in_place_type<FeasibilityAssumeIcmpEF>, ICmp, TakeTrue);
+      }
     }
 
-    // 3) STORE / LOAD effects (MUST run for Zero too)
-    if (auto *storeinst = llvm::dyn_cast<llvm::StoreInst>(curr)) {
-        const llvm::Value *valOp = storeinst->getValueOperand();
-        const llvm::Value *ptrOp = storeinst->getPointerOperand()->stripPointerCasts();
+    // unified logging + return for branch case
+    llvm::errs() << F_TAG << " EF normal @"; Feasibility::Util::dumpInst(curr);
+    llvm::errs() << "\n" << F_TAG << "   currCond="; Feasibility::Util::dumpFact(this, currNode);
+    llvm::errs() << "\n" << F_TAG << "   succCond="; Feasibility::Util::dumpFact(this, succNode);
+    llvm::errs() << "\n" << F_TAG << "   retEF=" << RetName << "\n";
+    return Ret;
+  }
 
-        if (auto *constval = llvm::dyn_cast<llvm::ConstantInt>(valOp)) {
-            unsigned bw = constval->getBitWidth();
-            uint64_t bits = constval->getValue().getZExtValue();
-            z3::expr c = store->ctx().bv_val(bits, bw);
-            const auto valueId = store->internExpr(c);
-            return EF(std::in_place_type<FeasibilitySetMemEF>, ptrOp, valueId);
-        }
+  // ---------------------------------------------------------------------------
+  // 2) STORE / LOAD effects
+  // ---------------------------------------------------------------------------
+  if (auto *storeinst = llvm::dyn_cast<llvm::StoreInst>(curr)) {
+    const llvm::Value *valOp = storeinst->getValueOperand();
+    const llvm::Value *ptrOp = storeinst->getPointerOperand()->stripPointerCasts();
 
-        return EF(std::in_place_type<FeasibilityIdentityEF>);
+    if (auto *constval = llvm::dyn_cast<llvm::ConstantInt>(valOp)) {
+      unsigned bw = constval->getBitWidth();
+      uint64_t bits = constval->getValue().getZExtValue();
+      z3::expr c = store->ctx().bv_val(bits, bw);
+      const auto valueId = store->internExpr(c);
+      Ret = EF(std::in_place_type<FeasibilitySetMemEF>, ptrOp, valueId);
+      RetName = "SetMem(const)";
+    } else {
+      Ret = EF(std::in_place_type<FeasibilityIdentityEF>);
+      RetName = "Identity (store non-const)";
     }
+  } else if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(curr)) {
+    const llvm::Value *loc = loadInst->getPointerOperand()->stripPointerCasts();
+    const llvm::Value *key = loadInst;
+    Ret = EF(std::in_place_type<FeasibilitySetSSAEF>, key, loc);
+    RetName = "SetSSA(load)";
+  } else {
+    // keep your fast path
+    Ret = EF(std::in_place_type<FeasibilityIdentityEF>);
+    RetName = "Identity";
+  }
 
-    if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(curr)) {
-        const llvm::Value *loc = loadInst->getPointerOperand()->stripPointerCasts();
-        const llvm::Value *key = loadInst;
-        return EF(std::in_place_type<FeasibilitySetSSAEF>, key, loc);
-    }
+  // unified logging
+  llvm::errs() << F_TAG << " EF normal @"; Feasibility::Util::dumpInst(curr);
+  llvm::errs() << "\n" << F_TAG << "   currCond="; Feasibility::Util::dumpFact(this, currNode);
+  llvm::errs() << "\n" << F_TAG << "   succCond="; Feasibility::Util::dumpFact(this, succNode);
+  llvm::errs() << "\n" << F_TAG << "   retEF=" << RetName << "\n";
 
-    // 4) now you may keep the "zero-involved => ID" fast path,
-    // but it no longer blocks store/load.
-    if (currNode != succNode) {
-        return EF(std::in_place_type<FeasibilityIdentityEF>);
-    }
-
-
-    return EF(std::in_place_type<FeasibilityIdentityEF>);
+  return Ret;
 }
+
 
 const llvm::BasicBlock* FeasibilityAnalysis::getSuccBB(FeasibilityAnalysis::n_t Succ) {
     if (!Succ) {

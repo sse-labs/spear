@@ -283,10 +283,6 @@ public:
 
   [[nodiscard]] bool isSatisfiable(const FeasibilityElement &E);
 
-  [[nodiscard]] bool isValid(const z3::expr &e);
-  [[nodiscard]] bool isUnsat(const z3::expr &e);
-  [[nodiscard]] bool isEquivalent(const z3::expr &A, const z3::expr &B);
-
   static bool isNotOf(const z3::expr &A, const z3::expr &B);
   static bool isAnd2(const z3::expr &E);
   static bool isOr2(const z3::expr &E);

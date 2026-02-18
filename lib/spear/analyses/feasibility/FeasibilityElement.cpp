@@ -166,30 +166,6 @@ bool FeasibilityElement::isSatisfiable() const {
   return store->isSatisfiable(*this);
 }
 
-bool FeasibilityStateStore::isValid(const z3::expr &e) {
-  solver.push();
-  solver.add(!e);
-  const bool ok = solver.check() == z3::unsat;
-  solver.pop();
-  return ok;
-}
-
-bool FeasibilityStateStore::isUnsat(const z3::expr &e) {
-  solver.push();
-  solver.add(e);
-  const bool ok = solver.check() == z3::unsat;
-  solver.pop();
-  return ok;
-}
-
-bool FeasibilityStateStore::isEquivalent(const z3::expr &A, const z3::expr &B) {
-  solver.push();
-  solver.add(A ^ B);
-  const bool ok = solver.check() == z3::unsat;
-  solver.pop();
-  return ok;
-}
-
 FeasibilityStateStore::FeasibilityStateStore() : solver(context) {
   baseConstraints.push_back(context.bool_val(true)); // pcId 0
   pcSatCache.push_back(-1);                          // cache for pcId 0
@@ -327,8 +303,6 @@ FeasibilityStateStore::join(const FeasibilityElement &AIn,
 }
 
 bool FeasibilityStateStore::isSatisfiable(const FeasibilityElement &E) {
-  auto start = std::chrono::high_resolution_clock::now();
-
   if (E.isBottom()) {
     return false;
   }
@@ -341,8 +315,14 @@ bool FeasibilityStateStore::isSatisfiable(const FeasibilityElement &E) {
     return c == 1;
   }
 
+  auto eq = baseConstraints[E.pcId];
+
+  llvm::errs() << "Checking satisfiability of PC " << E.pcId
+               << " with constraint: " << eq.to_string() << "\n";
+
+
   solver.push();
-  solver.add(baseConstraints[E.pcId]);
+  solver.add(eq);
   const bool sat = solver.check() == z3::sat;
   solver.pop();
 

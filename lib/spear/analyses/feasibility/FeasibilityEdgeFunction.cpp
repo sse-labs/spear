@@ -267,11 +267,21 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
         return source;
     }
 
+    llvm::errs() << "FeasibilityAssumeIcmpEF: computing target for ICMP " << *Cmp
+                 << " with source pcId=" << source.pcId
+                 << " ssaId=" << source.ssaId
+                 << " memId=" << source.memId
+                 << "\n";
+
     // Resolve operands of ICMP to their symbolic expression ids while source is valid
     auto Lid = Feasibility::Util::resolveId(Cmp->getOperand(0), source, S);
     auto Rid = Feasibility::Util::resolveId(Cmp->getOperand(1), source, S);
 
     if (!Lid || !Rid) {
+        llvm::errs() << "AssumeIcmp, computeTarget, lookup failed:"
+        << "\n  Operand0: " << *Cmp->getOperand(0) << " -> " << (Lid ? std::to_string(*Lid) : "<none>") << "\n"
+        << "  Operand1: " << *Cmp->getOperand(1) << " -> " << (Rid ? std::to_string(*Rid) : "<none>") << "\n";
+
         return source;
     }
 
@@ -342,6 +352,9 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
     S->CmpCondCache.emplace(ck, cid);
     l_t out = source.assume(S->exprOf(cid));
 
+    auto resultingPC = S->getPathConstraint(out.pcId);
+    llvm::errs() << "Resulting pc from assume: " << resultingPC.to_string() << "\n";
+
     return out;
 }
 
@@ -387,6 +400,79 @@ EF FeasibilityAssumeIcmpEF::join(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF> s
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
+l_t FeasibilityPhiEF::computeTarget(const l_t &source) const {
+    auto *S = source.getStore();
+    if (source.isBottom()) return source;
+    if (!phinode || !incomingVal) return source;
+
+    l_t out = source;
+
+    // pick bitwidth from PHI type
+    unsigned bw = 32;
+    if (phinode->getType()->isIntegerTy())
+        bw = phinode->getType()->getIntegerBitWidth();
+
+    auto PhiSymId = S->getOrCreateSym(phinode, bw, "phi");
+    auto InId = Util::resolveId(incomingVal, out, S);
+    if (!InId) return out;
+
+    // Bind: PHI -> phi_sym (stable)
+    out.ssaId = S->Ssa.set(out.ssaId, phinode, PhiSymId);
+
+    // Edge constraint: phi_sym == incoming_value
+    const z3::expr &PhiSym = S->exprOf(PhiSymId);
+    const z3::expr &InExpr  = S->exprOf(*InId);
+
+    if (PhiSym.is_bv() && InExpr.is_bv() &&
+        PhiSym.get_sort().bv_size() == InExpr.get_sort().bv_size()) {
+        out = out.assume(PhiSym == InExpr);
+        } else {
+            // (optional) handle non-bv / mismatch if your domain supports it
+        }
+
+    llvm::errs() << "AssumeIcmp: out pcId=" << out.pcId
+                 << " ssaId=" << out.ssaId
+                 << " memId=" << out.memId << "\n";
+    llvm::errs() << "AssumeIcmp: pc = " << S->getPathConstraint(out.pcId).to_string() << "\n";
+
+    return out;
+}
+
+EF FeasibilityPhiEF::compose(psr::EdgeFunctionRef<FeasibilityPhiEF> self, const EF &second) {
+    if (second.template isa<FeasibilityIdentityEF>() ||
+        second.template isa<psr::EdgeIdentity<l_t>>()) {
+        return EF(self);
+        }
+    if (second.template isa<FeasibilityAllTopEF>() ||
+        llvm::isa<psr::AllTop<l_t>>(second)) {
+        return EF(std::in_place_type<FeasibilityAllTopEF>);
+        }
+    if (second.template isa<FeasibilityAllBottomEF>() ||
+        llvm::isa<psr::AllBottom<l_t>>(second)) {
+        return EF(std::in_place_type<FeasibilityAllBottomEF>);
+        }
+
+    return second;
+}
+
+EF FeasibilityPhiEF::join(psr::EdgeFunctionRef<FeasibilityPhiEF> self, const psr::EdgeFunction<l_t> &other) {
+    if (other.template isa<FeasibilityAllBottomEF>() ||
+        llvm::isa<psr::AllBottom<l_t>>(other) ||
+        other.template isa<FeasibilityIdentityEF>() ||
+        other.template isa<psr::EdgeIdentity<l_t>>()) {
+        return EF(self);
+        }
+    if (other.template isa<FeasibilityAllTopEF>() ||
+        llvm::isa<psr::AllTop<l_t>>(other)) {
+        return EF(std::in_place_type<FeasibilityAllTopEF>);
+        }
+    if (other.template isa<FeasibilityPhiEF>()) {
+        const auto &O = other.template cast<FeasibilityPhiEF>();
+        if (*self == *O) return EF(self);
+    }
+
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+}
 
 
 EF edgeIdentity() { return EF(std::in_place_type<FeasibilityIdentityEF>); }

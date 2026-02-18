@@ -183,9 +183,7 @@ std::optional<z3::expr> createBitVal(const llvm::Value *V, z3::context *context)
     return std::nullopt;
 }
 
-std::optional<FeasibilityStateStore::ExprId> resolveId(const llvm::Value *V,
-                             const FeasibilityElement &St,
-                             FeasibilityStateStore *S) {
+std::optional<FeasibilityStateStore::ExprId> resolveId(const llvm::Value *V, const FeasibilityElement &St, FeasibilityStateStore *S) {
     if (!S || !V) return std::nullopt;
 
     S->resolveCalls++;
@@ -238,6 +236,34 @@ std::optional<FeasibilityStateStore::ExprId> resolveId(const llvm::Value *V,
 
         S->ResolveCache.emplace(K, id);
         return id;
+    }
+
+    if (auto *phi = llvm::dyn_cast<llvm::PHINode>(V)) {
+        // If we get here, SSA lookup didn't find it.
+        // Resolve PHI as a stable symbol; edge constraints are added elsewhere.
+
+        unsigned bw = 32;
+        if (phi->getType()->isIntegerTy())
+            bw = phi->getType()->getIntegerBitWidth();
+
+        auto PhiSymId = S->getOrCreateSym(phi, bw, "phi");
+
+        // Memoize into SSA env so next time case (2) hits quickly
+        FeasibilityElement tmp = St;
+        tmp.ssaId = S->Ssa.set(tmp.ssaId, phi, PhiSymId);
+
+        // IMPORTANT: your ResolveKey currently uses St.ssaId/memId.
+        // You should cache with the *original* key K (based on St),
+        // because resolveId is a pure query. The SSA memoization above
+        // only helps if the caller keeps tmp. If you can't thread tmp out,
+        // skip the tmp update and rely on ResolveCache.
+        //
+        // If you *can* change the API: return (id, maybeUpdatedState).
+        //
+        // For now: just cache and return.
+
+        S->ResolveCache.emplace(K, PhiSymId);
+        return PhiSymId;
     }
 
     return std::nullopt;

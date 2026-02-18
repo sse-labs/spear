@@ -151,6 +151,29 @@ struct FeasibilityAssumeIcmpEF {
     bool isConstant() const noexcept { return false; }
 };
 
+struct FeasibilityPhiEF {
+    using l_t = Feasibility::l_t;
+
+    const llvm::PHINode *phinode = nullptr;
+    const llvm::Value *incomingVal = nullptr;
+
+    FeasibilityPhiEF(const llvm::PHINode *phinode, const llvm::Value *incomingVal) : phinode(phinode), incomingVal(incomingVal) {}
+
+    [[nodiscard]] l_t computeTarget(const l_t &source) const;
+
+    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityPhiEF>,
+                                    const EF &secondFunction);
+
+    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityPhiEF> thisFunc,
+                                 const psr::EdgeFunction<l_t> &otherFunc);
+
+    bool operator==(const FeasibilityPhiEF &O) const {
+        return phinode == O.phinode && incomingVal == O.incomingVal;
+    }
+
+    bool isConstant() const noexcept { return false; }
+};
+
 EF edgeIdentity();
 
 EF edgeTop();
