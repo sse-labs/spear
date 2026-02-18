@@ -57,14 +57,6 @@ l_t FeasibilityAllTopEF::computeTarget(const l_t &source) const {
 
 EF FeasibilityAllTopEF::compose(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFunc, const EF &second) {
 
-    if (F_DEBUG_ENABLED) {
-        llvm::errs() << "[FDBG] AllTop::compose second=";
-        Feasibility::Util::dumpEF(second);
-        llvm::errs() << " kind=";
-        Feasibility::Util::dumpEFKind(second);
-        llvm::errs() << "\n";
-    }
-
     if (second.template isa<FeasibilityIdentityEF>() || second.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
@@ -118,7 +110,7 @@ bool FeasibilityAllBottomEF::isConstant() const noexcept {
 // ========================= FeasibilitySetSSAEF =================================
 
 l_t FeasibilitySetSSAEF::computeTarget(const l_t &source) const {
-    if (source.isBottom() || source.isIdeAbsorbing()) {
+    if (source.isBottom()) {
         return source;
     }
 
@@ -149,15 +141,17 @@ EF FeasibilitySetSSAEF::compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFu
     if (secondFunction.template isa<FeasibilityIdentityEF>() ||
         secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF{thisFunc};
-        }
+    }
+
     if (secondFunction.template isa<FeasibilityAllTopEF>() ||
         llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
+    }
+
     if (secondFunction.template isa<FeasibilityAllBottomEF>() ||
         llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
-        }
+    }
 
     if (secondFunction.template isa<FeasibilitySetSSAEF>()) {
         const auto &other = secondFunction.template cast<FeasibilitySetSSAEF>();
@@ -167,29 +161,29 @@ EF FeasibilitySetSSAEF::compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFu
         }
     }
 
-    // No SeqEF: drop "thisFunc" and keep the later effect (sound over-approx)
     return secondFunction;
 }
 
 
-EF FeasibilitySetSSAEF::join(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFunc,
-                             const psr::EdgeFunction<l_t> &other) {
+EF FeasibilitySetSSAEF::join(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFunc, const psr::EdgeFunction<l_t> &other) {
     if (other.template isa<FeasibilityAllBottomEF>() ||
         llvm::isa<psr::AllBottom<l_t>>(other) ||
         other.template isa<FeasibilityIdentityEF>() ||
         other.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF(thisFunc);
-        }
-    if (other.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(other)) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
-    if (other.template isa<FeasibilitySetSSAEF>()) {
-        const auto &o = other.template cast<FeasibilitySetSSAEF>();
-        if (*thisFunc == *o) return EF{thisFunc};
     }
 
-    // No JoinEF: widen
+    if (other.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(other)) {
+        return EF(std::in_place_type<FeasibilityAllTopEF>);
+    }
+
+    if (other.template isa<FeasibilitySetSSAEF>()) {
+        const auto &o = other.template cast<FeasibilitySetSSAEF>();
+        if (*thisFunc == *o) {
+            return EF{thisFunc};
+        }
+    }
+
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
@@ -200,7 +194,7 @@ bool FeasibilitySetSSAEF::isConstant() const noexcept {
 // ========================= FeasibilitySetMemEF =================================
 
 l_t FeasibilitySetMemEF::computeTarget(const l_t &source) const {
-    if (source.isBottom() || source.isIdeAbsorbing()) {
+    if (source.isBottom()) {
         return source;
     }
     l_t out = source;
@@ -213,28 +207,25 @@ l_t FeasibilitySetMemEF::computeTarget(const l_t &source) const {
 
 EF FeasibilitySetMemEF::compose(psr::EdgeFunctionRef<FeasibilitySetMemEF> self,
                                 const EF &second) {
-    if (second.template isa<FeasibilityIdentityEF>() ||
-        second.template isa<psr::EdgeIdentity<l_t>>()) {
+    if (second.template isa<FeasibilityIdentityEF>() || second.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF(self);
-        }
-    if (second.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(second)) {
+    }
+
+    if (second.template isa<FeasibilityAllBottomEF>() || llvm::isa<psr::AllBottom<l_t>>(second)) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
-        }
-    if (second.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(second)) {
+    }
+
+    if (second.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(second)) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
+    }
 
     if (second.template isa<FeasibilitySetMemEF>()) {
         const auto &other = second.template cast<FeasibilitySetMemEF>();
         if (self->Loc == other->Loc) {
-            // later store wins
             return EF{second};
         }
     }
 
-    // No SeqEF: drop earlier store and keep later effect
     return second;
 }
 
@@ -245,17 +236,17 @@ EF FeasibilitySetMemEF::join(psr::EdgeFunctionRef<FeasibilitySetMemEF> thisFunc,
         other.template isa<FeasibilityIdentityEF>() ||
         other.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF(thisFunc);
-        }
-    if (other.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(other)) {
+    }
+
+    if (other.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(other)) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
+    }
+
     if (other.template isa<FeasibilitySetMemEF>()) {
         const auto &o = other.template cast<FeasibilitySetMemEF>();
         if (*thisFunc == *o) return EF{thisFunc};
     }
 
-    // No JoinEF: widen
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
@@ -266,72 +257,27 @@ bool FeasibilitySetMemEF::isConstant() const noexcept {
 
 l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
     auto *S = source.getStore();
-    if (S) {
-        S->metrics.edgeFunctionCount++;
-    }
-
-    // ---- Sampling setup ----
-    // Sample every 1024th execution (tune with mask: 0x3FF -> 1024, 0xFF -> 256, etc.)
-    constexpr uint64_t SampleMask = 0x3FF;          // 1024-1
-    constexpr uint64_t SampleRate = SampleMask + 1; // 1024
-
-    const uint64_t cnt = S ? S->metrics.edgeFunctionCount.load(std::memory_order_relaxed) : 0;
-    const bool doSample = S && ((cnt & SampleMask) == 0);
-
-    std::chrono::high_resolution_clock::time_point start;
-    if (doSample) {
-        start = std::chrono::high_resolution_clock::now();
-    }
 
     // ⊥ = killed/unreachable: must stay ⊥
     if (source.isBottom()) {
-        if (doSample) {
-            auto end = std::chrono::high_resolution_clock::now();
-            auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-            S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-        }
         return source;
-    }
-
-    // If you still have IdeAbsorbing around, treat it like ⊥ (old behavior).
-    if (source.isIdeAbsorbing()) {
-        if (doSample) {
-            auto end = std::chrono::high_resolution_clock::now();
-            auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-            S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-        }
-        return l_t::bottom(source.getStore());
     }
 
     if (!Cmp || !S) {
-        if (doSample) {
-            auto end = std::chrono::high_resolution_clock::now();
-            auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-            S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-        }
         return source;
     }
 
-    // Resolve operands in the state of *source*
+    // Resolve operands of ICMP to their symbolic expression ids while source is valid
     auto Lid = Feasibility::Util::resolveId(Cmp->getOperand(0), source, S);
     auto Rid = Feasibility::Util::resolveId(Cmp->getOperand(1), source, S);
+
     if (!Lid || !Rid) {
-        if (doSample) {
-            auto end = std::chrono::high_resolution_clock::now();
-            auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-            S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-        }
         return source;
     }
 
+    // ICMP condition is a boolean condition on the path, so we can cache it for future reuse
     FeasibilityStateStore::CmpCondKey ck{source.ssaId, source.memId, Cmp, TakeTrueEdge};
     if (auto it = S->CmpCondCache.find(ck); it != S->CmpCondCache.end()) {
-        if (doSample) {
-            auto end = std::chrono::high_resolution_clock::now();
-            auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-            S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-        }
-
         // already have boolean condition expr id
         const z3::expr &Cond = S->exprOf(it->second);
 
@@ -341,35 +287,21 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
         return out;
     }
 
+    // Query the actual expressions from the calculated expression ids valid during source
     const z3::expr &L = S->exprOf(*Lid);
     const z3::expr &R = S->exprOf(*Rid);
 
     // Type sanity
     if (!L.is_bv() || !R.is_bv() || L.get_sort().bv_size() != R.get_sort().bv_size()) {
-        if (doSample) {
-            auto end = std::chrono::high_resolution_clock::now();
-            auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-            S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-        }
         return source;
     }
 
     // cheap syntactic fast paths
     if (*Lid == *Rid) {
         if (Cmp->getPredicate() == llvm::CmpInst::ICMP_EQ) {
-            if (doSample) {
-                auto end = std::chrono::high_resolution_clock::now();
-                auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-                S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-            }
             return source;
         }
         if (Cmp->getPredicate() == llvm::CmpInst::ICMP_NE) {
-            if (doSample) {
-                auto end = std::chrono::high_resolution_clock::now();
-                auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-                S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-            }
             return l_t::bottom(S);
         }
     }
@@ -390,11 +322,6 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
         case llvm::CmpInst::ICMP_SGE: Cond = z3::sge(L, R); break;
 
         default: {
-            if (doSample) {
-                auto end = std::chrono::high_resolution_clock::now();
-                auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-                S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-            }
             return source;
         }
     }
@@ -404,32 +331,16 @@ l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
     }
 
     if (Cond.is_false()) {
-        if (doSample) {
-            auto end = std::chrono::high_resolution_clock::now();
-            auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-            S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-        }
         return l_t::bottom(S);
     }
 
     if (Cond.is_true()) {
-        if (doSample) {
-            auto end = std::chrono::high_resolution_clock::now();
-            auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-            S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-        }
         return source;
     }
 
     auto cid = S->internExpr(Cond);
     S->CmpCondCache.emplace(ck, cid);
     l_t out = source.assume(S->exprOf(cid));
-
-    if (doSample) {
-        auto end = std::chrono::high_resolution_clock::now();
-        auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-        S->metrics.totalEdgeFunctionTime += static_cast<uint64_t>(dur) * SampleRate;
-    }
 
     return out;
 }
@@ -451,7 +362,7 @@ EF FeasibilityAssumeIcmpEF::compose(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
         }
 
-    // No SeqEF: drop the assume (sound, but loses pruning across composed effects)
+
     return second;
 }
 
@@ -473,7 +384,6 @@ EF FeasibilityAssumeIcmpEF::join(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF> s
         if (*self == *O) return EF(self);
     }
 
-    // No JoinEF: widen
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 

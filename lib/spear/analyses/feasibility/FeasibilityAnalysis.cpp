@@ -99,9 +99,6 @@ FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, con
     store = std::make_unique<FeasibilityStateStore>();
     this->ICFG = ICFG;
 
-    // Reset metrics at start
-    store->metrics.reset();
-
     llvm::errs() << "[METRICS] FeasibilityAnalysis initialized - metrics tracking enabled\n";
 }
 
@@ -164,11 +161,6 @@ FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
         return Lhs;
     }
 
-    // reached-but-infeasible should dominate
-    if (Lhs.isIdeAbsorbing() || Rhs.isIdeAbsorbing()) {
-        return l_t::ideAbsorbing(this->store.get());
-    }
-
     if (Lhs.isIdeNeutral()) {
         return Rhs;
     }
@@ -208,27 +200,7 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFu
 }
 
 FeasibilityAnalysis::EdgeFunctionType
-FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
-                                           n_t succ, d_t succNode) {
-  // DON'T increment edgeFunctionCount here - count executions not creations
-
-  // Periodic metrics reporting (every 10000 edge functions)
-  static std::atomic<uint64_t> efCounter{0};
-  if (++efCounter % 10000 == 0) {
-    llvm::errs() << "\n[METRICS] Progress at " << efCounter.load() << " EF creations:\n";
-    llvm::errs() << "  PC pool:      " << store->baseConstraints.size()
-                 << " (created: " << store->metrics.totalPcCreated.load() << ")\n";
-    llvm::errs() << "  Max PC depth: " << store->metrics.maxPcAstDepth.load() << "\n";
-    llvm::errs() << "  Max PC nodes: " << store->metrics.maxPcAstNodes.load() << "\n";
-    llvm::errs() << "  SAT:          " << store->metrics.satCheckCount.load()
-                 << " (hits: " << store->metrics.satCacheHits.load()
-                 << ", misses: " << store->metrics.satCacheMisses.load() << ")\n";
-    llvm::errs() << "  PC clears:    " << store->metrics.pcClearCalls.load() << "\n";
-    llvm::errs() << "  Expr table:   " << store->ExprTable.size() << "\n";
-    llvm::errs() << "  Intern:       calls=" << store->metrics.internCalls.load()
-                 << " inserted=" << store->metrics.internInserted.load()
-                 << " hits=" << store->metrics.internHits.load() << "\n\n";
-  }
+FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t succNode) {
 
   if (F_DEBUG_ENABLED) {
     llvm::errs() << F_TAG << " EF normal @";

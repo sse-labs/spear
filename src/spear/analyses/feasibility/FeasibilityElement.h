@@ -32,41 +32,6 @@ class raw_ostream;
 
 namespace Feasibility {
 
-struct AnalysisMetrics {
-  // Timing metrics (microseconds)
-  std::atomic<uint64_t> totalSatCheckTime{0};
-  std::atomic<uint64_t> totalJoinTime{0};
-  std::atomic<uint64_t> totalAssumeTime{0};
-  std::atomic<uint64_t> totalEdgeFunctionTime{0};
-
-  // Counters
-  std::atomic<uint64_t> satCheckCount{0};
-  std::atomic<uint64_t> satCacheHits{0};
-  std::atomic<uint64_t> satCacheMisses{0};
-  std::atomic<uint64_t> joinCount{0};
-  std::atomic<uint64_t> assumeCount{0};
-  std::atomic<uint64_t> edgeFunctionCount{0};
-
-  // Path constraint metrics
-  std::atomic<uint64_t> maxPcAstDepth{0};
-  std::atomic<uint64_t> maxPcAstNodes{0};
-  std::atomic<uint64_t> totalPcCreated{0};
-  std::atomic<uint64_t> maxPcPoolSize{0};
-  std::atomic<uint64_t> pcClearCalls{0};
-
-  // Store metrics
-  std::atomic<uint64_t> maxSsaEnvSize{0};
-  std::atomic<uint64_t> maxMemEnvSize{0};
-
-  // Interning debug counters
-  std::atomic<uint64_t> internCalls{0};
-  std::atomic<uint64_t> internInserted{0};
-  std::atomic<uint64_t> internHits{0};
-
-  void reset();
-  void report(llvm::raw_ostream &OS) const;
-};
-
 template <typename KeyT, typename ValueT, unsigned PoolReserve = 256>
 class EnvPool final {
  public:
@@ -242,7 +207,6 @@ class FeasibilityStateStore;
 
 struct FeasibilityElement final {
   enum class Kind : std::uint8_t {
-    IdeAbsorbing = 0,
     IdeNeutral   = 1,
     Bottom       = 2,
     Normal       = 3,
@@ -268,7 +232,6 @@ struct FeasibilityElement final {
   [[nodiscard]] Kind getKind() const noexcept;
 
   [[nodiscard]] bool isIdeNeutral() const noexcept;
-  [[nodiscard]] bool isIdeAbsorbing() const noexcept;
 
   [[nodiscard]] bool isTop() const noexcept;
   [[nodiscard]] bool isBottom() const noexcept;
@@ -340,8 +303,6 @@ public:
 
   EnvPool<EnvKey, ExprId> Mem;
   EnvPool<EnvKey, ExprId> Ssa;
-
-  AnalysisMetrics metrics;
 
   [[nodiscard]] size_t getPathConstraintCount() const { return baseConstraints.size(); }
   [[nodiscard]] uint64_t computeAstDepth(const z3::expr &E) const;

@@ -16,7 +16,6 @@
 #include <utility>
 #include <string>
 #include <memory>
-#include <catch2/internal/catch_unique_ptr.hpp>
 
 #include "../../src/spear/analyses/loopbound/LoopBound.h"
 #include "../../src/spear/analyses/loopbound/util.h"
@@ -39,6 +38,8 @@ PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   HA = std::make_shared<psr::HelperAnalyses>(&M, Entrypoints);
   LoopBoundResult.reset();
   FeasibilityResult.reset();
+
+  llvm::errs() << M << "\n";
 
   auto &FAM = AM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*mod).getManager();
 
@@ -245,7 +246,7 @@ bool PhasarHandlerPass::isNodeFeasibleForZero(const llvm::Instruction *I,
     return false;
 
   const auto &L = It->second;
-  return !L.isBottom() && !L.isIdeAbsorbing() && L.isSatisfiable();
+  return !L.isBottom() && L.isSatisfiable();
 }
 
 std::optional<Feasibility::FeasibilityAnalysis::l_t>
@@ -290,7 +291,7 @@ bool PhasarHandlerPass::isEdgeFeasible(const llvm::BasicBlock *PredBB,
   const auto &Lpred = *LpredOpt;
 
   // If predecessor is already infeasible, edge can't be feasible
-  if (Lpred.isBottom() || Lpred.isIdeAbsorbing() || !Lpred.isSatisfiable())
+  if (Lpred.isBottom() || !Lpred.isSatisfiable())
     return false;
 
   // 2) Find the exact successor node used by the ICFG for this edge
@@ -310,5 +311,5 @@ bool PhasarHandlerPass::isEdgeFeasible(const llvm::BasicBlock *PredBB,
 
   auto Lsucc = EF.computeTarget(Lpred);
 
-  return !Lsucc.isBottom() && !Lsucc.isIdeAbsorbing() && Lsucc.isSatisfiable();
+  return !Lsucc.isBottom() && Lsucc.isSatisfiable();
 }
