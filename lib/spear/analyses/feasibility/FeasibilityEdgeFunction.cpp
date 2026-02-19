@@ -9,617 +9,277 @@
 
 namespace Feasibility {
 
+/**
+ * Calculate what will happen, if we currently have the element source (the incoming lattice value, here the current path condition)
+ * and apply the edge function (add the constraint represented by ConstraintInst) to it.
+ */
+l_t FeasibilityAddConstrainEF::computeTarget(const l_t &source) const {
+    auto *manager = this->manager;
 
-
-// ========================= FeasibilityIdentityEF =================================
-
-l_t FeasibilityIdentityEF::computeTarget(const l_t &source) const {
-    return source;
-}
-
-EF FeasibilityIdentityEF::compose(psr::EdgeFunctionRef<FeasibilityIdentityEF>,
-                                  const EF &secondFunction) {
-    return secondFunction;
-}
-
-EF FeasibilityIdentityEF::join(psr::EdgeFunctionRef<FeasibilityIdentityEF> thisFunc,
-                               const psr::EdgeFunction<l_t> &otherFunc) {
-    if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(otherFunc)) {
-        return EF(thisFunc);
-        }
-    if (otherFunc.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(otherFunc)) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
-    if (otherFunc.template isa<FeasibilityIdentityEF>() ||
-        otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(thisFunc);
-        }
-
-    // No JoinEF: widen
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-}
-
-bool FeasibilityIdentityEF::isConstant() const noexcept {
-    return false;
-}
-
-
-// ========================= FeasibilityAllTopEF =================================
-
-l_t FeasibilityAllTopEF::computeTarget(const l_t &source) const {
     if (source.isBottom()) {
-        return source;
+        return source; // Bottom is absorbing a o F = F
     }
-    return l_t::top(source.getStore());
+
+    // Prepare the constraint to add, depending on whether we are in the true or false branch of the constraint instruction.
+    auto incomingConstrain = source.formularID;
+    auto existingConstrain = this->pathConditionId;
+
+    // Construct the new formula by adding the constraint represented by ConstraintInst to the source formula.
+    auto newFormulaId = manager->mkAnd(incomingConstrain, existingConstrain);
+
+    //llvm::errs() << "Computing target for FeasibilityAddConstrainEF: \n"
+    //                "Adding constraint with ID " << incomingConstrain << " to source formula with ID " << existingConstrain << ". New formula ID is " << newFormulaId << "\n";
+
+    if (!manager->isSat(newFormulaId)) {
+        auto out = source;
+        out.kind = l_t::Kind::Bottom;
+        out.formularID = source.bottomId;
+        return out;
+    }
+
+    // Copy the incoming element and update it with the new formula ID. This is the result of applying the edge function to the source element.
+    auto out = source;
+    out.formularID = newFormulaId;
+
+    if (out.kind == l_t::Kind::Top) {
+        out.kind = l_t::Kind::Normal;
+    }
+
+    return out;
 }
 
-EF FeasibilityAllTopEF::compose(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFunc, const EF &second) {
+EF FeasibilityAddConstrainEF::compose(psr::EdgeFunctionRef<FeasibilityAddConstrainEF> thisFunc, const EF &otherFunc) {
+    // Check the types of the edge functions and act accordingly
 
-    if (second.template isa<FeasibilityIdentityEF>() || second.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
+    // Edge identy just returns this function as it does not change the input and thus does not affect the constraints
+    // that we have already added to the path condition.
+    if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
+        return EF(thisFunc);
     }
 
-    // Top maps any non-bottom to ⊤, preserves ⊥.
-    if (second.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(second)) {
+    // Top edge function acts as neutral element for composition, as it does not change the input and thus does not
+    // affect the constraints that we have already added to the path condition.
+    if (otherFunc.template isa<FeasibilityAllTopEF>()) {
+        return EF(thisFunc);
+    }
+
+    // Bottom edge function acts as absorbing element for composition,
+    // as it maps any input to bottom and thus makes the path infeasible,
+    // regardless of the constraints that we have already added to the path condition.
+    if (otherFunc.template isa<FeasibilityAllBottomEF>()) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
     }
 
-    if (second.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(second)) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
+    if (auto *otherC = otherFunc.template dyn_cast<FeasibilityAddConstrainEF>()) {
+        // Take both icmps, construct a new formular, create a new edge function with the new constraint and return it.
+        // This allows us to combine the constraints of both edge functions into a single edge function,
+        // Most importantly here: Simplify the formular to mitigate double exprexissons
+
+        // Query the path condition ids of each edge function
+        auto thisConstrainId = thisFunc->pathConditionId;
+        auto otherConstrainId = otherC->pathConditionId;
+
+        // query the actual formulas from the manager using the ids
+        auto thisFormula = thisFunc->manager->getExpression(thisConstrainId);
+        auto otherFormula = otherC->manager->getExpression(otherConstrainId);
+
+        //llvm::errs() << "Calculating composition of two FeasibilityAddConstrainEFs: " << thisFormula.to_string() << " && " << otherFormula.to_string() << "\n";
+
+        // Construct the new formula by taking the conjunction of the two formulas.
+        // This is the result of applying both edge functions to the input element.
+        // h(x) = f(g(x)) => h(x) = f(x AND otherFormula) => h(x) = x AND thisFormula AND otherFormula
+        auto newFormulaId = thisFunc->manager->mkAnd(thisConstrainId, otherConstrainId);
+
+        //llvm::errs() << "Calculating compose of two FeasibilityAddConstrainEFs: " << thisFormula.to_string() << " || " << otherFormula.to_string() << "\n";
+        //llvm::errs() << "\t" << "Resulting formula: " << thisFunc->manager->getExpression(newFormulaId).to_string() << "\n";
+
+        if (!thisFunc->manager->isSat(newFormulaId)) {
+            //llvm::errs() << "\t" << "Resulting formula is UNSAT\n";
+            return EF(std::in_place_type<FeasibilityAllBottomEF>);
+        }
+
+        // Return a new edge function that adds the new constraint to the path condition.
+        // This is the result of composing the two edge functions.
+        return EF(std::in_place_type<FeasibilityAddConstrainEF>, thisFunc->manager, newFormulaId);
     }
 
-
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-}
-
-EF FeasibilityAllTopEF::join(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFunc, const psr::EdgeFunction<l_t> &) {
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-}
-
-bool FeasibilityAllTopEF::isConstant() const noexcept {
-    return false;
-}
-
-
-// ========================= FeasibilityAllBottomEF =================================
-
-l_t FeasibilityAllBottomEF::computeTarget(const l_t &source) const {
-    if (source.isBottom()) {
-        return source;
-    }
-    return l_t::bottom(source.getStore());
-}
-
-EF FeasibilityAllBottomEF::compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF> thisFunc, const EF &secondFunction) {
-    return EF(std::in_place_type<FeasibilityAllBottomEF>);
-}
-
-EF FeasibilityAllBottomEF::join(psr::EdgeFunctionRef<FeasibilityAllBottomEF>, const psr::EdgeFunction<l_t> &otherFunc) {
+    llvm::errs() << "ALARM in FeasibilityAddConstrainEF::compose: We are trying to compose an edge function of type FeasibilityAddConstrainEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
+                    "Please check the implementation of the analysis and make sure that it only produces edge functions of the supported types.\n";
     return otherFunc;
 }
 
-bool FeasibilityAllBottomEF::isConstant() const noexcept {
-    return true;
-}
-
-
-// ========================= FeasibilitySetSSAEF =================================
-
-l_t FeasibilitySetSSAEF::computeTarget(const l_t &source) const {
-    if (source.isBottom()) {
-        return source;
+EF FeasibilityAddConstrainEF::join(psr::EdgeFunctionRef<FeasibilityAddConstrainEF> thisFunc, const psr::EdgeFunction<l_t> &otherFunc) {
+    // Edge identy just returns this function as it does not change the input and thus does not affect the constraints
+    // that we have already added to the path condition.
+    if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
+        return EF(thisFunc);
     }
 
-    auto *S = source.getStore();
-    l_t out = source;
-
-
-    // 1) try read memory
-    if (auto mv = S->Mem.getValue(out.memId, Loc)) {
-        out.ssaId = S->Ssa.set(out.ssaId, Key, *mv);
-        return out;
+    // Top edge function acts as absorbing element for joining.
+    // As we are calculaling A v T = T
+    if (otherFunc.template isa<FeasibilityAllTopEF>()) {
+        return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
 
-    unsigned bw = 32;
-    z3::expr sym = Feasibility::Util::mkSymBV(Loc, bw, "mem", &S->ctx());
-    auto eid = S->internExpr(sym);
-
-    out.memId = S->Mem.set(out.memId, Loc, eid);
-    out.ssaId = S->Ssa.set(out.ssaId, Key, eid);
-    return out;
-}
-
-EF FeasibilitySetSSAEF::compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFunc,
-                                const EF &secondFunction) {
-    if (secondFunction.template isa<FeasibilityIdentityEF>() ||
-        secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+    // Bottom edge function acts as neutral element for joining,
+    // as it maps any input to itself A V ⊥ = A
+    if (otherFunc.template isa<FeasibilityAllBottomEF>()) {
+        //llvm::errs() << "Joining FeasibilityAddConstrainEF with FeasibilityAllBottomEF. Result is the original FeasibilityAddConstrainEF, as A V ⊥ = A\n";
         return EF{thisFunc};
     }
 
-    if (secondFunction.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
+    if (auto *otherC = otherFunc.template dyn_cast<FeasibilityAddConstrainEF>()) {
+        // Take both formularids, construct a new formular, create a new edge function with the new constraint and return it.
+        // This allows us to combine the constraints of both edge functions into a single edge function,
+        // Most importantly here: Simplify the formular to mitigate double exprexissons
+
+        // Query the path condition ids of each edge function
+        auto thisConstrainId = thisFunc->pathConditionId;
+        auto otherConstrainId = otherC->pathConditionId;
+
+        // query the actual formulas from the manager using the ids
+        auto thisFormula = thisFunc->manager->getExpression(thisConstrainId);
+        auto otherFormula = otherC->manager->getExpression(otherConstrainId);
+
+        // Construct the new formula by taking the disjunction of the two formulas.
+        // This is the result of applying both edge functions to the input element.
+        // h(x) = f(x) V g(x) => h(x) = (x AND thisFormula) V (x AND otherFormula) => h(x) = x AND (thisFormula V otherFormula)
+        auto newFormulaId = thisFunc->manager->mkOr(thisConstrainId, otherConstrainId);
+
+        //llvm::errs() << "Calculating join of two FeasibilityAddConstrainEFs: " << thisFormula.to_string() << " || " << otherFormula.to_string() << "=" << newFormulaId << "\n";
+        //llvm::errs() << "\t" << "Resulting formula: " << thisFunc->manager->getExpression(newFormulaId).to_string() << "\n";
+
+        if (!thisFunc->manager->isSat(newFormulaId)) {
+            //llvm::errs() << "\t" << "Resulting formula is UNSAT\n";
+            return EF(std::in_place_type<FeasibilityAllBottomEF>);
+        }
+
+        // Return a new edge function that adds the new constraint to the path condition.
+        // This is the result of composing the two edge functions.
+        return EF(std::in_place_type<FeasibilityAddConstrainEF>, thisFunc->manager, newFormulaId);
+    }
+
+    llvm::errs() << "ALARM in FeasibilityAddConstrainEF::join: We are trying to join an edge function of type FeasibilityAddConstrainEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
+                    "Please check the implementation of the analysis and make sure that it only produces edge functions of the supported types.\n";
+    return otherFunc;
+}
+
+// =====================================================================================================================
+
+l_t FeasibilityAllTopEF::computeTarget(const l_t &source) const {
+    return l_t::createElement(source.manager, source.topId, l_t::Kind::Top);
+}
+
+EF FeasibilityAllTopEF::compose(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFunc, const EF &secondFunction) {
+    if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
 
-    if (secondFunction.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
+    // Composition of T and ⊥ is ⊥, as T is the identity for composition and thus does not affect the result of the
+    // composition, while ⊥ is absorbing for composition and thus makes the result of the composition ⊥.
+    if (secondFunction.template isa<FeasibilityAllBottomEF>() || llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
     }
 
-    if (secondFunction.template isa<FeasibilitySetSSAEF>()) {
-        const auto &other = secondFunction.template cast<FeasibilitySetSSAEF>();
-        if (thisFunc->Key == other->Key) {
-            // later write wins
-            return EF{secondFunction};
-        }
-    }
-
-    // in FeasibilitySetSSAEF::compose(...)
-    if (secondFunction.template isa<FeasibilityAssumeIcmpEF>()) {
-        const auto &A = secondFunction.template cast<FeasibilityAssumeIcmpEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkSetSSA(thisFunc->Loc, thisFunc->Key));
-        R.pushBack(PackedOp::mkAssume(A->Cmp, A->TakeTrueEdge));
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    if (secondFunction.template isa<FeasibilityPhiEF>()) {
-        const auto &P = secondFunction.template cast<FeasibilityPhiEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkSetSSA(thisFunc->Loc, thisFunc->Key));
-        R.pushBack(PackedOp::mkPhi(P->phinode, P->incomingVal));
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    if (secondFunction.template isa<FeasibilityPackedEF>()) {
-        const auto &P2 = secondFunction.template cast<FeasibilityPackedEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkSetSSA(thisFunc->Loc, thisFunc->Key));
-        for (unsigned i = 0; i < P2->N; ++i)
-            if (!R.pushBack(P2->Ops[i])) return EF(std::in_place_type<FeasibilityAllTopEF>);
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    // otherwise: if you truly can't represent it, THEN AllTop is safe
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-}
-
-
-EF FeasibilitySetSSAEF::join(psr::EdgeFunctionRef<FeasibilitySetSSAEF> thisFunc, const psr::EdgeFunction<l_t> &other) {
-    if (other.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(other) ||
-        other.template isa<FeasibilityIdentityEF>() ||
-        other.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(thisFunc);
-    }
-
-    if (other.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(other)) {
+    // Composition of T and T is T, as T is the identity for composition and thus does not affect the result of the composition.
+    if (secondFunction.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
 
-    if (other.template isa<FeasibilitySetSSAEF>()) {
-        const auto &o = other.template cast<FeasibilitySetSSAEF>();
-        if (*thisFunc == *o) {
-            return EF{thisFunc};
-        }
+    // Composition of T and A is T
+    if (secondFunction.template isa<FeasibilityAddConstrainEF>()) {
+        return EF(secondFunction);
     }
+
+    llvm::errs() << "ALARM in FeasibilityAllTopEF::compose: We are trying to compose an edge function of type FeasibilityAllTopEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
+                    "Please check the FeasibilityAllTopEF of the analysis and make sure that it only produces edge functions of the supported types.\n";
 
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
-bool FeasibilitySetSSAEF::isConstant() const noexcept {
-    return false;
-}
-
-// ========================= FeasibilitySetMemEF =================================
-
-l_t FeasibilitySetMemEF::computeTarget(const l_t &source) const {
-    if (source.isBottom()) {
-        return source;
+EF FeasibilityAllTopEF::join(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFunc, const psr::EdgeFunction<l_t> &secondFunction) {
+    if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+        return EF(std::in_place_type<FeasibilityAllTopEF>);
     }
-    l_t out = source;
 
-    out.memId = source.getStore()->Mem.set(out.memId, Loc, ValueId);
-    return out;
+    // Composition of T or ⊥ is T, as T is the absorbing element for joining
+    if (secondFunction.template isa<FeasibilityAllBottomEF>() || llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
+        return EF(std::in_place_type<FeasibilityAllTopEF>);
+    }
+
+    // Joining of T and T is T, as T is the absorbing element for joining.
+    if (secondFunction.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
+        return EF(std::in_place_type<FeasibilityAllTopEF>);
+    }
+
+    // Join of T and A is T
+    if (secondFunction.template isa<FeasibilityAddConstrainEF>()) {
+        return EF(std::in_place_type<FeasibilityAllTopEF>);
+    }
+
+    llvm::errs() << "ALARM in FeasibilityAllTopEF::join: We are trying to join an edge function of type FeasibilityAllTopEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
+                    "Please check the FeasibilityAllTopEF of the analysis and make sure that it only produces edge functions of the supported types.\n";
+
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
-EF FeasibilitySetMemEF::compose(psr::EdgeFunctionRef<FeasibilitySetMemEF> thisFunc,
-                                const EF &secondFunction) {
-  // Keep existing fast paths if you want:
-  if (secondFunction.template isa<FeasibilityIdentityEF>() ||
-      secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-    return EF(thisFunc);
-  }
-  if (secondFunction.template isa<FeasibilityAllBottomEF>() ||
-      llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
+// =====================================================================================================================
+
+l_t FeasibilityAllBottomEF::computeTarget(const l_t &source) const {
+    return l_t::createElement(source.manager, source.bottomId, l_t::Kind::Bottom);
+}
+
+EF FeasibilityAllBottomEF::compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF> thisFunc, const EF &secondFunction) {
+    if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+        return EF(std::in_place_type<FeasibilityAllBottomEF>);
+    }
+
+    // Composition of ⊥ and ⊥ is ⊥, as ⊥ is the absorbing element for composition and thus does not affect the result of the
+    if (secondFunction.template isa<FeasibilityAllBottomEF>() || llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
+        return EF(std::in_place_type<FeasibilityAllBottomEF>);
+    }
+
+    // Composition of ⊥ and T is ⊥, as ⊥ absorbs T in composition, as ⊥ maps any input to bottom and thus makes the
+    // path infeasible, regardless of the constraints that we have already added to the path condition.
+    if (secondFunction.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
+        return EF(std::in_place_type<FeasibilityAllBottomEF>);
+    }
+
+    // Composition of ⊥ and A is A
+    if (secondFunction.template isa<FeasibilityAddConstrainEF>()) {
+        return EF(std::in_place_type<FeasibilityAllBottomEF>);
+    }
+
+    llvm::errs() << "ALARM in FeasibilityAllBottomEF::compose: We are trying to compose an edge function of type FeasibilityAllBottomEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
+                    "Please check the FeasibilityAllBottomEF of the analysis and make sure that it only produces edge functions of the supported types.\n";
+
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
-  }
-  if (secondFunction.template isa<FeasibilityAllTopEF>() ||
-      llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
-
-  // Optional: collapse consecutive SetMem on same location (later wins)
-  if (secondFunction.template isa<FeasibilitySetMemEF>()) {
-    const auto &other = secondFunction.template cast<FeasibilitySetMemEF>();
-    if (thisFunc->Loc == other->Loc) {
-      return EF{secondFunction}; // later write wins
-    }
-  }
-
-  // --- Packing cases (analog to SetSSAEF::compose) ---
-
-  // SetMem ∘ Assume => Packed[SetMem, Assume]
-  if (secondFunction.template isa<FeasibilityAssumeIcmpEF>()) {
-    const auto &A = secondFunction.template cast<FeasibilityAssumeIcmpEF>();
-    FeasibilityPackedEF R;
-    R.pushBack(PackedOp::mkSetMem(thisFunc->Loc, thisFunc->ValueId));
-    R.pushBack(PackedOp::mkAssume(A->Cmp, A->TakeTrueEdge));
-    return EF(std::in_place_type<FeasibilityPackedEF>, R);
-  }
-
-  // SetMem ∘ Phi => Packed[SetMem, Phi]
-  if (secondFunction.template isa<FeasibilityPhiEF>()) {
-    const auto &P = secondFunction.template cast<FeasibilityPhiEF>();
-    FeasibilityPackedEF R;
-    R.pushBack(PackedOp::mkSetMem(thisFunc->Loc, thisFunc->ValueId));
-    R.pushBack(PackedOp::mkPhi(P->phinode, P->incomingVal));
-    return EF(std::in_place_type<FeasibilityPackedEF>, R);
-  }
-
-  // SetMem ∘ Packed => prepend SetMem
-  if (secondFunction.template isa<FeasibilityPackedEF>()) {
-    const auto &P2 = secondFunction.template cast<FeasibilityPackedEF>();
-    FeasibilityPackedEF R;
-    R.pushBack(PackedOp::mkSetMem(thisFunc->Loc, thisFunc->ValueId));
-    for (unsigned i = 0; i < P2->N; ++i) {
-      if (!R.pushBack(P2->Ops[i])) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-      }
-    }
-    return EF(std::in_place_type<FeasibilityPackedEF>, R);
-  }
-
-  // If you can't represent the composition precisely, be safe:
-  return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
-EF FeasibilitySetMemEF::join(psr::EdgeFunctionRef<FeasibilitySetMemEF> thisFunc,
-                             const psr::EdgeFunction<l_t> &other) {
-    if (other.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(other) ||
-        other.template isa<FeasibilityIdentityEF>() ||
-        other.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(thisFunc);
-    }
-
-    if (other.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(other)) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
-
-    if (other.template isa<FeasibilitySetMemEF>()) {
-        const auto &o = other.template cast<FeasibilitySetMemEF>();
-        if (*thisFunc == *o) return EF{thisFunc};
-    }
-
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-}
-
-
-bool FeasibilitySetMemEF::isConstant() const noexcept {
-    return false;
-}
-
-l_t FeasibilityAssumeIcmpEF::computeTarget(const l_t &source) const {
-    auto *S = source.getStore();
-
-    // ⊥ = killed/unreachable: must stay ⊥
-    if (source.isBottom()) {
-        return source;
-    }
-
-    if (!Cmp || !S) {
-        return source;
-    }
-
-    llvm::errs() << "FeasibilityAssumeIcmpEF: computing target for ICMP " << *Cmp
-                 << " with source pcId=" << source.pcId
-                 << " ssaId=" << source.ssaId
-                 << " memId=" << source.memId
-                 << "\n";
-
-    // Resolve operands of ICMP to their symbolic expression ids while source is valid
-    auto Lid = Feasibility::Util::resolveId(Cmp->getOperand(0), source, S);
-    auto Rid = Feasibility::Util::resolveId(Cmp->getOperand(1), source, S);
-
-    if (!Lid || !Rid) {
-        llvm::errs() << "AssumeIcmp, computeTarget, lookup failed:"
-        << "\n  Operand0: " << *Cmp->getOperand(0) << " -> " << (Lid ? std::to_string(*Lid) : "<none>") << "\n"
-        << "  Operand1: " << *Cmp->getOperand(1) << " -> " << (Rid ? std::to_string(*Rid) : "<none>") << "\n";
-
-        return source;
-    }
-
-    // ICMP condition is a boolean condition on the path, so we can cache it for future reuse
-    FeasibilityStateStore::CmpCondKey ck{source.ssaId, source.memId, Cmp, TakeTrueEdge};
-    if (auto it = S->CmpCondCache.find(ck); it != S->CmpCondCache.end()) {
-        // already have boolean condition expr id
-        const z3::expr &Cond = S->exprOf(it->second);
-
-        if (source.pcId == S->PcTrueId && Cond.is_true()) return source;
-
-        l_t out = source.assume(Cond);
-        return out;
-    }
-
-    // Query the actual expressions from the calculated expression ids valid during source
-    const z3::expr &L = S->exprOf(*Lid);
-    const z3::expr &R = S->exprOf(*Rid);
-
-    // Type sanity
-    if (!L.is_bv() || !R.is_bv() || L.get_sort().bv_size() != R.get_sort().bv_size()) {
-        return source;
-    }
-
-    // cheap syntactic fast paths
-    if (*Lid == *Rid) {
-        if (Cmp->getPredicate() == llvm::CmpInst::ICMP_EQ) {
-            return source;
-        }
-        if (Cmp->getPredicate() == llvm::CmpInst::ICMP_NE) {
-            return l_t::bottom(S);
-        }
-    }
-
-    z3::expr Cond = S->ctx().bool_val(true);
-    switch (Cmp->getPredicate()) {
-        case llvm::CmpInst::ICMP_EQ:  Cond = (L == R); break;
-        case llvm::CmpInst::ICMP_NE:  Cond = (L != R); break;
-
-        case llvm::CmpInst::ICMP_ULT: Cond = z3::ult(L, R); break;
-        case llvm::CmpInst::ICMP_ULE: Cond = z3::ule(L, R); break;
-        case llvm::CmpInst::ICMP_UGT: Cond = z3::ugt(L, R); break;
-        case llvm::CmpInst::ICMP_UGE: Cond = z3::uge(L, R); break;
-
-        case llvm::CmpInst::ICMP_SLT: Cond = z3::slt(L, R); break;
-        case llvm::CmpInst::ICMP_SLE: Cond = z3::sle(L, R); break;
-        case llvm::CmpInst::ICMP_SGT: Cond = z3::sgt(L, R); break;
-        case llvm::CmpInst::ICMP_SGE: Cond = z3::sge(L, R); break;
-
-        default: {
-            return source;
-        }
-    }
-
-    if (!TakeTrueEdge) {
-        Cond = !Cond;
-    }
-
-    if (Cond.is_false()) {
-        return l_t::bottom(S);
-    }
-
-    if (Cond.is_true()) {
-        return source;
-    }
-
-    auto cid = S->internExpr(Cond);
-    S->CmpCondCache.emplace(ck, cid);
-    l_t out = source.assume(S->exprOf(cid));
-
-    auto resultingPC = S->getPathConstraint(out.pcId);
-    llvm::errs() << "Resulting pc from assume: " << resultingPC.to_string() << "\n";
-
-    return out;
-}
-
-
-
-EF FeasibilityAssumeIcmpEF::compose(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF> self,
-                                    const EF &second) {
-    if (second.template isa<FeasibilityIdentityEF>() ||
-        second.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(self);
-        }
-    if (second.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(second)) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
-    if (second.template isa<FeasibilityAllBottomEF>() || llvm::isa<psr::AllBottom<l_t>>(second)) {
+EF FeasibilityAllBottomEF::join(psr::EdgeFunctionRef<FeasibilityAllBottomEF> thisFunc, const psr::EdgeFunction<l_t> &secondFunction) {
+    if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
     }
 
-    // Assume ∘ Packed => prepend Assume
-    if (second.template isa<FeasibilityPackedEF>()) {
-        const auto &P2 = second.template cast<FeasibilityPackedEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkAssume(self->Cmp, self->TakeTrueEdge));
-        for (unsigned i = 0; i < P2->N; ++i) {
-            if (!R.pushBack(P2->Ops[i])) return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    // Assume ∘ Phi => Packed[Assume, Phi]
-    if (second.template isa<FeasibilityPhiEF>()) {
-        const auto &P = second.template cast<FeasibilityPhiEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkAssume(self->Cmp, self->TakeTrueEdge));
-        R.pushBack(PackedOp::mkPhi(P->phinode, P->incomingVal));
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    // Assume ∘ Assume => Packed[Assume, Assume] (keeps both constraints!)
-    if (second.template isa<FeasibilityAssumeIcmpEF>()) {
-        const auto &A = second.template cast<FeasibilityAssumeIcmpEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkAssume(self->Cmp, self->TakeTrueEdge));
-        R.pushBack(PackedOp::mkAssume(A->Cmp, A->TakeTrueEdge));
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    // Assume ∘ SetSSA => Packed[Assume, SetSSA]
-    if (second.template isa<FeasibilitySetSSAEF>()) {
-        const auto &S = second.template cast<FeasibilitySetSSAEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkAssume(self->Cmp, self->TakeTrueEdge));
-        R.pushBack(PackedOp::mkSetSSA(S->Loc, S->Key));
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    // Assume ∘ SetMem => Packed[Assume, SetMem]
-    if (second.template isa<FeasibilitySetMemEF>()) {
-        const auto &M = second.template cast<FeasibilitySetMemEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkAssume(self->Cmp, self->TakeTrueEdge));
-        R.pushBack(PackedOp::mkSetMem(M->Loc, M->ValueId));
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-}
-
-
-EF FeasibilityAssumeIcmpEF::join(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF> self,
-                                 const psr::EdgeFunction<l_t> &other) {
-    if (other.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(other) ||
-        other.template isa<FeasibilityIdentityEF>() ||
-        other.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(self);
-        }
-    if (other.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(other)) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
-    if (other.template isa<FeasibilityAssumeIcmpEF>()) {
-        const auto &O = other.template cast<FeasibilityAssumeIcmpEF>();
-        if (*self == *O) return EF(self);
-    }
-
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-}
-
-l_t FeasibilityPhiEF::computeTarget(const l_t &source) const {
-    auto *S = source.getStore();
-    l_t out = source;
-    if (out.isBottom() || !phinode || !incomingVal) return out;
-
-    unsigned bw = 32;
-    if (phinode->getType()->isIntegerTy())
-        bw = phinode->getType()->getIntegerBitWidth();
-
-    // Stable across all preds:
-    auto PhiSymId = S->getOrCreateSym(phinode, bw, "phi");
-
-    // Resolve incoming under current SSA/mem:
-    auto InId = Util::resolveId(incomingVal, out, S);
-    if (!InId) return out;
-
-    // SSA: PHI result always maps to the same symbol
-    out.ssaId = S->Ssa.set(out.ssaId, phinode, PhiSymId);
-
-    // PC: edge-specific link
-    const z3::expr &PhiSym = S->exprOf(PhiSymId);
-    const z3::expr &InExpr = S->exprOf(*InId);
-    out = out.assume(PhiSym == InExpr);
-
-    llvm::errs() << "AssumeIcmp: out pcId=" << out.pcId
-                 << " ssaId=" << out.ssaId
-                 << " memId=" << out.memId << "\n";
-    llvm::errs() << "AssumeIcmp: pc = " << S->getPathConstraint(out.pcId).to_string() << "\n";
-
-    return out;
-}
-
-EF FeasibilityPhiEF::compose(psr::EdgeFunctionRef<FeasibilityPhiEF> self,
-                             const EF &second) {
-    if (second.template isa<FeasibilityIdentityEF>() ||
-        second.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(self);
-        }
-    if (second.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(second)) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
-    if (second.template isa<FeasibilityAllBottomEF>() || llvm::isa<psr::AllBottom<l_t>>(second)) {
+    // Joining of ⊥ or ⊥ is ⊥, as ⊥ is the absorbing element for joining
+    if (secondFunction.template isa<FeasibilityAllBottomEF>() || llvm::isa<psr::AllBottom<l_t>>(secondFunction)) {
         return EF(std::in_place_type<FeasibilityAllBottomEF>);
     }
 
-    // Phi ∘ Packed => prepend Phi
-    if (second.template isa<FeasibilityPackedEF>()) {
-        const auto &P2 = second.template cast<FeasibilityPackedEF>();
-        FeasibilityPackedEF R;
-        // prepend Phi then copy packed
-        R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
-        for (unsigned i = 0; i < P2->N; ++i) {
-            if (!R.pushBack(P2->Ops[i])) return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    // Phi ∘ Assume => Packed[Phi, Assume]
-    if (second.template isa<FeasibilityAssumeIcmpEF>()) {
-        const auto &A = second.template cast<FeasibilityAssumeIcmpEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
-        R.pushBack(PackedOp::mkAssume(A->Cmp, A->TakeTrueEdge));
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    // Phi ∘ Phi => Packed[Phi, Phi] (rare but legal)
-    if (second.template isa<FeasibilityPhiEF>()) {
-        const auto &P = second.template cast<FeasibilityPhiEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
-        R.pushBack(PackedOp::mkPhi(P->phinode, P->incomingVal));
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    if (second.template isa<FeasibilitySetSSAEF>()) {
-        const auto &S = second.template cast<FeasibilitySetSSAEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
-        R.pushBack(PackedOp::mkSetSSA(S->Loc, S->Key));
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    // Phi ∘ SetMem => Packed[Phi, SetMem]
-    if (second.template isa<FeasibilitySetMemEF>()) {
-        const auto &M = second.template cast<FeasibilitySetMemEF>();
-        FeasibilityPackedEF R;
-        R.pushBack(PackedOp::mkPhi(self->phinode, self->incomingVal));
-        R.pushBack(PackedOp::mkSetMem(M->Loc, M->ValueId));
-        return EF(std::in_place_type<FeasibilityPackedEF>, R);
-    }
-
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-}
-
-EF FeasibilityPhiEF::join(psr::EdgeFunctionRef<FeasibilityPhiEF> self, const psr::EdgeFunction<l_t> &other) {
-    if (other.template isa<FeasibilityAllBottomEF>() ||
-        llvm::isa<psr::AllBottom<l_t>>(other) ||
-        other.template isa<FeasibilityIdentityEF>() ||
-        other.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(self);
-        }
-    if (other.template isa<FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<l_t>>(other)) {
+    // Joining of ⊥ or T is T
+    if (secondFunction.template isa<FeasibilityAllTopEF>() || llvm::isa<psr::AllTop<l_t>>(secondFunction)) {
         return EF(std::in_place_type<FeasibilityAllTopEF>);
-        }
-    if (other.template isa<FeasibilityPhiEF>()) {
-        const auto &O = other.template cast<FeasibilityPhiEF>();
-        if (*self == *O) return EF(self);
     }
+
+    // Joining of ⊥ or A is T
+    if (secondFunction.template isa<FeasibilityAddConstrainEF>()) {
+        return EF(secondFunction);
+    }
+
+    llvm::errs() << "ALARM in FeasibilityAllBottomEF::join: We are trying to join an edge function of type FeasibilityAllBottomEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
+                    "Please check the FeasibilityAllBottomEF of the analysis and make sure that it only produces edge functions of the supported types.\n";
 
     return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
-
-
-EF edgeIdentity() { return EF(std::in_place_type<FeasibilityIdentityEF>); }
-EF edgeTop() { return EF(std::in_place_type<FeasibilityAllTopEF>); }
-EF edgeBottom() { return EF(std::in_place_type<FeasibilityAllBottomEF>); }
 
 } // namespace Feasibility

@@ -74,12 +74,6 @@ void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
 
   //LoopBoundResult = loopboundwrapper->getResults();
   FeasibilityResult = feasibilitywrapper->getResults();
-
-  // Report metrics after analysis completes
-  if (feasibilityProblem && feasibilityProblem->store) {
-    // llvm::errs() << "\n=== Feasibility Analysis Complete ===\n";
-    // Feasibility::Util::reportMetrics(feasibilityProblem->store.get());
-  }
 }
 
 void PhasarHandlerPass::dumpState() const {
@@ -139,8 +133,7 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
     return ResultMap;
   }
 
-  const llvm::Value *Zero =
-      feasibilityProblem ? feasibilityProblem->getZeroValue() : nullptr;
+  const llvm::Value *Zero = feasibilityProblem ? feasibilityProblem->getZeroValue() : nullptr;
 
   // 1) Create entries + optional diagnostics
   for (const llvm::BasicBlock &BB : *Func) {
@@ -150,41 +143,29 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
     Info.Feasible = false;
     Info.HasZeroAtEntry = false;
 
-    // Diagnostics: record lattice at a stable query inst (if available)
-    const llvm::Instruction *EntryI = pickQueryInst(BB);
-    if (EntryI && Zero && FeasibilityResult->containsNode(EntryI)) {
-      const auto ResMap = FeasibilityResult->resultsAt(EntryI);
+    const llvm::Instruction *terminator = BB.getTerminator();
+    auto latticeElementExists = FeasibilityResult->containsNode(terminator);
+    if (latticeElementExists) {
+      auto ResMap = FeasibilityResult->resultsAt(terminator);
       auto ItZ = ResMap.find(Zero);
       if (ItZ != ResMap.end()) {
-        Info.ZeroAtEntry = ItZ->second;
-        Info.HasZeroAtEntry = true;
+        const auto &L = ItZ->second;
+        //llvm::outs() << "Feasibility at terminator of " << BBName << ": " << L.kind << "\n";
+        if (L.kind == Feasibility::FeasibilityElement::Kind::Top) {
+          Info.Feasible = true;
+        }
+
+        if (L.kind == Feasibility::FeasibilityElement::Kind::Normal) {
+          // In this case the feasibility depends on the underlying formular.
+          // Formulars that can be resolved to true or false, are already simplified to Top or Bottom by the edge
+          // functions, so we can assume that Normal means "don't know, depends on formular".
+          Info.Feasible = true;
+        }
       }
     }
   }
 
-  // 2) Edge-sensitive predecessor rule:
-  // BB feasible iff exists pred P s.t. edge P->BB feasible.
-  const llvm::BasicBlock &EntryBB = Func->getEntryBlock();
 
-  for (const llvm::BasicBlock &BB : *Func) {
-    BlockFeasInfo &Info = ResultMap[blockName(BB)];
-
-    if (&BB == &EntryBB) {
-      // Seed reachability
-      Info.Feasible = true;
-      continue;
-    }
-
-    bool AnyIncomingFeasible = false;
-    for (const llvm::BasicBlock *PredBB : llvm::predecessors(&BB)) {
-      if (isEdgeFeasible(PredBB, &BB, Zero)) {
-        AnyIncomingFeasible = true;
-        break;
-      }
-    }
-
-    Info.Feasible = AnyIncomingFeasible;
-  }
 
   return ResultMap;
 }
@@ -246,7 +227,7 @@ bool PhasarHandlerPass::isNodeFeasibleForZero(const llvm::Instruction *I,
     return false;
 
   const auto &L = It->second;
-  return !L.isBottom() && L.isSatisfiable();
+  return !L.isBottom();
 }
 
 std::optional<Feasibility::FeasibilityAnalysis::l_t>
@@ -291,7 +272,7 @@ bool PhasarHandlerPass::isEdgeFeasible(const llvm::BasicBlock *PredBB,
   const auto &Lpred = *LpredOpt;
 
   // If predecessor is already infeasible, edge can't be feasible
-  if (Lpred.isBottom() || !Lpred.isSatisfiable())
+  if (Lpred.isBottom())
     return false;
 
   // 2) Find the exact successor node used by the ICFG for this edge
@@ -311,5 +292,5 @@ bool PhasarHandlerPass::isEdgeFeasible(const llvm::BasicBlock *PredBB,
 
   auto Lsucc = EF.computeTarget(Lpred);
 
-  return !Lsucc.isBottom() && Lsucc.isSatisfiable();
+  return !Lsucc.isBottom();
 }
