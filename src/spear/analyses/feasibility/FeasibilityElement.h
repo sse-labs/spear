@@ -8,12 +8,39 @@
 
 #include <vector>
 #include <z3++.h>
+#include <llvm/ADT/DenseMap.h>
+#include <llvm/IR/Value.h>
 #include <llvm/Support/raw_ostream.h>
 
 namespace Feasibility {
 
+struct Z3ExprHash {
+    std::size_t operator()(const z3::expr& e) const noexcept {
+        return static_cast<std::size_t>(
+            Z3_get_ast_hash(e.ctx(), e)
+        );
+    }
+};
+
+struct Z3ExprEq {
+    bool operator()(const z3::expr& a,
+                    const z3::expr& b) const noexcept {
+        return Z3_is_eq_ast(a.ctx(), a, b);
+    }
+};
+
 class FeasibilityAnalysisManager {
  public:
+    enum class SatTri : uint8_t { Unknown = 0, Sat = 1, Unsat = 2 };
+
+    /**
+     * Environment map that describes SSA renames as linked list
+     */
+    struct EnvNode {
+        const EnvNode* parent;
+        const llvm::Value* key;
+        const llvm::Value* val;
+    };
 
     explicit FeasibilityAnalysisManager(std::unique_ptr<z3::context> ctx);
 
@@ -34,6 +61,26 @@ class FeasibilityAnalysisManager {
     std::vector<z3::expr> Formulas;
 
     /**
+     * Sat-Cache to collect already used sat proves for known functions
+     */
+    std::vector<SatTri> SatCache;
+
+    /**
+     * Renamepool. Maps id -> Env renaming
+     */
+    std::vector<EnvNode> EnvPool;
+
+    /**
+     * Environment roots the pool elements map to
+     */
+    std::vector<const EnvNode*> EnvRoots;
+
+    /**
+     * Z3 Hashmap to make lookup O(1)
+     */
+    std::unordered_map<z3::expr, uint32_t, Z3ExprHash, Z3ExprEq> FormularsToId;
+
+    /**
      * Solver instance to check satisfiability of path constraints. This is shared across all elements and can be used to efficiently check the feasibility of path constraints without needing to create a new solver instance for each element.
      */
     z3::solver Solver;
@@ -43,7 +90,7 @@ class FeasibilityAnalysisManager {
      * @param id
      * @return
      */
-    z3::expr getExpression(uint32_t id);
+    const z3::expr& getExpression(uint32_t id) const;
 
     /**
      * Find the ID of a formula in the manager's formula list.
@@ -51,7 +98,7 @@ class FeasibilityAnalysisManager {
      * @param expr
      * @return
      */
-    std::optional<uint32_t>  findFormulaId(z3::expr expr);
+    std::optional<uint32_t> findFormulaId(const z3::expr& expr) const;
 
     /**
      * Create new and formular
@@ -68,6 +115,26 @@ class FeasibilityAnalysisManager {
      * @return
      */
     uint32_t mkOr(uint32_t aId, uint32_t bId);
+
+    bool isBoolTrue(const z3::expr &e);
+
+    bool isBoolFalse(const z3::expr &e);
+
+    bool isNotExpr(const z3::expr &e);
+
+    bool isNotOf(const z3::expr &a, const z3::expr &b);
+
+    void collectOrArgs(const z3::expr &e, std::vector<z3::expr> &out);
+
+    void collectAndArgs(const z3::expr &e, std::vector<z3::expr> &out);
+
+    z3::expr mkNaryOr(z3::context &ctx, const std::vector<z3::expr> &v);
+
+    z3::expr mkNaryAnd(z3::context &ctx, const std::vector<z3::expr> &v);
+
+    z3::expr mkOrSimplified(const z3::expr &a, const z3::expr &b);
+
+    z3::expr mkAndSimplified(const z3::expr &a, const z3::expr &b);
 
     /**
      * Create new not formular
@@ -89,6 +156,35 @@ class FeasibilityAnalysisManager {
      * @return
      */
     bool isSat(uint32_t id);
+
+    /**
+     * Add a new renaming relationship to our mapping
+     * @param baseEnvId
+     * @param k
+     * @param v
+     * @return
+     */
+    uint32_t extendEnv(uint32_t baseEnvId, const llvm::Value *k, const llvm::Value *v);
+
+    /**
+     * Resolve a given renaming id and the given value to its root
+     * @param envId
+     * @param v
+     * @return
+     */
+    const llvm::Value *resolve(uint32_t envId, const llvm::Value *v) const;
+
+    /**
+     * For the edge from pred to succ traverse the phis contained in succ and deal with phis
+     * add a new translation to the translation environment
+     * @param inEnvId
+     * @param pred
+     * @param succ
+     * @return
+     */
+    uint32_t applyPhiPack(uint32_t inEnvId, const llvm::BasicBlock *pred, const llvm::BasicBlock *succ);
+
+    z3::expr simplify(z3::expr input);
 };
 
 class FeasibilityElement {
@@ -105,8 +201,9 @@ class FeasibilityElement {
 
     uint32_t formularID = topId;
 
-    Kind kind = Kind::Top;
+    uint32_t environmentID = 0;
 
+    Kind kind = Kind::Top;
 
     FeasibilityElement() = default;
 
@@ -143,18 +240,6 @@ class FeasibilityElement {
      * @return
      */
     bool isTop() const;
-
-    /**
-     * Check if this Element is feasible either by checking if it's top (no information, so we assume feasible) or by checking the path constraint for satisfiability.
-     * @return
-     */
-    bool isFeasible() const;
-
-    /**
-     * Check if this Element is infeasible either by checking if it's bottom (infeasible) or by checking the path constraint for unsatisfiability.
-     * @return
-     */
-    bool isInFeasible() const;
 
     /**
      * Get the kind of this element (Bottom, Normal, or Top).

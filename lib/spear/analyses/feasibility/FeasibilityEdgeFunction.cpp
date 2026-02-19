@@ -93,10 +93,12 @@ EF FeasibilityAddConstrainEF::compose(psr::EdgeFunctionRef<FeasibilityAddConstra
         //llvm::errs() << "Calculating compose of two FeasibilityAddConstrainEFs: " << thisFormula.to_string() << " || " << otherFormula.to_string() << "\n";
         //llvm::errs() << "\t" << "Resulting formula: " << thisFunc->manager->getExpression(newFormulaId).to_string() << "\n";
 
-        if (!thisFunc->manager->isSat(newFormulaId)) {
+        // We could use caching here...
+        /*if (!thisFunc->manager->isSat(newFormulaId)) {
+            thisFunc->manager->SatCache[newFormulaId] = FeasibilityAnalysisManager::SatTri::Unknown;
             //llvm::errs() << "\t" << "Resulting formula is UNSAT\n";
             return EF(std::in_place_type<FeasibilityAllBottomEF>);
-        }
+        }*/
 
         // Return a new edge function that adds the new constraint to the path condition.
         // This is the result of composing the two edge functions.
@@ -149,10 +151,16 @@ EF FeasibilityAddConstrainEF::join(psr::EdgeFunctionRef<FeasibilityAddConstrainE
         //llvm::errs() << "Calculating join of two FeasibilityAddConstrainEFs: " << thisFormula.to_string() << " || " << otherFormula.to_string() << "=" << newFormulaId << "\n";
         //llvm::errs() << "\t" << "Resulting formula: " << thisFunc->manager->getExpression(newFormulaId).to_string() << "\n";
 
+        /**/
+
         if (!thisFunc->manager->isSat(newFormulaId)) {
+            thisFunc->manager->SatCache[newFormulaId] = FeasibilityAnalysisManager::SatTri::Unsat;
             //llvm::errs() << "\t" << "Resulting formula is UNSAT\n";
             return EF(std::in_place_type<FeasibilityAllBottomEF>);
         }
+
+        //llvm::errs() << "Join " << "\n";
+        //llvm::errs() << thisFunc->manager->getExpression(newFormulaId).to_string() << "\n";
 
         // Return a new edge function that adds the new constraint to the path condition.
         // This is the result of composing the two edge functions.

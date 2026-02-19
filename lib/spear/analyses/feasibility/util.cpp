@@ -236,4 +236,11 @@ z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llv
     return cmp;
 }
 
+bool blockStartsWithPhi(const llvm::BasicBlock *block) {
+    if (block->empty()) {
+        return false;
+    }
+    return llvm::isa<llvm::PHINode>(block->front());
+}
+
 } // namespace Feasibility::Util

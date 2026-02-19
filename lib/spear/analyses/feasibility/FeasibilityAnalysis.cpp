@@ -177,6 +177,12 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFu
 }
 
 FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t succNode) {
+    // Find blocks
+    const llvm::Instruction *SuccI = succ; // n_t assumed Instruction*
+    const llvm::Instruction *CurrI = curr; // n_t assumed Instruction*
+    const llvm::BasicBlock  *SuccBB = SuccI ? SuccI->getParent() : nullptr;
+    const llvm::BasicBlock *PrevBB = CurrI ? curr->getParent() : nullptr;
+
     /**
      * Path conditions are generated at branch instructions
      *
@@ -198,8 +204,6 @@ FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getNormalEdgeFunction
 
         // Additionally determine the successor basic block this analysis step leads to
         // Phasar will iterate over all possible paths so we can just check which successor matches the current step's successor.
-        const llvm::Instruction *SuccI = succ; // n_t assumed Instruction*
-        const llvm::BasicBlock  *SuccBB = SuccI ? SuccI->getParent() : nullptr;
 
         if (SuccBB != TrueBB && SuccBB != FalseBB) {
             // This should not happen, as Phasar should only call this function for valid successor nodes.

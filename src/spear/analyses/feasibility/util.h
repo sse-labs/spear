@@ -113,6 +113,13 @@ class Util {
      * @return
      */
     static z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llvm::ICmpInst* ICmp, bool areWeInTheTrueBranch);
+
+    /**
+     * Check if the given block starts with a phinode
+     * @param block
+     * @return
+     */
+    static bool blockStartsWithPhi(const llvm::BasicBlock *block);
 };
 
 }
