@@ -15,7 +15,7 @@
 namespace Feasibility::Util {
 
 
-std::atomic<bool> F_DebugEnabled{true};
+std::atomic<bool> F_DebugEnabled{false};
 
 const llvm::Value *asValue(FeasibilityDomain::d_t fact) {
     return static_cast<const llvm::Value *>(fact);
@@ -172,6 +172,20 @@ uint32_t findOrAddFormulaId(FeasibilityAnalysisManager *manager, z3::expr formul
 }
 
 z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llvm::ICmpInst* ICmp, bool areWeInTheTrueBranch, uint32_t envId) {
+    if (!manager) {
+        llvm::errs() << "ALARM: createConstraintFromICmp called with null manager\n";
+        // return a safe default
+        static z3::context dummy;
+        return dummy.bool_val(true);
+    }
+
+    if (!manager->hasEnv(envId)) {
+        llvm::errs() << "ALARM: envId " << envId << " does not exist in manager. "
+                     << "ICmp=" << *ICmp << "\n";
+        // safest behavior: do not constrain instead of crashing
+        return manager->Context->bool_val(true);
+    }
+
     auto op0 = manager->resolve(envId, ICmp->getOperand(0));
     auto op1 = manager->resolve(envId, ICmp->getOperand(1));
 

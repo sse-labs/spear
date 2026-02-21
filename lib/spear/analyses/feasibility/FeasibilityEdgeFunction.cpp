@@ -5,868 +5,1011 @@
 
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
 #include "analyses/feasibility/util.h"
+
+#include <atomic>
 #include <chrono>
 
 namespace Feasibility {
 
+namespace {
+constexpr bool FDBG = false;            // flip to false to disable
+constexpr uint64_t FDBG_EVERY = 10000; // periodic heartbeat
+constexpr double FDBG_SLOW_MS = 50.0;  // warn if a call exceeds this
+
+static std::atomic<uint64_t> g_dbg_seq{0};
+
+struct ScopedTimer {
+  const char *Tag;
+  uint64_t Seq;
+  std::chrono::steady_clock::time_point Start;
+
+  ScopedTimer(const char *T)
+      : Tag(T), Seq(++g_dbg_seq), Start(std::chrono::steady_clock::now()) {
+    if constexpr (FDBG) {
+      if (Seq % FDBG_EVERY == 0) {
+        llvm::errs() << "[FDBG] #" << Seq << " ENTER " << Tag << "\n";
+      }
+    }
+  }
+
+  ~ScopedTimer() {
+    if constexpr (FDBG) {
+      auto End = std::chrono::steady_clock::now();
+      double Ms =
+          std::chrono::duration<double, std::milli>(End - Start).count();
+      if (Ms >= FDBG_SLOW_MS) {
+        llvm::errs() << "[FDBG] #" << Seq << " SLOW  " << Tag << " took " << Ms
+                     << "ms\n";
+      }
+    }
+  }
+};
+
+#define FDBG_LINE(MSG)                                                          \
+  do {                                                                          \
+    if constexpr (FDBG) {                                                       \
+      llvm::errs() << "[FDBG] " << MSG << "\n";                                 \
+    }                                                                           \
+  } while (0)
+
+static inline const char *kindStr(Feasibility::l_t::Kind K) {
+  using Kt = Feasibility::l_t::Kind;
+  switch (K) {
+  case Kt::Top:
+    return "Top";
+  case Kt::Bottom:
+    return "Bottom";
+  case Kt::Normal:
+    return "Normal";
+  }
+  return "?";
+}
+
+static inline void dumpLatticeBrief(const char *Pfx,
+                                    const Feasibility::l_t &x) {
+  llvm::errs() << "[FDBG] " << Pfx << " kind=" << kindStr(x.getKind())
+               << " pc=" << x.getFormulaId() << " env=" << x.getEnvId() << "\n";
+}
+
+// --- New-API helpers: never touch l_t internals directly ---
+static inline Feasibility::l_t mkTopLike(const Feasibility::l_t &src) {
+  auto out = src;
+  out.setKind(Feasibility::l_t::Kind::Top);
+  out.setFormulaId(Feasibility::l_t::topId);
+  out.setEnvId(0); // Top env forced to 0
+  return out;
+}
+
+static inline Feasibility::l_t mkBottomLike(const Feasibility::l_t &src) {
+  auto out = src;
+  out.setKind(Feasibility::l_t::Kind::Bottom);
+  out.setFormulaId(Feasibility::l_t::bottomId);
+  out.setEnvId(0); // Bottom env forced to 0
+  return out;
+}
+
+static inline Feasibility::l_t mkNormalLike(const Feasibility::l_t &src,
+                                            uint32_t pc, uint32_t env) {
+  auto out = src;
+  out.setKind(Feasibility::l_t::Kind::Normal);
+  out.setFormulaId(pc);
+  out.setEnvId(env);
+  return out;
+}
+
+static inline FeasibilityAnalysisManager *pickManager(FeasibilityAnalysisManager *fromEF,
+                                                      const Feasibility::l_t &src) {
+  if (fromEF)
+    return fromEF;
+  return src.getManager();
+}
+} // namespace
 
 // =====================================================================================================================
 // FeasibilityAllTopEF
 
 l_t FeasibilityAllTopEF::computeTarget(const l_t &source) const {
-    // Preserve manager pointer; set (kind=Top, formula=topId)
-    auto out = source;
-    out.kind = l_t::Kind::Top;
-    out.formularID = l_t::topId; // or source.topId if you store it there
-    // env can stay unchanged
-    return out;
+  ScopedTimer T("AllTopEF::computeTarget");
+  if constexpr (FDBG) dumpLatticeBrief("AllTop.in ", source);
+
+  auto out = mkTopLike(source);
+  if constexpr (FDBG) dumpLatticeBrief("AllTop.out", out);
+  return out;
 }
 
 EF FeasibilityAllTopEF::compose(psr::EdgeFunctionRef<FeasibilityAllTopEF> /*thisFunc*/,
-                                const EF &/*secondFunction*/) {
-  // AllTop ∘ g = AllTop   (maps everything to top regardless of g)
+                                const EF & /*secondFunction*/) {
+  ScopedTimer T("AllTopEF::compose");
+  FDBG_LINE("AllTop ∘ g = AllTop");
   return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
 EF FeasibilityAllTopEF::join(psr::EdgeFunctionRef<FeasibilityAllTopEF> /*thisFunc*/,
-                             const psr::EdgeFunction<l_t> &/*otherFunc*/) {
-    // Compose = this ∘ second (apply second first, then this).
-    // Since this maps EVERYTHING to Top, it dominates composition.
-    // T ∘ g = T
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
+                             const psr::EdgeFunction<l_t> & /*otherFunc*/) {
+  ScopedTimer T("AllTopEF::join");
+  FDBG_LINE("AllTop ⊔ f = AllTop");
+  return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
 // =====================================================================================================================
 // FeasibilityAllBottomEF
 
 l_t FeasibilityAllBottomEF::computeTarget(const l_t &source) const {
-    auto out = source;
-    out.kind = l_t::Kind::Bottom;
-    out.formularID = l_t::bottomId; // or source.bottomId if you store it there
-    // env can stay unchanged
-    return out;
+  ScopedTimer T("AllBottomEF::computeTarget");
+  if constexpr (FDBG) dumpLatticeBrief("AllBottom.in ", source);
+
+  auto out = mkBottomLike(source);
+  if constexpr (FDBG) dumpLatticeBrief("AllBottom.out", out);
+  return out;
 }
 
-EF FeasibilityAllBottomEF::compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF> /*thisFunc*/,
-                                   const EF &/*secondFunction*/) {
-    // AllBottom ∘ g = AllBottom (once infeasible, stay infeasible)
+EF FeasibilityAllBottomEF::compose(
+    psr::EdgeFunctionRef<FeasibilityAllBottomEF> /*thisFunc*/,
+    const EF & /*secondFunction*/) {
+  ScopedTimer T("AllBottomEF::compose");
+  FDBG_LINE("AllBottom ∘ g = AllBottom");
+  return EF(std::in_place_type<FeasibilityAllBottomEF>);
+}
+
+EF FeasibilityAllBottomEF::join(
+    psr::EdgeFunctionRef<FeasibilityAllBottomEF> /*thisFunc*/,
+    const psr::EdgeFunction<l_t> &otherFunc) {
+  ScopedTimer T("AllBottomEF::join");
+  FDBG_LINE("AllBottom ⊔ f = f (Bottom neutral)");
+
+  if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
+  if (otherFunc.template isa<FeasibilityAllTopEF>() ||
+      otherFunc.template isa<psr::AllTop<l_t>>()) {
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+  if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
+      otherFunc.template isa<psr::AllBottom<l_t>>()) {
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
-}
-
-EF FeasibilityAllBottomEF::join(psr::EdgeFunctionRef<FeasibilityAllBottomEF> /*thisFunc*/,
-                                const psr::EdgeFunction<l_t> &otherFunc) {
-    // Join is OR of results. Bottom is neutral:
-    // ⊥ ⊔ f = f
-    if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-    }
-    if (otherFunc.template isa<FeasibilityAllTopEF>() || otherFunc.template isa<psr::AllTop<l_t>>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
-    if (otherFunc.template isa<FeasibilityAllBottomEF>() || otherFunc.template isa<psr::AllBottom<l_t>>()) {
-        return EF(std::in_place_type<FeasibilityAllBottomEF>);
-    }
-
-    // For AND/OR formula EFs, AddConstrainEF, PhiTranslateEF, etc.:
-    return EF(otherFunc);
+  }
+  return EF(otherFunc);
 }
 
 // =====================================================================================================================
 // FeasibilityPHITranslateEF
 
 l_t FeasibilityPHITranslateEF::computeTarget(const l_t &source) const {
-    auto *localManager = this->manager ? this->manager : source.manager;
+  ScopedTimer T("PHITranslateEF::computeTarget");
+  if constexpr (FDBG) dumpLatticeBrief("Phi.in ", source);
 
-    if (source.isBottom()) {
-        return source;
-    }
+  FeasibilityElement cached;
+  if (Memo.lookup(source, cached))
+    return cached;
 
-    if (!PredBB || !SuccBB) {
-        return source; // behave like Identity
-    }
+  auto *M = pickManager(this->manager, source);
 
-    const uint32_t incomingEnvId = source.environmentID;
+  if (source.isBottom()) {
+    FDBG_LINE("Phi.computeTarget: source is Bottom -> return Bottom");
+    return mkBottomLike(source);
+  }
 
-    const uint32_t outEnvId = localManager->applyPhiPack(incomingEnvId, PredBB, SuccBB);
+  if (!PredBB || !SuccBB) {
+    FDBG_LINE("Phi.computeTarget: missing PredBB/SuccBB -> Identity");
+    return source;
+  }
 
-    auto out = source;
-    out.environmentID = outEnvId;
+  const uint32_t incomingEnvId = source.getEnvId();
+  const uint32_t outEnvId = M->applyPhiPack(incomingEnvId, PredBB, SuccBB);
 
-    return out;
+  auto out = source;
+  out.setEnvId(outEnvId);
+
+  if constexpr (FDBG) dumpLatticeBrief("Phi.out", out);
+  Memo.store(source, out);
+  return out;
 }
 
-EF FeasibilityPHITranslateEF::compose(psr::EdgeFunctionRef<FeasibilityPHITranslateEF> thisFunc, const EF &secondFunction) {
+EF FeasibilityPHITranslateEF::compose(
+    psr::EdgeFunctionRef<FeasibilityPHITranslateEF> thisFunc,
+    const EF &secondFunction) {
+  ScopedTimer T("PHITranslateEF::compose");
 
-    // Identity case. Do nothing
-    if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(thisFunc);
-    }
+  if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+    FDBG_LINE("Phi ∘ Identity -> Phi");
+    return EF(thisFunc);
+  }
+  if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
+    FDBG_LINE("Phi ∘ Bottom -> Bottom");
+    return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  }
+  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
+    FDBG_LINE("Phi ∘ Top -> Top");
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
 
-    // Bottom case. Phi ° ⊥ = ⊥
-    if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-        return EF(std::in_place_type<FeasibilityAllBottomEF>);
-    }
+  auto *M = thisFunc->manager;
+  const auto step = PhiStep(thisFunc->PredBB, thisFunc->SuccBB);
 
-    // Top case. Phi ° ⊤ = ⊤
-    if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
+  if (auto *otherPhi =
+          secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
+    FDBG_LINE("Phi ∘ Phi -> ANDFormula(phiChain=[other, this])");
+    FeasibilityClause clause;
+    clause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
+    clause.PhiChain.push_back(step);
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+  }
 
-    // Any other case...
+  if (auto *addCons =
+          secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
+    FDBG_LINE("Phi ∘ Add -> ANDFormula(phiChain=[this], constr=[add])");
+    FeasibilityClause clause;
+    clause.PhiChain.push_back(step);
+    clause.Constrs.push_back(
+        LazyICmp(addCons->ConstraintInst, addCons->isTrueBranch));
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+  }
 
-    // Our current phi translation step
-    const auto step = PhiStep(thisFunc->PredBB, thisFunc->SuccBB);
-    auto *M = thisFunc->manager;
+  if (auto *andEF =
+          secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
+    FDBG_LINE("Phi ∘ AND -> AND (prepend phi step)");
+    FeasibilityClause clause = andEF->Clause;
+    clause.PhiChain.insert(clause.PhiChain.begin(), step);
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+  }
 
-    // Deals with two phis following after each other.
-    // We can just concatenate the phi chains, as applying the two phis in sequence is the same as applying the concatenated chain.
-    // Pray to your creator that this does not happen...
-    if (auto *otherPhi = secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-        FeasibilityClause clause;
+  if (secondFunction.template isa<FeasibilityORFormulaEF>()) {
+    FDBG_LINE("Phi ∘ OR -> lazy ComposeEF");
+    return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
+              secondFunction);
+  }
 
-        // Push the other phi's step first, as it will be applied first when we apply the composed function to an element.
-        clause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
-        clause.PhiChain.push_back(step);
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
-    }
-
-    // If we encounter another constraint after the phi translation, we need to apply the phi translation first and
-    // then add the constraint. This is because the constraint may refer to variables that are translated by the
-    // phi translation, and we need to make sure that we apply the phi translation before adding the
-    // constraint to ensure that we are adding the constraint to the correct variables in the environment.
-    if (auto *addCons = secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
-        FeasibilityClause clause;
-        clause.PhiChain.push_back(step);
-        clause.Constrs.push_back(LazyICmp(addCons->ConstraintInst, addCons->isTrueBranch));
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
-    }
-
-    // Deal with ANDs and ORs
-
-    // AND case. We need to prepend the current phi step to translate all other constraints in the clause.
-    if (auto *andEF = secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-        FeasibilityClause clause = andEF->Clause;
-        // Prepend our PHI translation step to the clause's PHI chain, as it needs to be applied before the constraints in the clause.
-        clause.PhiChain.insert(clause.PhiChain.begin(), step);
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
-    }
-
-    // OR case. We need to prepend the current phi step to all clauses in the OR, as it needs to be applied before the constraints in the clauses.
-    if (auto *orEF = secondFunction.template dyn_cast<FeasibilityORFormulaEF>()) {
-        auto existingClauses = orEF->Clauses;
-        for (auto &clause : existingClauses) {
-            clause.PhiChain.insert(clause.PhiChain.begin(), step);
-        }
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(existingClauses));
-    }
-
-    llvm::errs() << "ALARM in FeasibilityPHITranslateEF::compose: We are trying to compose an edge function of type FeasibilityPHITranslateEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
-                    "Please check the implementation of the analysis and make sure that it only produces edge functions of the supported types.\n";
-    return secondFunction;
+  llvm::errs()
+      << "ALARM in FeasibilityPHITranslateEF::compose: unsupported secondFunction\n";
+  return secondFunction;
 }
 
-EF FeasibilityPHITranslateEF::join(psr::EdgeFunctionRef<FeasibilityPHITranslateEF> thisFunc, const psr::EdgeFunction<l_t> &otherFunc) {
+EF FeasibilityPHITranslateEF::join(
+    psr::EdgeFunctionRef<FeasibilityPHITranslateEF> thisFunc,
+    const psr::EdgeFunction<l_t> &otherFunc) {
+  ScopedTimer T("PHITranslateEF::join");
 
-    // Identity case. Do nothing
-    if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-    }
+  if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
+    FDBG_LINE("Phi ⊔ Identity -> Identity (kept as before)");
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
+  if (otherFunc.template isa<FeasibilityAllTopEF>()) {
+    FDBG_LINE("Phi ⊔ Top -> Top");
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+  if (otherFunc.template isa<FeasibilityAllBottomEF>()) {
+    FDBG_LINE("Phi ⊔ Bottom -> Phi");
+    return EF(thisFunc);
+  }
 
-    // Top case. Phi V ⊤ = ⊤
-    if (otherFunc.template isa<FeasibilityAllTopEF>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
+  auto *M = thisFunc->manager;
 
-    // Bottom case. Phi V ⊥ = Phi
-    if (otherFunc.template isa<FeasibilityAllBottomEF>()) {
-        return EF(thisFunc);
-    }
+  FeasibilityClause thisClause;
+  thisClause.PhiChain.push_back(PhiStep(thisFunc->PredBB, thisFunc->SuccBB));
 
-    // Any other case...
-    auto *M = thisFunc->manager;
+  if (auto *otherPhi =
+          otherFunc.template dyn_cast<FeasibilityPHITranslateEF>()) {
+    FDBG_LINE("Phi ⊔ Phi -> ORFormula(2 phi-clauses)");
+    FeasibilityClause otherClause;
+    otherClause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
 
-    // If we want to join with another function we need to represent this phi also as clause
-    FeasibilityClause thisClause;
-    thisClause.PhiChain.push_back(PhiStep(thisFunc->PredBB, thisFunc->SuccBB));
+    llvm::SmallVector<FeasibilityClause, 4> clauses;
+    clauses.push_back(std::move(thisClause));
+    clauses.push_back(std::move(otherClause));
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-    // Phi case. Joining two phis with different translation steps results in an OR of the two phis, as we want to
-    // represent that either of the two translations may be applied.
-    if (auto *otherPhi = otherFunc.template dyn_cast<FeasibilityPHITranslateEF>()) {
-        // Create a new clause for the other phi translation step, as we need to represent it as a disjunction
-        // in the resulting OR formula.
-        FeasibilityClause otherClause;
-        otherClause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
+  if (auto *addCons =
+          otherFunc.template dyn_cast<FeasibilityAddConstrainEF>()) {
+    FDBG_LINE("Phi ⊔ Add -> ORFormula(phiClause, addClause)");
+    FeasibilityClause clauseOfAdd =
+        Util::clauseFromIcmp(addCons->ConstraintInst, addCons->isTrueBranch);
 
-        // Create the disjunction of the feasibility clauses
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        // Add the clause for this phi translation step
-        clauses.push_back(std::move(thisClause));
-        // Add the clause for the other phi translation step
-        clauses.push_back(std::move(otherClause));
+    llvm::SmallVector<FeasibilityClause, 4> clauses;
+    clauses.push_back(std::move(thisClause));
+    clauses.push_back(std::move(clauseOfAdd));
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-        // Create an or with the two clauses
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, clauses);
-    }
+  if (auto *andEF = otherFunc.template dyn_cast<FeasibilityANDFormulaEF>()) {
+    FDBG_LINE("Phi ⊔ AND -> ORFormula(phiClause, andClause)");
+    llvm::SmallVector<FeasibilityClause, 4> clauses;
+    clauses.push_back(std::move(thisClause));
+    clauses.push_back(andEF->Clause);
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-    if (auto *addCons = otherFunc.template dyn_cast<FeasibilityAddConstrainEF>()) {
-        // If we want to join with a constraint, we need to represent the phi translation as a clause and add the constraint to this clause,
-        // as we want to represent that the constraint is only added if the phi translation is applied.
+  if (auto *orEF = otherFunc.template dyn_cast<FeasibilityORFormulaEF>()) {
+    FDBG_LINE("Phi ⊔ OR -> OR (append phiClause)");
+    auto clauses = orEF->Clauses;
+    clauses.push_back(std::move(thisClause));
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-        // Create a new clause from the incoming add
-        FeasibilityClause clauseofAdd = Util::clauseFromIcmp(addCons->ConstraintInst, addCons->isTrueBranch);
-
-        // Create a vector of clauses we want to OR together, which consists of the clause for this phi translation
-        // step and the clause for the other constraint.
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        clauses.push_back(std::move(thisClause));
-        clauses.push_back(std::move(clauseofAdd));
-
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, clauses);
-    }
-
-    // Deal with ANDs and ORs
-
-    // AND case. We need to join the current phi step with the existing constraints in the clause,
-    // as we want to represent that the phi translation is applied together with the constraints in the clause.
-    if (auto *andEF = otherFunc.template dyn_cast<FeasibilityANDFormulaEF>()) {
-        // Create a new vector of clauses where we want to represent this phi and the incoming AND clause as a
-        // disjunction of the two, as we want to represent that either the phi translation is applied
-        // or the constraints in the clause are applied.
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        clauses.push_back(std::move(thisClause));
-        clauses.push_back(andEF->Clause);
-
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    // OR case. We need to join the current phi step with all existing clauses in the OR,
-    // as we want to represent that the phi translation is applied together with all constraints in the clauses.
-    if (auto *orEF = otherFunc.template dyn_cast<FeasibilityORFormulaEF>()) {
-        // Get the clauses of the incoming oR
-        auto clauses = orEF->Clauses;
-        clauses.push_back(std::move(thisClause));
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    llvm::errs() << "ALARM in FeasibilityPHITranslateEF::join: unsupported otherFunc\n";
-    return EF(otherFunc);
+  llvm::errs()
+      << "ALARM in FeasibilityPHITranslateEF::join: unsupported otherFunc\n";
+  return EF(otherFunc);
 }
 
 // =====================================================================================================================
 // FeasibilityAddConstrainEF
 
 l_t FeasibilityAddConstrainEF::computeTarget(const l_t &source) const {
-    auto *localManager = this->manager ? this->manager : source.manager;
+  ScopedTimer T("AddConstrainEF::computeTarget");
+  if constexpr (FDBG) dumpLatticeBrief("Add.in ", source);
 
-    if (source.isBottom()) {
-        return source;
-    }
+  FeasibilityElement cached;
+  if (Memo.lookup(source, cached))
+    return cached;
 
-    // If the incoming ICMP is borked, we just behave as identity
-    // This should not happen, as we should only create FeasibilityAddConstrainEF for valid ICMP instructions
-    if (!ConstraintInst) {
-        llvm::errs() << "ALARM in FeasibilityAddConstrainEF::computeTarget: ConstraintInst is null."
-                        "This should not happen, as we should only create FeasibilityAddConstrainEF for valid ICMP "
-                        "instructions. Please check the implementation of the analysis and make sure that we "
-                        "are only creating FeasibilityAddConstrainEF for valid ICMP instructions.\n";
-        return source;
-    }
+  auto *M = pickManager(this->manager, source);
 
-    const uint32_t incomingPathCondition = source.formularID;
+  if (source.isBottom()) {
+    FDBG_LINE("Add.computeTarget: source is Bottom -> return Bottom");
+    return mkBottomLike(source);
+  }
 
-    // Create a new constraint from the incoming ICMP instruction, the branch condition (true or false) and
-    // the environment of the source element.
-    z3::expr newConstraint = Util::createConstraintFromICmp(localManager, ConstraintInst, isTrueBranch, source.environmentID);
-    const uint32_t constraintId = Util::findOrAddFormulaId(localManager, newConstraint);
+  if (!ConstraintInst) {
+    llvm::errs()
+        << "ALARM in FeasibilityAddConstrainEF::computeTarget: ConstraintInst is null\n";
+    return source;
+  }
 
-    // Construct the new formula by adding the constraint represented by ConstraintInst to the source formula.
-    auto outPathConditionId = localManager->mkAnd(incomingPathCondition, constraintId);
+  const uint32_t incomingPC = source.getFormulaId();
+  const uint32_t env = source.getEnvId();
 
-    //llvm::errs() << "Computing target for FeasibilityAddConstrainEF: \n"
-    //                "Adding constraint with ID " << incomingConstrain << " to source formula with ID " << existingConstrain << ". New formula ID is " << newFormulaId << "\n";
+  z3::expr newConstraint =
+      Util::createConstraintFromICmp(M, ConstraintInst, isTrueBranch, env);
+  const uint32_t constraintId = Util::findOrAddFormulaId(M, newConstraint);
 
-    if (!localManager->isSat(outPathConditionId)) {
-        auto out = source;
-        out.kind = l_t::Kind::Bottom;
-        out.formularID = source.bottomId;
-        return out;
-    }
+  const uint32_t outPC = M->mkAnd(incomingPC, constraintId);
 
-    // Copy the incoming element and update it with the new formula ID. This is the result of applying the edge function to the source element.
-    auto out = source;
-    out.formularID = outPathConditionId;
-
-    if (out.kind == l_t::Kind::Top) {
-        out.kind = l_t::Kind::Normal;
-    }
-
+  if (!M->isSat(outPC)) {
+    FDBG_LINE("Add.computeTarget: UNSAT -> Bottom");
+    auto out = mkBottomLike(source);
+    if constexpr (FDBG) dumpLatticeBrief("Add.out", out);
+    Memo.store(source, out);
     return out;
+  }
+
+  auto out = source;
+  out.setFormulaId(outPC);
+  if (out.getKind() == l_t::Kind::Top) {
+    out.setKind(l_t::Kind::Normal);
+  }
+
+  if constexpr (FDBG) dumpLatticeBrief("Add.out", out);
+  Memo.store(source, out);
+  return out;
 }
 
-EF FeasibilityAddConstrainEF::compose(psr::EdgeFunctionRef<FeasibilityAddConstrainEF> thisFunc, const EF &secondFunction) {
-    // Check the types of the edge functions and act accordingly
+EF FeasibilityAddConstrainEF::compose(
+    psr::EdgeFunctionRef<FeasibilityAddConstrainEF> thisFunc,
+    const EF &secondFunction) {
+  ScopedTimer T("AddConstrainEF::compose");
 
-    // Identity do nothing
-    if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(thisFunc);
-    }
+  if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+    FDBG_LINE("Add ∘ Identity -> Add");
+    return EF(thisFunc);
+  }
+  if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
+    FDBG_LINE("Add ∘ Bottom -> Bottom");
+    return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  }
+  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
+    FDBG_LINE("Add ∘ Top -> Top");
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
 
-    // Bottom kills everything
-    if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-        return EF(std::in_place_type<FeasibilityAllBottomEF>);
-    }
+  auto *M = thisFunc->manager;
 
-    // Top kills everything
-    if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
+  FeasibilityClause thisClause;
+  thisClause.Constrs.push_back(
+      LazyICmp(thisFunc->ConstraintInst, thisFunc->isTrueBranch));
 
-    auto *M = thisFunc->manager;
+  if (auto *otherPhi =
+          secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
+    FDBG_LINE("Add ∘ Phi -> ANDFormula(constr=[this], phiChain=[phi])");
+    FeasibilityClause clause = thisClause;
+    clause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+  }
 
-    // Create new clause for this constraint that we want to add,
-    // as we need to represent it as a clause when we compose with other constraints or phis.
-    FeasibilityClause thisClause;
-    // Add the constraint represented by this edge function to the clause, as we need to represent it as a
-    // clause when we compose with other constraints or phis.
-    thisClause.Constrs.push_back(LazyICmp(thisFunc->ConstraintInst, thisFunc->isTrueBranch));
+  if (auto *otherAdd =
+          secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
+    FDBG_LINE("Add ∘ Add -> ANDFormula(2 constrs)");
+    FeasibilityClause clause = thisClause;
+    clause.Constrs.push_back(
+        LazyICmp(otherAdd->ConstraintInst, otherAdd->isTrueBranch));
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+  }
 
-    // Compose with an incoming phi
-    if (auto *otherPhi = secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-        FeasibilityClause otherClause = thisClause;
+  if (auto *otherAnd =
+          secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
+    FDBG_LINE("Add ∘ AND -> AND (append constr)");
+    FeasibilityClause clause = otherAnd->Clause;
+    clause.Constrs.append(thisClause.Constrs.begin(), thisClause.Constrs.end());
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+  }
 
-        // Do we need to insert at the beginning here?
-        otherClause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(otherClause));
-    }
+  if (secondFunction.template isa<FeasibilityORFormulaEF>()) {
+    FDBG_LINE("Add ∘ OR -> lazy ComposeEF");
+    return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
+              secondFunction);
+  }
 
-    // Compose with another add
-    if (auto *otherAddCons = secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
-        // Create a new empty clause
-        FeasibilityClause otherClause;
-
-        // Add the incoming constraint to the clause, as we need to represent it as a clause when we compose with
-        // other constraints or phis.
-        otherClause.Constrs.push_back(LazyICmp(otherAddCons->ConstraintInst, otherAddCons->isTrueBranch));
-
-        // Insert the newly constructed clause for the incoming constraint into the current clause, as we need to
-        // represent the composition of the two constraints as a conjunction of the two constraints in a single clause.
-        thisClause.Constrs.append(otherClause.Constrs.begin(), otherClause.Constrs.end());
-
-        // Construct an and from the two clauses, as we want to represent the composition of the
-        // two constraints as a conjunction of the two constraints in a single clause.
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(thisClause));
-    }
-
-    // Compose with an and
-    if (auto *otherAnd = secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-        // The incoming and already represents a conjunction of constraints and phis as a single clause,
-        // so we can just combine the constraints of this edge function with the constraints in the incoming AND clause.
-
-        FeasibilityClause incomingClause = otherAnd->Clause;
-        incomingClause.Constrs.append(thisClause.Constrs.begin(), thisClause.Constrs.end());
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(incomingClause));
-    }
-
-    // Compose with an OR.
-    if (auto *otherOr = secondFunction.template dyn_cast<FeasibilityORFormulaEF>()) {
-        // We need to compose this constraint with all clauses in the incoming OR
-        auto orClauses = otherOr->Clauses;
-
-        for (auto &clause : orClauses) {
-            clause.Constrs.append(thisClause.Constrs.begin(), thisClause.Constrs.end());
-        }
-
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(orClauses));
-    }
-
-    llvm::errs() << "ALARM in FeasibilityAddConstrainEF::compose: We are trying to compose an edge function of type FeasibilityAddConstrainEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
-                    "Please check the implementation of the analysis and make sure that it only produces edge functions of the supported types.\n";
-    return secondFunction;
+  llvm::errs()
+      << "ALARM in FeasibilityAddConstrainEF::compose: unsupported secondFunction\n";
+  return secondFunction;
 }
 
-EF FeasibilityAddConstrainEF::join(psr::EdgeFunctionRef<FeasibilityAddConstrainEF> thisFunc, const psr::EdgeFunction<l_t> &secondFunction) {
+EF FeasibilityAddConstrainEF::join(
+    psr::EdgeFunctionRef<FeasibilityAddConstrainEF> thisFunc,
+    const psr::EdgeFunction<l_t> &secondFunction) {
+  ScopedTimer T("AddConstrainEF::join");
 
-    // Edge identy do nothing
-    if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-    }
+  if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+    FDBG_LINE("Add ⊔ Identity -> Identity (kept as before)");
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
+  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
+    FDBG_LINE("Add ⊔ Top -> Top");
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+  if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
+    FDBG_LINE("Add ⊔ Bottom -> Add");
+    return EF{thisFunc};
+  }
 
-    // Top edge function acts as absorbing element for joining.
-    // As we are calculaling A v T = T
-    if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
+  auto *M = thisFunc->manager;
 
-    // Bottom edge function acts as neutral element for joining,
-    // as it maps any input to itself A V ⊥ = A
-    if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-        //llvm::errs() << "Joining FeasibilityAddConstrainEF with FeasibilityAllBottomEF. Result is the original FeasibilityAddConstrainEF, as A V ⊥ = A\n";
-        return EF{thisFunc};
-    }
+  FeasibilityClause thisClause;
+  thisClause.Constrs.push_back(
+      LazyICmp(thisFunc->ConstraintInst, thisFunc->isTrueBranch));
 
-    auto *M = thisFunc->manager;
+  if (auto *otherPhi =
+          secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
+    FDBG_LINE("Add ⊔ Phi -> ORFormula(addClause, phiClause)");
+    FeasibilityClause phiClause;
+    phiClause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
 
-    // Create new clause for this constraint that we want to add,
-    // as we need to represent it as a clause when we compose with other constraints or phis.
-    FeasibilityClause thisClause;
-    // Add the constraint represented by this edge function to the clause, as we need to represent it as a
-    // clause when we compose with other constraints or phis.
-    thisClause.Constrs.push_back(LazyICmp(thisFunc->ConstraintInst, thisFunc->isTrueBranch));
+    llvm::SmallVector<FeasibilityClause, 4> clauses;
+    clauses.push_back(std::move(thisClause));
+    clauses.push_back(std::move(phiClause));
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-    // Compose with an incoming phi
-    if (auto *otherPhi = secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-        // We need to represent the phi translation as a clause and add the constraint of this edge function to this clause,
-        FeasibilityClause phiClause;
-        // Push this phi translation step to the clause's PHI chain, as it needs to be applied before the constraints in the clause.
-        phiClause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
+  if (auto *otherAdd =
+          secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
+    FDBG_LINE("Add ⊔ Add -> ORFormula(2 addClauses)");
+    FeasibilityClause addClause;
+    addClause.Constrs.push_back(
+        LazyICmp(otherAdd->ConstraintInst, otherAdd->isTrueBranch));
 
-        // Construct a new vector of clauses we want to OR together
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
+    llvm::SmallVector<FeasibilityClause, 4> clauses;
+    clauses.push_back(std::move(thisClause));
+    clauses.push_back(std::move(addClause));
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-        // Add the present clause to the or vector
-        clauses.push_back(std::move(thisClause));
-        // Add the newly constructed phi translation step to the or vector
-        clauses.push_back(std::move(phiClause));
+  if (auto *otherAnd =
+          secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
+    FDBG_LINE("Add ⊔ AND -> ORFormula(addClause, andClause)");
+    llvm::SmallVector<FeasibilityClause, 4> clauses;
+    clauses.push_back(std::move(thisClause));
+    clauses.push_back(otherAnd->Clause);
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
+  if (auto *otherOr =
+          secondFunction.template dyn_cast<FeasibilityORFormulaEF>()) {
+    FDBG_LINE("Add ⊔ OR -> OR (append addClause)");
+    auto clauses = otherOr->Clauses;
+    clauses.push_back(std::move(thisClause));
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-    // Compose with another add
-    if (auto *otherAddCons = secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
-        // Create a brand new clause
-        FeasibilityClause addClause;
-        // Add the constraint of the incoming add as lazy ICMP based constraint to the clause.
-        addClause.Constrs.push_back(LazyICmp(otherAddCons->ConstraintInst, otherAddCons->isTrueBranch));
-
-        // Create a new or clause vector and add this clause and the newly constructed clause for the incoming add to
-        // this vector, as we want to represent the join of the two constraints as a disjunction
-        // of the two constraints in separate clauses.
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        clauses.push_back(std::move(thisClause));
-        clauses.push_back(std::move(addClause));
-
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    // Compose with an and
-    if (auto *otherAnd = secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-        // Create a new or vector
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-
-        // Add this clause and the clause of the incoming and to this vector
-        clauses.push_back(std::move(thisClause));
-        clauses.push_back(otherAnd->Clause);
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    // Compose with an OR.
-    if (auto *otherOr = secondFunction.template dyn_cast<FeasibilityORFormulaEF>()) {
-        // Get the incoming clauses
-        auto clauses = otherOr->Clauses;
-
-        // Add this clause to the incoming clauses
-        clauses.push_back(std::move(thisClause));
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    llvm::errs() << "ALARM in FeasibilityAddConstrainEF::join: We are trying to join an edge function of type FeasibilityAddConstrainEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
-                    "Please check the implementation of the analysis and make sure that it only produces edge functions of the supported types.\n";
-    return EF(secondFunction);
+  llvm::errs()
+      << "ALARM in FeasibilityAddConstrainEF::join: unsupported secondFunction\n";
+  return EF(secondFunction);
 }
 
 // =====================================================================================================================
 // FeasibilityANDFormulaEF
 
 l_t FeasibilityANDFormulaEF::computeTarget(const l_t &source) const {
-    auto *M = manager ? manager : source.manager;
+  ScopedTimer T("ANDFormulaEF::computeTarget");
+  if constexpr (FDBG) dumpLatticeBrief("AND.in ", source);
 
-    //llvm::errs() << "\t => source kind is " << (source.isTop() ? "Top" : (source.isBottom() ? "Bottom" : "Normal")) << ", formula ID is " << source.formularID << " and environment ID is " << source.environmentID << "\n";
-    if (source.isBottom()) {
-        return source;
-    }
+  FeasibilityElement cached;
+  if (Memo.lookup(source, cached))
+    return cached;
 
-    // Apply PHI translations first to get correct SSA names for constraint creation
-    const uint32_t outEnv = Util::applyPhiChain(M, source.environmentID, Clause.PhiChain);
-    uint32_t pathConditionId = source.formularID;
+  auto *M = pickManager(manager, source);
 
-    // Iterate over the lazy constraints in the clause and create the corresponding formulas, then add them to the path condition via AND.
-    for (const auto &lazyConstr : Clause.Constrs) {
-        // Dummy check if the ICMP contained in the lazy constraint is valid.
-        // This should not be necessary, as we should only create FeasibilityANDFormulaEF with valid LazyICmp
-        // constraints, but we check it just to be sure and to avoid potential crashes.
-        if (!lazyConstr.I) {
-            llvm::errs() << "ALARM in FeasibilityANDFormulaEF::computeTarget: LazyICmp has null instruction. This should not happen, as we should only create FeasibilityANDFormulaEF with valid LazyICmp constraints. Please check the implementation of the analysis and make sure that we are only creating FeasibilityANDFormulaEF with valid LazyICmp constraints.\n";
-            continue;
-        }
+  if (source.isBottom()) {
+    FDBG_LINE("AND.computeTarget: source is Bottom -> return Bottom");
+    return mkBottomLike(source);
+  }
 
-        // Create a new constraint from the lazy constraint,
-        // the branch condition (true or false) and the environment after applying the PHI translations.
-        z3::expr newlyConstructedExpression = Util::createConstraintFromICmp(M, lazyConstr.I, lazyConstr.TrueEdge, outEnv);
-        const uint32_t newConstrId = Util::findOrAddFormulaId(M, newlyConstructedExpression);
+  const bool hasPhi = !Clause.PhiChain.empty();
+  const bool hasConstr = !Clause.Constrs.empty();
 
-        // Create an and from the path condition contained in the lattice element and the newly constructed
-        // constraint, as we want to represent the composition of the
-        pathConditionId = M->mkAnd(pathConditionId, newConstrId);
+  const uint32_t srcEnv = source.getEnvId();
+  const uint32_t outEnv =
+      hasPhi ? Util::applyPhiChain(M, srcEnv, Clause.PhiChain) : srcEnv;
 
-        if (!M->isSat(pathConditionId)) {
-            auto out = source;
-            out.kind = l_t::Kind::Bottom;
-            out.formularID = source.bottomId;
-            out.environmentID = outEnv;  // keep for debugging
-            return out;
-        }
-    }
-
+  if (!hasConstr) {
     auto out = source;
-    out.formularID = pathConditionId;
-    out.environmentID = outEnv; // keep for debugging
-    if (out.kind == l_t::Kind::Top) {
-        out.kind = l_t::Kind::Normal;
-    }
-
+    out.setEnvId(outEnv);
+    Memo.store(source, out);
     return out;
+  }
+
+  uint32_t pc = source.getFormulaId();
+
+  for (const auto &lazyConstr : Clause.Constrs) {
+    if (!lazyConstr.I) {
+      llvm::errs()
+          << "ALARM in FeasibilityANDFormulaEF::computeTarget: LazyICmp has null instruction\n";
+      continue;
+    }
+
+    z3::expr expr = Util::createConstraintFromICmp(
+        M, lazyConstr.I, lazyConstr.TrueEdge, outEnv);
+    const uint32_t cid = Util::findOrAddFormulaId(M, expr);
+
+    pc = M->mkAnd(pc, cid);
+
+    if (!M->isSat(pc)) {
+      FDBG_LINE("AND.computeTarget: UNSAT -> Bottom");
+      auto out = mkBottomLike(source);
+      out.setEnvId(0); // Bottom env forced to 0
+      if constexpr (FDBG) dumpLatticeBrief("AND.out", out);
+      Memo.store(source, out);
+      return out;
+    }
+  }
+
+  auto out = source;
+  out.setFormulaId(pc);
+  out.setEnvId(outEnv);
+  if (out.getKind() == l_t::Kind::Top) {
+    out.setKind(l_t::Kind::Normal);
+  }
+
+  if constexpr (FDBG) dumpLatticeBrief("AND.out", out);
+  Memo.store(source, out);
+  return out;
 }
 
-EF FeasibilityANDFormulaEF::compose(psr::EdgeFunctionRef<FeasibilityANDFormulaEF> thisFunc, const EF &secondFunction) {
-    // Identiy do nothing
-    if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(thisFunc);
+EF FeasibilityANDFormulaEF::compose(
+    psr::EdgeFunctionRef<FeasibilityANDFormulaEF> thisFunc,
+    const EF &secondFunction) {
+  ScopedTimer T("ANDFormulaEF::compose");
+
+  if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+    FDBG_LINE("AND ∘ Identity -> AND");
+    return EF(thisFunc);
+  }
+  if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
+    FDBG_LINE("AND ∘ Bottom -> Bottom");
+    return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  }
+  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
+    FDBG_LINE("AND ∘ Top -> Top");
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+
+  auto *M = thisFunc->manager;
+
+  if (auto *phi =
+          secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
+    FDBG_LINE("AND ∘ Phi -> AND(conjClauses)");
+    FeasibilityClause phiClause = Util::clauseFromPhi(phi->PredBB, phi->SuccBB);
+    FeasibilityClause merged = Util::conjClauses(thisFunc->Clause, phiClause);
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(merged));
+  }
+
+  if (auto *add =
+          secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
+    FDBG_LINE("AND ∘ Add -> AND(conjClauses)");
+    FeasibilityClause addClause =
+        Util::clauseFromIcmp(add->ConstraintInst, add->isTrueBranch);
+    FeasibilityClause merged = Util::conjClauses(thisFunc->Clause, addClause);
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(merged));
+  }
+
+  if (auto *and2 =
+          secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
+    FDBG_LINE("AND ∘ AND -> AND(conjClauses)");
+    FeasibilityClause merged =
+        Util::conjClauses(thisFunc->Clause, and2->Clause);
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(merged));
+  }
+
+  if (auto *orEF =
+          secondFunction.template dyn_cast<FeasibilityORFormulaEF>()) {
+    FDBG_LINE("AND ∘ OR -> OR(distribute conj over each clause)");
+    llvm::SmallVector<FeasibilityClause, 4> mergedClauses;
+    mergedClauses.reserve(orEF->Clauses.size());
+    for (const auto &c : orEF->Clauses) {
+      mergedClauses.push_back(Util::conjClauses(thisFunc->Clause, c));
     }
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M,
+              std::move(mergedClauses));
+  }
 
-    // Bottom kills everything
-    if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-        return EF(std::in_place_type<FeasibilityAllBottomEF>);
-    }
-
-    // Top kills everything
-    if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
-
-    auto *M = thisFunc->manager;
-
-    // Phi Case
-    if (auto *otherPhi = secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-        // Create a new clause from the incoming phi information
-        FeasibilityClause phiClause = Util::clauseFromPhi(otherPhi->PredBB, otherPhi->SuccBB);
-        // Merge this clause and the phi clause by concatenating the PHI chains and the constraint vectors,
-        // as we want to represent the composition of the two edge functions as a conjunction of the
-        // constraints and phi translations in both clauses.
-        FeasibilityClause mergedClause = Util::conjClauses(thisFunc->Clause, phiClause);
-
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(mergedClause));
-    }
-
-    // Add constraint case
-    if (auto *otherAdd = secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
-        // Create a new clause from the incoming add information
-        FeasibilityClause addClause = Util::clauseFromIcmp(otherAdd->ConstraintInst, otherAdd->isTrueBranch);
-        // Merge this clause and the add clause by concatenating the PHI chains and the constraint vectors,
-        // as we want to represent the composition of the two edge functions as a conjunction of the
-        // constraints and phi translations in both clauses.
-        FeasibilityClause mergedClause = Util::conjClauses(thisFunc->Clause, addClause);
-
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(mergedClause));
-    }
-
-    // AND case
-    if (auto *otherAnd = secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-        // Merge the two clauses by concatenating the PHI chains and the constraint vectors,
-        // as we want to represent the composition of the two edge functions as a conjunction of the
-        // constraints and phi translations in both clauses.
-        FeasibilityClause mergedClause = Util::conjClauses(thisFunc->Clause, otherAnd->Clause);
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(mergedClause));
-    }
-
-    // OR case
-    if (auto *otherOr = secondFunction.template dyn_cast<FeasibilityORFormulaEF>()) {
-        // We need to merge this clause with all clauses in the incoming OR
-        llvm::SmallVector<FeasibilityClause, 4> mergedClauses;
-        mergedClauses.reserve(otherOr->Clauses.size());
-
-        for (const auto &orClause : otherOr->Clauses) {
-            mergedClauses.push_back(Util::conjClauses(thisFunc->Clause, orClause));
-        }
-
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(mergedClauses));
-    }
-
-    llvm::errs() << "ALARM in FeasibilityANDFormulaEF::compose: We are trying to compose an edge function of type FeasibilityANDFormulaEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
-                    "Please check the implementation of the analysis and make sure that it only produces edge functions of the supported types.\n";
-    return EF(secondFunction);
+  llvm::errs()
+      << "ALARM in FeasibilityANDFormulaEF::compose: unsupported secondFunction\n";
+  return EF(secondFunction);
 }
 
-EF FeasibilityANDFormulaEF::join(psr::EdgeFunctionRef<FeasibilityANDFormulaEF> thisFunc, const psr::EdgeFunction<l_t> &otherFunc) {
+EF FeasibilityANDFormulaEF::join(
+    psr::EdgeFunctionRef<FeasibilityANDFormulaEF> thisFunc,
+    const psr::EdgeFunction<l_t> &otherFunc) {
+  ScopedTimer T("ANDFormulaEF::join");
 
-    // Identity case. Do nothing
-    if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-    }
+  if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
+    FDBG_LINE("AND ⊔ Identity -> Identity");
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
+  if (otherFunc.template isa<FeasibilityAllTopEF>() ||
+      otherFunc.template isa<psr::AllTop<l_t>>()) {
+    FDBG_LINE("AND ⊔ Top -> Top");
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+  if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
+      otherFunc.template isa<psr::AllBottom<l_t>>()) {
+    FDBG_LINE("AND ⊔ Bottom -> AND");
+    return EF(thisFunc);
+  }
 
-    // Top case. A V ⊤ = ⊤
-    if (otherFunc.template isa<FeasibilityAllTopEF>() || otherFunc.template isa<psr::AllTop<l_t>>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
-    }
+  auto *M = thisFunc->manager;
 
-    // Bottom case. A V ⊥ = A
-    if (otherFunc.template isa<FeasibilityAllBottomEF>() || otherFunc.template isa<psr::AllBottom<l_t>>()) {
-        return EF(thisFunc);
-    }
+  if (otherFunc.template isa<FeasibilityJoinEF>() ||
+      otherFunc.template isa<FeasibilityComposeEF>()) {
+    FDBG_LINE("AND ⊔ (Join/Compose) -> JoinEF(lazy pointwise)");
+    return EF(std::in_place_type<FeasibilityJoinEF>, M, EF(thisFunc),
+              EF(otherFunc));
+  }
 
-    auto *M = thisFunc->manager;
+  if (auto *phi =
+          otherFunc.template dyn_cast<FeasibilityPHITranslateEF>()) {
+    FDBG_LINE("AND ⊔ Phi -> ORFormula(andClause, phiClause)");
+    llvm::SmallVector<FeasibilityClause, 4> clauses;
+    clauses.push_back(thisFunc->Clause);
+    clauses.push_back(Util::clauseFromPhi(phi->PredBB, phi->SuccBB));
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-    // Phi Case.
-    if (auto *otherphi = otherFunc.template dyn_cast<FeasibilityPHITranslateEF>()) {
-        // Create a new clauses vector for or operations
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        // Add this clause
-        clauses.push_back(thisFunc->Clause);
-        // Add the incoming phi as clause
-        clauses.push_back(Util::clauseFromPhi(otherphi->PredBB, otherphi->SuccBB));
+  if (auto *add =
+          otherFunc.template dyn_cast<FeasibilityAddConstrainEF>()) {
+    FDBG_LINE("AND ⊔ Add -> ORFormula(andClause, addClause)");
+    llvm::SmallVector<FeasibilityClause, 4> clauses;
+    clauses.push_back(thisFunc->Clause);
+    clauses.push_back(
+        Util::clauseFromIcmp(add->ConstraintInst, add->isTrueBranch));
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
+  if (auto *and2 = otherFunc.template dyn_cast<FeasibilityANDFormulaEF>()) {
+    FDBG_LINE("AND ⊔ AND -> ORFormula(2 andClauses)");
+    llvm::SmallVector<FeasibilityClause, 4> clauses;
+    clauses.push_back(thisFunc->Clause);
+    clauses.push_back(and2->Clause);
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-    // Add Case.
-    if (auto *otherAdd = otherFunc.template dyn_cast<FeasibilityAddConstrainEF>()) {
-        // Create a new clauses vector for or operations
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        // Add this clause
-        clauses.push_back(thisFunc->Clause);
-        // Add the incoming add as clause
-        clauses.push_back(Util::clauseFromIcmp(otherAdd->ConstraintInst, otherAdd->isTrueBranch));
+  if (auto *orEF = otherFunc.template dyn_cast<FeasibilityORFormulaEF>()) {
+    FDBG_LINE("AND ⊔ OR -> OR(append andClause)");
+    auto clauses = orEF->Clauses;
+    clauses.push_back(thisFunc->Clause);
+    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  }
 
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    // AND case
-    if (auto *otherAnd = otherFunc.template dyn_cast<FeasibilityANDFormulaEF>()) {
-        // Create a new clauses vector
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        // Add this clause
-        clauses.push_back(thisFunc->Clause);
-        // Add the incomin add clause
-        clauses.push_back(otherAnd->Clause);
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    // OR case
-    if (auto *otherOr = otherFunc.template dyn_cast<FeasibilityORFormulaEF>()) {
-        auto existingClauses = otherOr->Clauses;
-        existingClauses.push_back(thisFunc->Clause);
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(existingClauses));
-    }
-
-    llvm::errs() << "ALARM in FeasibilityANDFormulaEF::join: unsupported otherFunc\n";
-    return EF(otherFunc);
+  FDBG_LINE("AND ⊔ <unknown> -> JoinEF(lazy pointwise)");
+  return EF(std::in_place_type<FeasibilityJoinEF>, M, EF(thisFunc),
+            EF(otherFunc));
 }
 
 // =====================================================================================================================
 // FeasibilityORFormulaEF
 
 l_t FeasibilityORFormulaEF::computeTarget(const l_t &source) const {
-    auto *M = manager ? manager : source.manager;
+  ScopedTimer T("ORFormulaEF::computeTarget");
+  if constexpr (FDBG) dumpLatticeBrief("OR.in ", source);
 
-    if (source.isBottom()) {
-        return source;
+  FeasibilityElement cached;
+  if (Memo.lookup(source, cached))
+    return cached;
+
+  auto *M = pickManager(manager, source);
+
+  if (source.isBottom()) {
+    FDBG_LINE("OR.computeTarget: source is Bottom -> return Bottom");
+    return mkBottomLike(source);
+  }
+
+  uint32_t accPC = l_t::bottomId;
+  bool anySat = false;
+
+  for (const auto &clause : Clauses) {
+    FeasibilityANDFormulaEF andEF(M, clause);
+    l_t out = andEF.computeTarget(source);
+
+    if (out.isBottom()) {
+      continue;
     }
 
-    // Start our computation with the path condition ID of the incoming element. Start with bottom ID, as we will
-    // build up the formula from there by adding constraints and PHI translations via OR operations.
-    uint32_t accumulatedPathConditionId = source.bottomId;
-    // Keep track of the sat state of the disjunkt elements. If all of them are UNSAT, we return a bottom element
-    bool isAnyOfTheClausesSatisfied = false;
+    accPC = M->mkOr(accPC, out.getFormulaId());
+    anySat = true;
+  }
 
-    // Iterate over the clauses in the OR formula and create the corresponding formulas, then add them to the path condition via OR.
-    for (const auto &clause : Clauses) {
-        FeasibilityANDFormulaEF andEF(M, clause);
-        l_t out = andEF.computeTarget(source);
-
-        if (out.isBottom()) {
-            continue;
-        }
-
-        accumulatedPathConditionId = M->mkOr(accumulatedPathConditionId, out.formularID);
-        isAnyOfTheClausesSatisfied = true;
-    }
-
-    // Check if none of the clauses were satisfied.
-    // In this case, we return a bottom element, as we have a disjunction of unsatisfiable formulas,
-    // which is itself unsatisfiable.
-    if (!isAnyOfTheClausesSatisfied) {
-        auto out = source;
-        out.kind = l_t::Kind::Bottom;
-        out.formularID = l_t::bottomId;
-        return out;
-    }
-
-    /*if (!M->isSat(accumulatedPathConditionId)) {
-        auto out = source;
-        out.kind = l_t::Kind::Bottom;
-        out.formularID = source.bottomId;
-        return out;
-    }*/
-
-    auto out = source;
-    out.formularID = accumulatedPathConditionId;
-
-    // Environment after OR is not uniquely defined; each clause applies its own phi chain internally.
-    // Keep env unchanged.
-    if (out.kind == l_t::Kind::Top) {
-        out.kind = l_t::Kind::Normal;
-    }
+  if (!anySat) {
+    FDBG_LINE("OR.computeTarget: all clauses UNSAT -> Bottom");
+    auto out = mkBottomLike(source);
+    if constexpr (FDBG) dumpLatticeBrief("OR.out", out);
+    Memo.store(source, out);
     return out;
+  }
 
+  auto out = source;
+  out.setFormulaId(accPC);
+  if (out.getKind() == l_t::Kind::Top) {
+    out.setKind(l_t::Kind::Normal);
+  }
+
+  if constexpr (FDBG) dumpLatticeBrief("OR.out", out);
+  Memo.store(source, out);
+  return out;
 }
 
-EF FeasibilityORFormulaEF::compose(psr::EdgeFunctionRef<FeasibilityORFormulaEF> thisFunc, const EF &secondFunction) {
-    // Identiy do nothing
-    if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(thisFunc);
+EF FeasibilityORFormulaEF::compose(psr::EdgeFunctionRef<FeasibilityORFormulaEF> thisFunc,
+                                  const EF &secondFunction) {
+  ScopedTimer T("ORFormulaEF::compose");
+
+  if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+    if constexpr (FDBG) {
+      FDBG_LINE("OR ∘ Identity -> OR");
     }
+    return EF(thisFunc);
+  }
 
-    // Bottom kills everything
-    if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-        return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
+    if constexpr (FDBG) {
+      FDBG_LINE("OR ∘ Bottom -> Bottom");
     }
-
-    // Top kills everything
-    if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
+    return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  }
+  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
+    if constexpr (FDBG) {
+      FDBG_LINE("OR ∘ Top -> Top");
     }
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
 
-    auto *M = thisFunc->manager;
+  if constexpr (FDBG) {
+    FDBG_LINE("OR ∘ <nontrivial> -> ComposeEF(lazy)");
+  }
 
-    // Phi case
-    if (auto *otherPhi = secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-        // Create a new clause from the incoming phi information
-        FeasibilityClause phiClause = Util::clauseFromPhi(otherPhi->PredBB, otherPhi->SuccBB);
-
-        // Create new clauses vector
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        clauses.reserve(thisFunc->Clauses.size());
-
-        // Iterate over the contained clauses
-        for (const auto &clause : thisFunc->Clauses) {
-            // Join each clause with the incoming phi clause by concatenating the PHI chains and the constraint vectors,
-            clauses.push_back(Util::conjClauses(clause, phiClause));
-        }
-
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    // Add constraint case
-    if (auto *otherAdd = secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
-        // Create a new clause from the incoming phi information
-        FeasibilityClause addClause = Util::clauseFromIcmp(otherAdd->ConstraintInst, otherAdd->isTrueBranch);
-
-        // Create new clauses vector
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        clauses.reserve(thisFunc->Clauses.size());
-
-        // Iterate over the contained clauses
-        for (const auto &clause : thisFunc->Clauses) {
-            // Join each clause with the incoming phi clause by concatenating the PHI chains and the constraint vectors,
-            clauses.push_back(Util::conjClauses(clause, addClause));
-        }
-
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    // AND case
-    if (auto *otherAnd = secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-        // Create new clauses vector
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        clauses.reserve(thisFunc->Clauses.size());
-
-        // Iterate over the contained clauses
-        for (const auto &clause : thisFunc->Clauses) {
-            // Merge each clause with the incoming and clause by concatenating the PHI chains and the constraint vectors,
-            clauses.push_back(Util::conjClauses(clause, otherAnd->Clause));
-        }
-
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    // OR case
-    if (auto *otherOr = secondFunction.template dyn_cast<FeasibilityORFormulaEF>()) {
-        // Create new clauses vector
-        llvm::SmallVector<FeasibilityClause, 4> clauses;
-        clauses.reserve(thisFunc->Clauses.size() + otherOr->Clauses.size());
-
-        // Iterate over the contained clauses
-        for (const auto &presentClause : thisFunc->Clauses) {
-            // Iterate over the incoming clauses
-            for (const auto &inComingClause : otherOr->Clauses) {
-                clauses.push_back(Util::conjClauses(presentClause, inComingClause));
-            }
-        }
-
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
-
-    llvm::errs() << "ALARM in FeasibilityORFormulaEF::compose: We are trying to compose an edge function of type FeasibilityORFormulaEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
-                    "Please check the implementation of the analysis and make sure that it only produces edge functions of the supported types.\n";
-    return secondFunction;
+  auto *M = thisFunc->manager;
+  return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
+            secondFunction);
 }
 
-EF FeasibilityORFormulaEF::join(psr::EdgeFunctionRef<FeasibilityORFormulaEF> thisFunc, const psr::EdgeFunction<l_t> &secondFunction) {
-    // Identiy do nothing
-    if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-        return EF(thisFunc);
+EF FeasibilityORFormulaEF::join(psr::EdgeFunctionRef<FeasibilityORFormulaEF> thisFunc,
+                               const psr::EdgeFunction<l_t> &otherFunc) {
+  ScopedTimer T("ORFormulaEF::join");
+
+  if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
+    if constexpr (FDBG) {
+      FDBG_LINE("OR ⊔ Identity -> JoinEF(lazy)");
     }
+    return EF(std::in_place_type<FeasibilityJoinEF>, thisFunc->manager,
+              EF(thisFunc), EF(otherFunc));
+  }
 
-    // Bottom kills everything
-    if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-        return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  if (otherFunc.template isa<FeasibilityAllTopEF>() ||
+      otherFunc.template isa<psr::AllTop<l_t>>()) {
+    if constexpr (FDBG) {
+      FDBG_LINE("OR ⊔ Top -> Top");
     }
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
 
-    // Top kills everything
-    if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-        return EF(std::in_place_type<FeasibilityAllTopEF>);
+  if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
+      otherFunc.template isa<psr::AllBottom<l_t>>()) {
+    if constexpr (FDBG) {
+      FDBG_LINE("OR ⊔ Bottom -> OR");
     }
+    return EF(thisFunc);
+  }
 
-    auto *M = thisFunc->manager;
-
-    // Phi case.
-    if (auto *otherPhi = secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-        // Get the existing clauses
-        auto clauses = thisFunc->Clauses;
-        // Push the incoming phi as new clause
-        clauses.push_back(Util::clauseFromPhi(otherPhi->PredBB, otherPhi->SuccBB));
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
+  if constexpr (FDBG) {
+    if (auto *otherOr = otherFunc.template dyn_cast<FeasibilityORFormulaEF>()) {
+      llvm::errs() << "[FDBG] OR ⊔ OR -> JoinEF(lazy)\n";
+      llvm::errs() << "[FDBG] OR sizes: this=" << thisFunc->Clauses.size()
+                   << " other=" << otherOr->Clauses.size() << "\n";
+    } else {
+      FDBG_LINE("OR ⊔ <nontrivial> -> JoinEF(lazy)");
     }
+  }
 
-    // Add case
-    if (auto *otherAdd = secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
-        // Get the existing clauses
-        auto clauses = thisFunc->Clauses;
-        // Push the incoming phi as new clause
-        clauses.push_back(Util::clauseFromIcmp(otherAdd->ConstraintInst, otherAdd->isTrueBranch));
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
+  return EF(std::in_place_type<FeasibilityJoinEF>, thisFunc->manager,
+            EF(thisFunc), EF(otherFunc));
+}
 
-    // And case
-    if (auto *otherAnd = secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-        // Get the clauses
-        auto clauses = thisFunc->Clauses;
-        // Add the incoming and clause
-        clauses.push_back(otherAnd->Clause);
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
+// ============================================================================
+// FeasibilityComposeEF
 
-    // Or case
-    if (auto *otherOr = secondFunction.template dyn_cast<FeasibilityORFormulaEF>()) {
-        // Get the clauses
-        auto clauses = thisFunc->Clauses;
-        // Insert all incoming or clauses
-        clauses.append(otherOr->Clauses.begin(), otherOr->Clauses.end());
-        return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-    }
+l_t FeasibilityComposeEF::computeTarget(const l_t &source) const {
+  ScopedTimer T("ComposeEF::computeTarget");
+  if (FDBG) dumpLatticeBrief("Compose.in ", source);
 
-    llvm::errs() << "ALARM in FeasibilityORFormulaEF::compose: We are trying to compose an edge function of type FeasibilityORFormulaEF with an edge function of an unsupported type. This should not happen, as the analysis should only produce edge functions of the supported types. "
-                    "Please check the implementation of the analysis and make sure that it only produces edge functions of the supported types.\n";
-    return secondFunction;
+  FeasibilityElement cached;
+  if (Memo.lookup(source, cached))
+    return cached;
+
+  // ✅ Critical: Bottom is absorbing -> don't evaluate anything
+  if (source.isBottom()) {
+    FDBG_LINE("Compose.computeTarget: source is Bottom -> return Bottom");
+    return source; // already env=0 enforced elsewhere
+  }
+
+  const l_t mid = Second.computeTarget(source);
+  if (FDBG) dumpLatticeBrief("Compose.mid", mid);
+
+  // ✅ Also short-circuit if mid became Bottom (very common)
+  if (mid.isBottom()) {
+    FDBG_LINE("Compose.computeTarget: mid is Bottom -> return Bottom");
+    Memo.store(source, mid);
+    return mid;
+  }
+
+  const l_t out = First.computeTarget(mid);
+  if (FDBG) dumpLatticeBrief("Compose.out", out);
+  Memo.store(source, out);
+  return out;
+}
+
+EF FeasibilityComposeEF::compose(psr::EdgeFunctionRef<FeasibilityComposeEF> thisFunc,
+                                 const EF &secondFunction) {
+  ScopedTimer T("ComposeEF::compose");
+
+  if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+    FDBG_LINE("Compose ∘ Identity -> Compose");
+    return EF(thisFunc);
+  }
+  if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
+    FDBG_LINE("Compose ∘ Bottom -> Bottom");
+    return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  }
+  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
+    FDBG_LINE("Compose ∘ Top -> Top");
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+
+  auto *M = thisFunc->manager;
+  FDBG_LINE("Compose ∘ h -> new ComposeEF (nest)");
+  return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
+            secondFunction);
+}
+
+EF FeasibilityComposeEF::join(psr::EdgeFunctionRef<FeasibilityComposeEF> thisFunc,
+                              const psr::EdgeFunction<l_t> &otherFunc) {
+  ScopedTimer T("ComposeEF::join");
+
+  if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
+    FDBG_LINE("Compose ⊔ Identity -> lazy JoinEF");
+    return EF(std::in_place_type<FeasibilityJoinEF>, thisFunc->manager,
+              EF(thisFunc), EF(otherFunc));
+  }
+  if (otherFunc.template isa<FeasibilityAllTopEF>() ||
+      otherFunc.template isa<psr::AllTop<l_t>>()) {
+    FDBG_LINE("Compose ⊔ Top -> Top");
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+  if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
+      otherFunc.template isa<psr::AllBottom<l_t>>()) {
+    FDBG_LINE("Compose ⊔ Bottom -> Compose");
+    return EF(thisFunc);
+  }
+
+  FDBG_LINE("Compose ⊔ other -> lazy JoinEF");
+  return EF(std::in_place_type<FeasibilityJoinEF>, thisFunc->manager,
+            EF(thisFunc), EF(otherFunc));
+}
+
+// ============================================================================
+// FeasibilityJoinEF
+
+l_t FeasibilityJoinEF::computeTarget(const l_t &source) const {
+  ScopedTimer T("JoinEF::computeTarget");
+  if (FDBG) dumpLatticeBrief("Join.in ", source);
+
+  FeasibilityElement cached;
+  if (Memo.lookup(source, cached))
+    return cached;
+
+  // ✅ Critical: Bottom in -> Bottom out (your EFs already assume this)
+  if (source.isBottom()) {
+    FDBG_LINE("Join.computeTarget: source is Bottom -> return Bottom");
+    return source;
+  }
+
+  auto *M = manager ? manager : source.getManager();
+
+  const l_t L = Left.computeTarget(source);
+  if (FDBG) dumpLatticeBrief("Join.L", L);
+  if (L.isTop()) return mkTopLike(L);
+
+  const l_t R = Right.computeTarget(source);
+  if (FDBG) dumpLatticeBrief("Join.R", R);
+  if (R.isTop()) return mkTopLike(R);
+
+  if (L.isBottom()) return R;
+  if (R.isBottom()) return L;
+
+  const uint32_t outPC = M->mkOr(L.getFormulaId(), R.getFormulaId());
+  auto out = source;
+  out.setKind(l_t::Kind::Normal);
+  out.setFormulaId(outPC);
+  out.setEnvId(source.getEnvId());
+  if (FDBG) dumpLatticeBrief("Join.out", out);
+  Memo.store(source, out);
+  return out;
+}
+
+EF FeasibilityJoinEF::compose(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc,
+                              const EF &secondFunction) {
+  ScopedTimer T("JoinEF::compose");
+
+  if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
+    FDBG_LINE("Join ∘ Identity -> Join");
+    return EF(thisFunc);
+  }
+  if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
+    FDBG_LINE("Join ∘ Bottom -> Bottom");
+    return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  }
+  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
+    FDBG_LINE("Join ∘ Top -> Top");
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+
+  auto *M = thisFunc->manager;
+
+  FDBG_LINE("Join ∘ h -> distribute lazily via ComposeEF");
+  EF leftComposed =
+      EF(std::in_place_type<FeasibilityComposeEF>, M, thisFunc->Left,
+         secondFunction);
+  EF rightComposed =
+      EF(std::in_place_type<FeasibilityComposeEF>, M, thisFunc->Right,
+         secondFunction);
+
+  return EF(std::in_place_type<FeasibilityJoinEF>, M, std::move(leftComposed),
+            std::move(rightComposed));
+}
+
+EF FeasibilityJoinEF::join(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc,
+                           const psr::EdgeFunction<l_t> &otherFunc) {
+  ScopedTimer T("JoinEF::join");
+
+  if (otherFunc.template isa<FeasibilityAllTopEF>() ||
+      otherFunc.template isa<psr::AllTop<l_t>>()) {
+    FDBG_LINE("Join ⊔ Top -> Top");
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  }
+  if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
+      otherFunc.template isa<psr::AllBottom<l_t>>()) {
+    FDBG_LINE("Join ⊔ Bottom -> Join");
+    return EF(thisFunc);
+  }
+
+  FDBG_LINE("Join ⊔ other -> flatten (new JoinEF)");
+  return EF(std::in_place_type<FeasibilityJoinEF>, thisFunc->manager,
+            EF(thisFunc), EF(otherFunc));
 }
 
 } // namespace Feasibility

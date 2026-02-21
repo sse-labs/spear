@@ -103,9 +103,7 @@ FeasibilityAnalysis::initialSeeds() {
     l_t init = l_t::createElement(
         this->manager.get(),
         l_t::topId,
-        l_t::Kind::Top);
-
-    init.environmentID = 0; // empty env root
+        l_t::Kind::Top, 0);
 
     for (n_t SP : ICFG->getStartPointsOf(Main)) {
         Seeds.addSeed(SP, Zero, init);
