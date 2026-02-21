@@ -143,6 +143,16 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
     Info.Feasible = false;
     Info.HasZeroAtEntry = false;
 
+    for (auto &I : BB) {
+      auto latticeElementExists = FeasibilityResult->containsNode(&I);
+      if (latticeElementExists) {
+        auto ResMap = FeasibilityResult->resultsAt(&I);
+        for (auto entry : ResMap) {
+          llvm::outs() << "Feasibility at instruction " << I << ": " << entry.second.kind << ", id: " << entry.second.formularID << "\n";
+        }
+      }
+    }
+
     const llvm::Instruction *terminator = BB.getTerminator();
     auto latticeElementExists = FeasibilityResult->containsNode(terminator);
     if (latticeElementExists) {
@@ -150,7 +160,7 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
       auto ItZ = ResMap.find(Zero);
       if (ItZ != ResMap.end()) {
         const auto &L = ItZ->second;
-        //llvm::outs() << "Feasibility at terminator of " << BBName << ": " << L.kind << "\n";
+        llvm::outs() << "Feasibility at terminator of " << BBName << ": " << L.kind << "\n";
         if (L.kind == Feasibility::FeasibilityElement::Kind::Top) {
           Info.Feasible = true;
         }

@@ -56,6 +56,7 @@ uint32_t FeasibilityAnalysisManager::mkAnd(uint32_t aId, uint32_t bId) {
     auto b = getExpression(bId);
 
     z3::expr res = mkAndSimplified(a, b);
+    llvm::errs() << "Calculated and " << res.to_string() << "\n";
 
     if (auto pid = findFormulaId(res)) return *pid;
 
@@ -78,6 +79,7 @@ uint32_t FeasibilityAnalysisManager::mkOr(uint32_t aId, uint32_t bId) {
     auto b = getExpression(bId);
 
     z3::expr res = mkOrSimplified(a, b);
+    llvm::errs() << "Calculated or " << res.to_string() << "\n";
 
     if (auto pid = findFormulaId(res)) return *pid;
 
@@ -327,26 +329,36 @@ const llvm::Value* FeasibilityAnalysisManager::resolve(uint32_t envId, const llv
 uint32_t FeasibilityAnalysisManager::applyPhiPack(uint32_t inEnvId, const llvm::BasicBlock* pred, const llvm::BasicBlock* succ) {
     uint32_t env = inEnvId;
 
+    if (!pred || !succ) return env;
+
     for (auto &I : *succ) {
         auto *phi = llvm::dyn_cast<llvm::PHINode>(&I);
         if (!phi) {
             break;
         };
 
-        const llvm::Value* incoming = phi->getIncomingValueForBlock(pred);
+        const int idx = phi->getBasicBlockIndex(pred);
+        if (idx < 0) {
+            // pred is not an incoming edge for THIS phi => skip it (or treat as bug)
+            continue;
+        }
 
-        llvm::errs() << "Applying phi-pack for phi node: " << *phi << "\n";
-        llvm::errs() << "\tIncoming value before " << pred->getName() << ": " << *incoming << "\n";
+        //llvm::errs() << "Phi on edge " << pred->getName() << " -> " << succ->getName() << ": " << *phi << "\n";
+
+        const llvm::Value *incoming = phi->getIncomingValue(idx);
+
+        // llvm::errs() << "Applying phi-pack for phi node: " << *phi << "\n";
+        // llvm::errs() << "\tIncoming value before " << pred->getName() << ": " << *incoming << "\n";
 
         // Resolve incoming through current env (handles phi-chains)
         incoming = resolve(env, incoming);
 
-        llvm::errs() << "\tIncoming value after resolve " << pred->getName() << ": " << *incoming << "\n";
+        //llvm::errs() << "\tIncoming value after resolve " << pred->getName() << ": " << *incoming << "\n";
 
         // bind: phi-result := incoming
-        llvm::errs() << "env before: " << env << "\n";
+        //llvm::errs() << "env before: " << env << "\n";
         env = extendEnv(env, phi, incoming);
-        llvm::errs() << "env after: " << env << "\n";
+        //llvm::errs() << "env after: " << env << "\n";
     }
     return env;
 }
@@ -442,5 +454,7 @@ std::ostream &operator<<(std::ostream &os, const std::optional<FeasibilityElemen
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const FeasibilityElement::Kind &K) {
     return os << toString(K);
 }
+
+
 
 } // namespace Feasibility

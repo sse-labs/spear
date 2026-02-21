@@ -92,10 +92,7 @@ void dumpEF(const Feasibility::FeasibilityAnalysis::EdgeFunctionType &edgeFuncti
     if (auto *addcons = edgeFunction.template dyn_cast<Feasibility::FeasibilityAddConstrainEF>()) {
         auto mananger = addcons->manager;
 
-        auto constraintId = addcons->pathConditionId;
-        auto formular = mananger->getExpression(constraintId);
-
-        llvm::errs() << "EF=ADDCONS[" << formular.to_string() << ")]";
+        llvm::errs() << "EF=ADDCONS[" << *addcons->ConstraintInst << ")]";
         return;
     }
 
@@ -174,9 +171,9 @@ uint32_t findOrAddFormulaId(FeasibilityAnalysisManager *manager, z3::expr formul
     return potentialid.value();
 }
 
-z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llvm::ICmpInst* ICmp, bool areWeInTheTrueBranch) {
-    auto op0 = ICmp->getOperand(0);
-    auto op1 = ICmp->getOperand(1);
+z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llvm::ICmpInst* ICmp, bool areWeInTheTrueBranch, uint32_t envId) {
+    auto op0 = manager->resolve(envId, ICmp->getOperand(0));
+    auto op1 = manager->resolve(envId, ICmp->getOperand(1));
 
     auto c0 = createBitVal(op0, manager->Context);
     auto c1 = createBitVal(op1, manager->Context);
@@ -242,5 +239,60 @@ bool blockStartsWithPhi(const llvm::BasicBlock *block) {
     }
     return llvm::isa<llvm::PHINode>(block->front());
 }
+
+bool isTrueId(FeasibilityAnalysisManager *M, uint32_t id) {
+    // You may have special ids for true/false; if so, shortcut here.
+    // Otherwise check via expression.
+    return M->isBoolTrue(M->getExpression(id));
+}
+
+bool isFalseId(FeasibilityAnalysisManager *M, uint32_t id) {
+    return M->isBoolFalse(M->getExpression(id));
+}
+
+FeasibilityClause clauseFromIcmp(const llvm::ICmpInst *I, bool TrueEdge) {
+    FeasibilityClause c;
+    c.Constrs.push_back(LazyICmp(I, TrueEdge));
+    return c;
+}
+
+bool isRealPred(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ) {
+    for (const llvm::BasicBlock *P : llvm::predecessors(Succ)) {
+        if (P == Pred) return true;
+    }
+    return false;
+}
+
+FeasibilityClause clauseFromPhi(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ) {
+    FeasibilityClause c;
+    c.PhiChain.push_back(PhiStep(Pred, Succ));
+    return c;
+}
+
+uint32_t applyPhiChain(FeasibilityAnalysisManager *M, uint32_t envId, const llvm::SmallVectorImpl<PhiStep> &chain) {
+    uint32_t e = envId;
+    for (const auto &st : chain) {
+        if (st.PredBB && st.SuccBB) {
+            e = M->applyPhiPack(e, st.PredBB, st.SuccBB);
+        }
+    }
+    return e;
+}
+
+FeasibilityClause conjClauses(const FeasibilityClause &A, const FeasibilityClause &B) {
+    FeasibilityClause out = A;
+    out.PhiChain.append(B.PhiChain.begin(), B.PhiChain.end());
+    out.Constrs.append(B.Constrs.begin(), B.Constrs.end());
+    return out;
+}
+
+void prependPhi(FeasibilityClause &C, const PhiStep &P) {
+    C.PhiChain.insert(C.PhiChain.begin(), P);
+}
+
+void appendPhi(FeasibilityClause &C, const PhiStep &P) {
+    C.PhiChain.push_back(P);
+}
+
 
 } // namespace Feasibility::Util

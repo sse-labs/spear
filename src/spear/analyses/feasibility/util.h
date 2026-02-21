@@ -8,6 +8,7 @@
 #include <atomic>
 
 #include "FeasibilityAnalysis.h"
+#include "FeasibilityEdgeFunction.h"
 
 #define F_TAG "[FDBG]"
 #define F_DEBUG_ENABLED false
@@ -112,7 +113,7 @@ class Util {
      * @param areWeInTheTrueBranch
      * @return
      */
-    static z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llvm::ICmpInst* ICmp, bool areWeInTheTrueBranch);
+    static z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llvm::ICmpInst* ICmp, bool areWeInTheTrueBranch, uint32_t envId);
 
     /**
      * Check if the given block starts with a phinode
@@ -120,6 +121,27 @@ class Util {
      * @return
      */
     static bool blockStartsWithPhi(const llvm::BasicBlock *block);
+
+
+    static bool isTrueId(FeasibilityAnalysisManager *M, uint32_t id);
+
+    static bool isFalseId(FeasibilityAnalysisManager *M, uint32_t id);
+
+    static FeasibilityClause clauseFromIcmp(const llvm::ICmpInst *I, bool TrueEdge);
+
+    static FeasibilityClause clauseFromPhi(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ);
+
+    static uint32_t applyPhiChain(FeasibilityAnalysisManager *M, uint32_t envId, const llvm::SmallVectorImpl<PhiStep> &chain);
+
+    static void uniqAppend(llvm::SmallVector<uint32_t, 4> &out, uint32_t id);
+
+    static void appendPhi(FeasibilityClause &C, const PhiStep &P);
+
+    static void prependPhi(FeasibilityClause &C, const PhiStep &P);
+
+    static FeasibilityClause conjClauses(const FeasibilityClause &A, const FeasibilityClause &B);
+
+    static bool isRealPred(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ);
 };
 
 }

@@ -203,6 +203,7 @@ class FeasibilityElement {
 
     uint32_t environmentID = 0;
 
+    // We have to init on Bottom, as we only set this value if we encountered a SAT formula.
     Kind kind = Kind::Top;
 
     FeasibilityElement() = default;
