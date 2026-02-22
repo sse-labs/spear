@@ -142,6 +142,12 @@ class Util {
     static FeasibilityClause conjClauses(const FeasibilityClause &A, const FeasibilityClause &B);
 
     static bool isRealPred(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ);
+
+   static void normalizeClause(FeasibilityClause &C);
+
+ static bool sameClause(const FeasibilityClause &A, const FeasibilityClause &B);
+
+ static void normalizeClauses(llvm::SmallVectorImpl<FeasibilityClause> &Cs);
 };
 
 }

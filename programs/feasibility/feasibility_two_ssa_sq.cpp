@@ -56,6 +56,22 @@ int main(int argc, char **argv) {
         }
     }
 
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
     cheese--;
     return cheese;
 }

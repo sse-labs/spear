@@ -12,9 +12,13 @@
 namespace Feasibility {
 
 namespace {
-constexpr bool FDBG = false;            // flip to false to disable
-constexpr uint64_t FDBG_EVERY = 10000; // periodic heartbeat
-constexpr double FDBG_SLOW_MS = 50.0;  // warn if a call exceeds this
+
+// ============================================================================
+// Debug + timing
+// ============================================================================
+constexpr bool FDBG = true;             // flip to false to disable
+constexpr uint64_t FDBG_EVERY = 10000;   // periodic heartbeat
+constexpr double FDBG_SLOW_MS = 50.0;    // warn if a call exceeds this
 
 static std::atomic<uint64_t> g_dbg_seq{0};
 
@@ -52,6 +56,18 @@ struct ScopedTimer {
     }                                                                           \
   } while (0)
 
+#define FDBG_RATE(MSG, N)                                                       \
+  do {                                                                          \
+    if constexpr (FDBG) {                                                       \
+      static std::atomic<uint64_t> _c{0};                                       \
+      if ((++_c % (N)) == 0)                                                    \
+        llvm::errs() << "[FDBG] " << MSG << "\n";                               \
+    }                                                                           \
+  } while (0)
+
+// ============================================================================
+// Lattice helpers
+// ============================================================================
 static inline const char *kindStr(Feasibility::l_t::Kind K) {
   using Kt = Feasibility::l_t::Kind;
   switch (K) {
@@ -72,11 +88,13 @@ static inline void dumpLatticeBrief(const char *Pfx,
 }
 
 // --- New-API helpers: never touch l_t internals directly ---
+// IMPORTANT: In this analysis, Top/Bottom are global truth constants.
+// We intentionally reset env to 0 on Top/Bottom to avoid env-driven blowups.
 static inline Feasibility::l_t mkTopLike(const Feasibility::l_t &src) {
   auto out = src;
   out.setKind(Feasibility::l_t::Kind::Top);
   out.setFormulaId(Feasibility::l_t::topId);
-  out.setEnvId(0); // Top env forced to 0
+  out.setEnvId(src.getEnvId());
   return out;
 }
 
@@ -84,7 +102,7 @@ static inline Feasibility::l_t mkBottomLike(const Feasibility::l_t &src) {
   auto out = src;
   out.setKind(Feasibility::l_t::Kind::Bottom);
   out.setFormulaId(Feasibility::l_t::bottomId);
-  out.setEnvId(0); // Bottom env forced to 0
+  out.setEnvId(src.getEnvId());
   return out;
 }
 
@@ -97,65 +115,108 @@ static inline Feasibility::l_t mkNormalLike(const Feasibility::l_t &src,
   return out;
 }
 
-static inline FeasibilityAnalysisManager *pickManager(FeasibilityAnalysisManager *fromEF,
-                                                      const Feasibility::l_t &src) {
+static inline FeasibilityAnalysisManager *
+pickManager(FeasibilityAnalysisManager *fromEF, const Feasibility::l_t &src) {
   if (fromEF)
     return fromEF;
   return src.getManager();
 }
+
+// ============================================================================
+// EF category predicates
+// ============================================================================
+static inline bool isIdEF(const EF &ef) noexcept {
+  return ef.template isa<psr::EdgeIdentity<l_t>>();
+}
+
+static inline bool isAllTopEF(const EF &ef) noexcept {
+  return ef.template isa<FeasibilityAllTopEF>() ||
+         ef.template isa<psr::AllTop<l_t>>();
+}
+
+static inline bool isAllBottomEF(const EF &ef) noexcept {
+  return ef.template isa<FeasibilityAllBottomEF>() ||
+         ef.template isa<psr::AllBottom<l_t>>();
+}
+
+// ============================================================================
+// JOIN CUT POLICY
+// ============================================================================
+// You requested: "On each join we emit true. Just true. We only want to detect
+// pruned paths."
+//
+// Therefore:
+//   - Bottom is neutral for OR-join (false OR x = x)
+//   - Top is absorbing (true OR x = true)
+//   - Any non-trivial join (two different, non-bottom EFs) collapses to Top.
+//
+// This kills join chains and avoids OR explosion.
+static inline EF cutJoinToTop(const EF &lhs, const EF &rhs) {
+  if (isAllTopEF(lhs) || isAllTopEF(rhs))
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+
+  if (isAllBottomEF(lhs))
+    return rhs;
+  if (isAllBottomEF(rhs))
+    return lhs;
+
+  // Non-trivial merge => forget disjunction, keep "feasible".
+  return EF(std::in_place_type<FeasibilityAllTopEF>);
+}
+
 } // namespace
 
 // =====================================================================================================================
 // FeasibilityAllTopEF
+//
+// Constant TRUE edge function (maps any input to lattice Top / tautology).
+// This is the "cut" result used at joins.
+// =====================================================================================================================
 
 l_t FeasibilityAllTopEF::computeTarget(const l_t &source) const {
-  ScopedTimer T("AllTopEF::computeTarget");
-  if constexpr (FDBG) dumpLatticeBrief("AllTop.in ", source);
-
-  auto out = mkTopLike(source);
-  if constexpr (FDBG) dumpLatticeBrief("AllTop.out", out);
-  return out;
+  return mkTopLike(source); // pc=true, env preserved
 }
 
-EF FeasibilityAllTopEF::compose(psr::EdgeFunctionRef<FeasibilityAllTopEF> /*thisFunc*/,
-                                const EF & /*secondFunction*/) {
-  ScopedTimer T("AllTopEF::compose");
-  FDBG_LINE("AllTop ∘ g = AllTop");
-  return EF(std::in_place_type<FeasibilityAllTopEF>);
+// IMPORTANT: make reset NOT dominate composition
+EF FeasibilityAllTopEF::compose(psr::EdgeFunctionRef<FeasibilityAllTopEF> /*thisFunc*/, const EF &g) {
+  // Reset ∘ g  => g   (so reset does not wipe later constraints)
+  return EF(g);
 }
 
-EF FeasibilityAllTopEF::join(psr::EdgeFunctionRef<FeasibilityAllTopEF> /*thisFunc*/,
-                             const psr::EdgeFunction<l_t> & /*otherFunc*/) {
-  ScopedTimer T("AllTopEF::join");
-  FDBG_LINE("AllTop ⊔ f = AllTop");
+EF FeasibilityAllTopEF::join(psr::EdgeFunctionRef<FeasibilityAllTopEF> /*thisFunc*/, const psr::EdgeFunction<l_t> &otherFunc) {
   return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
 // =====================================================================================================================
 // FeasibilityAllBottomEF
+// =====================================================================================================================
 
 l_t FeasibilityAllBottomEF::computeTarget(const l_t &source) const {
   ScopedTimer T("AllBottomEF::computeTarget");
-  if constexpr (FDBG) dumpLatticeBrief("AllBottom.in ", source);
+  if constexpr (FDBG)
+    dumpLatticeBrief("AllBottom.in ", source);
 
   auto out = mkBottomLike(source);
-  if constexpr (FDBG) dumpLatticeBrief("AllBottom.out", out);
+  if constexpr (FDBG)
+    dumpLatticeBrief("AllBottom.out", out);
   return out;
 }
 
 EF FeasibilityAllBottomEF::compose(
     psr::EdgeFunctionRef<FeasibilityAllBottomEF> /*thisFunc*/,
     const EF & /*secondFunction*/) {
+  // Bottom ∘ g = Bottom
   ScopedTimer T("AllBottomEF::compose");
-  FDBG_LINE("AllBottom ∘ g = AllBottom");
+  FDBG_RATE("AllBottom ∘ g = AllBottom", 100000);
   return EF(std::in_place_type<FeasibilityAllBottomEF>);
 }
 
 EF FeasibilityAllBottomEF::join(
     psr::EdgeFunctionRef<FeasibilityAllBottomEF> /*thisFunc*/,
     const psr::EdgeFunction<l_t> &otherFunc) {
+  // false OR f = f
   ScopedTimer T("AllBottomEF::join");
-  FDBG_LINE("AllBottom ⊔ f = f (Bottom neutral)");
+  FDBG_RATE("AllBottom ⊔ f = f (Bottom neutral)", 100000);
 
   if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
     return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
@@ -173,10 +234,12 @@ EF FeasibilityAllBottomEF::join(
 
 // =====================================================================================================================
 // FeasibilityPHITranslateEF
+// =====================================================================================================================
 
 l_t FeasibilityPHITranslateEF::computeTarget(const l_t &source) const {
   ScopedTimer T("PHITranslateEF::computeTarget");
-  if constexpr (FDBG) dumpLatticeBrief("Phi.in ", source);
+  if constexpr (FDBG)
+    dumpLatticeBrief("Phi.in ", source);
 
   FeasibilityElement cached;
   if (Memo.lookup(source, cached))
@@ -185,12 +248,12 @@ l_t FeasibilityPHITranslateEF::computeTarget(const l_t &source) const {
   auto *M = pickManager(this->manager, source);
 
   if (source.isBottom()) {
-    FDBG_LINE("Phi.computeTarget: source is Bottom -> return Bottom");
+    FDBG_RATE("Phi.computeTarget: source is Bottom -> return Bottom", 100000);
     return mkBottomLike(source);
   }
 
   if (!PredBB || !SuccBB) {
-    FDBG_LINE("Phi.computeTarget: missing PredBB/SuccBB -> Identity");
+    FDBG_RATE("Phi.computeTarget: missing PredBB/SuccBB -> Identity", 100000);
     return source;
   }
 
@@ -200,7 +263,8 @@ l_t FeasibilityPHITranslateEF::computeTarget(const l_t &source) const {
   auto out = source;
   out.setEnvId(outEnvId);
 
-  if constexpr (FDBG) dumpLatticeBrief("Phi.out", out);
+  if constexpr (FDBG)
+    dumpLatticeBrief("Phi.out", out);
   Memo.store(source, out);
   return out;
 }
@@ -211,57 +275,53 @@ EF FeasibilityPHITranslateEF::compose(
   ScopedTimer T("PHITranslateEF::compose");
 
   if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-    FDBG_LINE("Phi ∘ Identity -> Phi");
+    FDBG_RATE("Phi ∘ Identity -> Phi", 100000);
     return EF(thisFunc);
   }
   if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-    FDBG_LINE("Phi ∘ Bottom -> Bottom");
+    FDBG_RATE("Phi ∘ Bottom -> Bottom", 100000);
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
   }
-  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-    FDBG_LINE("Phi ∘ Top -> Top");
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
 
+  // DO NOT simplify Phi ∘ Top here:
+  // Top is a constant lattice element and we still want later constraints to apply
+  // correctly after a join-cut. Keep it lazy/canonical.
   auto *M = thisFunc->manager;
   const auto step = PhiStep(thisFunc->PredBB, thisFunc->SuccBB);
 
   if (auto *otherPhi =
           secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-    FDBG_LINE("Phi ∘ Phi -> ANDFormula(phiChain=[other, this])");
+    FDBG_RATE("Phi ∘ Phi -> ANDFormula(phiChain=[other, this])", 100000);
     FeasibilityClause clause;
     clause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
     clause.PhiChain.push_back(step);
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M,
+              std::move(clause));
   }
 
   if (auto *addCons =
           secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
-    FDBG_LINE("Phi ∘ Add -> ANDFormula(phiChain=[this], constr=[add])");
+    FDBG_RATE("Phi ∘ Add -> ANDFormula(phiChain=[this], constr=[add])", 100000);
     FeasibilityClause clause;
     clause.PhiChain.push_back(step);
     clause.Constrs.push_back(
         LazyICmp(addCons->ConstraintInst, addCons->isTrueBranch));
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M,
+              std::move(clause));
   }
 
   if (auto *andEF =
           secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-    FDBG_LINE("Phi ∘ AND -> AND (prepend phi step)");
+    FDBG_RATE("Phi ∘ AND -> AND (prepend phi step)", 100000);
     FeasibilityClause clause = andEF->Clause;
     clause.PhiChain.insert(clause.PhiChain.begin(), step);
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+    Util::normalizeClause(clause);
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M,
+              std::move(clause));
   }
 
-  if (secondFunction.template isa<FeasibilityORFormulaEF>()) {
-    FDBG_LINE("Phi ∘ OR -> lazy ComposeEF");
-    return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
-              secondFunction);
-  }
-
-  llvm::errs()
-      << "ALARM in FeasibilityPHITranslateEF::compose: unsupported secondFunction\n";
-  return secondFunction;
+  FDBG_RATE("Phi ∘ <nontrivial> -> internCompose (manager-canonical)", 10000);
+  return M->internCompose(EF(thisFunc), secondFunction);
 }
 
 EF FeasibilityPHITranslateEF::join(
@@ -269,74 +329,18 @@ EF FeasibilityPHITranslateEF::join(
     const psr::EdgeFunction<l_t> &otherFunc) {
   ScopedTimer T("PHITranslateEF::join");
 
-  if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
-    FDBG_LINE("Phi ⊔ Identity -> Identity (kept as before)");
-    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-  }
-  if (otherFunc.template isa<FeasibilityAllTopEF>()) {
-    FDBG_LINE("Phi ⊔ Top -> Top");
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
-  if (otherFunc.template isa<FeasibilityAllBottomEF>()) {
-    FDBG_LINE("Phi ⊔ Bottom -> Phi");
-    return EF(thisFunc);
-  }
-
-  auto *M = thisFunc->manager;
-
-  FeasibilityClause thisClause;
-  thisClause.PhiChain.push_back(PhiStep(thisFunc->PredBB, thisFunc->SuccBB));
-
-  if (auto *otherPhi =
-          otherFunc.template dyn_cast<FeasibilityPHITranslateEF>()) {
-    FDBG_LINE("Phi ⊔ Phi -> ORFormula(2 phi-clauses)");
-    FeasibilityClause otherClause;
-    otherClause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
-
-    llvm::SmallVector<FeasibilityClause, 4> clauses;
-    clauses.push_back(std::move(thisClause));
-    clauses.push_back(std::move(otherClause));
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  if (auto *addCons =
-          otherFunc.template dyn_cast<FeasibilityAddConstrainEF>()) {
-    FDBG_LINE("Phi ⊔ Add -> ORFormula(phiClause, addClause)");
-    FeasibilityClause clauseOfAdd =
-        Util::clauseFromIcmp(addCons->ConstraintInst, addCons->isTrueBranch);
-
-    llvm::SmallVector<FeasibilityClause, 4> clauses;
-    clauses.push_back(std::move(thisClause));
-    clauses.push_back(std::move(clauseOfAdd));
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  if (auto *andEF = otherFunc.template dyn_cast<FeasibilityANDFormulaEF>()) {
-    FDBG_LINE("Phi ⊔ AND -> ORFormula(phiClause, andClause)");
-    llvm::SmallVector<FeasibilityClause, 4> clauses;
-    clauses.push_back(std::move(thisClause));
-    clauses.push_back(andEF->Clause);
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  if (auto *orEF = otherFunc.template dyn_cast<FeasibilityORFormulaEF>()) {
-    FDBG_LINE("Phi ⊔ OR -> OR (append phiClause)");
-    auto clauses = orEF->Clauses;
-    clauses.push_back(std::move(thisClause));
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  llvm::errs()
-      << "ALARM in FeasibilityPHITranslateEF::join: unsupported otherFunc\n";
-  return EF(otherFunc);
+  // Apply global cut policy (kills join chains)
+  return cutJoinToTop(EF(thisFunc), EF(otherFunc));
 }
 
 // =====================================================================================================================
 // FeasibilityAddConstrainEF
+// =====================================================================================================================
 
 l_t FeasibilityAddConstrainEF::computeTarget(const l_t &source) const {
   ScopedTimer T("AddConstrainEF::computeTarget");
-  if constexpr (FDBG) dumpLatticeBrief("Add.in ", source);
+  if constexpr (FDBG)
+    dumpLatticeBrief("Add.in ", source);
 
   FeasibilityElement cached;
   if (Memo.lookup(source, cached))
@@ -345,7 +349,7 @@ l_t FeasibilityAddConstrainEF::computeTarget(const l_t &source) const {
   auto *M = pickManager(this->manager, source);
 
   if (source.isBottom()) {
-    FDBG_LINE("Add.computeTarget: source is Bottom -> return Bottom");
+    FDBG_RATE("Add.computeTarget: source is Bottom -> return Bottom", 100000);
     return mkBottomLike(source);
   }
 
@@ -365,9 +369,10 @@ l_t FeasibilityAddConstrainEF::computeTarget(const l_t &source) const {
   const uint32_t outPC = M->mkAnd(incomingPC, constraintId);
 
   if (!M->isSat(outPC)) {
-    FDBG_LINE("Add.computeTarget: UNSAT -> Bottom");
+    FDBG_RATE("Add.computeTarget: UNSAT -> Bottom", 100000);
     auto out = mkBottomLike(source);
-    if constexpr (FDBG) dumpLatticeBrief("Add.out", out);
+    if constexpr (FDBG)
+      dumpLatticeBrief("Add.out", out);
     Memo.store(source, out);
     return out;
   }
@@ -378,7 +383,8 @@ l_t FeasibilityAddConstrainEF::computeTarget(const l_t &source) const {
     out.setKind(l_t::Kind::Normal);
   }
 
-  if constexpr (FDBG) dumpLatticeBrief("Add.out", out);
+  if constexpr (FDBG)
+    dumpLatticeBrief("Add.out", out);
   Memo.store(source, out);
   return out;
 }
@@ -389,18 +395,15 @@ EF FeasibilityAddConstrainEF::compose(
   ScopedTimer T("AddConstrainEF::compose");
 
   if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-    FDBG_LINE("Add ∘ Identity -> Add");
+    FDBG_RATE("Add ∘ Identity -> Add", 100000);
     return EF(thisFunc);
   }
   if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-    FDBG_LINE("Add ∘ Bottom -> Bottom");
+    FDBG_RATE("Add ∘ Bottom -> Bottom", 100000);
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
   }
-  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-    FDBG_LINE("Add ∘ Top -> Top");
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
 
+  // DO NOT simplify Add ∘ Top here (see note above).
   auto *M = thisFunc->manager;
 
   FeasibilityClause thisClause;
@@ -409,38 +412,34 @@ EF FeasibilityAddConstrainEF::compose(
 
   if (auto *otherPhi =
           secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-    FDBG_LINE("Add ∘ Phi -> ANDFormula(constr=[this], phiChain=[phi])");
+    FDBG_RATE("Add ∘ Phi -> ANDFormula(constr=[this], phiChain=[phi])", 100000);
     FeasibilityClause clause = thisClause;
     clause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+    Util::normalizeClause(clause);
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M,
+              std::move(clause));
   }
 
   if (auto *otherAdd =
           secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
-    FDBG_LINE("Add ∘ Add -> ANDFormula(2 constrs)");
+    FDBG_RATE("Add ∘ Add -> ANDFormula(2 constrs)", 100000);
     FeasibilityClause clause = thisClause;
     clause.Constrs.push_back(
         LazyICmp(otherAdd->ConstraintInst, otherAdd->isTrueBranch));
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
+    Util::normalizeClause(clause);
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M,
+              std::move(clause));
   }
 
   if (auto *otherAnd =
           secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-    FDBG_LINE("Add ∘ AND -> AND (append constr)");
-    FeasibilityClause clause = otherAnd->Clause;
-    clause.Constrs.append(thisClause.Constrs.begin(), thisClause.Constrs.end());
+    FDBG_RATE("Add ∘ AND -> AND (append constr)", 100000);
+    FeasibilityClause clause = Util::conjClauses(otherAnd->Clause, thisClause);
     return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
   }
 
-  if (secondFunction.template isa<FeasibilityORFormulaEF>()) {
-    FDBG_LINE("Add ∘ OR -> lazy ComposeEF");
-    return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
-              secondFunction);
-  }
-
-  llvm::errs()
-      << "ALARM in FeasibilityAddConstrainEF::compose: unsupported secondFunction\n";
-  return secondFunction;
+  FDBG_RATE("Add ∘ <nontrivial> -> internCompose (manager-canonical)", 10000);
+  return M->internCompose(EF(thisFunc), secondFunction);
 }
 
 EF FeasibilityAddConstrainEF::join(
@@ -448,78 +447,18 @@ EF FeasibilityAddConstrainEF::join(
     const psr::EdgeFunction<l_t> &secondFunction) {
   ScopedTimer T("AddConstrainEF::join");
 
-  if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-    FDBG_LINE("Add ⊔ Identity -> Identity (kept as before)");
-    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-  }
-  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-    FDBG_LINE("Add ⊔ Top -> Top");
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
-  if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-    FDBG_LINE("Add ⊔ Bottom -> Add");
-    return EF{thisFunc};
-  }
-
-  auto *M = thisFunc->manager;
-
-  FeasibilityClause thisClause;
-  thisClause.Constrs.push_back(
-      LazyICmp(thisFunc->ConstraintInst, thisFunc->isTrueBranch));
-
-  if (auto *otherPhi =
-          secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-    FDBG_LINE("Add ⊔ Phi -> ORFormula(addClause, phiClause)");
-    FeasibilityClause phiClause;
-    phiClause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
-
-    llvm::SmallVector<FeasibilityClause, 4> clauses;
-    clauses.push_back(std::move(thisClause));
-    clauses.push_back(std::move(phiClause));
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  if (auto *otherAdd =
-          secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
-    FDBG_LINE("Add ⊔ Add -> ORFormula(2 addClauses)");
-    FeasibilityClause addClause;
-    addClause.Constrs.push_back(
-        LazyICmp(otherAdd->ConstraintInst, otherAdd->isTrueBranch));
-
-    llvm::SmallVector<FeasibilityClause, 4> clauses;
-    clauses.push_back(std::move(thisClause));
-    clauses.push_back(std::move(addClause));
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  if (auto *otherAnd =
-          secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-    FDBG_LINE("Add ⊔ AND -> ORFormula(addClause, andClause)");
-    llvm::SmallVector<FeasibilityClause, 4> clauses;
-    clauses.push_back(std::move(thisClause));
-    clauses.push_back(otherAnd->Clause);
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  if (auto *otherOr =
-          secondFunction.template dyn_cast<FeasibilityORFormulaEF>()) {
-    FDBG_LINE("Add ⊔ OR -> OR (append addClause)");
-    auto clauses = otherOr->Clauses;
-    clauses.push_back(std::move(thisClause));
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  llvm::errs()
-      << "ALARM in FeasibilityAddConstrainEF::join: unsupported secondFunction\n";
-  return EF(secondFunction);
+  // Apply global cut policy (kills join chains)
+  return cutJoinToTop(EF(thisFunc), EF(secondFunction));
 }
 
 // =====================================================================================================================
 // FeasibilityANDFormulaEF
+// =====================================================================================================================
 
 l_t FeasibilityANDFormulaEF::computeTarget(const l_t &source) const {
   ScopedTimer T("ANDFormulaEF::computeTarget");
-  if constexpr (FDBG) dumpLatticeBrief("AND.in ", source);
+  if constexpr (FDBG)
+    dumpLatticeBrief("AND.in ", source);
 
   FeasibilityElement cached;
   if (Memo.lookup(source, cached))
@@ -528,7 +467,7 @@ l_t FeasibilityANDFormulaEF::computeTarget(const l_t &source) const {
   auto *M = pickManager(manager, source);
 
   if (source.isBottom()) {
-    FDBG_LINE("AND.computeTarget: source is Bottom -> return Bottom");
+    FDBG_RATE("AND.computeTarget: source is Bottom -> return Bottom", 100000);
     return mkBottomLike(source);
   }
 
@@ -555,17 +494,19 @@ l_t FeasibilityANDFormulaEF::computeTarget(const l_t &source) const {
       continue;
     }
 
-    z3::expr expr = Util::createConstraintFromICmp(
-        M, lazyConstr.I, lazyConstr.TrueEdge, outEnv);
+    z3::expr expr =
+        Util::createConstraintFromICmp(M, lazyConstr.I, lazyConstr.TrueEdge,
+                                       outEnv);
     const uint32_t cid = Util::findOrAddFormulaId(M, expr);
 
     pc = M->mkAnd(pc, cid);
 
     if (!M->isSat(pc)) {
-      FDBG_LINE("AND.computeTarget: UNSAT -> Bottom");
+      FDBG_RATE("AND.computeTarget: UNSAT -> Bottom", 100000);
       auto out = mkBottomLike(source);
-      out.setEnvId(0); // Bottom env forced to 0
-      if constexpr (FDBG) dumpLatticeBrief("AND.out", out);
+      out.setEnvId(0);
+      if constexpr (FDBG)
+        dumpLatticeBrief("AND.out", out);
       Memo.store(source, out);
       return out;
     }
@@ -578,7 +519,8 @@ l_t FeasibilityANDFormulaEF::computeTarget(const l_t &source) const {
     out.setKind(l_t::Kind::Normal);
   }
 
-  if constexpr (FDBG) dumpLatticeBrief("AND.out", out);
+  if constexpr (FDBG)
+    dumpLatticeBrief("AND.out", out);
   Memo.store(source, out);
   return out;
 }
@@ -589,60 +531,48 @@ EF FeasibilityANDFormulaEF::compose(
   ScopedTimer T("ANDFormulaEF::compose");
 
   if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-    FDBG_LINE("AND ∘ Identity -> AND");
+    FDBG_RATE("AND ∘ Identity -> AND", 100000);
     return EF(thisFunc);
   }
   if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-    FDBG_LINE("AND ∘ Bottom -> Bottom");
+    FDBG_RATE("AND ∘ Bottom -> Bottom", 100000);
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
-  }
-  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-    FDBG_LINE("AND ∘ Top -> Top");
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
   }
 
   auto *M = thisFunc->manager;
 
   if (auto *phi =
           secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-    FDBG_LINE("AND ∘ Phi -> AND(conjClauses)");
-    FeasibilityClause phiClause = Util::clauseFromPhi(phi->PredBB, phi->SuccBB);
+    FDBG_RATE("AND ∘ Phi -> AND(conjClauses)", 100000);
+    FeasibilityClause phiClause =
+        Util::clauseFromPhi(phi->PredBB, phi->SuccBB);
     FeasibilityClause merged = Util::conjClauses(thisFunc->Clause, phiClause);
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(merged));
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M,
+              std::move(merged));
   }
 
   if (auto *add =
           secondFunction.template dyn_cast<FeasibilityAddConstrainEF>()) {
-    FDBG_LINE("AND ∘ Add -> AND(conjClauses)");
+    FDBG_RATE("AND ∘ Add -> AND(conjClauses)", 100000);
     FeasibilityClause addClause =
         Util::clauseFromIcmp(add->ConstraintInst, add->isTrueBranch);
     FeasibilityClause merged = Util::conjClauses(thisFunc->Clause, addClause);
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(merged));
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M,
+              std::move(merged));
   }
 
   if (auto *and2 =
           secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-    FDBG_LINE("AND ∘ AND -> AND(conjClauses)");
-    FeasibilityClause merged =
-        Util::conjClauses(thisFunc->Clause, and2->Clause);
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(merged));
+    FDBG_RATE("AND ∘ AND -> AND(conjClauses)", 100000);
+    FeasibilityClause merged = Util::conjClauses(thisFunc->Clause, and2->Clause);
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M,
+              std::move(merged));
   }
 
-  if (auto *orEF =
-          secondFunction.template dyn_cast<FeasibilityORFormulaEF>()) {
-    FDBG_LINE("AND ∘ OR -> OR(distribute conj over each clause)");
-    llvm::SmallVector<FeasibilityClause, 4> mergedClauses;
-    mergedClauses.reserve(orEF->Clauses.size());
-    for (const auto &c : orEF->Clauses) {
-      mergedClauses.push_back(Util::conjClauses(thisFunc->Clause, c));
-    }
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M,
-              std::move(mergedClauses));
-  }
-
-  llvm::errs()
-      << "ALARM in FeasibilityANDFormulaEF::compose: unsupported secondFunction\n";
-  return EF(secondFunction);
+  // PRUNE-ONLY MODE: never distribute over OR (causes blowups).
+  // Keep lazy/canonical; OR should be rare anyway due to cut-joins.
+  FDBG_RATE("AND ∘ <nontrivial> -> internCompose (manager-canonical)", 10000);
+  return M->internCompose(EF(thisFunc), secondFunction);
 }
 
 EF FeasibilityANDFormulaEF::join(
@@ -650,75 +580,18 @@ EF FeasibilityANDFormulaEF::join(
     const psr::EdgeFunction<l_t> &otherFunc) {
   ScopedTimer T("ANDFormulaEF::join");
 
-  if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
-    FDBG_LINE("AND ⊔ Identity -> Identity");
-    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-  }
-  if (otherFunc.template isa<FeasibilityAllTopEF>() ||
-      otherFunc.template isa<psr::AllTop<l_t>>()) {
-    FDBG_LINE("AND ⊔ Top -> Top");
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
-  if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
-      otherFunc.template isa<psr::AllBottom<l_t>>()) {
-    FDBG_LINE("AND ⊔ Bottom -> AND");
-    return EF(thisFunc);
-  }
-
-  auto *M = thisFunc->manager;
-
-  if (otherFunc.template isa<FeasibilityJoinEF>() ||
-      otherFunc.template isa<FeasibilityComposeEF>()) {
-    FDBG_LINE("AND ⊔ (Join/Compose) -> JoinEF(lazy pointwise)");
-    return EF(std::in_place_type<FeasibilityJoinEF>, M, EF(thisFunc),
-              EF(otherFunc));
-  }
-
-  if (auto *phi =
-          otherFunc.template dyn_cast<FeasibilityPHITranslateEF>()) {
-    FDBG_LINE("AND ⊔ Phi -> ORFormula(andClause, phiClause)");
-    llvm::SmallVector<FeasibilityClause, 4> clauses;
-    clauses.push_back(thisFunc->Clause);
-    clauses.push_back(Util::clauseFromPhi(phi->PredBB, phi->SuccBB));
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  if (auto *add =
-          otherFunc.template dyn_cast<FeasibilityAddConstrainEF>()) {
-    FDBG_LINE("AND ⊔ Add -> ORFormula(andClause, addClause)");
-    llvm::SmallVector<FeasibilityClause, 4> clauses;
-    clauses.push_back(thisFunc->Clause);
-    clauses.push_back(
-        Util::clauseFromIcmp(add->ConstraintInst, add->isTrueBranch));
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  if (auto *and2 = otherFunc.template dyn_cast<FeasibilityANDFormulaEF>()) {
-    FDBG_LINE("AND ⊔ AND -> ORFormula(2 andClauses)");
-    llvm::SmallVector<FeasibilityClause, 4> clauses;
-    clauses.push_back(thisFunc->Clause);
-    clauses.push_back(and2->Clause);
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  if (auto *orEF = otherFunc.template dyn_cast<FeasibilityORFormulaEF>()) {
-    FDBG_LINE("AND ⊔ OR -> OR(append andClause)");
-    auto clauses = orEF->Clauses;
-    clauses.push_back(thisFunc->Clause);
-    return EF(std::in_place_type<FeasibilityORFormulaEF>, M, std::move(clauses));
-  }
-
-  FDBG_LINE("AND ⊔ <unknown> -> JoinEF(lazy pointwise)");
-  return EF(std::in_place_type<FeasibilityJoinEF>, M, EF(thisFunc),
-            EF(otherFunc));
+  // Apply global cut policy (kills join chains)
+  return cutJoinToTop(EF(thisFunc), EF(otherFunc));
 }
 
 // =====================================================================================================================
 // FeasibilityORFormulaEF
+// =====================================================================================================================
 
 l_t FeasibilityORFormulaEF::computeTarget(const l_t &source) const {
   ScopedTimer T("ORFormulaEF::computeTarget");
-  if constexpr (FDBG) dumpLatticeBrief("OR.in ", source);
+  if constexpr (FDBG)
+    dumpLatticeBrief("OR.in ", source);
 
   FeasibilityElement cached;
   if (Memo.lookup(source, cached))
@@ -727,7 +600,7 @@ l_t FeasibilityORFormulaEF::computeTarget(const l_t &source) const {
   auto *M = pickManager(manager, source);
 
   if (source.isBottom()) {
-    FDBG_LINE("OR.computeTarget: source is Bottom -> return Bottom");
+    FDBG_RATE("OR.computeTarget: source is Bottom -> return Bottom", 100000);
     return mkBottomLike(source);
   }
 
@@ -747,9 +620,10 @@ l_t FeasibilityORFormulaEF::computeTarget(const l_t &source) const {
   }
 
   if (!anySat) {
-    FDBG_LINE("OR.computeTarget: all clauses UNSAT -> Bottom");
+    FDBG_RATE("OR.computeTarget: all clauses UNSAT -> Bottom", 100000);
     auto out = mkBottomLike(source);
-    if constexpr (FDBG) dumpLatticeBrief("OR.out", out);
+    if constexpr (FDBG)
+      dumpLatticeBrief("OR.out", out);
     Memo.store(source, out);
     return out;
   }
@@ -760,203 +634,165 @@ l_t FeasibilityORFormulaEF::computeTarget(const l_t &source) const {
     out.setKind(l_t::Kind::Normal);
   }
 
-  if constexpr (FDBG) dumpLatticeBrief("OR.out", out);
+  if constexpr (FDBG)
+    dumpLatticeBrief("OR.out", out);
   Memo.store(source, out);
   return out;
 }
 
-EF FeasibilityORFormulaEF::compose(psr::EdgeFunctionRef<FeasibilityORFormulaEF> thisFunc,
-                                  const EF &secondFunction) {
+EF FeasibilityORFormulaEF::compose(
+    psr::EdgeFunctionRef<FeasibilityORFormulaEF> thisFunc,
+    const EF &secondFunction) {
   ScopedTimer T("ORFormulaEF::compose");
 
   if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-    if constexpr (FDBG) {
-      FDBG_LINE("OR ∘ Identity -> OR");
-    }
+    FDBG_RATE("OR ∘ Identity -> OR", 100000);
     return EF(thisFunc);
   }
 
   if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-    if constexpr (FDBG) {
-      FDBG_LINE("OR ∘ Bottom -> Bottom");
-    }
+    FDBG_RATE("OR ∘ Bottom -> Bottom", 100000);
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
   }
-  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-    if constexpr (FDBG) {
-      FDBG_LINE("OR ∘ Top -> Top");
-    }
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
 
-  if constexpr (FDBG) {
-    FDBG_LINE("OR ∘ <nontrivial> -> ComposeEF(lazy)");
-  }
-
-  auto *M = thisFunc->manager;
-  return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
-            secondFunction);
+  // Keep lazy compose; manager interns/canonicalizes.
+  FDBG_RATE("OR ∘ <nontrivial> -> internCompose (manager-canonical)", 10000);
+  return thisFunc->manager->internCompose(EF(thisFunc), secondFunction);
 }
 
-EF FeasibilityORFormulaEF::join(psr::EdgeFunctionRef<FeasibilityORFormulaEF> thisFunc,
-                               const psr::EdgeFunction<l_t> &otherFunc) {
+EF FeasibilityORFormulaEF::join(
+    psr::EdgeFunctionRef<FeasibilityORFormulaEF> thisFunc,
+    const psr::EdgeFunction<l_t> &otherFunc) {
   ScopedTimer T("ORFormulaEF::join");
 
-  if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
-    if constexpr (FDBG) {
-      FDBG_LINE("OR ⊔ Identity -> JoinEF(lazy)");
-    }
-    return EF(std::in_place_type<FeasibilityJoinEF>, thisFunc->manager,
-              EF(thisFunc), EF(otherFunc));
-  }
-
-  if (otherFunc.template isa<FeasibilityAllTopEF>() ||
-      otherFunc.template isa<psr::AllTop<l_t>>()) {
-    if constexpr (FDBG) {
-      FDBG_LINE("OR ⊔ Top -> Top");
-    }
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
-
-  if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
-      otherFunc.template isa<psr::AllBottom<l_t>>()) {
-    if constexpr (FDBG) {
-      FDBG_LINE("OR ⊔ Bottom -> OR");
-    }
-    return EF(thisFunc);
-  }
-
-  if constexpr (FDBG) {
-    if (auto *otherOr = otherFunc.template dyn_cast<FeasibilityORFormulaEF>()) {
-      llvm::errs() << "[FDBG] OR ⊔ OR -> JoinEF(lazy)\n";
-      llvm::errs() << "[FDBG] OR sizes: this=" << thisFunc->Clauses.size()
-                   << " other=" << otherOr->Clauses.size() << "\n";
-    } else {
-      FDBG_LINE("OR ⊔ <nontrivial> -> JoinEF(lazy)");
-    }
-  }
-
-  return EF(std::in_place_type<FeasibilityJoinEF>, thisFunc->manager,
-            EF(thisFunc), EF(otherFunc));
+  // Apply global cut policy (kills join chains)
+  return cutJoinToTop(EF(thisFunc), EF(otherFunc));
 }
 
 // ============================================================================
 // FeasibilityComposeEF
+// ============================================================================
 
 l_t FeasibilityComposeEF::computeTarget(const l_t &source) const {
   ScopedTimer T("ComposeEF::computeTarget");
-  if (FDBG) dumpLatticeBrief("Compose.in ", source);
 
   FeasibilityElement cached;
   if (Memo.lookup(source, cached))
     return cached;
 
-  // ✅ Critical: Bottom is absorbing -> don't evaluate anything
+  if constexpr (FDBG)
+    dumpLatticeBrief("Compose.in ", source);
+
+  // Bottom is absorbing
   if (source.isBottom()) {
-    FDBG_LINE("Compose.computeTarget: source is Bottom -> return Bottom");
-    return source; // already env=0 enforced elsewhere
+    Memo.store(source, source);
+    return source;
   }
 
-  const l_t mid = Second.computeTarget(source);
-  if (FDBG) dumpLatticeBrief("Compose.mid", mid);
+  // --------- Algebraic short-circuits (no evaluation) ---------
+  if (isAllBottomEF(Second)) {
+    auto out = mkBottomLike(source);
+    Memo.store(source, out);
+    return out;
+  }
 
-  // ✅ Also short-circuit if mid became Bottom (very common)
+  if (isIdEF(Second)) {
+    const l_t out = First.computeTarget(source);
+    Memo.store(source, out);
+    return out;
+  }
+  if (isIdEF(First)) {
+    const l_t out = Second.computeTarget(source);
+    Memo.store(source, out);
+    return out;
+  }
+  if (isAllBottomEF(First)) {
+    auto out = mkBottomLike(source);
+    Memo.store(source, out);
+    return out;
+  }
+  // ------------------------------------------------------------
+
+  const l_t mid = Second.computeTarget(source);
+  if constexpr (FDBG)
+    dumpLatticeBrief("Compose.mid", mid);
+
   if (mid.isBottom()) {
-    FDBG_LINE("Compose.computeTarget: mid is Bottom -> return Bottom");
     Memo.store(source, mid);
     return mid;
   }
 
   const l_t out = First.computeTarget(mid);
-  if (FDBG) dumpLatticeBrief("Compose.out", out);
+  if constexpr (FDBG)
+    dumpLatticeBrief("Compose.out", out);
   Memo.store(source, out);
   return out;
 }
 
-EF FeasibilityComposeEF::compose(psr::EdgeFunctionRef<FeasibilityComposeEF> thisFunc,
-                                 const EF &secondFunction) {
+EF FeasibilityComposeEF::compose(
+    psr::EdgeFunctionRef<FeasibilityComposeEF> thisFunc,
+    const EF &secondFunction) {
   ScopedTimer T("ComposeEF::compose");
 
   if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-    FDBG_LINE("Compose ∘ Identity -> Compose");
+    FDBG_RATE("Compose ∘ Identity -> Compose", 100000);
     return EF(thisFunc);
   }
   if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-    FDBG_LINE("Compose ∘ Bottom -> Bottom");
+    FDBG_RATE("Compose ∘ Bottom -> Bottom", 100000);
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
   }
-  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-    FDBG_LINE("Compose ∘ Top -> Top");
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
 
-  auto *M = thisFunc->manager;
-  FDBG_LINE("Compose ∘ h -> new ComposeEF (nest)");
-  return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
-            secondFunction);
+  // Keep lazy; manager canonicalizes/interns compose chain.
+  FDBG_RATE("Compose ∘ h -> internCompose (manager-canonical)", 10000);
+  return thisFunc->manager->internCompose(EF(thisFunc), secondFunction);
 }
 
-EF FeasibilityComposeEF::join(psr::EdgeFunctionRef<FeasibilityComposeEF> thisFunc,
-                              const psr::EdgeFunction<l_t> &otherFunc) {
+EF FeasibilityComposeEF::join(
+    psr::EdgeFunctionRef<FeasibilityComposeEF> thisFunc,
+    const psr::EdgeFunction<l_t> &otherFunc) {
   ScopedTimer T("ComposeEF::join");
 
-  if (otherFunc.template isa<psr::EdgeIdentity<l_t>>()) {
-    FDBG_LINE("Compose ⊔ Identity -> lazy JoinEF");
-    return EF(std::in_place_type<FeasibilityJoinEF>, thisFunc->manager,
-              EF(thisFunc), EF(otherFunc));
-  }
-  if (otherFunc.template isa<FeasibilityAllTopEF>() ||
-      otherFunc.template isa<psr::AllTop<l_t>>()) {
-    FDBG_LINE("Compose ⊔ Top -> Top");
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
-  if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
-      otherFunc.template isa<psr::AllBottom<l_t>>()) {
-    FDBG_LINE("Compose ⊔ Bottom -> Compose");
-    return EF(thisFunc);
-  }
-
-  FDBG_LINE("Compose ⊔ other -> lazy JoinEF");
-  return EF(std::in_place_type<FeasibilityJoinEF>, thisFunc->manager,
-            EF(thisFunc), EF(otherFunc));
+  // Apply global cut policy (kills join chains)
+  return cutJoinToTop(EF(thisFunc), EF(otherFunc));
 }
 
 // ============================================================================
 // FeasibilityJoinEF
+// ============================================================================
+//
+// NOTE: With the cut-join policy, solver-level joins should almost never need
+// to materialize JoinEF nodes. We keep it as a safety net, but it still
+// collapses to TRUE unless both sides are Bottom.
+// ============================================================================
 
 l_t FeasibilityJoinEF::computeTarget(const l_t &source) const {
   ScopedTimer T("JoinEF::computeTarget");
-  if (FDBG) dumpLatticeBrief("Join.in ", source);
 
   FeasibilityElement cached;
   if (Memo.lookup(source, cached))
     return cached;
 
-  // ✅ Critical: Bottom in -> Bottom out (your EFs already assume this)
+  if constexpr (FDBG)
+    dumpLatticeBrief("Join.in ", source);
+
   if (source.isBottom()) {
-    FDBG_LINE("Join.computeTarget: source is Bottom -> return Bottom");
+    Memo.store(source, source);
     return source;
   }
 
-  auto *M = manager ? manager : source.getManager();
-
+  // Evaluate both sides
   const l_t L = Left.computeTarget(source);
-  if (FDBG) dumpLatticeBrief("Join.L", L);
-  if (L.isTop()) return mkTopLike(L);
-
   const l_t R = Right.computeTarget(source);
-  if (FDBG) dumpLatticeBrief("Join.R", R);
-  if (R.isTop()) return mkTopLike(R);
 
-  if (L.isBottom()) return R;
-  if (R.isBottom()) return L;
+  // If both infeasible => Bottom, otherwise cut to Top.
+  if (L.isBottom() && R.isBottom()) {
+    auto out = mkBottomLike(source);
+    Memo.store(source, out);
+    return out;
+  }
 
-  const uint32_t outPC = M->mkOr(L.getFormulaId(), R.getFormulaId());
-  auto out = source;
-  out.setKind(l_t::Kind::Normal);
-  out.setFormulaId(outPC);
-  out.setEnvId(source.getEnvId());
-  if (FDBG) dumpLatticeBrief("Join.out", out);
+  auto out = mkTopLike(source);
   Memo.store(source, out);
   return out;
 }
@@ -966,50 +802,25 @@ EF FeasibilityJoinEF::compose(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc,
   ScopedTimer T("JoinEF::compose");
 
   if (secondFunction.template isa<psr::EdgeIdentity<l_t>>()) {
-    FDBG_LINE("Join ∘ Identity -> Join");
+    FDBG_RATE("Join ∘ Identity -> Join", 100000);
     return EF(thisFunc);
   }
   if (secondFunction.template isa<FeasibilityAllBottomEF>()) {
-    FDBG_LINE("Join ∘ Bottom -> Bottom");
+    FDBG_RATE("Join ∘ Bottom -> Bottom", 100000);
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
   }
-  if (secondFunction.template isa<FeasibilityAllTopEF>()) {
-    FDBG_LINE("Join ∘ Top -> Top");
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
 
-  auto *M = thisFunc->manager;
-
-  FDBG_LINE("Join ∘ h -> distribute lazily via ComposeEF");
-  EF leftComposed =
-      EF(std::in_place_type<FeasibilityComposeEF>, M, thisFunc->Left,
-         secondFunction);
-  EF rightComposed =
-      EF(std::in_place_type<FeasibilityComposeEF>, M, thisFunc->Right,
-         secondFunction);
-
-  return EF(std::in_place_type<FeasibilityJoinEF>, M, std::move(leftComposed),
-            std::move(rightComposed));
+  // Keep lazy; manager canonicalizes/interns compose chain.
+  FDBG_RATE("Join ∘ h -> internCompose (manager-canonical)", 10000);
+  return thisFunc->manager->internCompose(EF(thisFunc), secondFunction);
 }
 
 EF FeasibilityJoinEF::join(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc,
                            const psr::EdgeFunction<l_t> &otherFunc) {
   ScopedTimer T("JoinEF::join");
 
-  if (otherFunc.template isa<FeasibilityAllTopEF>() ||
-      otherFunc.template isa<psr::AllTop<l_t>>()) {
-    FDBG_LINE("Join ⊔ Top -> Top");
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-  }
-  if (otherFunc.template isa<FeasibilityAllBottomEF>() ||
-      otherFunc.template isa<psr::AllBottom<l_t>>()) {
-    FDBG_LINE("Join ⊔ Bottom -> Join");
-    return EF(thisFunc);
-  }
-
-  FDBG_LINE("Join ⊔ other -> flatten (new JoinEF)");
-  return EF(std::in_place_type<FeasibilityJoinEF>, thisFunc->manager,
-            EF(thisFunc), EF(otherFunc));
+  // Apply global cut policy (kills join chains)
+  return cutJoinToTop(EF(thisFunc), EF(otherFunc));
 }
 
 } // namespace Feasibility
