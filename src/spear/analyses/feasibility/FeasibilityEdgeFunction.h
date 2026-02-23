@@ -1,243 +1,108 @@
-/*
- * Copyright (c) 2026 Maximilian Krebs
- * All rights reserved.
- */
-
 #ifndef SPEAR_FEASIBILITYEDGEFUNCTION_H
 #define SPEAR_FEASIBILITYEDGEFUNCTION_H
 
 #include <phasar/DataFlow/IfdsIde/EdgeFunction.h>
-#include <llvm/IR/Value.h>           // add if not already pulled transitively
-#include <z3++.h>                    // add if not already pulled transitively
+#include <phasar/DataFlow/IfdsIde/EdgeFunctionUtils.h>
 
-#include <utility>
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/Support/raw_ostream.h>
+
+#include <z3++.h>
 
 #include "FeasibilityElement.h"
+#include "analyses/feasibility/util.h" // Util::createConstraintFromICmp
 
 namespace Feasibility {
 
-using l_t = Feasibility::FeasibilityElement;
-using EF = psr::EdgeFunction<l_t>;
+using l_t = FeasibilityElement;
+using EF  = psr::EdgeFunction<l_t>;
 
-/**
- * Identity edge function for the FeasibilityAnalysis. Maps any input to itself.
- */
-struct FeasibilityIdentityEF {
-    using l_t = Feasibility::l_t;
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityIdentityEF>,
-                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityIdentityEF> thisFunc,
-                   const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityIdentityEF &) const = default;
-
-    bool isConstant() const noexcept;
-};
-
-/**
- * Top edge function for the FeasibilityAnalysis. Maps any input to top.
- */
-struct FeasibilityAllTopEF {
-    using l_t = Feasibility::l_t;
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAllTopEF>,
-                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFunc,
-                   const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityAllTopEF &) const = default;
-
-    bool isConstant() const noexcept;
-};
-
-/**
- * Bottom edge function for the FeasibilityAnalysis. Maps any input to bottom.
- */
+// ============================================================================
+// AllBottomEF: constant BOTTOM (unreachable)
+// ============================================================================
 struct FeasibilityAllBottomEF {
-    using l_t = Feasibility::l_t;
+  using l_t = FeasibilityElement;
+  [[nodiscard]] l_t computeTarget(const l_t &source) const;
+  [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF>,
+                                  const EF &secondFunction);
+  [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAllBottomEF>,
+                               const psr::EdgeFunction<l_t> &otherFunc);
 
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF>,
-                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAllBottomEF> thisFunc,
-                   const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityAllBottomEF &) const = default;
-
-    bool isConstant() const noexcept;
+  bool operator==(const FeasibilityAllBottomEF &) const = default;
+  bool isConstant() const noexcept { return false; }
 };
 
-/**
- * Assume edge function for the FeasibilityAnalysis. Maps any input to the result of assuming a condition.
- * The condition is stored as a z3::expr in the edge function and is applied to the input element when computeTarget is called.
- */
-struct FeasibilityAssumeEF {
-    using l_t = Feasibility::l_t;
+// ============================================================================
+// Fork B: AddAtomsEF is *lazy* over env and *phi-aware*.
+//
+// Each LazyAtom carries the CFG edge (Pred->Succ) whose PHIs must be applied
+// before evaluating the ICmp atom.
+// ============================================================================
+struct LazyAtom {
+  const llvm::BasicBlock *PredBB = nullptr;
+  const llvm::BasicBlock *SuccBB = nullptr;
+  const llvm::ICmpInst *I = nullptr;
+  bool TrueEdge = true;
 
-    const z3::expr Cond;
+  LazyAtom() = default;
+  LazyAtom(const llvm::BasicBlock *P, const llvm::BasicBlock *S,
+           const llvm::ICmpInst *Inst, bool T)
+      : PredBB(P), SuccBB(S), I(Inst), TrueEdge(T) {}
 
-    FeasibilityAssumeEF(z3::expr ValueExpr)
-        : Cond(ValueExpr) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAssumeEF>,
-                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAssumeEF> thisFunc,
-                   const psr::EdgeFunction<l_t> &otherFunc);
-
-    // Required by psr::EdgeFunction: must be equality comparable (unless empty).
-    bool operator==(const FeasibilityAssumeEF &Other) const;
-
-    bool isConstant() const noexcept;
+  bool operator==(const LazyAtom &o) const noexcept {
+    return PredBB == o.PredBB && SuccBB == o.SuccBB && I == o.I &&
+           TrueEdge == o.TrueEdge;
+  }
 };
 
-/**
- * SSA edge function to manipulate SSA store of the FeasibilityElement.
- * Maps any input to the result of updating the SSA store with a new binding.
- */
-struct FeasibilitySetSSAEF {
-    using l_t = Feasibility::l_t;
+// Adds a conjunction of (lazy) atoms to the current conjunction set.
+// compose = concat atoms (second then this)
+// join    = intersection of atoms (keep only guaranteed adds)
+struct FeasibilityAddAtomsEF {
+  using l_t = FeasibilityElement;
+  FeasibilityAnalysisManager *manager = nullptr;
+  llvm::SmallVector<LazyAtom, 4> Atoms;
 
-    const llvm::Value *Key = nullptr;
-    const llvm::Value *Loc = nullptr;
+  FeasibilityAddAtomsEF() = default;
+  FeasibilityAddAtomsEF(FeasibilityAnalysisManager *M,
+                        llvm::SmallVector<LazyAtom, 4> A)
+      : manager(M), Atoms(std::move(A)) {}
 
-    // Direct set: SSA[Key] := ValueExpr
-    FeasibilitySetSSAEF(const llvm::Value *Key, const llvm::Value *Loc)
-        : Key(Key), Loc(Loc) {}
+  // Convenience: single atom on a specific edge Pred->Succ
+  FeasibilityAddAtomsEF(FeasibilityAnalysisManager *M,
+                        const llvm::BasicBlock *Pred,
+                        const llvm::BasicBlock *Succ,
+                        const llvm::ICmpInst *I,
+                        bool OnTrueEdge)
+      : manager(M) {
+    Atoms.emplace_back(Pred, Succ, I, OnTrueEdge);
+  }
 
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilitySetSSAEF>, const EF &secondFunction);
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilitySetSSAEF>, const psr::EdgeFunction<l_t> &otherFunc);
+  [[nodiscard]] l_t computeTarget(const l_t &source) const;
 
-    bool operator==(const FeasibilitySetSSAEF &O) const = default;
+  [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisFunc,
+                                  const EF &secondFunction);
 
-    bool isConstant() const noexcept;
+  [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisFunc,
+                               const psr::EdgeFunction<l_t> &otherFunc);
+
+  bool operator==(const FeasibilityAddAtomsEF &o) const noexcept;
+  bool isConstant() const noexcept { return false; }
 };
 
-/**
- * Memory edge function to manipulate memory store of the FeasibilityElement.
- * Maps any input to the result of updating the memory store with a new binding.
- */
-struct FeasibilitySetMemEF {
-    using l_t = Feasibility::l_t;
 
-    const llvm::Value *Loc = nullptr;
-    FeasibilityStateStore::ExprId ValueId = 0;
+static inline bool isIdEF(const EF &ef) noexcept {
+  return ef.template isa<psr::EdgeIdentity<l_t>>();
+}
+static inline bool isAllTopEF(const EF &ef) noexcept {
+  return ef.template isa<psr::AllTop<l_t>>();
+}
+static inline bool isAllBottomEF(const EF &ef) noexcept {
+  return ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>();
+}
 
-    FeasibilitySetMemEF(const llvm::Value *Loc, FeasibilityStateStore::ExprId ValueExpr)
-        : Loc(Loc), ValueId(ValueExpr) {}
+} // namespace Feasibility
 
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilitySetMemEF>,
-                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilitySetMemEF> thisFunc,
-                   const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilitySetMemEF &) const = default;
-
-    bool isConstant() const noexcept;
-};
-
-/**
- * Sequential composition edge function.
- * Represents Second ∘ First, i.e., computeTarget(x) = Second(First(x)).
- */
-struct FeasibilitySeqEF {
-    using l_t = Feasibility::l_t;
-
-    EF First;
-    EF Second;
-
-    FeasibilitySeqEF(EF First, EF Second)
-        : First(std::move(First)), Second(std::move(Second)) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilitySeqEF> thisFunc,
-                                    const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilitySeqEF> thisFunc,
-                                 const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilitySeqEF &) const = default;
-
-    bool isConstant() const noexcept;
-};
-
-/**
- * Pointwise join edge function.
- * Represents (First ⊔ Second), i.e., computeTarget(x) = First(x) ⊔ Second(x).
- *
- * This is necessary because the IDE solver joins edge functions, not lattice values.
- */
-struct FeasibilityJoinEF {
-    using l_t = Feasibility::l_t;
-
-    EF Left;
-    EF Right;
-
-    FeasibilityJoinEF(EF Left, EF Right)
-        : Left(std::move(Left)), Right(std::move(Right)) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc,
-                                    const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc,
-                                 const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityJoinEF &) const = default;
-
-    bool isConstant() const noexcept;
-};
-
-struct FeasibilityAssumeIcmpEF {
-    using l_t = Feasibility::l_t;
-
-    const llvm::ICmpInst *Cmp = nullptr;
-    bool TakeTrueEdge = true; // if false => use !cond
-
-    FeasibilityAssumeIcmpEF(const llvm::ICmpInst *C, bool T)
-        : Cmp(C), TakeTrueEdge(T) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF>,
-                                    const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAssumeIcmpEF> thisFunc,
-                                 const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityAssumeIcmpEF &O) const {
-        return Cmp == O.Cmp && TakeTrueEdge == O.TakeTrueEdge;
-    }
-
-    bool isConstant() const noexcept { return false; }
-};
-
-EF edgeIdentity();
-
-EF edgeTop();
-
-EF edgeBottom();
-
-}  // namespace Feasibility
-
-#endif  // SPEAR_FEASIBILITYEDGEFUNCTION_H
-
+#endif // SPEAR_FEASIBILITYEDGEFUNCTION_H

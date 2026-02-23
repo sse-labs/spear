@@ -16,7 +16,6 @@
 #include <utility>
 #include <string>
 #include <memory>
-#include <catch2/internal/catch_unique_ptr.hpp>
 
 #include "../../src/spear/analyses/loopbound/LoopBound.h"
 #include "../../src/spear/analyses/loopbound/util.h"
@@ -39,6 +38,8 @@ PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   HA = std::make_shared<psr::HelperAnalyses>(&M, Entrypoints);
   LoopBoundResult.reset();
   FeasibilityResult.reset();
+
+  llvm::errs() << M << "\n";
 
   auto &FAM = AM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*mod).getManager();
 
@@ -123,6 +124,14 @@ PhasarHandlerPass::BoundVarMap PhasarHandlerPass::queryBoundVars(llvm::Function 
   return ResultMap;
 }
 
+bool PhasarHandlerPass::constains(std::vector<llvm::BasicBlock *> visited, llvm::BasicBlock *BB) const {
+  for (auto *V : visited) {
+    if (V == BB) {
+      return true;
+    }
+  }
+  return false;
+}
 
 PhasarHandlerPass::FeasibilityMap
 PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
@@ -132,51 +141,83 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
     return ResultMap;
   }
 
-  const llvm::Value *Zero =
-      feasibilityProblem ? feasibilityProblem->getZeroValue() : nullptr;
+  const llvm::Value *Zero = feasibilityProblem ? feasibilityProblem->getZeroValue() : nullptr;
 
-  // 1) Create entries + optional diagnostics
-  for (const llvm::BasicBlock &BB : *Func) {
-    const std::string BBName = blockName(BB);
-    BlockFeasInfo &Info = ResultMap[BBName];
-
-    Info.Feasible = false;
-    Info.HasZeroAtEntry = false;
-
-    // Diagnostics: record lattice at a stable query inst (if available)
-    const llvm::Instruction *EntryI = pickQueryInst(BB);
-    if (EntryI && Zero && FeasibilityResult->containsNode(EntryI)) {
-      const auto ResMap = FeasibilityResult->resultsAt(EntryI);
-      auto ItZ = ResMap.find(Zero);
-      if (ItZ != ResMap.end()) {
-        Info.ZeroAtEntry = ItZ->second;
-        Info.HasZeroAtEntry = true;
-      }
+  struct SetSigHash {
+    size_t operator()(const SetSigKey &K) const noexcept {
+      // Same idea as DenseMap hash, but return size_t
+      return (size_t)llvm::hash_combine(K.Mgr,
+        llvm::hash_combine_range(K.AstIds.begin(), K.AstIds.end()));
     }
+  };
+
+  // Create the worklist and visited set for a simple CFG traversal to query feasibility at block entries.
+  auto firstBlock = &Func->getEntryBlock();
+  std::deque<llvm::BasicBlock*> worklist{firstBlock};
+  llvm::DenseMap<const llvm::BasicBlock*, BlockFeasInfo> visited;
+  std::unordered_map<SetSigKey, bool, SetSigHash> SatCache;
+  SatCache.reserve(128); // optional
+
+  // At all blocks to the visited set with default entries to ensure we don't revisit them. We will fill in the actual feasibility info in the next loop.
+  for (auto &BB : *Func) {
+    const std::string BBName = blockName(BB);
+    visited[&BB] = BlockFeasInfo{}; // default entry
   }
 
-  // 2) Edge-sensitive predecessor rule:
-  // BB feasible iff exists pred P s.t. edge P->BB feasible.
-  const llvm::BasicBlock &EntryBB = Func->getEntryBlock();
+  // Iterate over the worklist until its empty
+  while (!worklist.empty()) {
+    // Get the first entry
+    llvm::BasicBlock *BB = worklist.front();
+    worklist.pop_front();
 
-  for (const llvm::BasicBlock &BB : *Func) {
-    BlockFeasInfo &Info = ResultMap[blockName(BB)];
+    // Check if we have already visited this block. If so, skip it.
+    const std::string BBName = blockName(*BB);
 
-    if (&BB == &EntryBB) {
-      // Seed reachability
-      Info.Feasible = true;
-      continue;
+    // llvm::errs() << "Solving for " << BBName << "\n";
+
+    if (visited[BB].visited) {
+      continue; // already visited
     }
 
-    bool AnyIncomingFeasible = false;
-    for (const llvm::BasicBlock *PredBB : llvm::predecessors(&BB)) {
-      if (isEdgeFeasible(PredBB, &BB, Zero)) {
-        AnyIncomingFeasible = true;
-        break;
+    // Mark this block as visited
+    visited[BB].visited = true;
+
+    // Query feasibility at the last instruction of the block (terminator),
+    // which is the most stable point to query for block entry feasibility.
+    if (const llvm::Instruction *Term = BB->getTerminator()) {
+      // Query the analysis result for the terminator instruction and check if it contains an entry for the zero value.
+      auto res = FeasibilityResult->resultsAt(Term);
+      auto it = res.find(Zero);
+
+      if (it != res.end()) {
+        // If it does, we check the kind of the lattice element. If it's not bottom, the block is feasible.
+        const auto &entry = it->second;
+
+        const auto *Mgr = entry.getManager();
+        uint32_t FId = entry.getFormulaId();
+
+        std::vector<z3::expr> set = Mgr->getPureSet(FId);
+        SetSigKey Sig = makeSig(Mgr, set);
+
+        auto ItSat = SatCache.find(Sig);
+        bool isSat;
+        if (ItSat != SatCache.end()) {
+          isSat = ItSat->second;
+        } else {
+          isSat = Feasibility::Util::setSat(set, Mgr->Context.get());
+          SatCache.emplace(std::move(Sig), isSat);
+        }
+
+        ResultMap[BBName].Feasible = isSat;
+        ResultMap[BBName].HasZeroAtEntry = true;
+        ResultMap[BBName].visited = true;
+
+        if (isSat) {
+          auto sucss = llvm::successors(BB);
+          worklist.insert(worklist.end(), sucss.begin(), sucss.end());
+        }
       }
     }
-
-    Info.Feasible = AnyIncomingFeasible;
   }
 
   return ResultMap;
@@ -239,7 +280,7 @@ bool PhasarHandlerPass::isNodeFeasibleForZero(const llvm::Instruction *I,
     return false;
 
   const auto &L = It->second;
-  return !L.isBottom() && !L.isIdeAbsorbing() && L.isSatisfiable();
+  return !L.isBottom();
 }
 
 std::optional<Feasibility::FeasibilityAnalysis::l_t>
@@ -284,7 +325,7 @@ bool PhasarHandlerPass::isEdgeFeasible(const llvm::BasicBlock *PredBB,
   const auto &Lpred = *LpredOpt;
 
   // If predecessor is already infeasible, edge can't be feasible
-  if (Lpred.isBottom() || Lpred.isIdeAbsorbing() || !Lpred.isSatisfiable())
+  if (Lpred.isBottom())
     return false;
 
   // 2) Find the exact successor node used by the ICFG for this edge
@@ -304,5 +345,5 @@ bool PhasarHandlerPass::isEdgeFeasible(const llvm::BasicBlock *PredBB,
 
   auto Lsucc = EF.computeTarget(Lpred);
 
-  return !Lsucc.isBottom() && !Lsucc.isIdeAbsorbing() && Lsucc.isSatisfiable();
+  return !Lsucc.isBottom();
 }

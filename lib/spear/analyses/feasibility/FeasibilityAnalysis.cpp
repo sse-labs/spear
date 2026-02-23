@@ -33,27 +33,6 @@ public:
     ContainerT computeTargets(D Src) override {
         ContainerT Out = Inner->computeTargets(Src);
 
-        if (F_DEBUG_ENABLED) {
-            llvm::errs() << F_TAG << " FF " << Name << "  ";
-            if (Curr) { Feasibility::Util::dumpInst(Curr); } else { llvm::errs() << "<null>"; }
-            llvm::errs() << "  ->  ";
-            if (Succ) { Feasibility::Util::dumpInst(Succ); } else { llvm::errs() << "<null>"; }
-            llvm::errs() << "\n" << F_TAG << "   Src=";
-            Feasibility::Util::dumpFact(A,
-                                static_cast<Feasibility::FeasibilityAnalysis ::d_t>(Src));
-            llvm::errs() << "   Targets={";
-            bool first = true;
-            for (auto T : Out) {
-                if (!first) {
-                    llvm::errs() << ", ";
-                }
-                first = false;
-                Feasibility::Util::dumpFact(
-                    A, static_cast<Feasibility::FeasibilityAnalysis ::d_t>(T));
-            }
-            llvm::errs() << "}\n";
-        }
-
         return Out;
     }
 };
@@ -92,40 +71,35 @@ public:
 };
 
 
-FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, const psr::LLVMBasedICFG *ICFG)
-: base_t(IRDB, {"main"}, std::optional<d_t>(
-    static_cast<d_t>(psr::LLVMZeroValue::getInstance()))) {
+FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM,
+                                         const psr::LLVMProjectIRDB *IRDB,
+                                         const psr::LLVMBasedICFG *ICFG)
+    : base_t(IRDB, {"main"}, std::optional<d_t>(static_cast<d_t>(psr::LLVMZeroValue::getInstance()))) {
     (void)FAM;
-    store = std::make_unique<FeasibilityStateStore>();
+
+    manager = std::make_unique<FeasibilityAnalysisManager>(std::make_unique<z3::context>());
     this->ICFG = ICFG;
 }
 
 
-psr::InitialSeeds<FeasibilityAnalysis::n_t, FeasibilityAnalysis::d_t,
+psr::InitialSeeds<FeasibilityAnalysis::n_t,
+                  FeasibilityAnalysis::d_t,
                   FeasibilityAnalysis::l_t>
 FeasibilityAnalysis::initialSeeds() {
+
     psr::InitialSeeds<n_t, d_t, l_t> Seeds;
 
-    auto Main = this->getProjectIRDB()->getFunctionDefinition("main");
+    auto *Main = this->getProjectIRDB()->getFunctionDefinition("main");
     if (!Main || Main->isDeclaration()) {
-        return Seeds;
-    }
-    if (!ICFG) {
-        assert(false && "FeasibilityAnalysis: ICFG is null");
         return Seeds;
     }
 
     const d_t Zero = this->getZeroValue();
-    const l_t IdeNeutral = topElement();
 
-    for (n_t SP : ICFG->getStartPointsOf(&*Main)) {
-        Seeds.addSeed(SP, Zero, IdeNeutral);
+    l_t init = emptyElement();
 
-        if (F_DEBUG_ENABLED) {
-            llvm::errs() << F_TAG << " Seed(ICFG) @";
-            Feasibility::Util::dumpInst(SP);
-            llvm::errs() << "\n";
-        }
+    for (n_t SP : ICFG->getStartPointsOf(Main)) {
+        Seeds.addSeed(SP, Zero, init);
     }
 
     return Seeds;
@@ -140,37 +114,25 @@ bool FeasibilityAnalysis::isZeroValue(d_t Fact) const noexcept{
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::topElement() {
-    return l_t::ideNeutral(this->store.get());
+    return FeasibilityElement::createElement(this->manager.get(), FeasibilityElement::topId, FeasibilityElement::Kind::Top);
 }
 
 FeasibilityElement FeasibilityAnalysis::bottomElement() {
-    return l_t::bottom(this->store.get());
+    return FeasibilityElement::createElement(this->manager.get(), FeasibilityElement::bottomId, FeasibilityElement::Kind::Bottom);
 }
 
-psr::EdgeFunction<FeasibilityAnalysis::l_t> FeasibilityAnalysis::allTopFunction() {
+FeasibilityElement FeasibilityAnalysis::emptyElement() {
+    return FeasibilityElement::createElement(this->manager.get(), FeasibilityElement::topId, FeasibilityElement::Kind::Empty);
+}
+
+psr::EdgeFunction<l_t> FeasibilityAnalysis::allTopFunction() {
     return psr::AllTop<l_t>{};
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
-    if (Lhs.isBottom()) {
-        return Rhs;
-    }
-    if (Rhs.isBottom()) {
-        return Lhs;
-    }
-
-    // reached-but-infeasible should dominate
-    if (Lhs.isIdeAbsorbing() || Rhs.isIdeAbsorbing()) {
-        return l_t::ideAbsorbing(this->store.get());
-    }
-
-    if (Lhs.isIdeNeutral()) {
-        return Rhs;
-    }
-    if (Rhs.isIdeNeutral()) {
-        return Lhs;
-    }
-
+    /*llvm::errs() << "[FDBG] VALUE.join U1=" << (Lhs.isTop()?"T":"F")
+             << " U2=" << (Rhs.isTop()?"T":"F")
+             << " -> " << ((Lhs.isTop() && Rhs.isTop())?"T":"F") << "\n";*/
     return Lhs.join(Rhs);
 }
 
@@ -203,112 +165,98 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFu
 }
 
 FeasibilityAnalysis::EdgeFunctionType
-FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode,
-                                           n_t succ, d_t succNode) {
-  if (F_DEBUG_ENABLED) {
-    llvm::errs() << F_TAG << " EF normal @";
-    Feasibility::Util::dumpInst(curr);
-    llvm::errs() << "\n" << F_TAG << "   currCond=";
-    Feasibility::Util::dumpFact(this, currNode);
-    llvm::errs() << "\n" << F_TAG << "   succCond=";
-    Feasibility::Util::dumpFact(this, succNode);
-    llvm::errs() << "\n";
+FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t /*currNode*/,
+                                           n_t succ, d_t /*succNode*/) {
+  const llvm::Instruction *SuccI = succ;
+  const llvm::Instruction *CurrI = curr;
+
+  const llvm::BasicBlock *SuccBB = SuccI ? SuccI->getParent() : nullptr;
+  const llvm::BasicBlock *CurrBB = CurrI ? CurrI->getParent() : nullptr;
+
+  auto *M = this->manager.get();
+
+  // If we cannot determine blocks: be conservative (do nothing).
+  if (!SuccBB || !CurrBB) {
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
   }
 
-  // ---------------------------------------------------------------------------
-  // 1) Handle conditional branches FIRST (must constrain Zero too!)
-  // ---------------------------------------------------------------------------
-    if (auto *Br = llvm::dyn_cast<llvm::BranchInst>(curr)) {
-        if (Br->isConditional()) {
+  // We only care about branch conditions for pruning; everything else is identity.
+  auto *br = llvm::dyn_cast<llvm::BranchInst>(CurrI);
+  if (!br) {
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
 
-            const llvm::BasicBlock *SuccBB = succ ? succ->getParent() : nullptr;
-            const llvm::BasicBlock *TrueBB = Br->getSuccessor(0);
-            const llvm::BasicBlock *FalseBB = Br->getSuccessor(1);
+  // Unconditional branch: no constraint. Still, phi substitution will be applied
+  // later when constraints are built (in successor), so nothing to add here.
+  if (!br->isConditional()) {
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
 
-            const bool TakeTrue  = (SuccBB == TrueBB);
-            const bool TakeFalse = (SuccBB == FalseBB);
+  const llvm::BasicBlock *TrueBB  = br->getSuccessor(0);
+  const llvm::BasicBlock *FalseBB = br->getSuccessor(1);
 
-            if (!TakeTrue && !TakeFalse) {
-                // Not a CFG successor edge we understand -> don't constrain
-                return EF(std::in_place_type<FeasibilityIdentityEF>);
-            }
+  if (SuccBB != TrueBB && SuccBB != FalseBB) {
+    llvm::errs() << "WARNING: successor does not match branch successors; using Identity\n";
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
 
-            llvm::Value *CondV = Br->getCondition();
-            while (auto *CastI = llvm::dyn_cast<llvm::CastInst>(CondV)) {
-                CondV = CastI->getOperand(0);
-            }
+  const bool onTrueEdge = (SuccBB == TrueBB);
 
-            // Constant condition fast path (important for your loop example too)
-            if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(CondV)) {
-                const bool CondTrue = !CI->isZero();
-                const bool EdgeTaken = TakeTrue ? CondTrue : !CondTrue;
-                return EdgeTaken ? EF(std::in_place_type<FeasibilityIdentityEF>)
-                                 : EF(std::in_place_type<FeasibilityAllBottomEF>); // or your "make infeasible" EF
-            }
+  // Strip casts from the condition
+  llvm::Value *CondV = br->getCondition();
+  while (auto *CastI = llvm::dyn_cast<llvm::CastInst>(CondV)) {
+    CondV = CastI->getOperand(0);
+  }
 
-            if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
-                return EF(std::in_place_type<FeasibilityAssumeIcmpEF>, ICmp, /*TakeTrueEdge=*/TakeTrue);
-            }
+  // Constant conditions: if we can decide the edge is never taken, return UNREACHABLE.
+  // NOTE: in your NEW MODEL, unreachable is lattice Bottom (Kind::Bottom).
+  // If your AllTopEF is "Top=true", then use AllBottomEF here instead.
+  if (auto *icmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
+    if (auto *c0 = llvm::dyn_cast<llvm::ConstantInt>(icmp->getOperand(0))) {
+      if (auto *c1 = llvm::dyn_cast<llvm::ConstantInt>(icmp->getOperand(1))) {
+        const bool cmpTrue =
+            llvm::ICmpInst::compare(c0->getValue(), c1->getValue(), icmp->getPredicate());
+        const bool edgeTaken = onTrueEdge ? cmpTrue : !cmpTrue;
 
-            return EF(std::in_place_type<FeasibilityIdentityEF>);
-        }
-    }
-
-    // 3) STORE / LOAD effects (MUST run for Zero too)
-    if (auto *storeinst = llvm::dyn_cast<llvm::StoreInst>(curr)) {
-        const llvm::Value *valOp = storeinst->getValueOperand();
-        const llvm::Value *ptrOp = storeinst->getPointerOperand()->stripPointerCasts();
-
-        if (auto *constval = llvm::dyn_cast<llvm::ConstantInt>(valOp)) {
-            unsigned bw = constval->getBitWidth();
-            uint64_t bits = constval->getValue().getZExtValue();
-            z3::expr c = store->ctx().bv_val(bits, bw);
-            const auto valueId = store->internExpr(c);
-            return EF(std::in_place_type<FeasibilitySetMemEF>, ptrOp, valueId);
+        if (!edgeTaken) {
+          // Edge is infeasible.
+          // Choose the EF that maps to lattice Bottom (unreachable).
+            EF(std::in_place_type<FeasibilityAddAtomsEF>, M, CurrBB, SuccBB, icmp, edgeTaken);
         }
 
-        return EF(std::in_place_type<FeasibilityIdentityEF>);
+        // Edge always taken: adds no constraint.
+          EF(std::in_place_type<FeasibilityAddAtomsEF>, M, CurrBB, SuccBB, icmp, edgeTaken);
+      }
     }
 
-    if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(curr)) {
-        const llvm::Value *loc = loadInst->getPointerOperand()->stripPointerCasts();
-        const llvm::Value *key = loadInst;
-        return EF(std::in_place_type<FeasibilitySetSSAEF>, key, loc);
-    }
+    // General case: store a LazyAtom (phi-aware) and let computeTarget:
+    //  1) applyPhiPack(source.env, CurrBB, SuccBB)
+    //  2) build z3 atom under that env
+    //  3) addAtom to pc-set
+    /*llvm::errs() << "DEBUG: Adding FeasibilityAddAtomsEF for edge " << CurrBB->getName() << " -> " << SuccBB->getName()
+         << " with condition " << *icmp << " on " << (onTrueEdge ? "true" : "false") << " branch\n";*/
+    return EF(std::in_place_type<FeasibilityAddAtomsEF>, M, CurrBB, SuccBB, icmp, onTrueEdge);
+  }
 
-    // 4) now you may keep the "zero-involved => ID" fast path,
-    // but it no longer blocks store/load.
-    if (currNode != succNode) {
-        return EF(std::in_place_type<FeasibilityIdentityEF>);
-    }
-    if (isZeroValue(currNode) || isZeroValue(succNode)) {
-        return EF(std::in_place_type<FeasibilityIdentityEF>);
-    }
-    return EF(std::in_place_type<FeasibilityIdentityEF>);
-}
-
-const llvm::BasicBlock* FeasibilityAnalysis::getSuccBB(FeasibilityAnalysis::n_t Succ) {
-    if (!Succ) {
-        return nullptr;
-    }
-    return Succ->getParent();
+  // Non-icmp condition: unknown, do nothing.
+  return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
 }
 
 FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getCallEdgeFunction(n_t CallSite, d_t SrcNode,
                                                                               f_t DestFun, d_t DestNode) {
-    return EF(std::in_place_type<FeasibilityIdentityEF>);
+    return EF(std::in_place_type<psr::EdgeIdentity<FeasibilityElement>>);
 }
 
 FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getReturnEdgeFunction(n_t CallSite, f_t Callee,
                                                                                 n_t ExitStmt, d_t ExitNode,
                                                                                 n_t RetSite, d_t RetNode) {
-    return EF(std::in_place_type<FeasibilityIdentityEF>);
+    return EF(std::in_place_type<psr::EdgeIdentity<FeasibilityElement>>);
 }
 
 FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getCallToRetEdgeFunction(n_t CallSite, d_t CallNode,
                                                                                    n_t RetSite, d_t RetSiteNode,
                                                                                    llvm::ArrayRef<f_t> Callees) {
-    return EF(std::in_place_type<FeasibilityIdentityEF>);
+    return EF(std::in_place_type<psr::EdgeIdentity<FeasibilityElement>>);
 }
 
 

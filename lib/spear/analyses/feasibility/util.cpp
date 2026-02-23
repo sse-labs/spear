@@ -12,20 +12,9 @@
 #include "analyses/feasibility/FeasibilityAnalysis.h"
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
 
-namespace Feasibility::Util {
+namespace Feasibility {
 
-
-std::atomic<bool> F_DebugEnabled{true};
-
-z3::expr mkSymBV(const llvm::Value *V, unsigned BW, const char *prefix, z3::context *Ctx) {
-    std::string name;
-    if (V && V->hasName()) {
-        name = std::string(prefix) + "_" + V->getName().str();
-    } else {
-        name = std::string(prefix) + "_" + std::to_string(reinterpret_cast<uintptr_t>(V));
-    }
-    return Ctx->bv_const(name.c_str(), BW);
-}
+std::atomic<bool> F_DebugEnabled{false};
 
 const llvm::Value *asValue(FeasibilityDomain::d_t fact) {
     return static_cast<const llvm::Value *>(fact);
@@ -57,7 +46,7 @@ const llvm::Value *stripAddr(const llvm::Value *pointer) {
     return pointer;
 }
 
-void dumpFact(Feasibility::FeasibilityAnalysis *analysis, Feasibility::FeasibilityDomain::d_t fact) {
+void Util::dumpFact(Feasibility::FeasibilityAnalysis *analysis, Feasibility::FeasibilityDomain::d_t fact) {
     if (!F_DebugEnabled.load())
         return;
     if (!fact) {
@@ -76,7 +65,7 @@ void dumpFact(Feasibility::FeasibilityAnalysis *analysis, Feasibility::Feasibili
     }
 }
 
-void dumpInst(Feasibility::FeasibilityDomain::n_t instruction) {
+void Util::dumpInst(Feasibility::FeasibilityDomain::n_t instruction) {
     if (!F_DebugEnabled.load())
         return;
     if (!instruction) {
@@ -86,71 +75,26 @@ void dumpInst(Feasibility::FeasibilityDomain::n_t instruction) {
     llvm::errs() << *instruction;
 }
 
-void dumpEF(const Feasibility::FeasibilityAnalysis::EdgeFunctionType &edgeFunction) {
-    if (edgeFunction.template isa<Feasibility::FeasibilityIdentityEF>()) {
-        llvm::errs() << "EF=ID";
-        return;
-    }
-
+void Util::dumpEF(const Feasibility::FeasibilityAnalysis::EdgeFunctionType &edgeFunction) {
     if (edgeFunction.template isa<Feasibility::FeasibilityAllBottomEF>() ||
         llvm::isa<psr::AllBottom<Feasibility::l_t>>(edgeFunction)) {
         llvm::errs() << "EF=BOT";
         return;
     }
 
-    if (edgeFunction.template isa<Feasibility::FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<Feasibility::l_t>>(edgeFunction)) {
-        llvm::errs() << "EF=TOP";
-        return;
-    }
-
-    if (auto *assume = edgeFunction.template dyn_cast<Feasibility::FeasibilityAssumeEF>()) {
-        llvm::errs() << "EF=ASSUME[" << assume->Cond.to_string() << "]";
-        return;
-    }
-
-    if (auto *ssaset = edgeFunction.template dyn_cast<Feasibility::FeasibilitySetSSAEF>()) {
-        llvm::errs() << "EF=SETSSA[" << ssaset->Key << "]";
-        return;
-    }
-
-    if (auto *memsset = edgeFunction.template dyn_cast<Feasibility::FeasibilitySetMemEF>()) {
-        llvm::errs() << "EF=SETMEM[" << memsset->Loc << "]";
-        return;
-    }
-
     llvm::errs() << "EF=<other>";
 }
 
-void dumpEFKind(const EF &E) {
+void Util::dumpEFKind(const EF &E) {
     llvm::errs() << "[EFKind=";
 
-    if (E.template isa<FeasibilityIdentityEF>()) {
-        llvm::errs() << "FeasibilityIdentityEF";
-    }
-    else if (E.template isa<FeasibilityAllTopEF>()) {
-        llvm::errs() << "FeasibilityAllTopEF";
-    }
-    else if (E.template isa<FeasibilityAllBottomEF>()) {
+   if (E.template isa<FeasibilityAllBottomEF>()) {
         llvm::errs() << "FeasibilityAllBottomEF";
-    }
-    else if (E.template isa<FeasibilityAssumeEF>()) {
-        llvm::errs() << "FeasibilityAssumeEF";
-    }
-    else if (E.template isa<FeasibilitySetSSAEF>()) {
-        llvm::errs() << "FeasibilitySetSSAEF";
-    }
-    else if (E.template isa<FeasibilitySetMemEF>()) {
-        llvm::errs() << "FeasibilitySetMemEF";
-    }
-
-    else if (llvm::isa<psr::AllTop<FeasibilityAnalysis::l_t>>(E)) {
+    } else if (llvm::isa<psr::AllTop<FeasibilityAnalysis::l_t>>(E)) {
         llvm::errs() << "psr::AllTop";
-    }
-    else if (llvm::isa<psr::AllBottom<FeasibilityAnalysis::l_t>>(E)) {
+    } else if (llvm::isa<psr::AllBottom<FeasibilityAnalysis::l_t>>(E)) {
         llvm::errs() << "psr::AllBottom";
-    }
-    else if (llvm::isa<psr::EdgeIdentity<FeasibilityAnalysis::l_t>>(E)) {
+    } else if (llvm::isa<psr::EdgeIdentity<FeasibilityAnalysis::l_t>>(E)) {
         llvm::errs() << "psr::EdgeIdentity";
     }
 
@@ -161,11 +105,21 @@ void dumpEFKind(const EF &E) {
     llvm::errs() << "]";
 }
 
-z3::expr createFreshBitVal(const llvm::Value *key, unsigned bitwidth, const char *prefix, z3::context *context) {
+z3::expr Util::mkSymBV(const llvm::Value *V, unsigned BW, const char *prefix, z3::context *Ctx) {
+    std::string name;
+    if (V && V->hasName()) {
+        name = std::string(prefix) + "_" + V->getName().str();
+    } else {
+        name = std::string(prefix) + "_" + std::to_string(reinterpret_cast<uintptr_t>(V));
+    }
+    return Ctx->bv_const(name.c_str(), BW);
+}
+
+z3::expr Util::createFreshBitVal(const llvm::Value *key, unsigned bitwidth, const char *prefix, z3::context *context) {
     return mkSymBV(key, bitwidth, prefix, context);
 }
 
-std::optional<z3::expr> createIntVal(const llvm::Value *val, z3::context *context) {
+std::optional<z3::expr> Util::createIntVal(const llvm::Value *val, z3::context *context) {
     if (auto constval = llvm::dyn_cast<llvm::ConstantInt>(val)) {
         unsigned bitwidth = constval->getBitWidth();
         uint64_t numval = constval->getValue().getZExtValue();
@@ -174,7 +128,7 @@ std::optional<z3::expr> createIntVal(const llvm::Value *val, z3::context *contex
     return std::nullopt;
 }
 
-std::optional<z3::expr> createBitVal(const llvm::Value *V, z3::context *context) {
+std::optional<z3::expr> Util::createBitVal(const llvm::Value *V, z3::context *context) {
     if (!V) {
         return std::nullopt;
     }
@@ -191,133 +145,108 @@ std::optional<z3::expr> createBitVal(const llvm::Value *V, z3::context *context)
     return std::nullopt;
 }
 
-std::optional<z3::expr> resolve(const llvm::Value *V, const FeasibilityElement &St, FeasibilityStateStore *Store) {
-    if (!V || !Store) {
-    return std::nullopt;
-  }
-
-  // ------------------------------------------------------------
-  // 0) Constants
-  // ------------------------------------------------------------
-  if (auto C = createIntVal(V, &Store->ctx())) {
-    return C;
-  }
-
-  if (!V->getType()->isIntegerTy()) {
-    return std::nullopt;
-  }
-
-  const unsigned Bw =
-      llvm::cast<llvm::IntegerType>(V->getType())->getBitWidth();
-
-  // ------------------------------------------------------------
-  // 1) SSA lookup for *any* integer-typed Value
-  //    (this includes LoadInst results, BinaryOperator results, args, etc.)
-  // ------------------------------------------------------------
-  if (auto SsaId = Store->Ssa.getValue(St.ssaId, V)) {
-    return Store->exprOf(*SsaId);
-  }
-
-  // ------------------------------------------------------------
-  // 2) Load fallback: if SSA doesn't have the load result yet,
-  //    read from MEM using the load's pointer operand.
-  // ------------------------------------------------------------
-  if (const auto *LI = llvm::dyn_cast<llvm::LoadInst>(V)) {
-    const llvm::Value *Loc = LI->getPointerOperand()->stripPointerCasts();
-
-    if (auto MemId = Store->Mem.getValue(St.memId, Loc)) {
-      return Store->exprOf(*MemId);
+z3::expr Util::createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llvm::ICmpInst* ICmp, bool areWeInTheTrueBranch, uint32_t envId) {
+    if (!manager) {
+        llvm::errs() << "ALARM: createConstraintFromICmp called with null manager\n";
+        // return a safe default
+        static z3::context dummy;
+        return dummy.bool_val(true);
     }
 
-    // Unknown memory -> stable symbol for this *location* (not for the load!)
-    // This is crucial: two loads from the same Loc must resolve to the same thing.
-    const auto SymId = Store->getOrCreateSym(Loc, Bw, "mem");
-    return Store->exprOf(SymId);
-  }
-
-  // ------------------------------------------------------------
-  // 3) Casts
-  // ------------------------------------------------------------
-  if (const auto *Cast = llvm::dyn_cast<llvm::CastInst>(V)) {
-    auto Op = resolve(Cast->getOperand(0), St, Store);
-    if (!Op) {
-      return std::nullopt;
+    if (!manager->hasEnv(envId)) {
+        llvm::errs() << "ALARM: envId " << envId << " does not exist in manager. "
+                     << "ICmp=" << *ICmp << "\n";
+        // safest behavior: do not constrain instead of crashing
+        return manager->Context.get()->bool_val(true);
     }
 
-    const unsigned DstBW =
-        llvm::cast<llvm::IntegerType>(Cast->getType())->getBitWidth();
-    const unsigned SrcBW = Op->get_sort().bv_size();
+    auto op0 = manager->resolve(envId, ICmp->getOperand(0));
+    auto op1 = manager->resolve(envId, ICmp->getOperand(1));
 
-    if (llvm::isa<llvm::ZExtInst>(Cast)) {
-      if (DstBW > SrcBW) return z3::zext(*Op, DstBW - SrcBW);
-      if (DstBW < SrcBW) return Op->extract(DstBW - 1, 0);
-      return *Op;
-    }
-    if (llvm::isa<llvm::SExtInst>(Cast)) {
-      if (DstBW > SrcBW) return z3::sext(*Op, DstBW - SrcBW);
-      if (DstBW < SrcBW) return Op->extract(DstBW - 1, 0);
-      return *Op;
-    }
-    if (llvm::isa<llvm::TruncInst>(Cast)) {
-      if (DstBW <= SrcBW) return Op->extract(DstBW - 1, 0);
-      return z3::zext(*Op, DstBW - SrcBW);
-    }
-    if (llvm::isa<llvm::BitCastInst>(Cast)) {
-      if (DstBW == SrcBW) return *Op;
-      if (DstBW < SrcBW) return Op->extract(DstBW - 1, 0);
-      return z3::zext(*Op, DstBW - SrcBW);
+    auto c0 = createBitVal(op0, manager->Context.get());
+    auto c1 = createBitVal(op1, manager->Context.get());
+
+    if (!c0 || !c1) {
+        // If we cannot create a formula for one of the operands,
+        // we return a default formula (true) that does not constrain the analysis.
+        llvm::errs() << "WARNING: Could not create constraint from ICmp instruction " << *ICmp << " because we could not create formulas for its operands.\n";
+        return manager->Context.get()->bool_val(true);
     }
 
-    return std::nullopt;
-  }
-
-  // ------------------------------------------------------------
-  // 4) Binary operators
-  // ------------------------------------------------------------
-  if (const auto *BO = llvm::dyn_cast<llvm::BinaryOperator>(V)) {
-    auto L = resolve(BO->getOperand(0), St, Store);
-    auto R = resolve(BO->getOperand(1), St, Store);
-    if (!L || !R) {
-      return std::nullopt;
+    // Init the constraint formula to true, and then update it based on the predicate of the ICmp instruction.
+    // We use the appropriate Z3 operators for each predicate to create the correct constraint formula.
+    z3::expr cmp = manager->Context.get()->bool_val(true);
+    switch (ICmp->getPredicate()) {
+        case llvm::ICmpInst::ICMP_EQ:
+            cmp = (*c0 == *c1);
+            break;
+        case llvm::ICmpInst::ICMP_NE:
+            cmp = (*c0 != *c1);
+            break;
+        case llvm::ICmpInst::ICMP_UGT:
+            cmp = z3::ugt(*c0, *c1);
+            break;
+        case llvm::ICmpInst::ICMP_UGE:
+            cmp = z3::uge(*c0, *c1);
+            break;
+        case llvm::ICmpInst::ICMP_ULT:
+            cmp = z3::ult(*c0, *c1);
+            break;
+        case llvm::ICmpInst::ICMP_ULE:
+            cmp = z3::ule(*c0, *c1);
+            break;
+        case llvm::ICmpInst::ICMP_SGT:
+            cmp = (*c0 > *c1);
+            break;
+        case llvm::ICmpInst::ICMP_SGE:
+            cmp = (*c0 >= *c1);
+            break;
+        case llvm::ICmpInst::ICMP_SLT:
+            cmp = (*c0 < *c1);
+            break;
+        case llvm::ICmpInst::ICMP_SLE:
+            cmp = (*c0 <= *c1);
+            break;
+        default:
+            // If we encounter an unsupported predicate, we return a default formula (true) that does not constrain the analysis. In practice, you
+            cmp = manager->Context.get()->bool_val(true);
+            break;
     }
 
-    switch (BO->getOpcode()) {
-      case llvm::Instruction::Add:  return (*L) + (*R);
-      case llvm::Instruction::Sub:  return (*L) - (*R);
-      case llvm::Instruction::Mul:  return (*L) * (*R);
-      case llvm::Instruction::And:  return (*L) & (*R);
-      case llvm::Instruction::Or:   return (*L) | (*R);
-      case llvm::Instruction::Xor:  return (*L) ^ (*R);
-      case llvm::Instruction::Shl:  return z3::shl(*L, *R);
-      case llvm::Instruction::LShr: return z3::lshr(*L, *R);
-      case llvm::Instruction::AShr: return z3::ashr(*L, *R);
-      default: break;
+    // If we are on the false branch of the constraint, we negate the formula to represent the negation of the constraint.
+    if (!areWeInTheTrueBranch) {
+        cmp = !cmp;
     }
-    return std::nullopt;
-  }
 
-  // ------------------------------------------------------------
-  // 5) Fallback: stable symbol for the SSA value itself
-  // ------------------------------------------------------------
-  const auto SymId = Store->getOrCreateSym(V, Bw, "v");
-  return Store->exprOf(SymId);
+    return cmp;
 }
 
-const llvm::Instruction* firstRealInst(const llvm::BasicBlock *BB) {
-    if (!BB) {
-        return nullptr;
+bool Util::blockStartsWithPhi(const llvm::BasicBlock *block) {
+    if (block->empty()) {
+        return false;
     }
-#if LLVM_VERSION_MAJOR >= 14
-    return BB->getFirstNonPHIOrDbgOrLifetime();
-#else
-    // Fallback: skip PHI and dbg
-    for (const llvm::Instruction &I : *BB) {
-        if (!llvm::isa<llvm::PHINode>(&I) && !llvm::isa<llvm::DbgInfoIntrinsic>(&I)) {
-            return &I;
-        }
+    return llvm::isa<llvm::PHINode>(block->front());
+}
+
+bool Util::isRealPred(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ) {
+    for (const llvm::BasicBlock *P : llvm::predecessors(Succ)) {
+        if (P == Pred) return true;
     }
-    return nullptr;
-#endif
+    return false;
+}
+
+
+bool Util::setSat(std::vector<z3::expr> set, z3::context *ctx) {
+    if  (set.empty()) {
+        // An empty set represents the formula "true", which is satisfiable.
+        return true;
+    }
+
+    z3::solver solver(*ctx);
+    for (const auto &atom : set) {
+        solver.add(atom);
+    }
+    return solver.check() == z3::sat;
 }
 
 } // namespace Feasibility::Util

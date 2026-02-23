@@ -51,7 +51,7 @@ public:
     using EdgeFunctionType = psr::EdgeFunction<l_t>;
 
     // New implementation uses a state store (owns z3::context and persistent state).
-    std::unique_ptr<FeasibilityStateStore> store;
+    std::unique_ptr<FeasibilityAnalysisManager> manager;
 
     explicit FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, const psr::LLVMBasedICFG *ICFG);
 
@@ -81,6 +81,8 @@ private:
     l_t topElement() override;
 
     l_t bottomElement() override;
+
+    l_t emptyElement();
 
     l_t join(l_t Lhs, l_t Rhs) override;
 
@@ -130,8 +132,6 @@ private:
      * @return Return the KeepLocalOnCallToRet flow
      */
     FlowFunctionPtrType getCallToRetFlowFunction(n_t CallSite, n_t RetSite, llvm::ArrayRef<f_t> Callees) override;
-
-    static const llvm::BasicBlock *getSuccBB(n_t Succ);
 
     /**
      * Call edge function
