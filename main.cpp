@@ -109,12 +109,7 @@ void runAnalysisRoutine(CLIOptions opts) {
     modulePassManager.run(*module_up, moduleAnalysisManager);
 
     PhasarHandlerPass PH;
-    auto start = std::chrono::high_resolution_clock::now();
     PH.runOnModule(*module_up);
-    auto end = std::chrono::high_resolution_clock::now();
-
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Runtime: " << duration.count() << " ms\n";
 
     /*Modelchecker McheckerInstance;
     auto mcheckercontext = McheckerInstance.getContext();
@@ -128,13 +123,19 @@ void runAnalysisRoutine(CLIOptions opts) {
     // Store results for later use
     auto MainFn = module_up->getFunction("main");
     auto loopboundResults = PH.queryBoundVars(MainFn);
+    auto start = std::chrono::high_resolution_clock::now();
     auto feasibilityResults = PH.queryFeasibility(MainFn);
+    auto end = std::chrono::high_resolution_clock::now();
+
 
     for (const auto &entry : feasibilityResults) {
-        std::string feasStr = entry.second.Feasible? "FEASIBLE": "INFEASIBLE";
+        std::string feasStr = entry.second.Feasible? "REACHABLE": "UNREACHABLE";
 
         std::cout << "Feasibility results for block: " << entry.first << " => " << feasStr << "\n";
     }
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Runtime: " << duration.count() << " ms\n";
 
     PhasarResultRegistry::get().store(loopboundResults);
 

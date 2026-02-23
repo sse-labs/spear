@@ -5,8 +5,120 @@
 
 int main(int argc, char **argv) {
     int length = argc;
+    int width = argc/2;
     int cheese = 1;
     int cmp = (argc ^ (argv[0][0] & 1));   // depends on argv, so not a constant
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (width < cmp) {
+        if (width > cmp) {
+            cheese++;
+        }
+    }
+
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
+
+    if (length > cmp) {
+        if (length >= cmp) {
+            if (length < cmp) {
+                cheese++;
+            }
+        }
+    }
 
     if (length > cmp) {
         if (length >= cmp) {

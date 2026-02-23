@@ -7,95 +7,78 @@
 #ifndef SPEAR_FEASIBILITYELEMENT_H
 #define SPEAR_FEASIBILITYELEMENT_H
 
-#include <atomic>
 #include <cstdint>
 #include <deque>
-#include <mutex>
 #include <optional>
+#include <set>
+#include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
+#include <mutex>
 
-#include <llvm/ADT/Hashing.h>
-#include <llvm/ADT/SmallVector.h>
-#include <llvm/IR/Value.h>
 #include <llvm/Support/raw_ostream.h>
 #include <z3++.h>
+#include <llvm/IR/Value.h>
 
 #include <phasar/DataFlow/IfdsIde/EdgeFunction.h>
 
 namespace Feasibility {
 
-struct Z3ExprHash {
-  std::size_t operator()(const z3::expr &e) const noexcept {
-    return static_cast<std::size_t>(Z3_get_ast_hash(e.ctx(), e));
-  }
-};
-
-struct Z3ExprEq {
-  bool operator()(const z3::expr &a, const z3::expr &b) const noexcept {
-    return Z3_is_eq_ast(a.ctx(), a, b);
-  }
-};
-
 class FeasibilityAnalysisManager;
 
+// ============================================================================
+// FeasibilityElement
+// ============================================================================
 class FeasibilityElement {
 public:
-  enum class Kind : uint8_t { Top = 0, Bottom = 1, Normal = 2 };
+  enum class Kind : uint8_t { Top = 0, Bottom = 1, Normal = 2, Empty = 3 };
 
-  // IMPORTANT: keep these consistent with your manager initialization.
-  static constexpr uint32_t topId = 0;     // true
-  static constexpr uint32_t bottomId = 1;  // false
+  static constexpr uint32_t topId    = 0; // empty set == true
+  static constexpr uint32_t bottomId = 1; // reserved (unused for sets)
 
   FeasibilityElement() noexcept
-      : kind(Kind::Top), formularID(0), envId(0), manager(nullptr) {}
+      : kind(Kind::Top), formularID(topId), manager(nullptr), envId(0) {}
 
   static FeasibilityElement createElement(FeasibilityAnalysisManager *man,
                                           uint32_t formulaId, Kind type,
-                                          uint32_t envId = 0);
+                                          uint32_t envId = 0) noexcept;
 
-  Kind getKind() const { return kind; }
-  bool isTop() const { return kind == Kind::Top; }
-  bool isBottom() const { return kind == Kind::Bottom; }
-  bool isNormal() const { return kind == Kind::Normal; }
+  bool isTop() const noexcept { return kind == Kind::Top; }
+  bool isBottom() const noexcept { return kind == Kind::Bottom; }
+  bool isNormal() const noexcept { return kind == Kind::Normal; }
+  bool isEmpty() const noexcept { return kind == Kind::Empty; }
 
-  void setKind(Kind k) { this->kind = k; }
+  FeasibilityAnalysisManager *getManager() const noexcept { return manager; }
+  Kind getKind() const noexcept { return kind; }
+  uint32_t getFormulaId() const noexcept { return formularID; }
+  uint32_t getEnvId() const noexcept { return envId; }
 
-  uint32_t getFormulaId() const { return formularID; }
-  uint32_t getEnvId() const { return envId; }
-  FeasibilityAnalysisManager *getManager() const { return manager; }
+  void setFormulaId(uint32_t id) noexcept { formularID = id; }
+  void setEnvId(uint32_t id) noexcept { envId = id; }
+  void setKind(Kind k) noexcept { kind = k; }
 
-  void setFormulaId(uint32_t id) { this->formularID = id; }
-  void setEnvId(uint32_t id) { this->envId = id; }
-
-  FeasibilityElement join(FeasibilityElement &other) const;
+  /// MUST-join (intersection) with reachability semantics:
+  /// ⊥ ⊔ x = x
+  /// x ⊔ ⊥ = x
+  /// Top = empty set (true), absorbing for intersection.
+  FeasibilityElement join(const FeasibilityElement &other) const;
 
   std::string toString() const;
 
-  bool operator==(const FeasibilityElement &other) const {
+  bool operator==(const FeasibilityElement &other) const noexcept {
     return kind == other.kind && formularID == other.formularID &&
            envId == other.envId && manager == other.manager;
   }
-  bool operator!=(const FeasibilityElement &other) const {
+  bool operator!=(const FeasibilityElement &other) const noexcept {
     return !(*this == other);
   }
 
 private:
   friend class FeasibilityAnalysisManager;
 
-  // Canonicalization rule:
-  //  - Bottom must always have envId==0
-  //  - (recommended) Top must always have envId==0
-  static inline uint32_t canonicalizeEnv(Kind k, uint32_t env) {
-    if (k == Kind::Bottom) return 0;
-    if (k == Kind::Top) return 0;
-    return env;
-  }
-
   FeasibilityElement(Kind k, uint32_t fid, FeasibilityAnalysisManager *m,
-                     uint32_t e)
-      : kind(k), formularID(fid), manager(m), envId(canonicalizeEnv(k, e)) {}
+                     uint32_t e) noexcept
+      : kind(k), formularID(fid), manager(m), envId(e) {}
 
   Kind kind{Kind::Top};
   uint32_t formularID{topId};
@@ -103,35 +86,59 @@ private:
   uint32_t envId{0};
 };
 
+// ============================================================================
+// FeasibilityAnalysisManager
+// ============================================================================
 class FeasibilityAnalysisManager {
 public:
-  enum class SatTri : uint8_t { Unknown = 0, Sat = 1, Unsat = 2 };
-
   using l_t = FeasibilityElement;
   using EF  = psr::EdgeFunction<l_t>;
-
   using EFStableId = uint64_t;
+
+  /// Comparator for z3::expr so we can store them in std::set.
+  /// We order by Z3 AST id, which is stable within a context.
+  struct ExprLess {
+    bool operator()(const z3::expr &a, const z3::expr &b) const noexcept {
+      // Both expr must come from the same context (true for one manager).
+      unsigned ia = Z3_get_ast_id(a.ctx(), a);
+      unsigned ib = Z3_get_ast_id(b.ctx(), b);
+      return ia < ib;
+    }
+  };
+
+  using ExprSet = std::set<z3::expr, ExprLess>;
 
   explicit FeasibilityAnalysisManager(std::unique_ptr<z3::context> ctx);
 
-  // ---- canonical singleton EFs (MUST be reused everywhere) ----
-  const EF &identityEF() const noexcept { return IdentityEF; }
-  const EF &allTopEF() const noexcept { return AllTopEF; }
-  const EF &allBottomEF() const noexcept { return AllBottomEF; }
+  // --------------------------------------------------------------------------
+  // Formula storage (conjunction sets)
+  // --------------------------------------------------------------------------
+  const ExprSet &getSet(uint32_t id) const;
 
-  // ===== stable EF ids =====
-  EFStableId efStableId(const EF &F) const;
+  /// Intern a set, return its ID.
+  uint32_t internSet(const ExprSet &S);
+
+  /// Create ID for (Set[id] ∪ {atom})
+  uint32_t addAtom(uint32_t baseId, const z3::expr &atom);
+
+  /// Create ID for (Set[a] ∩ Set[b])
+  uint32_t intersect(uint32_t aId, uint32_t bId);
+
+  // Optional helper (slow path): find a singleton set's id
+  std::optional<uint32_t> findSingletonId(const z3::expr &atom) const;
+
+  std::vector<z3::expr> getPureSet(uint32_t id) const;
 
   struct EnvNode {
-    const EnvNode *parent;
-    const llvm::Value *key;
-    const llvm::Value *val;
+    const EnvNode *parent = nullptr;
+    const llvm::Value *key = nullptr;
+    const llvm::Value *val = nullptr;
   };
 
   struct EnvKey {
-    uint32_t Base;
-    const llvm::Value *K;
-    const llvm::Value *V;
+    uint32_t Base = 0;
+    const llvm::Value *K = nullptr;
+    const llvm::Value *V = nullptr;
 
     bool operator==(const EnvKey &o) const noexcept {
       return Base == o.Base && K == o.K && V == o.V;
@@ -150,198 +157,51 @@ public:
     }
   };
 
-  struct PhiKey {
-    uint32_t In;
-    const llvm::BasicBlock *Pred;
-    const llvm::BasicBlock *Succ;
+  bool hasEnv(uint32_t id) const noexcept;
 
-    bool operator==(const PhiKey &o) const noexcept {
-      return In == o.In && Pred == o.Pred && Succ == o.Succ;
-    }
-  };
-
-  struct PhiKeyHash {
-    std::size_t operator()(const PhiKey &k) const noexcept {
-      std::size_t h = std::hash<uint32_t>{}(k.In);
-      auto mix = [&](std::size_t x) {
-        h ^= x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-      };
-      mix(std::hash<const void *>{}(static_cast<const void *>(k.Pred)));
-      mix(std::hash<const void *>{}(static_cast<const void *>(k.Succ)));
-      return h;
-    }
-  };
-
-  // ===== resolve(envId, v) cache =====
-  struct ResolveKey {
-    uint32_t Env;
-    const llvm::Value *V;
-
-    bool operator==(const ResolveKey &o) const noexcept {
-      return Env == o.Env && V == o.V;
-    }
-  };
-
-  struct ResolveKeyHash {
-    std::size_t operator()(const ResolveKey &k) const noexcept {
-      std::size_t h = std::hash<uint32_t>{}(k.Env);
-      h ^= std::hash<const void *>{}(static_cast<const void *>(k.V)) +
-           0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-      return h;
-    }
-  };
-
-  // ===== compose/join interning keys (KEYED BY STABLE IDS) =====
-  struct EFPairKey {
-    EFStableId A;
-    EFStableId B;
-    bool operator==(const EFPairKey &o) const noexcept { return A==o.A && B==o.B; }
-  };
-
-  struct EFPairHash {
-    size_t operator()(const EFPairKey &k) const noexcept {
-      size_t h = std::hash<EFStableId>{}(k.A);
-      h ^= std::hash<EFStableId>{}(k.B) + 0x9e3779b97f4a7c15ULL + (h<<6) + (h>>2);
-      return h;
-    }
-  };
-
-  struct EFVecKey {
-    llvm::SmallVector<EFStableId, 4> ids;
-    bool operator==(const EFVecKey &o) const noexcept { return ids == o.ids; }
-  };
-
-  struct EFVecKeyHash {
-    size_t operator()(const EFVecKey &k) const noexcept {
-      return (size_t)llvm::hash_combine_range(k.ids.begin(), k.ids.end());
-    }
-  };
-
-  // ---------- formulas ----------
-  const z3::expr &getExpression(uint32_t id) const;
-  std::optional<uint32_t> findFormulaId(const z3::expr &expr) const;
-
-  uint32_t mkAnd(uint32_t aId, uint32_t bId);
-  uint32_t mkOr(uint32_t aId, uint32_t bId);
-  uint32_t mkNot(z3::expr a);
-  uint32_t mkAtomic(z3::expr a);
-
-  bool isBoolTrue(const z3::expr &e);
-  bool isBoolFalse(const z3::expr &e);
-  bool isNotExpr(const z3::expr &e);
-  bool isNotOf(const z3::expr &a, const z3::expr &b);
-
-  void collectOrArgs(const z3::expr &e, std::vector<z3::expr> &out);
-  void collectAndArgs(const z3::expr &e, std::vector<z3::expr> &out);
-
-  z3::expr mkNaryOr(z3::context &ctx, const std::vector<z3::expr> &v);
-  z3::expr mkNaryAnd(z3::context &ctx, const std::vector<z3::expr> &v);
-
-  z3::expr mkOrSimplified(const z3::expr &a, const z3::expr &b);
-  z3::expr mkAndSimplified(const z3::expr &a, const z3::expr &b);
-
-  EFStableId efStableIdFromOpaque(const void *opaque) const;
-
-  // SAT depends ONLY on formula id.
-  bool isSat(uint32_t id);
-
-  // ---------- environments ----------
-  bool hasEnv(uint32_t id) const;
-
+  /// Direct lookup: returns bound value if present, else nullptr
   const llvm::Value *lookupEnv(uint32_t envId, const llvm::Value *k) const;
-  const llvm::Value *lookupBinding(uint32_t envId,
-                                   const llvm::Value *key) const;
 
-  const llvm::Value *resolve(uint32_t envId, const llvm::Value *v);
+  /// Resolves a value through the environment chain (v -> binding -> binding...)
+  const llvm::Value *resolve(uint32_t envId, const llvm::Value *v) const;
 
+  /// Create/return envId for baseEnvId extended with (k -> v)
   uint32_t extendEnv(uint32_t baseEnvId, const llvm::Value *k,
                      const llvm::Value *v);
 
+  /// Apply all PHIs in 'succ' for the incoming edge pred->succ
   uint32_t applyPhiPack(uint32_t inEnvId, const llvm::BasicBlock *pred,
                         const llvm::BasicBlock *succ);
 
-  // ---------- interning ----------
-  // General entry points used by edge-function implementations:
-  EF internCompose(const EF &A, const EF &B);
-  EF internJoin(const EF &A, const EF &B);
 
-  // Opaque fast-paths: caller already computed stable ids.
-  EF internComposeOpaque(EFStableId aId, const EF &A,
-                         EFStableId bId, const EF &B);
-  EF internJoinOpaque(EFStableId aId, const EF &A,
-                      EFStableId bId, const EF &B);
-
-  z3::expr simplify(z3::expr input);
-
-  // ---------- state ----------
-  std::unique_ptr<z3::context> OwnedContext;
-  z3::context *Context = nullptr;
-
-  std::vector<z3::expr> Formulas;
-  std::vector<SatTri> SatCache;
-  std::unordered_map<z3::expr, uint32_t, Z3ExprHash, Z3ExprEq> FormularsToId;
-
-  std::deque<EnvNode> EnvPool;
-  std::vector<const EnvNode *> EnvRoots;
-
-  std::unordered_map<EnvKey, uint32_t, EnvKeyHash> EnvIntern;
-
-  std::unordered_map<PhiKey, uint32_t, PhiKeyHash> PhiCache;
-  mutable std::mutex PhiCacheMu;
-  uint64_t PhiCacheHits = 0;
-  uint64_t PhiCacheMiss = 0;
-  uint64_t PhiCacheInserts = 0;
-
-  mutable std::unordered_map<ResolveKey, const llvm::Value *, ResolveKeyHash> ResolveCache;
-  mutable std::mutex ResolveCacheMu;
-  uint64_t ResolveCacheHits = 0;
-  uint64_t ResolveCacheMiss = 0;
-  uint64_t ResolveCacheInserts = 0;
-
-  // ===== stable id interning (opaque pointer -> stable id) =====
-  mutable std::unordered_map<const void *, EFStableId> EFIdIntern;
-  mutable std::mutex EFIdInternMu;
-  mutable std::atomic<EFStableId> NextEFStableId{10}; // reserve 0..9
-
-  // ===== compose/join interning =====
-  std::unordered_map<EFPairKey, EF, EFPairHash> ComposeIntern;
-  std::unordered_map<EFVecKey, EF, EFVecKeyHash> JoinInternNary;
-  mutable std::mutex ComposeInternMu;
-  mutable std::mutex JoinInternMu;
-
-  uint64_t ComposeInternHits = 0;
-  uint64_t ComposeInternMiss = 0;
-  uint64_t ComposeInternInserts = 0;
-
-  uint64_t JoinInternHits = 0;
-  uint64_t JoinInternMiss = 0;
-  uint64_t JoinInternInserts = 0;
-
+  // --------------------------------------------------------------------------
+  // Owned Z3
+  // --------------------------------------------------------------------------
+  std::unique_ptr<z3::context> Context;
   z3::solver Solver;
 
 private:
-  // Canonical singleton EFs (manager-owned, constructed once)
-  EF IdentityEF;
-  EF AllTopEF;
-  EF AllBottomEF;
+  // Sets[0] = empty set == true (Top)
+  // Sets[1] = reserved (bottomId) (we keep empty set as placeholder)
+  std::vector<ExprSet> Sets;
 
-  // ===== helpers for join/compose canonicalization =====
-  void collectJoinOps(const EF &E, llvm::SmallVectorImpl<EF> &out) const;
-  void normalizeJoinOps(llvm::SmallVectorImpl<EF> &ops) const;
+  void ensureEnvZeroInitialized();
 
-  void collectComposeChainLeft(const EF &E, llvm::SmallVectorImpl<EF> &out) const;
-  void normalizeComposeChain(llvm::SmallVectorImpl<EF> &chain) const;
+  std::deque<EnvNode> EnvPool;
+  std::vector<const EnvNode *> EnvRoots; // EnvRoots[0] == nullptr
 
-  EF internComposeById(EFStableId aId, const EF &A,
-                       EFStableId bId, const EF &B);
+  // Optional, but recommended: env interning avoids creating duplicate env nodes
+  std::unordered_map<EnvKey, uint32_t, EnvKeyHash> EnvIntern;
+  mutable std::mutex EnvInternMu;
 
-  EF buildBalancedJoinTree(const llvm::SmallVectorImpl<EF> &ops,
-                           size_t lo, size_t hi) const;
+  // Interning table: hash(set) -> id. We still validate equality on collision.
+  mutable std::mutex SetsMutex;
+  std::unordered_map<std::size_t, std::vector<uint32_t>> InternBuckets;
+
+  static std::size_t hashSet(const ExprSet &S);
 };
 
 std::string toString(const std::optional<FeasibilityElement> &E);
-std::ostream &operator<<(std::ostream &os,
-                         const std::optional<FeasibilityElement> &E);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                               const FeasibilityElement &E);
 
