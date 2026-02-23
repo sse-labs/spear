@@ -122,32 +122,11 @@ class Util {
      */
     static bool blockStartsWithPhi(const llvm::BasicBlock *block);
 
-
-    static bool isTrueId(FeasibilityAnalysisManager *M, uint32_t id);
-
-    static bool isFalseId(FeasibilityAnalysisManager *M, uint32_t id);
-
-    static FeasibilityClause clauseFromIcmp(const llvm::ICmpInst *I, bool TrueEdge);
-
-    static FeasibilityClause clauseFromPhi(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ);
-
-    static uint32_t applyPhiChain(FeasibilityAnalysisManager *M, uint32_t envId, const llvm::SmallVectorImpl<PhiStep> &chain);
-
     static void uniqAppend(llvm::SmallVector<uint32_t, 4> &out, uint32_t id);
-
-    static void appendPhi(FeasibilityClause &C, const PhiStep &P);
-
-    static void prependPhi(FeasibilityClause &C, const PhiStep &P);
-
-    static FeasibilityClause conjClauses(const FeasibilityClause &A, const FeasibilityClause &B);
 
     static bool isRealPred(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ);
 
-   static void normalizeClause(FeasibilityClause &C);
-
- static bool sameClause(const FeasibilityClause &A, const FeasibilityClause &B);
-
- static void normalizeClauses(llvm::SmallVectorImpl<FeasibilityClause> &Cs);
+    static bool setSat(std::vector<z3::expr> set, z3::context *ctx);
 };
 
 }

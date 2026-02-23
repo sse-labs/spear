@@ -124,6 +124,14 @@ PhasarHandlerPass::BoundVarMap PhasarHandlerPass::queryBoundVars(llvm::Function 
   return ResultMap;
 }
 
+bool PhasarHandlerPass::constains(std::vector<llvm::BasicBlock *> visited, llvm::BasicBlock *BB) const {
+  for (auto *V : visited) {
+    if (V == BB) {
+      return true;
+    }
+  }
+  return false;
+}
 
 PhasarHandlerPass::FeasibilityMap
 PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
@@ -135,50 +143,82 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
 
   const llvm::Value *Zero = feasibilityProblem ? feasibilityProblem->getZeroValue() : nullptr;
 
-  // 1) Create entries + optional diagnostics
-  for (const llvm::BasicBlock &BB : *Func) {
+  struct SetSigHash {
+    size_t operator()(const SetSigKey &K) const noexcept {
+      // Same idea as DenseMap hash, but return size_t
+      return (size_t)llvm::hash_combine(K.Mgr,
+        llvm::hash_combine_range(K.AstIds.begin(), K.AstIds.end()));
+    }
+  };
+
+  // Create the worklist and visited set for a simple CFG traversal to query feasibility at block entries.
+  auto firstBlock = &Func->getEntryBlock();
+  std::deque<llvm::BasicBlock*> worklist{firstBlock};
+  llvm::DenseMap<const llvm::BasicBlock*, BlockFeasInfo> visited;
+  std::unordered_map<SetSigKey, bool, SetSigHash> SatCache;
+  SatCache.reserve(128); // optional
+
+  // At all blocks to the visited set with default entries to ensure we don't revisit them. We will fill in the actual feasibility info in the next loop.
+  for (auto &BB : *Func) {
     const std::string BBName = blockName(BB);
-    BlockFeasInfo &Info = ResultMap[BBName];
+    visited[&BB] = BlockFeasInfo{}; // default entry
+  }
 
-    Info.Feasible = false;
-    Info.HasZeroAtEntry = false;
+  // Iterate over the worklist until its empty
+  while (!worklist.empty()) {
+    // Get the first entry
+    llvm::BasicBlock *BB = worklist.front();
+    worklist.pop_front();
 
-    for (auto &I : BB) {
-      auto latticeElementExists = FeasibilityResult->containsNode(&I);
-      if (latticeElementExists) {
-        auto ResMap = FeasibilityResult->resultsAt(&I);
-        for (auto entry : ResMap) {
-          auto k = entry.second.getKind();
-          std::string kindStr = (k == Feasibility::FeasibilityElement::Kind::Top)
-                                ? "TOP"
-                                : (k == Feasibility::FeasibilityElement::Kind::Bottom)
-                                      ? "BOTTOM"
-                                      : "NORMAL";
+    // Check if we have already visited this block. If so, skip it.
+    const std::string BBName = blockName(*BB);
 
-          llvm::outs() << "Feasibility at instruction " << I << ": " << kindStr << ", id: " << entry.second.getFormulaId() << "\n";
-        }
-      }
+    // llvm::errs() << "Solving for " << BBName << "\n";
+
+    if (visited[BB].visited) {
+      continue; // already visited
     }
 
-    llvm::outs() << "\n";
+    // Mark this block as visited
+    visited[BB].visited = true;
 
+    // Query feasibility at the last instruction of the block (terminator),
+    // which is the most stable point to query for block entry feasibility.
+    if (const llvm::Instruction *Term = BB->getTerminator()) {
+      // Query the analysis result for the terminator instruction and check if it contains an entry for the zero value.
+      auto res = FeasibilityResult->resultsAt(Term);
+      auto it = res.find(Zero);
 
-    const llvm::Instruction *terminator = BB.getTerminator();
-    auto latticeElementExists = FeasibilityResult->containsNode(terminator);
-    if (latticeElementExists) {
-      auto ResMap = FeasibilityResult->resultsAt(terminator);
-      auto ItZ = ResMap.find(Zero);
-      if (ItZ != ResMap.end()) {
-        const auto &L = ItZ->second;
-        //llvm::outs() << "Feasibility at terminator of " << BBName << ": " << L.getKind() << "\n";
-        if (L.isBottom()) {
-          Info.Feasible = true;
+      if (it != res.end()) {
+        // If it does, we check the kind of the lattice element. If it's not bottom, the block is feasible.
+        const auto &entry = it->second;
+
+        const auto *Mgr = entry.getManager();
+        uint32_t FId = entry.getFormulaId();
+
+        std::vector<z3::expr> set = Mgr->getPureSet(FId);
+        SetSigKey Sig = makeSig(Mgr, set);
+
+        auto ItSat = SatCache.find(Sig);
+        bool isSat;
+        if (ItSat != SatCache.end()) {
+          isSat = ItSat->second;
+        } else {
+          isSat = Feasibility::Util::setSat(set, Mgr->Context.get());
+          SatCache.emplace(std::move(Sig), isSat);
+        }
+
+        ResultMap[BBName].Feasible = isSat;
+        ResultMap[BBName].HasZeroAtEntry = true;
+        ResultMap[BBName].visited = true;
+
+        if (isSat) {
+          auto sucss = llvm::successors(BB);
+          worklist.insert(worklist.end(), sucss.begin(), sucss.end());
         }
       }
     }
   }
-
-
 
   return ResultMap;
 }

@@ -96,15 +96,7 @@ FeasibilityAnalysis::initialSeeds() {
 
     const d_t Zero = this->getZeroValue();
 
-    // Create initial lattice element:
-    // PC = true (topId)
-    // Env = 0 (empty)
-    // Kind = Top
-    l_t init = l_t::createElement(
-        this->manager.get(),
-        l_t::topId,          // pc = true baseline
-        l_t::Kind::Bottom,   // REACHED baseline (yes, Bottom kind now means “reached”)
-    0);
+    l_t init = emptyElement();
 
     for (n_t SP : ICFG->getStartPointsOf(Main)) {
         Seeds.addSeed(SP, Zero, init);
@@ -114,12 +106,10 @@ FeasibilityAnalysis::initialSeeds() {
 }
 
 FeasibilityAnalysis::d_t FeasibilityAnalysis::zeroValue() const {
-    // Creates an empty stupid fact
     return static_cast<d_t>(psr::LLVMZeroValue::getInstance());
 }
 
 bool FeasibilityAnalysis::isZeroValue(d_t Fact) const noexcept{
-    // This is mere a dummy function, as we only propagate zero values
     return base_t::isZeroValue(Fact);
 }
 
@@ -131,14 +121,18 @@ FeasibilityElement FeasibilityAnalysis::bottomElement() {
     return FeasibilityElement::createElement(this->manager.get(), FeasibilityElement::bottomId, FeasibilityElement::Kind::Bottom);
 }
 
-psr::EdgeFunction<FeasibilityAnalysis::l_t> FeasibilityAnalysis::allTopFunction() {
+FeasibilityElement FeasibilityAnalysis::emptyElement() {
+    return FeasibilityElement::createElement(this->manager.get(), FeasibilityElement::topId, FeasibilityElement::Kind::Empty);
+}
+
+psr::EdgeFunction<l_t> FeasibilityAnalysis::allTopFunction() {
     return psr::AllTop<l_t>{};
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
-    llvm::errs() << "[FDBG] VALUE.join U1=" << (Lhs.isTop()?"T":"F")
+    /*llvm::errs() << "[FDBG] VALUE.join U1=" << (Lhs.isTop()?"T":"F")
              << " U2=" << (Rhs.isTop()?"T":"F")
-             << " -> " << ((Lhs.isTop() && Rhs.isTop())?"T":"F") << "\n";
+             << " -> " << ((Lhs.isTop() && Rhs.isTop())?"T":"F") << "\n";*/
     return Lhs.join(Rhs);
 }
 
@@ -170,116 +164,82 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFu
     return std::make_shared<DebugFlow<d_t, container_t>>(Inner, "CallToRetKeepLocal", this, CallSite, RetSite);
 }
 
-FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t /*currNode*/, n_t succ, d_t /*succNode*/) {
-    const llvm::Instruction *SuccI = succ;
-    const llvm::Instruction *CurrI = curr;
+FeasibilityAnalysis::EdgeFunctionType
+FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t /*currNode*/,
+                                           n_t succ, d_t /*succNode*/) {
+  const llvm::Instruction *SuccI = succ;
+  const llvm::Instruction *CurrI = curr;
 
-    const llvm::BasicBlock *SuccBB = SuccI ? SuccI->getParent() : nullptr;
-    const llvm::BasicBlock *CurrBB = CurrI ? CurrI->getParent() : nullptr;
+  const llvm::BasicBlock *SuccBB = SuccI ? SuccI->getParent() : nullptr;
+  const llvm::BasicBlock *CurrBB = CurrI ? CurrI->getParent() : nullptr;
 
-    auto *localManager = this->manager.get();
+  auto *M = this->manager.get();
 
-    // Fallback, if we cannot determine the edge type, we just return an identity function.
-    if (!SuccBB || !CurrBB) {
-        return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-    }
+  // If we cannot determine blocks: be conservative (do nothing).
+  if (!SuccBB || !CurrBB) {
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
 
-    // Build a clause
-    FeasibilityClause clause;
+  // We only care about branch conditions for pruning; everything else is identity.
+  auto *br = llvm::dyn_cast<llvm::BranchInst>(CurrI);
+  if (!br) {
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
 
-    // If we encounter a edge which is part of a PHI translation, we need to add the corresponding phi step to the
-    // clause, as it needs to be applied before any constraints on the edge. We can identify such edges by
-    // checking if the successor block starts with a PHINode, as PHI translations are always represented by
-    // edges that lead into a block with a PHINode (as the PHINodes are the ones that perform the actual translation).
-    if (llvm::isa<llvm::PHINode>(SuccBB->begin())) {
-        clause.PhiChain.push_back(PhiStep(CurrBB, SuccBB));
-    }
+  // Unconditional branch: no constraint. Still, phi substitution will be applied
+  // later when constraints are built (in successor), so nothing to add here.
+  if (!br->isConditional()) {
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
 
-    // Check if we are currently in a br instruction. Only add the phi step if we are in a br instruction with a
-    // condition, as only such instructions can be part of a phi translation. If we are in a br instruction
-    // without a condition, we are in an unconditional branch and thus not in a phi translation, even if
-    // the successor block starts with a PHINode.
-    auto *br = llvm::dyn_cast<llvm::BranchInst>(CurrI);
-    if (!br || !br->isConditional()) {
-        if (clause.PhiChain.empty() && clause.Constrs.empty()) {
-            return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  const llvm::BasicBlock *TrueBB  = br->getSuccessor(0);
+  const llvm::BasicBlock *FalseBB = br->getSuccessor(1);
+
+  if (SuccBB != TrueBB && SuccBB != FalseBB) {
+    llvm::errs() << "WARNING: successor does not match branch successors; using Identity\n";
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+  }
+
+  const bool onTrueEdge = (SuccBB == TrueBB);
+
+  // Strip casts from the condition
+  llvm::Value *CondV = br->getCondition();
+  while (auto *CastI = llvm::dyn_cast<llvm::CastInst>(CondV)) {
+    CondV = CastI->getOperand(0);
+  }
+
+  // Constant conditions: if we can decide the edge is never taken, return UNREACHABLE.
+  // NOTE: in your NEW MODEL, unreachable is lattice Bottom (Kind::Bottom).
+  // If your AllTopEF is "Top=true", then use AllBottomEF here instead.
+  if (auto *icmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
+    if (auto *c0 = llvm::dyn_cast<llvm::ConstantInt>(icmp->getOperand(0))) {
+      if (auto *c1 = llvm::dyn_cast<llvm::ConstantInt>(icmp->getOperand(1))) {
+        const bool cmpTrue =
+            llvm::ICmpInst::compare(c0->getValue(), c1->getValue(), icmp->getPredicate());
+        const bool edgeTaken = onTrueEdge ? cmpTrue : !cmpTrue;
+
+        if (!edgeTaken) {
+          // Edge is infeasible.
+          // Choose the EF that maps to lattice Bottom (unreachable).
+            EF(std::in_place_type<FeasibilityAddAtomsEF>, M, CurrBB, SuccBB, icmp, edgeTaken);
         }
 
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, localManager, std::move(clause));
+        // Edge always taken: adds no constraint.
+          EF(std::in_place_type<FeasibilityAddAtomsEF>, M, CurrBB, SuccBB, icmp, edgeTaken);
+      }
     }
 
-    // Determine which successor edge we are on
-    const llvm::BasicBlock *TrueBB  = br->getSuccessor(0);
-    const llvm::BasicBlock *FalseBB = br->getSuccessor(1);
+    // General case: store a LazyAtom (phi-aware) and let computeTarget:
+    //  1) applyPhiPack(source.env, CurrBB, SuccBB)
+    //  2) build z3 atom under that env
+    //  3) addAtom to pc-set
+    /*llvm::errs() << "DEBUG: Adding FeasibilityAddAtomsEF for edge " << CurrBB->getName() << " -> " << SuccBB->getName()
+         << " with condition " << *icmp << " on " << (onTrueEdge ? "true" : "false") << " branch\n";*/
+    return EF(std::in_place_type<FeasibilityAddAtomsEF>, M, CurrBB, SuccBB, icmp, onTrueEdge);
+  }
 
-    // Check if the successor is neither the true sucessor nor the false sucessor
-    if (SuccBB != TrueBB && SuccBB != FalseBB) {
-        // This case should never happen. If it does, burn down your device
-        llvm::errs() << "WARNING: successor does not match branch successors; using Identity\n";
-        if (clause.PhiChain.empty()) {
-            return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-        }
-
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, localManager, std::move(clause));
-    }
-
-    // Determine at which edge we are currently looking. If the successor is the true successor, we are on the true
-    // edge, otherwise we are on the false edge. This is relevant for adding the correct constraint to the clause,
-    // as we need to add the constraint that corresponds to the condition of the branch instruction and
-    // whether we are on the true or false edge.
-    const bool onTrueEdge = (SuccBB == TrueBB);
-
-    // Prepare the conditon
-    // Strip casts from the condition
-    llvm::Value *CondV = br->getCondition();
-    while (auto *CastI = llvm::dyn_cast<llvm::CastInst>(CondV)) {
-        CondV = CastI->getOperand(0);
-    }
-
-    // Constant conditions
-    if (auto *icmp = llvm::dyn_cast<llvm::ICmpInst>(CondV)) {
-        //llvm::errs() << "Caculating for ICMP instruction: " << *icmp << "\n";
-        // Determine if we can shortcut, i.e., if the condition is a constant value,
-        // we can directly return bottom if the condition is not satisfied.
-        if (auto *c0 = llvm::dyn_cast<llvm::ConstantInt>(icmp->getOperand(0))) {
-            if (auto *c1 = llvm::dyn_cast<llvm::ConstantInt>(icmp->getOperand(1))) {
-                // Determine if the condition is satisfied on this edge. If it is, we can return top, as the
-                // path condition on this edge is true. If it is not, we can return bottom, as the path condition
-                // on this edge is false.
-                const bool cmpTrue = llvm::ICmpInst::compare(c0->getValue(), c1->getValue(), icmp->getPredicate());
-                const bool edgeTaken = onTrueEdge ? cmpTrue : !cmpTrue;
-
-                // If we can shortcut, i.e the constant condition is not
-                // satisfied on this edge, we return bottom, as the path condition on this edge is false.
-                if (!edgeTaken) {
-                    return EF(std::in_place_type<FeasibilityAllTopEF>);
-                }
-
-                // Check if we encountered a phi. If not just return identity
-                if (clause.PhiChain.empty()) {
-                    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-                }
-
-                return EF(std::in_place_type<FeasibilityANDFormulaEF>, localManager, std::move(clause));
-            }
-        }
-
-        // General case: We encoutered a generic ICMP
-        // We need to add the condition of the branch instruction as a constraint to the clause, as it is part of the path condition on this edge.
-        clause.Constrs.push_back(LazyICmp(icmp, onTrueEdge));
-        return EF(std::in_place_type<FeasibilityANDFormulaEF>, localManager, std::move(clause));
-    }
-
-    // Fallback case: We encountered a non-constant condition that is not an ICMP instruction.
-    // In this case, we cannot determine the condition on this edge, so we just return the clause
-    // with any potential phi translation steps, but without adding any constraints to it,
-    // as we do not know which constraints to add. If there are no phi translation steps, we just return identity.
-
-    if (clause.PhiChain.empty()) {
-        return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
-    }
-
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, localManager, std::move(clause));
+  // Non-icmp condition: unknown, do nothing.
+  return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
 }
 
 FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getCallEdgeFunction(n_t CallSite, d_t SrcNode,

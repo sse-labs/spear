@@ -12,8 +12,7 @@
 #include "analyses/feasibility/FeasibilityAnalysis.h"
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
 
-namespace Feasibility::Util {
-
+namespace Feasibility {
 
 std::atomic<bool> F_DebugEnabled{false};
 
@@ -47,7 +46,7 @@ const llvm::Value *stripAddr(const llvm::Value *pointer) {
     return pointer;
 }
 
-void dumpFact(Feasibility::FeasibilityAnalysis *analysis, Feasibility::FeasibilityDomain::d_t fact) {
+void Util::dumpFact(Feasibility::FeasibilityAnalysis *analysis, Feasibility::FeasibilityDomain::d_t fact) {
     if (!F_DebugEnabled.load())
         return;
     if (!fact) {
@@ -66,7 +65,7 @@ void dumpFact(Feasibility::FeasibilityAnalysis *analysis, Feasibility::Feasibili
     }
 }
 
-void dumpInst(Feasibility::FeasibilityDomain::n_t instruction) {
+void Util::dumpInst(Feasibility::FeasibilityDomain::n_t instruction) {
     if (!F_DebugEnabled.load())
         return;
     if (!instruction) {
@@ -76,28 +75,20 @@ void dumpInst(Feasibility::FeasibilityDomain::n_t instruction) {
     llvm::errs() << *instruction;
 }
 
-void dumpEF(const Feasibility::FeasibilityAnalysis::EdgeFunctionType &edgeFunction) {
+void Util::dumpEF(const Feasibility::FeasibilityAnalysis::EdgeFunctionType &edgeFunction) {
     if (edgeFunction.template isa<Feasibility::FeasibilityAllBottomEF>() ||
         llvm::isa<psr::AllBottom<Feasibility::l_t>>(edgeFunction)) {
         llvm::errs() << "EF=BOT";
         return;
     }
 
-    if (edgeFunction.template isa<Feasibility::FeasibilityAllTopEF>() ||
-        llvm::isa<psr::AllTop<Feasibility::l_t>>(edgeFunction)) {
-        llvm::errs() << "EF=TOP";
-        return;
-    }
-
     llvm::errs() << "EF=<other>";
 }
 
-void dumpEFKind(const EF &E) {
+void Util::dumpEFKind(const EF &E) {
     llvm::errs() << "[EFKind=";
 
-   if (E.template isa<FeasibilityAllTopEF>()) {
-        llvm::errs() << "FeasibilityAllTopEF";
-    } else if (E.template isa<FeasibilityAllBottomEF>()) {
+   if (E.template isa<FeasibilityAllBottomEF>()) {
         llvm::errs() << "FeasibilityAllBottomEF";
     } else if (llvm::isa<psr::AllTop<FeasibilityAnalysis::l_t>>(E)) {
         llvm::errs() << "psr::AllTop";
@@ -114,7 +105,7 @@ void dumpEFKind(const EF &E) {
     llvm::errs() << "]";
 }
 
-z3::expr mkSymBV(const llvm::Value *V, unsigned BW, const char *prefix, z3::context *Ctx) {
+z3::expr Util::mkSymBV(const llvm::Value *V, unsigned BW, const char *prefix, z3::context *Ctx) {
     std::string name;
     if (V && V->hasName()) {
         name = std::string(prefix) + "_" + V->getName().str();
@@ -124,11 +115,11 @@ z3::expr mkSymBV(const llvm::Value *V, unsigned BW, const char *prefix, z3::cont
     return Ctx->bv_const(name.c_str(), BW);
 }
 
-z3::expr createFreshBitVal(const llvm::Value *key, unsigned bitwidth, const char *prefix, z3::context *context) {
+z3::expr Util::createFreshBitVal(const llvm::Value *key, unsigned bitwidth, const char *prefix, z3::context *context) {
     return mkSymBV(key, bitwidth, prefix, context);
 }
 
-std::optional<z3::expr> createIntVal(const llvm::Value *val, z3::context *context) {
+std::optional<z3::expr> Util::createIntVal(const llvm::Value *val, z3::context *context) {
     if (auto constval = llvm::dyn_cast<llvm::ConstantInt>(val)) {
         unsigned bitwidth = constval->getBitWidth();
         uint64_t numval = constval->getValue().getZExtValue();
@@ -137,7 +128,7 @@ std::optional<z3::expr> createIntVal(const llvm::Value *val, z3::context *contex
     return std::nullopt;
 }
 
-std::optional<z3::expr> createBitVal(const llvm::Value *V, z3::context *context) {
+std::optional<z3::expr> Util::createBitVal(const llvm::Value *V, z3::context *context) {
     if (!V) {
         return std::nullopt;
     }
@@ -154,15 +145,7 @@ std::optional<z3::expr> createBitVal(const llvm::Value *V, z3::context *context)
     return std::nullopt;
 }
 
-uint32_t findOrAddFormulaId(FeasibilityAnalysisManager *manager, z3::expr formula) {
-    auto potentialid = manager->findFormulaId(formula);
-    if (!potentialid.has_value()) {
-        return manager->mkAtomic(formula);
-    }
-    return potentialid.value();
-}
-
-z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llvm::ICmpInst* ICmp, bool areWeInTheTrueBranch, uint32_t envId) {
+z3::expr Util::createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llvm::ICmpInst* ICmp, bool areWeInTheTrueBranch, uint32_t envId) {
     if (!manager) {
         llvm::errs() << "ALARM: createConstraintFromICmp called with null manager\n";
         // return a safe default
@@ -174,25 +157,25 @@ z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llv
         llvm::errs() << "ALARM: envId " << envId << " does not exist in manager. "
                      << "ICmp=" << *ICmp << "\n";
         // safest behavior: do not constrain instead of crashing
-        return manager->Context->bool_val(true);
+        return manager->Context.get()->bool_val(true);
     }
 
     auto op0 = manager->resolve(envId, ICmp->getOperand(0));
     auto op1 = manager->resolve(envId, ICmp->getOperand(1));
 
-    auto c0 = createBitVal(op0, manager->Context);
-    auto c1 = createBitVal(op1, manager->Context);
+    auto c0 = createBitVal(op0, manager->Context.get());
+    auto c1 = createBitVal(op1, manager->Context.get());
 
     if (!c0 || !c1) {
         // If we cannot create a formula for one of the operands,
         // we return a default formula (true) that does not constrain the analysis.
         llvm::errs() << "WARNING: Could not create constraint from ICmp instruction " << *ICmp << " because we could not create formulas for its operands.\n";
-        return manager->Context->bool_val(true);
+        return manager->Context.get()->bool_val(true);
     }
 
     // Init the constraint formula to true, and then update it based on the predicate of the ICmp instruction.
     // We use the appropriate Z3 operators for each predicate to create the correct constraint formula.
-    z3::expr cmp = manager->Context->bool_val(true);
+    z3::expr cmp = manager->Context.get()->bool_val(true);
     switch (ICmp->getPredicate()) {
         case llvm::ICmpInst::ICMP_EQ:
             cmp = (*c0 == *c1);
@@ -226,7 +209,7 @@ z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llv
             break;
         default:
             // If we encounter an unsupported predicate, we return a default formula (true) that does not constrain the analysis. In practice, you
-            cmp = manager->Context->bool_val(true);
+            cmp = manager->Context.get()->bool_val(true);
             break;
     }
 
@@ -238,115 +221,32 @@ z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llv
     return cmp;
 }
 
-void normalizeClause(FeasibilityClause &C) {
-    // PhiChain: sort by (PredBB ptr, SuccBB ptr) then dedup
-    llvm::sort(C.PhiChain, [](const PhiStep &A, const PhiStep &B) {
-      if (A.PredBB != B.PredBB) return A.PredBB < B.PredBB;
-      return A.SuccBB < B.SuccBB;
-    });
-    C.PhiChain.erase(std::unique(C.PhiChain.begin(), C.PhiChain.end(),
-                                 [](const PhiStep &A, const PhiStep &B) {
-                                   return A.PredBB == B.PredBB && A.SuccBB == B.SuccBB;
-                                 }),
-                     C.PhiChain.end());
-
-    // Constrs: sort by (ICmp ptr, TrueEdge) then dedup
-    llvm::sort(C.Constrs, [](const LazyICmp &A, const LazyICmp &B) {
-      if (A.I != B.I) return A.I < B.I;
-      return A.TrueEdge < B.TrueEdge;
-    });
-    C.Constrs.erase(std::unique(C.Constrs.begin(), C.Constrs.end(),
-                                [](const LazyICmp &A, const LazyICmp &B) {
-                                  return A.I == B.I && A.TrueEdge == B.TrueEdge;
-                                }),
-                    C.Constrs.end());
-}
-
-bool sameClause(const FeasibilityClause &A, const FeasibilityClause &B) {
-    if (A.PhiChain.size() != B.PhiChain.size()) return false;
-    if (A.Constrs.size()  != B.Constrs.size())  return false;
-
-    for (size_t i = 0; i < A.PhiChain.size(); ++i)
-        if (A.PhiChain[i].PredBB != B.PhiChain[i].PredBB || A.PhiChain[i].SuccBB != B.PhiChain[i].SuccBB)
-            return false;
-
-    for (size_t i = 0; i < A.Constrs.size(); ++i)
-        if (A.Constrs[i].I != B.Constrs[i].I || A.Constrs[i].TrueEdge != B.Constrs[i].TrueEdge)
-            return false;
-
-    return true;
-}
-
-bool blockStartsWithPhi(const llvm::BasicBlock *block) {
+bool Util::blockStartsWithPhi(const llvm::BasicBlock *block) {
     if (block->empty()) {
         return false;
     }
     return llvm::isa<llvm::PHINode>(block->front());
 }
 
-bool isTrueId(FeasibilityAnalysisManager *M, uint32_t id) {
-    // You may have special ids for true/false; if so, shortcut here.
-    // Otherwise check via expression.
-    return M->isBoolTrue(M->getExpression(id));
-}
-
-bool isFalseId(FeasibilityAnalysisManager *M, uint32_t id) {
-    return M->isBoolFalse(M->getExpression(id));
-}
-
-FeasibilityClause clauseFromIcmp(const llvm::ICmpInst *I, bool TrueEdge) {
-    FeasibilityClause c;
-    c.Constrs.push_back(LazyICmp(I, TrueEdge));
-    return c;
-}
-
-bool isRealPred(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ) {
+bool Util::isRealPred(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ) {
     for (const llvm::BasicBlock *P : llvm::predecessors(Succ)) {
         if (P == Pred) return true;
     }
     return false;
 }
 
-FeasibilityClause clauseFromPhi(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ) {
-    FeasibilityClause c;
-    c.PhiChain.push_back(PhiStep(Pred, Succ));
-    return c;
-}
 
-uint32_t applyPhiChain(FeasibilityAnalysisManager *M, uint32_t envId, const llvm::SmallVectorImpl<PhiStep> &chain) {
-    uint32_t e = envId;
-    for (const auto &st : chain) {
-        if (st.PredBB && st.SuccBB) {
-            e = M->applyPhiPack(e, st.PredBB, st.SuccBB);
-        }
+bool Util::setSat(std::vector<z3::expr> set, z3::context *ctx) {
+    if  (set.empty()) {
+        // An empty set represents the formula "true", which is satisfiable.
+        return true;
     }
-    return e;
-}
 
-FeasibilityClause conjClauses(const FeasibilityClause &A, const FeasibilityClause &B) {
-    FeasibilityClause out = A;
-    out.PhiChain.append(B.PhiChain.begin(), B.PhiChain.end());
-    out.Constrs.append(B.Constrs.begin(), B.Constrs.end());
-    normalizeClause(out);
-    return out;
-}
-
-void prependPhi(FeasibilityClause &C, const PhiStep &P) {
-    C.PhiChain.insert(C.PhiChain.begin(), P);
-}
-
-void appendPhi(FeasibilityClause &C, const PhiStep &P) {
-    C.PhiChain.push_back(P);
-}
-
-void normalizeClauses(llvm::SmallVectorImpl<FeasibilityClause> &Cs) {
-    for (auto &C : Cs)
-        Util::normalizeClause(C);
-
-    // Optional (only if you have operator== for FeasibilityClause):
-    // Cs.erase(std::unique(Cs.begin(), Cs.end()), Cs.end());
-
-    // If you don't have equality / ordering for clauses, just normalize each and keep order.
+    z3::solver solver(*ctx);
+    for (const auto &atom : set) {
+        solver.add(atom);
+    }
+    return solver.check() == z3::sat;
 }
 
 } // namespace Feasibility::Util

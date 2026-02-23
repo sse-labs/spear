@@ -82,6 +82,8 @@ private:
 
     l_t bottomElement() override;
 
+    l_t emptyElement();
+
     l_t join(l_t Lhs, l_t Rhs) override;
 
     const psr::LLVMBasedICFG *ICFG = nullptr;

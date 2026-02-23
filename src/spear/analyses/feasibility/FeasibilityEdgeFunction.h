@@ -1,342 +1,108 @@
-/*
- * Copyright (c) 2026 Maximilian Krebs
- * All rights reserved.
- */
-
 #ifndef SPEAR_FEASIBILITYEDGEFUNCTION_H
 #define SPEAR_FEASIBILITYEDGEFUNCTION_H
 
 #include <phasar/DataFlow/IfdsIde/EdgeFunction.h>
-#include <llvm/IR/Value.h>           // add if not already pulled transitively
-#include <z3++.h>                    // add if not already pulled transitively
-
-#include <utility>
-#include <llvm/IR/Instructions.h>
 #include <phasar/DataFlow/IfdsIde/EdgeFunctionUtils.h>
 
-#include "FeasibilityEdgeFunctionMemo.h"
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/Support/raw_ostream.h>
+
+#include <z3++.h>
+
 #include "FeasibilityElement.h"
+#include "analyses/feasibility/util.h" // Util::createConstraintFromICmp
 
 namespace Feasibility {
 
-using l_t = Feasibility::FeasibilityElement;
-using EF = psr::EdgeFunction<l_t>;
+using l_t = FeasibilityElement;
+using EF  = psr::EdgeFunction<l_t>;
 
-static inline std::size_t hashPtr(const void *p) noexcept {
-  return std::hash<const void *>{}(p);
-}
-
-// 64-bit mix (boost-like)
-static inline std::size_t hashCombine(std::size_t h, std::size_t x) noexcept {
-  // 64-bit constant works fine on 32-bit too (it will truncate)
-  h ^= x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-  return h;
-}
-
-// One atomic constraint, evaluated lazily under the current env.
-struct LazyICmp {
-  const llvm::ICmpInst *I = nullptr;
-  bool TrueEdge = true;
-
-  LazyICmp() = default;
-  LazyICmp(const llvm::ICmpInst *Inst, bool T) : I(Inst), TrueEdge(T) {}
-
-  bool operator==(const LazyICmp &) const = default;
-
-  std::size_t hash() const noexcept {
-    std::size_t h = hashPtr(I);
-    h = hashCombine(h, std::hash<bool>{}(TrueEdge));
-    return h;
-  }
-};
-
-// One PHI translation step (Pred -> Succ) to apply via applyPhiPack.
-struct PhiStep {
-  const llvm::BasicBlock *PredBB = nullptr;
-  const llvm::BasicBlock *SuccBB = nullptr;
-
-  PhiStep() = default;
-  PhiStep(const llvm::BasicBlock *P, const llvm::BasicBlock *S) : PredBB(P), SuccBB(S) {}
-
-  bool operator==(const PhiStep &) const = default;
-
-  std::size_t hash() const noexcept {
-    std::size_t h = hashPtr(PredBB);
-    h = hashCombine(h, hashPtr(SuccBB));
-    return h;
-  }
-};
-
-// DNF helper clause: conjunction of phi-steps and constraints.
-struct FeasibilityClause {
-  llvm::SmallVector<PhiStep, 2> PhiChain; // optional
-  llvm::SmallVector<LazyICmp, 4> Constrs; // conjunction
-
-  bool operator==(const FeasibilityClause &) const = default;
-
-  std::size_t hash() const noexcept {
-    // Tag the two sequences so [PhiChain=A, Constrs=B] != [PhiChain=B, Constrs=A]
-    std::size_t h = 0xC1A0C1A0u;
-
-    h = hashCombine(h, std::hash<unsigned>{}((unsigned)PhiChain.size()));
-    for (const auto &s : PhiChain) {
-      h = hashCombine(h, s.hash());
-    }
-
-    h = hashCombine(h, 0xBADC0FFEu);
-    h = hashCombine(h, std::hash<unsigned>{}((unsigned)Constrs.size()));
-    for (const auto &c : Constrs) {
-      h = hashCombine(h, c.hash());
-    }
-
-    return h;
-  }
-};
-
-
-/**
- * Top edge function for the FeasibilityAnalysis. Maps any input to top.
- */
-struct FeasibilityAllTopEF {
-    using l_t = Feasibility::l_t;
-
-    FeasibilityAllTopEF() {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAllTopEF>,
-                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFunc,
-                   const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityAllTopEF &) const = default;
-
-    bool isConstant() const noexcept { return false; };
-};
-
-/**
- * Bottom edge function for the FeasibilityAnalysis. Maps any input to bottom.
- */
+// ============================================================================
+// AllBottomEF: constant BOTTOM (unreachable)
+// ============================================================================
 struct FeasibilityAllBottomEF {
-    using l_t = Feasibility::l_t;
-
-    FeasibilityAllBottomEF() {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF>,
-                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAllBottomEF> thisFunc,
-                   const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityAllBottomEF &) const = default;
-
-    bool isConstant() const noexcept { return false; };
-};
-
-
-// Adds a *formula id* to the incoming PC via AND:  x ↦ x ∧ Cid
-// This is our sequential operator
-struct FeasibilityANDFormulaEF {
-    using l_t = Feasibility::l_t;
-
-    mutable ComputeTargetMemo<FeasibilityElement> Memo;
-
-    FeasibilityAnalysisManager *manager = nullptr;
-
-    // A conjunction of constraints and phi translations that we want to add to the path condition.
-    // This represents a clause in a DNF formula.
-    FeasibilityClause Clause;
-
-    FeasibilityANDFormulaEF(FeasibilityAnalysisManager *M, FeasibilityClause C)
-      : manager(M), Clause(std::move(C)) {}
-
-    // Convenience: single icmp clause
-    FeasibilityANDFormulaEF(FeasibilityAnalysisManager *M,
-                            const llvm::ICmpInst *I,
-                            bool OnTrueEdge)
-        : manager(M) {
-        Clause.Constrs.push_back(LazyICmp(I, OnTrueEdge));
-    }
-
-    // Convenience: phi-only clause
-    FeasibilityANDFormulaEF(FeasibilityAnalysisManager *M,
-                            const llvm::BasicBlock *Pred,
-                            const llvm::BasicBlock *Succ)
-        : manager(M) {
-        Clause.PhiChain.push_back(PhiStep(Pred, Succ));
-    }
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityANDFormulaEF> thisFunc,
+  using l_t = FeasibilityElement;
+  [[nodiscard]] l_t computeTarget(const l_t &source) const;
+  [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF>,
                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityANDFormulaEF> thisFunc,
+  [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAllBottomEF>,
                                const psr::EdgeFunction<l_t> &otherFunc);
 
-    bool operator==(const FeasibilityANDFormulaEF &other) const {
-        // We consider two FeasibilityANDFormulaEFs to be equal if they have the same clause (i.e. represent the same conjunction of constraints and phi translations), regardless of the manager pointer (which is not relevant for equality).
-        return Clause == other.Clause;
-    };
-    bool isConstant() const noexcept { return false; }
-};
-
-
-/**
- * Updates the environment id
- */
-struct FeasibilityPHITranslateEF {
-    using l_t = Feasibility::l_t;
-
-    mutable ComputeTargetMemo<FeasibilityElement> Memo;
-
-
-    FeasibilityAnalysisManager *manager = nullptr;
-
-    // Edge identity of the translation: "incoming edge pred -> succ"
-    const llvm::BasicBlock *PredBB = nullptr;
-    const llvm::BasicBlock *SuccBB = nullptr;
-
-    FeasibilityPHITranslateEF() = default;
-
-    FeasibilityPHITranslateEF(FeasibilityAnalysisManager *M,
-                              const llvm::BasicBlock *Pred,
-                              const llvm::BasicBlock *Succ)
-        : manager(M), PredBB(Pred), SuccBB(Succ) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityPHITranslateEF> thisFunc,
-                                    const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityPHITranslateEF> thisFunc,
-                                 const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityPHITranslateEF &other) const {
-        // We consider two FeasibilityPHITranslateEFs to be equal if they represent the same edge identity (i.e. have the same PredBB and SuccBB), regardless of the manager pointer (which is not relevant for equality).
-        return PredBB == other.PredBB && SuccBB == other.SuccBB;
-    }
-    bool isConstant() const noexcept { return false; }
+  bool operator==(const FeasibilityAllBottomEF &) const = default;
+  bool isConstant() const noexcept { return false; }
 };
 
 // ============================================================================
-// Lazy EF nodes to avoid OR∘OR distribution blow-ups
+// Fork B: AddAtomsEF is *lazy* over env and *phi-aware*.
+//
+// Each LazyAtom carries the CFG edge (Pred->Succ) whose PHIs must be applied
+// before evaluating the ICmp atom.
+// ============================================================================
+struct LazyAtom {
+  const llvm::BasicBlock *PredBB = nullptr;
+  const llvm::BasicBlock *SuccBB = nullptr;
+  const llvm::ICmpInst *I = nullptr;
+  bool TrueEdge = true;
 
-/// Represents function composition without expanding (f ∘ g).
-/// computeTarget(x) = f(g(x)).
-struct FeasibilityComposeEF {
-    using l_t = Feasibility::l_t;
+  LazyAtom() = default;
+  LazyAtom(const llvm::BasicBlock *P, const llvm::BasicBlock *S,
+           const llvm::ICmpInst *Inst, bool T)
+      : PredBB(P), SuccBB(S), I(Inst), TrueEdge(T) {}
 
-    mutable ComputeTargetMemo<FeasibilityElement> Memo;
-
-    FeasibilityAnalysisManager *manager = nullptr;
-    EF First;   // applied second (outer)
-    EF Second;  // applied first  (inner)
-
-    FeasibilityComposeEF() = default;
-
-    FeasibilityComposeEF(FeasibilityAnalysisManager *M, EF F, EF G)
-        : manager(M), First(std::move(F)), Second(std::move(G)) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityComposeEF> thisFunc,
-                                    const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityComposeEF> thisFunc,
-                                 const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityComposeEF &other) const {
-        // We consider two FeasibilityComposeEFs to be equal if they have the same First and Second functions (i.e. represent the same composition), regardless of the manager pointer (which is not relevant for equality).
-        return First == other.First && Second == other.Second;
-    }
-    bool isConstant() const noexcept { return false; }
+  bool operator==(const LazyAtom &o) const noexcept {
+    return PredBB == o.PredBB && SuccBB == o.SuccBB && I == o.I &&
+           TrueEdge == o.TrueEdge;
+  }
 };
+
+// Adds a conjunction of (lazy) atoms to the current conjunction set.
+// compose = concat atoms (second then this)
+// join    = intersection of atoms (keep only guaranteed adds)
+struct FeasibilityAddAtomsEF {
+  using l_t = FeasibilityElement;
+  FeasibilityAnalysisManager *manager = nullptr;
+  llvm::SmallVector<LazyAtom, 4> Atoms;
+
+  FeasibilityAddAtomsEF() = default;
+  FeasibilityAddAtomsEF(FeasibilityAnalysisManager *M,
+                        llvm::SmallVector<LazyAtom, 4> A)
+      : manager(M), Atoms(std::move(A)) {}
+
+  // Convenience: single atom on a specific edge Pred->Succ
+  FeasibilityAddAtomsEF(FeasibilityAnalysisManager *M,
+                        const llvm::BasicBlock *Pred,
+                        const llvm::BasicBlock *Succ,
+                        const llvm::ICmpInst *I,
+                        bool OnTrueEdge)
+      : manager(M) {
+    Atoms.emplace_back(Pred, Succ, I, OnTrueEdge);
+  }
+
+  [[nodiscard]] l_t computeTarget(const l_t &source) const;
+
+  [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisFunc,
+                                  const EF &secondFunction);
+
+  [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisFunc,
+                               const psr::EdgeFunction<l_t> &otherFunc);
+
+  bool operator==(const FeasibilityAddAtomsEF &o) const noexcept;
+  bool isConstant() const noexcept { return false; }
+};
+
 
 static inline bool isIdEF(const EF &ef) noexcept {
-    return ef.template isa<psr::EdgeIdentity<l_t>>();
+  return ef.template isa<psr::EdgeIdentity<l_t>>();
 }
 static inline bool isAllTopEF(const EF &ef) noexcept {
-    return ef.template isa<FeasibilityAllTopEF>() || ef.template isa<psr::AllTop<l_t>>();
+  return ef.template isa<psr::AllTop<l_t>>();
 }
 static inline bool isAllBottomEF(const EF &ef) noexcept {
-    return ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>();
+  return ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>();
 }
 
-constexpr bool FDBG = true;
+} // namespace Feasibility
 
-static inline FeasibilityAnalysisManager *pickManager(FeasibilityAnalysisManager *M, const l_t &source) {
-    // If the source is bottom, we can pick any manager, because the result will be bottom anyway (and thus not depend on the manager).
-    // This allows us to avoid unnecessary dependencies on the manager in some edge functions.
-    if (source.isBottom()) {
-        return M;
-    }
-    return source.getManager();
-}
-
-static inline const char *kindStr(Feasibility::l_t::Kind K) {
-    using Kt = Feasibility::l_t::Kind;
-    switch (K) {
-        case Kt::Top:    return "Top";
-        case Kt::Bottom: return "Bottom";
-        case Kt::Normal: return "Normal";
-    }
-    return "?";
-}
-
-static inline void dumpLatticeBrief(const char *Pfx,
-                                    const Feasibility::l_t &x) {
-    llvm::errs() << "[FDBG] " << Pfx << " kind=" << kindStr(x.getKind())
-                 << " pc=" << x.getFormulaId() << " env=" << x.getEnvId() << "\n";
-}
-
-// Best-effort EF name printer (no RTTI needed; uses isa<> checks).
-static inline const char *efName(const EF &ef) {
-    if (ef.template isa<psr::EdgeIdentity<l_t>>()) return "Identity";
-    if (ef.template isa<FeasibilityAllTopEF>() || ef.template isa<psr::AllTop<l_t>>()) return "AllTopEF";
-    if (ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>()) return "AllBottomEF";
-    if (ef.template isa<FeasibilityPHITranslateEF>()) return "PHITranslateEF";
-    if (ef.template isa<FeasibilityANDFormulaEF>()) return "ANDFormulaEF";
-    if (ef.template isa<FeasibilityComposeEF>()) return "ComposeEF";
-    return "EF<?>"; // fallback
-}
-
-static inline void dumpClauseBrief(const FeasibilityClause &C) {
-    llvm::errs() << "phi=" << C.PhiChain.size() << " constr=" << C.Constrs.size();
-    if (!C.Constrs.empty()) {
-        llvm::errs() << " [";
-        unsigned shown = 0;
-        for (const auto &lc : C.Constrs) {
-            if (!lc.I) continue;
-            if (shown++) llvm::errs() << ", ";
-            llvm::errs() << (lc.TrueEdge ? "T:" : "F:") << *lc.I;
-            if (shown >= 10 && C.Constrs.size() > 10) { llvm::errs() << ", ..."; break; }
-        }
-        llvm::errs() << "]";
-    }
-}
-
-}  // namespace Feasibility
-
-// std::hash specializations (so you can stick these in unordered_map/unordered_set)
-namespace std {
-template <> struct hash<Feasibility::LazyICmp> {
-    std::size_t operator()(const Feasibility::LazyICmp &x) const noexcept { return x.hash(); }
-};
-template <> struct hash<Feasibility::PhiStep> {
-    std::size_t operator()(const Feasibility::PhiStep &x) const noexcept { return x.hash(); }
-};
-template <> struct hash<Feasibility::FeasibilityClause> {
-    std::size_t operator()(const Feasibility::FeasibilityClause &x) const noexcept { return x.hash(); }
-};
-
-
-
-} // namespace std
-
-
-#endif  // SPEAR_FEASIBILITYEDGEFUNCTION_H
-
+#endif // SPEAR_FEASIBILITYEDGEFUNCTION_H
