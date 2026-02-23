@@ -168,7 +168,7 @@ EF FeasibilityAllBottomEF::compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF> 
     llvm::errs() << "[FDBG] compose AllBottomEF ∘ " << efName(secondFunction)
                  << " -> AllBottomEF\n";
   }
-  return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  return EF(secondFunction);
 }
 
 EF FeasibilityAllBottomEF::join(psr::EdgeFunctionRef<FeasibilityAllBottomEF> thisFunc,

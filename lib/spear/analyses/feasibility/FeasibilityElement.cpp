@@ -283,16 +283,18 @@ void FeasibilityAnalysisManager::normalizeComposeChain(
     if (E.template isa<psr::EdgeIdentity<l_t>>()) {
       continue;
     }
-    if (E.template isa<FeasibilityAllBottomEF>()) {
-      chain.clear();
-      chain.push_back(AllBottomEF);
-      return;
-    }
+
+    // UNREACHABLE is absorbing
     if (E.template isa<FeasibilityAllTopEF>()) {
       chain.clear();
       chain.push_back(AllTopEF);
       return;
     }
+
+    // IMPORTANT under NEW semantics:
+    // AllBottomEF is *not* absorbing; do NOT clear the chain.
+    // It represents "reachable baseline reset" and must not erase later constraints.
+
     tmp.push_back(E);
   }
 
@@ -313,14 +315,14 @@ FeasibilityAnalysisManager::internComposeById(EFStableId aId, const EF &A,
   if (A.template isa<psr::EdgeIdentity<l_t>>()) return B;
   if (B.template isa<psr::EdgeIdentity<l_t>>()) return A;
 
-  if (A.template isa<FeasibilityAllBottomEF>()) return A;
-  if (B.template isa<FeasibilityAllBottomEF>()) return B;
-
+  // UNREACHABLE (Top) is absorbing
   if (A.template isa<FeasibilityAllTopEF>()) return A;
   if (B.template isa<FeasibilityAllTopEF>()) return B;
 
-  EFPairKey key{aId, bId};
+  // IMPORTANT under NEW semantics:
+  // AllBottomEF is NOT absorbing. Do NOT early-return here.
 
+  EFPairKey key{aId, bId};
   {
     std::lock_guard<std::mutex> L(ComposeInternMu);
     if (auto it = ComposeIntern.find(key); it != ComposeIntern.end()) {
