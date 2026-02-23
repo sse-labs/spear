@@ -238,45 +238,6 @@ z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llv
     return cmp;
 }
 
-void normalizeClause(FeasibilityClause &C) {
-    // PhiChain: sort by (PredBB ptr, SuccBB ptr) then dedup
-    llvm::sort(C.PhiChain, [](const PhiStep &A, const PhiStep &B) {
-      if (A.PredBB != B.PredBB) return A.PredBB < B.PredBB;
-      return A.SuccBB < B.SuccBB;
-    });
-    C.PhiChain.erase(std::unique(C.PhiChain.begin(), C.PhiChain.end(),
-                                 [](const PhiStep &A, const PhiStep &B) {
-                                   return A.PredBB == B.PredBB && A.SuccBB == B.SuccBB;
-                                 }),
-                     C.PhiChain.end());
-
-    // Constrs: sort by (ICmp ptr, TrueEdge) then dedup
-    llvm::sort(C.Constrs, [](const LazyICmp &A, const LazyICmp &B) {
-      if (A.I != B.I) return A.I < B.I;
-      return A.TrueEdge < B.TrueEdge;
-    });
-    C.Constrs.erase(std::unique(C.Constrs.begin(), C.Constrs.end(),
-                                [](const LazyICmp &A, const LazyICmp &B) {
-                                  return A.I == B.I && A.TrueEdge == B.TrueEdge;
-                                }),
-                    C.Constrs.end());
-}
-
-bool sameClause(const FeasibilityClause &A, const FeasibilityClause &B) {
-    if (A.PhiChain.size() != B.PhiChain.size()) return false;
-    if (A.Constrs.size()  != B.Constrs.size())  return false;
-
-    for (size_t i = 0; i < A.PhiChain.size(); ++i)
-        if (A.PhiChain[i].PredBB != B.PhiChain[i].PredBB || A.PhiChain[i].SuccBB != B.PhiChain[i].SuccBB)
-            return false;
-
-    for (size_t i = 0; i < A.Constrs.size(); ++i)
-        if (A.Constrs[i].I != B.Constrs[i].I || A.Constrs[i].TrueEdge != B.Constrs[i].TrueEdge)
-            return false;
-
-    return true;
-}
-
 bool blockStartsWithPhi(const llvm::BasicBlock *block) {
     if (block->empty()) {
         return false;
@@ -294,23 +255,11 @@ bool isFalseId(FeasibilityAnalysisManager *M, uint32_t id) {
     return M->isBoolFalse(M->getExpression(id));
 }
 
-FeasibilityClause clauseFromIcmp(const llvm::ICmpInst *I, bool TrueEdge) {
-    FeasibilityClause c;
-    c.Constrs.push_back(LazyICmp(I, TrueEdge));
-    return c;
-}
-
 bool isRealPred(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ) {
     for (const llvm::BasicBlock *P : llvm::predecessors(Succ)) {
         if (P == Pred) return true;
     }
     return false;
-}
-
-FeasibilityClause clauseFromPhi(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ) {
-    FeasibilityClause c;
-    c.PhiChain.push_back(PhiStep(Pred, Succ));
-    return c;
 }
 
 uint32_t applyPhiChain(FeasibilityAnalysisManager *M, uint32_t envId, const llvm::SmallVectorImpl<PhiStep> &chain) {
@@ -323,30 +272,5 @@ uint32_t applyPhiChain(FeasibilityAnalysisManager *M, uint32_t envId, const llvm
     return e;
 }
 
-FeasibilityClause conjClauses(const FeasibilityClause &A, const FeasibilityClause &B) {
-    FeasibilityClause out = A;
-    out.PhiChain.append(B.PhiChain.begin(), B.PhiChain.end());
-    out.Constrs.append(B.Constrs.begin(), B.Constrs.end());
-    normalizeClause(out);
-    return out;
-}
-
-void prependPhi(FeasibilityClause &C, const PhiStep &P) {
-    C.PhiChain.insert(C.PhiChain.begin(), P);
-}
-
-void appendPhi(FeasibilityClause &C, const PhiStep &P) {
-    C.PhiChain.push_back(P);
-}
-
-void normalizeClauses(llvm::SmallVectorImpl<FeasibilityClause> &Cs) {
-    for (auto &C : Cs)
-        Util::normalizeClause(C);
-
-    // Optional (only if you have operator== for FeasibilityClause):
-    // Cs.erase(std::unique(Cs.begin(), Cs.end()), Cs.end());
-
-    // If you don't have equality / ordering for clauses, just normalize each and keep order.
-}
 
 } // namespace Feasibility::Util

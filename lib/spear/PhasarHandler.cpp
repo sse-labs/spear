@@ -155,7 +155,7 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
                                       ? "BOTTOM"
                                       : "NORMAL";
 
-          llvm::outs() << "Feasibility at instruction " << I << ": " << kindStr << ", id: " << entry.second.getFormulaId() << "\n";
+          llvm::outs() << "Feasibility at instruction " << I << ": " << kindStr << "" << "\n";
         }
       }
     }

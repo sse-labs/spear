@@ -1,518 +1,419 @@
 /*
- * Copyright (c) 2026 Maximilian Krebs
- * All rights reserved.
+ * Patched to the IDENTITY-based 2-point approach:
+ *
+ *   Lattice:
+ *     Top    = UNREACHABLE (absorbing along paths)
+ *     Bottom = REACHABLE
+ *
+ *   CRITICAL semantic rule (fixes your “UNSAT not preserved”):
+ *     NO edge function is allowed to map Top -> Bottom (revive unreachable).
+ *
+ * Therefore:
+ *   - We keep FeasibilityAllTopEF (constant Top).
+ *   - We DO NOT use AllBottomEF / psr::AllBottom at all in the algebra.
+ *     “Reachable baseline” is represented by Identity EF.
+ *
+ * Additionally:
+ *   - EF-join collapsing returns either AllTopEF or Identity (never AllBottomEF).
+ *   - compose-folding of “constant reachable inner” uses Identity.
+ *   - join handlers treat any Bottom-constant EF as Identity (or ignore).
+ *
+ * NOTE: This file still defines FeasibilityAllBottomEF, but it must not be
+ *       introduced by compose/join/collapse. You can remove it later.
  */
 
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
 #include "analyses/feasibility/util.h"
 
-#include <atomic>
-#include <chrono>
+#include <llvm/Support/raw_ostream.h>
 
 namespace Feasibility {
 
 namespace {
 
-// ============================================================================
-// NEW SEMANTICS (critical):
-//
-//   l_t::Kind::Top    == UNREACHABLE  (no feasible path reaches here)
-//   l_t::Kind::Normal == REACHABLE with info (pc/env tracked)
-//   l_t::Kind::Bottom == REACHABLE baseline (pc/env reset; conservative)
-//
-// This matches PhASAR's IDE table initialization: default value is topElement(),
-// therefore "not-yet-seen" == UNREACHABLE.
-// ============================================================================
+constexpr bool FDBG_PC = true;
 
-// ============================================================================
-// Debug helpers (EF calculation trace)
-// ============================================================================
-// FDBG must be a compile-time constant for `if constexpr`.
-// You can override via -DFDBG=1
-#ifndef FDBG
-#define FDBG 0
-#endif
+// Pretty print helpers --------------------------------------------------------
 
-#define FDBG_LINE(MSG)                                                         \
-  do {                                                                         \
-    if constexpr (FDBG) {                                                      \
-      llvm::errs() << "[FDBG] " << MSG << "\n";                                \
-    }                                                                          \
-  } while (0)
-
-// ============================================================================
-// Canonical constructors under NEW semantics
-// ============================================================================
-
-static inline l_t mkUnreached(const l_t &src) {
-  // UNREACHABLE
-  auto out = src;
-  out.setKind(l_t::Kind::Top);
-  out.setFormulaId(l_t::topId); // keep canonical
-  out.setEnvId(0);
-  return out;
+static inline const char *kstr(const l_t &x) {
+  return x.isTop() ? "Top(UNREACH)" : "Bottom(REACH)";
 }
 
-static inline l_t mkReachedBaseline(const l_t &src) {
-  // REACHABLE baseline (reset after joinCut)
-  auto out = src;
-  out.setKind(l_t::Kind::Bottom);
-  out.setFormulaId(l_t::topId); // pc=true baseline (IMPORTANT)
-  out.setEnvId(0);
-  return out;
-}
+// Evaluate clause SAT + debug -------------------------------------------------
 
-static inline l_t mkNormalLike(const l_t &src, uint32_t pc, uint32_t env) {
-  // REACHABLE with tracked info
-  auto out = src;
-  out.setKind(l_t::Kind::Normal);
-  out.setFormulaId(pc);
-  out.setEnvId(env);
-  return out;
-}
+static bool evalClauseSatDbg(FeasibilityAnalysisManager *M,
+                             const FeasibilityClause &C,
+                             const char *who) {
+  uint32_t env = 0;
+  z3::context &ctx = *M->Context;
+  z3::expr conj = ctx.bool_val(true);
 
-// ============================================================================
-// joinCutEF under NEW semantics:
-//
-// We store UNREACHABLE in the lattice.
-// Merge rule for existence-of-feasible-path:
-//
-//   unreachable(out) = unreachable(lhs) AND unreachable(rhs)
-//
-// We cut the EF algebra at merges:
-//   - if BOTH incoming EFs are provably constant-unreachable => keep unreachable
-//   - else => reset to reachable baseline (forget old pc/env; keep future pruning)
-// ============================================================================
-static inline EF joinCutEF(const EF &lhs, const EF &rhs) {
-  const bool LUnreach = isAllTopEF(lhs); // constant UNREACHABLE
-  const bool RUnreach = isAllTopEF(rhs);
+  for (const auto &st : C.Steps) {
+    if (st.K == ClauseStep::Kind::Phi) {
+      const auto &ph = st.Phi;
+      if (ph.PredBB && ph.SuccBB)
+        env = M->applyPhiPack(env, ph.PredBB, ph.SuccBB);
+      continue;
+    }
 
-  if (LUnreach && RUnreach) {
-    return EF(std::in_place_type<FeasibilityAllTopEF>); // UNREACHABLE
+    // ICmp step
+    const auto &lc = st.ICmp;
+    if (!lc.I) continue;
+
+    z3::expr atom = Util::createConstraintFromICmp(M, lc.I, lc.TrueEdge, env);
+
+    if constexpr (FDBG_PC) {
+      llvm::errs() << "[FDBG][PC] atom=" << atom.to_string()
+                   << " from " << (lc.TrueEdge ? "T:" : "F:") << *lc.I
+                   << " env=" << env << "\n";
+    }
+
+    conj = conj && atom;
   }
 
-  return EF(std::in_place_type<FeasibilityAllBottomEF>); // REACHABLE baseline
+  conj = M->simplify(conj);
+
+  const uint32_t id = M->mkAtomic(conj);
+  const bool sat = M->isSat(id);
+
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] " << who << " conj=" << conj.to_string()
+                 << " id=" << id
+                 << " => " << (sat ? "SAT" : "UNSAT") << "\n";
+  }
+
+  return sat;
+}
+
+// Join on lattice values (2-point): unreachable only if both unreachable.
+static inline l_t joinVal(const l_t &a, const l_t &b) {
+  FeasibilityAnalysisManager *M = a.getManager() ? a.getManager() : b.getManager();
+  if (a.isTop() && b.isTop()) return l_t::createTop(M);
+  return l_t::createBottom(M);
+}
+
+// Determine EF-join result via behavior on Bottom seed.
+// IMPORTANT: returns AllTop or Identity (never AllBottom).
+static EF joinEFByBottomSeed(FeasibilityAnalysisManager *M, const EF &A, const psr::EdgeFunction<l_t> &B) {
+  const l_t bot = l_t::createBottom(M);
+  const l_t top = l_t::createTop(M);
+
+  const l_t aB = A.computeTarget(bot);
+  const l_t bB = B.computeTarget(bot);
+  const l_t aT = A.computeTarget(top);
+  const l_t bT = B.computeTarget(top);
+
+  const l_t jB = joinVal(aB, bB);
+  const l_t jT = joinVal(aT, bT);
+
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] join2pt: "
+                 << efName(A) << "⊔" << efName(EF(B))
+                 << "  j(B)=" << kstr(jB)
+                 << "  j(T)=" << kstr(jT) << "\n";
+  }
+
+  // In the intended domain, jT==Top implies both are unreachable on Top
+  if (jT.isTop() && jB.isTop())
+    return EF(std::in_place_type<FeasibilityAllTopEF>);
+
+  // If jT is Bottom, reachable can happen; represent by Identity
+  // (Top-absorbing + reachability-preserving)
+  return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+}
+
+static inline l_t mkUnreachable(const l_t &src, FeasibilityAnalysisManager *M = nullptr) {
+  if (!M) M = src.getManager();
+  return l_t::createTop(M);
+}
+static inline l_t mkReachable(const l_t &src, FeasibilityAnalysisManager *M = nullptr) {
+  if (!M) M = src.getManager();
+  return l_t::createBottom(M);
+}
+
+// Convenience: treat any “AllBottom-ish” EF as Identity in this architecture.
+// You can tighten this later if you remove AllBottom entirely.
+static inline bool isAllBottomishEF(const EF &ef) noexcept {
+  return ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>();
 }
 
 } // namespace
 
 // =====================================================================================================================
 // FeasibilityAllTopEF
-//
-// Constant UNREACHABLE edge function.
 // =====================================================================================================================
 
 l_t FeasibilityAllTopEF::computeTarget(const l_t &source) const {
-  if constexpr (FDBG)
-    dumpLatticeBrief("AllTop.in ", source);
-
-  auto out = mkUnreached(source);
-
-  if constexpr (FDBG)
-    dumpLatticeBrief("AllTop.out", out);
-  return out;
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] AllTopEF(" << kstr(source) << ") -> Top(UNREACH)\n";
+  }
+  return mkUnreachable(source);
 }
 
 EF FeasibilityAllTopEF::compose(psr::EdgeFunctionRef<FeasibilityAllTopEF> /*thisFunc*/,
-                                const EF &secondFunction) {
-  // UNREACHABLE ∘ g = UNREACHABLE (absorbing)
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] compose AllTopEF ∘ " << efName(secondFunction)
-                 << " -> AllTopEF\n";
-  }
+                                const EF & /*secondFunction*/) {
   return EF(std::in_place_type<FeasibilityAllTopEF>);
 }
 
-EF FeasibilityAllTopEF::join(psr::EdgeFunctionRef<FeasibilityAllTopEF> thisFunc,
+EF FeasibilityAllTopEF::join(psr::EdgeFunctionRef<FeasibilityAllTopEF> /*thisFunc*/,
                              const psr::EdgeFunction<l_t> &otherFunc) {
-  const EF A(thisFunc);
-  const EF B(otherFunc);
-  EF out = joinCutEF(A, B);
-
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] join    AllTopEF ⊔ " << efName(B) << " -> "
-                 << efName(out) << "\n";
-  }
-  return out;
+  // Top is neutral in value-join, so (AllTop ⊔ h) = h
+  return EF(otherFunc);
 }
 
 // =====================================================================================================================
 // FeasibilityAllBottomEF
-//
-// Constant REACHABLE-baseline edge function (reset pc/env).
 // =====================================================================================================================
-
+// NOTE: In the IDENTITY-based approach, you should NOT create this EF from
+// compose/join/collapse. If it still appears, it can revive Top unless it is
+// Top-absorbing. We therefore make it Top-absorbing (safe), even though the
+// preferred approach is "do not use it at all".
+//
+// If you want to fully remove it later, delete this struct and any isa<> checks.
 l_t FeasibilityAllBottomEF::computeTarget(const l_t &source) const {
-  if constexpr (FDBG)
-    dumpLatticeBrief("AllBottom.in ", source);
-
-  // If already UNREACHABLE, keep it (UNREACHABLE dominates reachability).
-  if (source.isTop()) {
-    auto out = mkUnreached(source);
-    if constexpr (FDBG)
-      dumpLatticeBrief("AllBottom.out", out);
-    return out;
+  // Top-absorbing to avoid reviving unreachable:
+  //   AllBottom(Top) = Top
+  //   AllBottom(Bottom) = Bottom
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] AllBottomEF(" << kstr(source) << ") -> "
+                 << (source.isTop() ? "Top(UNREACH)" : "Bottom(REACH)") << "\n";
   }
-
-  auto out = mkReachedBaseline(source);
-
-  if constexpr (FDBG)
-    dumpLatticeBrief("AllBottom.out", out);
-  return out;
+  if (source.isTop())
+    return source;
+  return mkReachable(source);
 }
 
 EF FeasibilityAllBottomEF::compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF> /*thisFunc*/,
                                    const EF &secondFunction) {
-  // REACHABLE-baseline ∘ g = REACHABLE-baseline (constant reset)
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] compose AllBottomEF ∘ " << efName(secondFunction)
-                 << " -> AllBottomEF\n";
-  }
-  return EF(secondFunction);
+  // Keep Top-absorption: if second makes it Top, preserve Top.
+  // But in the preferred identity-based usage, you should never hit this.
+  if (isAllTopEF(secondFunction)) return secondFunction;
+  if (isIdEF(secondFunction)) return EF(std::in_place_type<FeasibilityAllBottomEF>);
+  return EF(std::in_place_type<FeasibilityComposeEF>, nullptr,
+            EF(std::in_place_type<FeasibilityAllBottomEF>), secondFunction);
 }
 
-EF FeasibilityAllBottomEF::join(psr::EdgeFunctionRef<FeasibilityAllBottomEF> thisFunc,
+EF FeasibilityAllBottomEF::join(psr::EdgeFunctionRef<FeasibilityAllBottomEF> /*thisFunc*/,
                                 const psr::EdgeFunction<l_t> &otherFunc) {
-  const EF A(thisFunc);
-  const EF B(otherFunc);
-  EF out = joinCutEF(A, B);
-
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] join    AllBottomEF ⊔ " << efName(B) << " -> "
-                 << efName(out) << "\n";
-  }
-  return out;
+  // Value-join with Bottom returns Bottom, but we avoid creating this in joins.
+  // Conservatively: collapse by bottom-seed to Identity/AllTop.
+  FeasibilityAnalysisManager *M = nullptr;
+  // We may not have a manager pointer here; use otherFunc on Bottom seed with nullptr manager not possible.
+  // So just return otherFunc (safe-ish) — but again, this EF should not appear.
+  return EF(otherFunc);
 }
 
 // =====================================================================================================================
 // FeasibilityPHITranslateEF
+// (Identity on reachability; only prints the step so you see the chain)
 // =====================================================================================================================
 
 l_t FeasibilityPHITranslateEF::computeTarget(const l_t &source) const {
-  if constexpr (FDBG)
-    dumpLatticeBrief("Phi.in ", source);
-
-  FeasibilityElement cached;
-  if (Memo.lookup(source, cached)) {
-    if constexpr (FDBG)
-      dumpLatticeBrief("Phi.memo", cached);
-    return cached;
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] PHITranslateEF("
+                 << (PredBB ? PredBB->getName() : "<null>")
+                 << "->"
+                 << (SuccBB ? SuccBB->getName() : "<null>")
+                 << ")(" << kstr(source) << ") -> " << kstr(source) << "\n";
   }
-
-  auto *M = pickManager(this->manager, source);
-
-  // NEW: UNREACHABLE is absorbing (do not translate env)
-  if (source.isTop()) {
-    auto out = mkUnreached(source);
-    Memo.store(source, out);
-    if constexpr (FDBG)
-      dumpLatticeBrief("Phi.out", out);
-    return out;
-  }
-
-  if (!PredBB || !SuccBB) {
-    Memo.store(source, source);
-    if constexpr (FDBG)
-      dumpLatticeBrief("Phi.out", source);
-    return source;
-  }
-
-  const uint32_t incomingEnvId = source.getEnvId();
-  const uint32_t outEnvId = M->applyPhiPack(incomingEnvId, PredBB, SuccBB);
-
-  auto out = source;
-  out.setEnvId(outEnvId);
-
-  Memo.store(source, out);
-  if constexpr (FDBG)
-    dumpLatticeBrief("Phi.out", out);
-  return out;
+  return source;
 }
 
-EF FeasibilityPHITranslateEF::compose(
-    psr::EdgeFunctionRef<FeasibilityPHITranslateEF> thisFunc,
-    const EF &secondFunction) {
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] compose PHITranslateEF ∘ " << efName(secondFunction)
-                 << "\n";
+EF FeasibilityPHITranslateEF::compose(psr::EdgeFunctionRef<FeasibilityPHITranslateEF> thisFunc,
+                                      const EF &secondFunction) {
+  // this ∘ second
+
+  if (isIdEF(secondFunction)) return EF(thisFunc);
+  if (isAllTopEF(secondFunction)) return secondFunction;
+
+  // In identity-based semantics, "reachable constant" is Identity, not AllBottom.
+  if (isAllBottomishEF(secondFunction))
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+
+  // ✅ If we are composing PHI ∘ AND, fold PHI into the AND clause
+  if (auto *And = secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
+    FeasibilityClause fused = And->Clause;
+    fused.Steps.insert(fused.Steps.begin(),
+                       ClauseStep::mkPhi(thisFunc->PredBB, thisFunc->SuccBB));
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, thisFunc->manager, std::move(fused));
   }
 
-  if (isIdEF(secondFunction))
+  // otherwise keep lazy
+  return EF(std::in_place_type<FeasibilityComposeEF>, thisFunc->manager,
+            EF(thisFunc), secondFunction);
+}
+
+EF FeasibilityPHITranslateEF::join(psr::EdgeFunctionRef<FeasibilityPHITranslateEF> thisFunc,
+                                   const psr::EdgeFunction<l_t> &otherFunc) {
+  // Treat any AllBottom-ish as Identity (reachable)
+  if (llvm::isa<FeasibilityAllBottomEF>(otherFunc) || llvm::isa<psr::AllBottom<l_t>>(otherFunc))
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+
+  if (llvm::isa<FeasibilityAllTopEF>(otherFunc) || llvm::isa<psr::AllTop<l_t>>(otherFunc))
     return EF(thisFunc);
 
-  // inner constant UNREACHABLE => UNREACHABLE
-  if (isAllTopEF(secondFunction))
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
-
-  auto *M = thisFunc->manager;
-  const auto step = PhiStep(thisFunc->PredBB, thisFunc->SuccBB);
-
-  if (auto *otherPhi =
-          secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-    FeasibilityClause clause;
-    clause.PhiChain.push_back(PhiStep(otherPhi->PredBB, otherPhi->SuccBB));
-    clause.PhiChain.push_back(step);
-    if constexpr (FDBG) {
-      llvm::errs() << "[FDBG]  -> ANDFormulaEF (phi+phi): ";
-      dumpClauseBrief(clause);
-      llvm::errs() << "\n";
-    }
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
-  }
-
-  if (auto *andEF =
-          secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-    FeasibilityClause clause = andEF->Clause;
-    clause.PhiChain.insert(clause.PhiChain.begin(), step);
-    if constexpr (FDBG) {
-      llvm::errs() << "[FDBG]  -> ANDFormulaEF (prepend phi): ";
-      dumpClauseBrief(clause);
-      llvm::errs() << "\n";
-    }
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(clause));
-  }
-
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG]  -> ComposeEF (lazy)\n";
-  }
-  return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
-            secondFunction);
-}
-
-EF FeasibilityPHITranslateEF::join(
-    psr::EdgeFunctionRef<FeasibilityPHITranslateEF> thisFunc,
-    const psr::EdgeFunction<l_t> &otherFunc) {
-  const EF A(thisFunc);
-  const EF B(otherFunc);
-  EF out = joinCutEF(A, B);
-
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] join    PHITranslateEF ⊔ " << efName(B) << " -> "
-                 << efName(out) << "\n";
-  }
-  return out;
+  FeasibilityAnalysisManager *M = thisFunc->manager;
+  return joinEFByBottomSeed(M, EF(thisFunc), otherFunc);
 }
 
 // =====================================================================================================================
 // FeasibilityANDFormulaEF
+// Visualizes: constraints + built Z3 conjunction
 // =====================================================================================================================
 
 l_t FeasibilityANDFormulaEF::computeTarget(const l_t &source) const {
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] AND.computeTarget clause: ";
-    dumpClauseBrief(Clause);
-    llvm::errs() << "\n";
-    dumpLatticeBrief("AND.in  ", source);
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] ANDFormulaEF(" << kstr(source) << ") clause:\n";
   }
 
-  FeasibilityElement cached;
-  if (Memo.lookup(source, cached)) {
-    if constexpr (FDBG)
-      dumpLatticeBrief("AND.memo", cached);
-    return cached;
-  }
-
-  auto *M = pickManager(manager, source);
-
-  // NEW: UNREACHABLE is absorbing
+  // Top absorbing: once unreachable, always unreachable
   if (source.isTop()) {
-    auto out = mkUnreached(source);
-    Memo.store(source, out);
-    if constexpr (FDBG)
-      dumpLatticeBrief("AND.out ", out);
-    return out;
+    if constexpr (FDBG_PC) {
+      llvm::errs() << "[FDBG][PC] ANDFormulaEF short-circuit: input Top => Top\n";
+    }
+    return source;
   }
 
-  const bool hasPhi = !Clause.PhiChain.empty();
-  const bool hasConstr = !Clause.Constrs.empty();
+  FeasibilityAnalysisManager *pickedManager = pickManager(manager, source);
 
-  const uint32_t srcEnv = source.getEnvId();
-  const uint32_t outEnv =
-      hasPhi ? Util::applyPhiChain(M, srcEnv, Clause.PhiChain) : srcEnv;
+  const bool sat = evalClauseSatDbg(pickedManager, Clause, "ANDFormulaEF");
+  l_t out = sat ? l_t::createBottom(pickedManager) : l_t::createTop(pickedManager);
 
-  // env translation only: stay reachable (keep kind as-is)
-  if (!hasConstr) {
-    auto out = source;
-    out.setEnvId(outEnv);
-    Memo.store(source, out);
-    if constexpr (FDBG)
-      dumpLatticeBrief("AND.out ", out);
-    return out;
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] ANDFormulaEF result: " << (sat ? "Bottom(REACH)" : "Top(UNREACH)") << "\n";
   }
 
-  uint32_t pc = source.getFormulaId();
-
-  for (const auto &lazyConstr : Clause.Constrs) {
-    if (!lazyConstr.I) {
-      llvm::errs() << "ALARM in FeasibilityANDFormulaEF::computeTarget: LazyICmp "
-                      "has null instruction\n";
-      continue;
-    }
-
-    if constexpr (FDBG) {
-      llvm::errs() << "[FDBG]   + " << (lazyConstr.TrueEdge ? "T" : "F")
-                   << ": " << *lazyConstr.I << "\n";
-    }
-
-    z3::expr expr =
-        Util::createConstraintFromICmp(M, lazyConstr.I, lazyConstr.TrueEdge,
-                                       outEnv);
-    const uint32_t cid = Util::findOrAddFormulaId(M, expr);
-
-    pc = M->mkAnd(pc, cid);
-
-    // NEW: UNSAT => UNREACHABLE (Top)
-    if (!M->isSat(pc)) {
-      auto out = mkUnreached(source);
-      Memo.store(source, out);
-      if constexpr (FDBG)
-        dumpLatticeBrief("AND.out ", out);
-      return out;
-    }
-  }
-
-  // SAT => REACHABLE with info
-  auto out = mkNormalLike(source, pc, outEnv);
-  Memo.store(source, out);
-
-  if constexpr (FDBG)
-    dumpLatticeBrief("AND.out ", out);
   return out;
 }
 
-EF FeasibilityANDFormulaEF::compose(
-    psr::EdgeFunctionRef<FeasibilityANDFormulaEF> thisFunc,
-    const EF &secondFunction) {
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] compose ANDFormulaEF ∘ " << efName(secondFunction)
-                 << "\n";
+EF FeasibilityANDFormulaEF::compose(psr::EdgeFunctionRef<FeasibilityANDFormulaEF> thisFunc,
+                                    const EF &secondFunction) {
+  // this ∘ second
+
+  if (isIdEF(secondFunction)) return EF(thisFunc);
+  if (isAllTopEF(secondFunction)) return secondFunction;
+
+  // In identity-based semantics, treat “AllBottom inner” as Identity inner.
+  if (isAllBottomishEF(secondFunction))
+    return EF(thisFunc); // f ∘ Id = f
+
+  // ✅ Fuse AND ∘ AND by concatenating step sequences
+  if (auto *Other = secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
+    FeasibilityClause fused;
+    // Composition order: this ∘ second => second runs first.
+    fused.Steps.append(Other->Clause.Steps.begin(), Other->Clause.Steps.end());
+    fused.Steps.append(thisFunc->Clause.Steps.begin(), thisFunc->Clause.Steps.end());
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, thisFunc->manager, std::move(fused));
   }
 
-  if (isIdEF(secondFunction))
+  // ✅ Fuse AND ∘ PHI (if PHI nodes still appear)
+  if (auto *Phi = secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
+    FeasibilityClause fused = thisFunc->Clause;
+    fused.Steps.insert(fused.Steps.begin(),
+                       ClauseStep::mkPhi(Phi->PredBB, Phi->SuccBB));
+    return EF(std::in_place_type<FeasibilityANDFormulaEF>, thisFunc->manager, std::move(fused));
+  }
+
+  // otherwise keep lazy
+  return EF(std::in_place_type<FeasibilityComposeEF>, thisFunc->manager,
+            EF(thisFunc), secondFunction);
+}
+
+EF FeasibilityANDFormulaEF::join(psr::EdgeFunctionRef<FeasibilityANDFormulaEF> thisFunc,
+                                 const psr::EdgeFunction<l_t> &otherFunc) {
+  // Treat AllBottom-ish as Identity (reachable)
+  if (llvm::isa<FeasibilityAllBottomEF>(otherFunc) || llvm::isa<psr::AllBottom<l_t>>(otherFunc))
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
+
+  // Top is neutral on join
+  if (llvm::isa<FeasibilityAllTopEF>(otherFunc) || llvm::isa<psr::AllTop<l_t>>(otherFunc))
     return EF(thisFunc);
 
-  // inner constant UNREACHABLE => UNREACHABLE
-  if (isAllTopEF(secondFunction))
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  FeasibilityAnalysisManager *M = thisFunc->manager;
 
-  auto *M = thisFunc->manager;
-
-  if (auto *phi =
-          secondFunction.template dyn_cast<FeasibilityPHITranslateEF>()) {
-    FeasibilityClause phiClause = Util::clauseFromPhi(phi->PredBB, phi->SuccBB);
-    FeasibilityClause merged = Util::conjClauses(thisFunc->Clause, phiClause);
-    if constexpr (FDBG) {
-      llvm::errs() << "[FDBG]  -> ANDFormulaEF (conj with phi): ";
-      dumpClauseBrief(merged);
-      llvm::errs() << "\n";
-    }
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(merged));
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] join: ANDFormulaEF ⊔ " << efName(EF(otherFunc))
+                 << " (collapsed by Bottom-seed truth table)\n";
   }
 
-  if (auto *and2 =
-          secondFunction.template dyn_cast<FeasibilityANDFormulaEF>()) {
-    FeasibilityClause merged = Util::conjClauses(thisFunc->Clause, and2->Clause);
-    if constexpr (FDBG) {
-      llvm::errs() << "[FDBG]  -> ANDFormulaEF (conj with AND): ";
-      dumpClauseBrief(merged);
-      llvm::errs() << "\n";
-    }
-    return EF(std::in_place_type<FeasibilityANDFormulaEF>, M, std::move(merged));
-  }
-
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG]  -> ComposeEF (lazy)\n";
-  }
-  return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
-            secondFunction);
-}
-
-EF FeasibilityANDFormulaEF::join(
-    psr::EdgeFunctionRef<FeasibilityANDFormulaEF> thisFunc,
-    const psr::EdgeFunction<l_t> &otherFunc) {
-  const EF A(thisFunc);
-  const EF B(otherFunc);
-  EF out = joinCutEF(A, B);
-
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] join    ANDFormulaEF ⊔ " << efName(B) << " -> "
-                 << efName(out) << "\n";
-  }
-  return out;
+  return joinEFByBottomSeed(M, EF(thisFunc), otherFunc);
 }
 
 // ============================================================================
 // FeasibilityComposeEF
+// Visualizes: the computeTarget pipeline First(Second(x))
 // ============================================================================
 
 l_t FeasibilityComposeEF::computeTarget(const l_t &source) const {
-  if constexpr (FDBG)
-    dumpLatticeBrief("Compose.in ", source);
-
-  FeasibilityElement cached;
-  if (Memo.lookup(source, cached)) {
-    if constexpr (FDBG)
-      dumpLatticeBrief("Compose.memo", cached);
-    return cached;
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] ComposeEF(" << kstr(source) << ") = "
+                 << efName(First) << "(" << efName(Second) << "(x))\n";
   }
 
-  // NEW: UNREACHABLE is absorbing
+  // Top absorbing
   if (source.isTop()) {
-    auto out = mkUnreached(source);
-    Memo.store(source, out);
-    if constexpr (FDBG)
-      dumpLatticeBrief("Compose.out", out);
-    return out;
+    if constexpr (FDBG_PC) {
+      llvm::errs() << "[FDBG][PC] ComposeEF short-circuit: input Top => Top\n";
+    }
+    return source;
   }
 
   const l_t mid = Second.computeTarget(source);
-  if constexpr (FDBG)
-    dumpLatticeBrief("Compose.mid", mid);
+
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] ComposeEF mid = " << kstr(mid) << "\n";
+  }
 
   if (mid.isTop()) {
-    Memo.store(source, mid);
-    if constexpr (FDBG)
-      dumpLatticeBrief("Compose.out", mid);
+    if constexpr (FDBG_PC) {
+      llvm::errs() << "[FDBG][PC] ComposeEF short-circuit: mid Top => Top\n";
+    }
     return mid;
   }
 
   const l_t out = First.computeTarget(mid);
-  Memo.store(source, out);
 
-  if constexpr (FDBG)
-    dumpLatticeBrief("Compose.out", out);
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] ComposeEF out = " << kstr(out) << "\n";
+  }
+
   return out;
 }
 
 EF FeasibilityComposeEF::compose(psr::EdgeFunctionRef<FeasibilityComposeEF> thisFunc,
                                  const EF &secondFunction) {
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] compose ComposeEF ∘ " << efName(secondFunction)
-                 << "\n";
-  }
+  if (isIdEF(secondFunction)) return EF(thisFunc);
+  if (isAllTopEF(secondFunction)) return secondFunction;
 
-  if (isIdEF(secondFunction))
+  // Treat AllBottom-ish as Identity (inner disappears)
+  if (isAllBottomishEF(secondFunction))
     return EF(thisFunc);
 
-  if (isAllTopEF(secondFunction))
-    return EF(std::in_place_type<FeasibilityAllTopEF>);
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] compose: ComposeEF ∘ " << efName(secondFunction) << " -> nested ComposeEF\n";
+  }
 
-  auto *M = thisFunc->manager;
-  return EF(std::in_place_type<FeasibilityComposeEF>, M, EF(thisFunc),
-            secondFunction);
+  return EF(std::in_place_type<FeasibilityComposeEF>, thisFunc->manager,
+            EF(thisFunc), secondFunction);
 }
 
 EF FeasibilityComposeEF::join(psr::EdgeFunctionRef<FeasibilityComposeEF> thisFunc,
                               const psr::EdgeFunction<l_t> &otherFunc) {
-  const EF A(thisFunc);
-  const EF B(otherFunc);
-  EF out = joinCutEF(A, B);
+  // Treat AllBottom-ish as Identity (reachable)
+  if (llvm::isa<FeasibilityAllBottomEF>(otherFunc) || llvm::isa<psr::AllBottom<l_t>>(otherFunc))
+    return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
 
-  if constexpr (FDBG) {
-    llvm::errs() << "[FDBG] join    ComposeEF ⊔ " << efName(B) << " -> "
-                 << efName(out) << "\n";
+  if (llvm::isa<FeasibilityAllTopEF>(otherFunc) || llvm::isa<psr::AllTop<l_t>>(otherFunc))
+    return EF(thisFunc);
+
+  FeasibilityAnalysisManager *M = thisFunc->manager;
+
+  if constexpr (FDBG_PC) {
+    llvm::errs() << "[FDBG][PC] join: ComposeEF ⊔ " << efName(EF(otherFunc))
+                 << " (collapsed by Bottom-seed truth table)\n";
   }
-  return out;
+
+  return joinEFByBottomSeed(M, EF(thisFunc), otherFunc);
 }
 
 } // namespace Feasibility

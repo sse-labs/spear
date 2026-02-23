@@ -40,67 +40,63 @@ struct Z3ExprEq {
 
 class FeasibilityAnalysisManager;
 
-class FeasibilityElement {
-public:
-  enum class Kind : uint8_t { Top = 0, Bottom = 1, Normal = 2 };
+  class FeasibilityElement {
+  public:
+    // Inverted names preserved:
+    //   Top    = UNREACHABLE
+    //   Bottom = REACHABLE
+    enum class Kind : uint8_t { Top, Bottom };
 
-  // IMPORTANT: keep these consistent with your manager initialization.
-  static constexpr uint32_t topId = 0;     // true
-  static constexpr uint32_t bottomId = 1;  // false
+    // Keep these for compatibility with older code that expects ids.
+    // They are not used to store any PC.
+    static constexpr uint32_t topId    = 0;
+    static constexpr uint32_t bottomId = 1;
 
-  FeasibilityElement() noexcept
-      : kind(Kind::Top), formularID(0), envId(0), manager(nullptr) {}
+  private:
+    Kind kind = Kind::Bottom;
+    FeasibilityAnalysisManager *manager = nullptr;
 
-  static FeasibilityElement createElement(FeasibilityAnalysisManager *man,
-                                          uint32_t formulaId, Kind type,
-                                          uint32_t envId = 0);
+  public:
+    FeasibilityElement() = default;
+    FeasibilityElement(Kind K, FeasibilityAnalysisManager *M) : kind(K), manager(M) {}
 
-  Kind getKind() const { return kind; }
-  bool isTop() const { return kind == Kind::Top; }
-  bool isBottom() const { return kind == Kind::Bottom; }
-  bool isNormal() const { return kind == Kind::Normal; }
+    static FeasibilityElement createTop(FeasibilityAnalysisManager *M) {
+      return FeasibilityElement(Kind::Top, M);
+    }
+    static FeasibilityElement createBottom(FeasibilityAnalysisManager *M) {
+      return FeasibilityElement(Kind::Bottom, M);
+    }
 
-  void setKind(Kind k) { this->kind = k; }
+    Kind getKind() const noexcept { return kind; }
 
-  uint32_t getFormulaId() const { return formularID; }
-  uint32_t getEnvId() const { return envId; }
-  FeasibilityAnalysisManager *getManager() const { return manager; }
+    // Inverted naming:
+    //   Top    -> UNREACHABLE
+    //   Bottom -> REACHABLE
+    bool isTop() const noexcept { return kind == Kind::Top; }
+    bool isBottom() const noexcept { return kind == Kind::Bottom; }
 
-  void setFormulaId(uint32_t id) { this->formularID = id; }
-  void setEnvId(uint32_t id) { this->envId = id; }
+    FeasibilityAnalysisManager *getManager() const noexcept { return manager; }
 
-  FeasibilityElement join(FeasibilityElement &other) const;
+    // Lattice join (CFG merge):
+    // Unreachable only if BOTH unreachable; otherwise reachable.
+    FeasibilityElement join(const FeasibilityElement &Other) const {
+      FeasibilityAnalysisManager *M = manager ? manager : Other.manager;
+      if (this->isTop() && Other.isTop())
+        return createTop(M);
+      return createBottom(M);
+    }
 
-  std::string toString() const;
+    // IMPORTANT: make l_t equality comparable for PhASAR templates
+    bool operator==(const FeasibilityElement &O) const noexcept {
+      // Usually you want equality to be about the abstract value only.
+      // Comparing manager pointers can cause needless mismatches across contexts.
+      return kind == O.kind;
+    }
+    bool operator!=(const FeasibilityElement &O) const noexcept { return !(*this == O); }
 
-  bool operator==(const FeasibilityElement &other) const {
-    return kind == other.kind && formularID == other.formularID &&
-           envId == other.envId && manager == other.manager;
-  }
-  bool operator!=(const FeasibilityElement &other) const {
-    return !(*this == other);
-  }
-
-private:
-  friend class FeasibilityAnalysisManager;
-
-  // Canonicalization rule:
-  //  - Bottom must always have envId==0
-  //  - (recommended) Top must always have envId==0
-  static inline uint32_t canonicalizeEnv(Kind k, uint32_t env) {
-    if (k == Kind::Bottom) return 0;
-    if (k == Kind::Top) return 0;
-    return env;
-  }
-
-  FeasibilityElement(Kind k, uint32_t fid, FeasibilityAnalysisManager *m,
-                     uint32_t e)
-      : kind(k), formularID(fid), manager(m), envId(canonicalizeEnv(k, e)) {}
-
-  Kind kind{Kind::Top};
-  uint32_t formularID{topId};
-  FeasibilityAnalysisManager *manager{nullptr};
-  uint32_t envId{0};
+    std::string toString() const {
+      return isTop() ? "UNREACHABLE(Top)" : "REACHABLE(Bottom)";
+    }
 };
 
 class FeasibilityAnalysisManager {

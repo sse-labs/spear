@@ -483,54 +483,6 @@ uint32_t FeasibilityAnalysisManager::applyPhiPack(uint32_t inEnvId,
 
 // ===================== FeasibilityElement =====================
 
-FeasibilityElement
-FeasibilityElement::createElement(FeasibilityAnalysisManager *man,
-                                  uint32_t formulaId, Kind type,
-                                  uint32_t envId) {
-  return FeasibilityElement(type, formulaId, man, envId);
-}
-
-FeasibilityElement FeasibilityElement::join(FeasibilityElement &Other) const {
-  // New semantics:
-  //   Top    = UNREACHED
-  //   Bottom = REACHED baseline
-  //   Normal = REACHED with info
-  const bool thisUnreached  = this->isTop();
-  const bool otherUnreached = Other.isTop();
-
-  // Unreached only if BOTH are unreached.
-  if (thisUnreached && otherUnreached) {
-    return FeasibilityElement::createElement(getManager(),
-                                             FeasibilityElement::topId,
-                                             Kind::Top,
-                                             /*envId=*/0);
-  }
-
-  // Otherwise: reached (baseline reset)
-  return FeasibilityElement::createElement(getManager(),
-                                           FeasibilityElement::topId, // PC=true baseline
-                                           Kind::Bottom,
-                                           /*envId=*/0);
-}
-
-std::string FeasibilityElement::toString() const {
-  switch (kind) {
-    case Kind::Top:
-      return "UNREACHED";
-    case Kind::Bottom:
-      return "REACHED"; // baseline reached
-    case Kind::Normal: {
-      auto formula = manager->getExpression(formularID);
-      std::string s;
-      llvm::raw_string_ostream rso(s);
-      rso << "REACHED(pc=" << formularID << ", env=" << envId << "): " << formula.to_string();
-      rso.flush();
-      return s;
-    }
-  }
-  return "?";
-}
-
 std::ostream &operator<<(std::ostream &os,
                          const std::optional<FeasibilityElement> &E) {
   return os << toString(E);

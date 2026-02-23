@@ -68,30 +68,51 @@ struct PhiStep {
 };
 
 // DNF helper clause: conjunction of phi-steps and constraints.
-struct FeasibilityClause {
-  llvm::SmallVector<PhiStep, 2> PhiChain; // optional
-  llvm::SmallVector<LazyICmp, 4> Constrs; // conjunction
+    struct ClauseStep {
+        enum class Kind : uint8_t { Phi, ICmp };
+        Kind K;
+        PhiStep Phi;
+        LazyICmp ICmp;
 
-  bool operator==(const FeasibilityClause &) const = default;
+        static ClauseStep mkPhi(const llvm::BasicBlock *P, const llvm::BasicBlock *S) {
+            ClauseStep st;
+            st.K = Kind::Phi;
+            st.Phi = PhiStep(P, S);
+            return st;
+        }
+        static ClauseStep mkICmp(const llvm::ICmpInst *I, bool T) {
+            ClauseStep st;
+            st.K = Kind::ICmp;
+            st.ICmp = LazyICmp(I, T);
+            return st;
+        }
 
-  std::size_t hash() const noexcept {
-    // Tag the two sequences so [PhiChain=A, Constrs=B] != [PhiChain=B, Constrs=A]
-    std::size_t h = 0xC1A0C1A0u;
+        bool operator==(const ClauseStep &o) const = default;
 
-    h = hashCombine(h, std::hash<unsigned>{}((unsigned)PhiChain.size()));
-    for (const auto &s : PhiChain) {
-      h = hashCombine(h, s.hash());
-    }
+        std::size_t hash() const noexcept {
+            std::size_t h = 0x51;
+            h = hashCombine(h, std::hash<unsigned>{}(unsigned(K)));
+            if (K == Kind::Phi) {
+                h = hashCombine(h, Phi.hash());
+            } else {
+                h = hashCombine(h, ICmp.hash());
+            }
+            return h;
+        }
+    };
 
-    h = hashCombine(h, 0xBADC0FFEu);
-    h = hashCombine(h, std::hash<unsigned>{}((unsigned)Constrs.size()));
-    for (const auto &c : Constrs) {
-      h = hashCombine(h, c.hash());
-    }
+    struct FeasibilityClause {
+        llvm::SmallVector<ClauseStep, 8> Steps;
 
-    return h;
-  }
-};
+        bool operator==(const FeasibilityClause &) const = default;
+
+        std::size_t hash() const noexcept {
+            std::size_t h = 0xC1A0C1A0u;
+            h = hashCombine(h, std::hash<unsigned>{}((unsigned)Steps.size()));
+            for (const auto &s : Steps) h = hashCombine(h, s.hash());
+            return h;
+        }
+    };
 
 
 /**
@@ -158,7 +179,7 @@ struct FeasibilityANDFormulaEF {
                             const llvm::ICmpInst *I,
                             bool OnTrueEdge)
         : manager(M) {
-        Clause.Constrs.push_back(LazyICmp(I, OnTrueEdge));
+        Clause.Steps.push_back(ClauseStep::mkICmp(I, OnTrueEdge));
     }
 
     // Convenience: phi-only clause
@@ -166,7 +187,7 @@ struct FeasibilityANDFormulaEF {
                             const llvm::BasicBlock *Pred,
                             const llvm::BasicBlock *Succ)
         : manager(M) {
-        Clause.PhiChain.push_back(PhiStep(Pred, Succ));
+        Clause.Steps.push_back(ClauseStep::mkPhi(Pred, Succ));
     }
 
     [[nodiscard]] l_t computeTarget(const l_t &source) const;
@@ -262,9 +283,6 @@ static inline bool isIdEF(const EF &ef) noexcept {
 static inline bool isAllTopEF(const EF &ef) noexcept {
     return ef.template isa<FeasibilityAllTopEF>() || ef.template isa<psr::AllTop<l_t>>();
 }
-static inline bool isAllBottomEF(const EF &ef) noexcept {
-    return ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>();
-}
 
 constexpr bool FDBG = true;
 
@@ -282,15 +300,13 @@ static inline const char *kindStr(Feasibility::l_t::Kind K) {
     switch (K) {
         case Kt::Top:    return "Top";
         case Kt::Bottom: return "Bottom";
-        case Kt::Normal: return "Normal";
     }
     return "?";
 }
 
 static inline void dumpLatticeBrief(const char *Pfx,
                                     const Feasibility::l_t &x) {
-    llvm::errs() << "[FDBG] " << Pfx << " kind=" << kindStr(x.getKind())
-                 << " pc=" << x.getFormulaId() << " env=" << x.getEnvId() << "\n";
+    llvm::errs() << "[FDBG] " << Pfx << " kind=" << kindStr(x.getKind()) << "\n";
 }
 
 // Best-effort EF name printer (no RTTI needed; uses isa<> checks).
@@ -302,21 +318,6 @@ static inline const char *efName(const EF &ef) {
     if (ef.template isa<FeasibilityANDFormulaEF>()) return "ANDFormulaEF";
     if (ef.template isa<FeasibilityComposeEF>()) return "ComposeEF";
     return "EF<?>"; // fallback
-}
-
-static inline void dumpClauseBrief(const FeasibilityClause &C) {
-    llvm::errs() << "phi=" << C.PhiChain.size() << " constr=" << C.Constrs.size();
-    if (!C.Constrs.empty()) {
-        llvm::errs() << " [";
-        unsigned shown = 0;
-        for (const auto &lc : C.Constrs) {
-            if (!lc.I) continue;
-            if (shown++) llvm::errs() << ", ";
-            llvm::errs() << (lc.TrueEdge ? "T:" : "F:") << *lc.I;
-            if (shown >= 10 && C.Constrs.size() > 10) { llvm::errs() << ", ..."; break; }
-        }
-        llvm::errs() << "]";
-    }
 }
 
 }  // namespace Feasibility
