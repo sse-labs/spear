@@ -136,37 +136,6 @@ struct FeasibilityAllBottomEF {
     bool isConstant() const noexcept { return false; };
 };
 
-/**
- * Top edge function for the FeasibilityAnalysis. Maps any input to top.
- */
-struct FeasibilityAddConstrainEF {
-    using l_t = Feasibility::l_t;
-
-    mutable ComputeTargetMemo<FeasibilityElement> Memo;
-
-    FeasibilityAnalysisManager *manager = nullptr;
-    const llvm::ICmpInst *ConstraintInst = nullptr; // The instruction that represents the constraint we want to add to the path condition
-    bool isTrueBranch = false; // Whether we are in the true or false branch of the constraint instruction. This is needed to correctly construct the constraint formula from the ICmp instruction.
-
-    FeasibilityAddConstrainEF(FeasibilityAnalysisManager *manager, const llvm::ICmpInst *icmp, bool isTrueBranch):
-    manager(manager), ConstraintInst(icmp), isTrueBranch(isTrueBranch) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAddConstrainEF>,
-                                   const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAddConstrainEF> thisFunc,
-                   const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityAddConstrainEF &other) const {
-        // We consider two FeasibilityAddConstrainEFs to be equal if they add the same constraint instruction with the same branch condition, regardless of the manager pointer (which is not relevant for equality).
-        return ConstraintInst == other.ConstraintInst && isTrueBranch == other.isTrueBranch;
-    };
-
-    bool isConstant() const noexcept { return false; };
-};
-
 
 // Adds a *formula id* to the incoming PC via AND:  x ↦ x ∧ Cid
 // This is our sequential operator
@@ -215,58 +184,6 @@ struct FeasibilityANDFormulaEF {
     bool isConstant() const noexcept { return false; }
 };
 
-// Computes: x ↦ OR_i ( x ∧ Ci )
-// This is our join operator
-struct FeasibilityORFormulaEF {
-    using l_t = Feasibility::l_t;
-
-    mutable ComputeTargetMemo<FeasibilityElement> Memo;
-
-    FeasibilityAnalysisManager *manager = nullptr;
-
-    // Each clause represents a conjunction of constraints and phi translations that we want to add to the
-    // path condition, and the OR formula represents the disjunction of these clauses.
-    // Thus, we can represent any DNF formula over our constraints and phi translations using this struct.
-    // We use a SmallVector here because we expect to have only a few disjuncts in practice,
-    llvm::SmallVector<FeasibilityClause, 4> Clauses;
-
-    FeasibilityORFormulaEF() = default;
-
-    FeasibilityORFormulaEF(FeasibilityAnalysisManager *M,
-                           llvm::SmallVector<FeasibilityClause, 4> Cs)
-        : manager(M), Clauses(std::move(Cs)) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityORFormulaEF> thisFunc,
-                                  const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityORFormulaEF> thisFunc,
-                               const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityORFormulaEF &other) const {
-        // We consider two FeasibilityORFormulaEFs to be equal if they have the same set of clauses (i.e. represent the same DNF formula), regardless of the manager pointer (which is not relevant for equality).
-        // Note that we do not require the clauses to be in the same order, as the order of disjuncts in a DNF formula does not matter.
-        if (Clauses.size() != other.Clauses.size()) {
-            return false;
-        }
-        // Check that every clause in this->Clauses has an equal clause in other.Clauses
-        for (const auto &c : Clauses) {
-            bool foundEqual = false;
-            for (const auto &oc : other.Clauses) {
-                if (c == oc) {
-                    foundEqual = true;
-                    break;
-                }
-            }
-            if (!foundEqual) {
-                return false;
-            }
-        }
-        return true;
-    }
-    bool isConstant() const noexcept { return false; }
-};
 
 /**
  * Updates the environment id
@@ -339,36 +256,68 @@ struct FeasibilityComposeEF {
     bool isConstant() const noexcept { return false; }
 };
 
-/// Represents pointwise join without expanding into DNF.
-/// (f ⊔ g)(x) = f(x) ⊔ g(x)  where ⊔ on l_t corresponds to OR of PCs.
-struct FeasibilityJoinEF {
-    using l_t = Feasibility::l_t;
+static inline bool isIdEF(const EF &ef) noexcept {
+    return ef.template isa<psr::EdgeIdentity<l_t>>();
+}
+static inline bool isAllTopEF(const EF &ef) noexcept {
+    return ef.template isa<FeasibilityAllTopEF>() || ef.template isa<psr::AllTop<l_t>>();
+}
+static inline bool isAllBottomEF(const EF &ef) noexcept {
+    return ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>();
+}
 
-    mutable ComputeTargetMemo<FeasibilityElement> Memo;
+constexpr bool FDBG = true;
 
-    FeasibilityAnalysisManager *manager = nullptr;
-    EF Left;
-    EF Right;
-
-    FeasibilityJoinEF() = default;
-
-    FeasibilityJoinEF(FeasibilityAnalysisManager *M, EF L, EF R)
-        : manager(M), Left(std::move(L)), Right(std::move(R)) {}
-
-    [[nodiscard]] l_t computeTarget(const l_t &source) const;
-
-    [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc,
-                                    const EF &secondFunction);
-
-    [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityJoinEF> thisFunc,
-                                 const psr::EdgeFunction<l_t> &otherFunc);
-
-    bool operator==(const FeasibilityJoinEF &other) const {
-        // We consider two FeasibilityJoinEFs to be equal if they have the same Left and Right functions (i.e. represent the same pointwise join), regardless of the manager pointer (which is not relevant for equality).
-        return Left == other.Left && Right == other.Right;
+static inline FeasibilityAnalysisManager *pickManager(FeasibilityAnalysisManager *M, const l_t &source) {
+    // If the source is bottom, we can pick any manager, because the result will be bottom anyway (and thus not depend on the manager).
+    // This allows us to avoid unnecessary dependencies on the manager in some edge functions.
+    if (source.isBottom()) {
+        return M;
     }
-    bool isConstant() const noexcept { return false; }
-};
+    return source.getManager();
+}
+
+static inline const char *kindStr(Feasibility::l_t::Kind K) {
+    using Kt = Feasibility::l_t::Kind;
+    switch (K) {
+        case Kt::Top:    return "Top";
+        case Kt::Bottom: return "Bottom";
+        case Kt::Normal: return "Normal";
+    }
+    return "?";
+}
+
+static inline void dumpLatticeBrief(const char *Pfx,
+                                    const Feasibility::l_t &x) {
+    llvm::errs() << "[FDBG] " << Pfx << " kind=" << kindStr(x.getKind())
+                 << " pc=" << x.getFormulaId() << " env=" << x.getEnvId() << "\n";
+}
+
+// Best-effort EF name printer (no RTTI needed; uses isa<> checks).
+static inline const char *efName(const EF &ef) {
+    if (ef.template isa<psr::EdgeIdentity<l_t>>()) return "Identity";
+    if (ef.template isa<FeasibilityAllTopEF>() || ef.template isa<psr::AllTop<l_t>>()) return "AllTopEF";
+    if (ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>()) return "AllBottomEF";
+    if (ef.template isa<FeasibilityPHITranslateEF>()) return "PHITranslateEF";
+    if (ef.template isa<FeasibilityANDFormulaEF>()) return "ANDFormulaEF";
+    if (ef.template isa<FeasibilityComposeEF>()) return "ComposeEF";
+    return "EF<?>"; // fallback
+}
+
+static inline void dumpClauseBrief(const FeasibilityClause &C) {
+    llvm::errs() << "phi=" << C.PhiChain.size() << " constr=" << C.Constrs.size();
+    if (!C.Constrs.empty()) {
+        llvm::errs() << " [";
+        unsigned shown = 0;
+        for (const auto &lc : C.Constrs) {
+            if (!lc.I) continue;
+            if (shown++) llvm::errs() << ", ";
+            llvm::errs() << (lc.TrueEdge ? "T:" : "F:") << *lc.I;
+            if (shown >= 10 && C.Constrs.size() > 10) { llvm::errs() << ", ..."; break; }
+        }
+        llvm::errs() << "]";
+    }
+}
 
 }  // namespace Feasibility
 
@@ -383,6 +332,9 @@ template <> struct hash<Feasibility::PhiStep> {
 template <> struct hash<Feasibility::FeasibilityClause> {
     std::size_t operator()(const Feasibility::FeasibilityClause &x) const noexcept { return x.hash(); }
 };
+
+
+
 } // namespace std
 
 

@@ -89,13 +89,6 @@ void dumpEF(const Feasibility::FeasibilityAnalysis::EdgeFunctionType &edgeFuncti
         return;
     }
 
-    if (auto *addcons = edgeFunction.template dyn_cast<Feasibility::FeasibilityAddConstrainEF>()) {
-        auto mananger = addcons->manager;
-
-        llvm::errs() << "EF=ADDCONS[" << *addcons->ConstraintInst << ")]";
-        return;
-    }
-
     llvm::errs() << "EF=<other>";
 }
 
@@ -106,8 +99,6 @@ void dumpEFKind(const EF &E) {
         llvm::errs() << "FeasibilityAllTopEF";
     } else if (E.template isa<FeasibilityAllBottomEF>()) {
         llvm::errs() << "FeasibilityAllBottomEF";
-    } else if (E.template isa<FeasibilityAddConstrainEF>()) {
-        llvm::errs() << "FeasibilityAddConstrainEF";
     } else if (llvm::isa<psr::AllTop<FeasibilityAnalysis::l_t>>(E)) {
         llvm::errs() << "psr::AllTop";
     } else if (llvm::isa<psr::AllBottom<FeasibilityAnalysis::l_t>>(E)) {
@@ -243,8 +234,6 @@ z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llv
     if (!areWeInTheTrueBranch) {
         cmp = !cmp;
     }
-
-    llvm::errs() << cmp.to_string() << "\n";
 
     return cmp;
 }

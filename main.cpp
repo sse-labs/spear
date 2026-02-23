@@ -131,7 +131,7 @@ void runAnalysisRoutine(CLIOptions opts) {
     auto feasibilityResults = PH.queryFeasibility(MainFn);
 
     for (const auto &entry : feasibilityResults) {
-        std::string feasStr = entry.second.Feasible? "FEASIBLE": "INFEASIBLE";
+        std::string feasStr = entry.second.Feasible? "REACHABLE": "UNREACHABLE";
 
         std::cout << "Feasibility results for block: " << entry.first << " => " << feasStr << "\n";
     }

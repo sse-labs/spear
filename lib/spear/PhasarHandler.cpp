@@ -148,10 +148,20 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
       if (latticeElementExists) {
         auto ResMap = FeasibilityResult->resultsAt(&I);
         for (auto entry : ResMap) {
-          //llvm::outs() << "Feasibility at instruction " << I << ": " << entry.second.kind << ", id: " << entry.second.formularID << "\n";
+          auto k = entry.second.getKind();
+          std::string kindStr = (k == Feasibility::FeasibilityElement::Kind::Top)
+                                ? "TOP"
+                                : (k == Feasibility::FeasibilityElement::Kind::Bottom)
+                                      ? "BOTTOM"
+                                      : "NORMAL";
+
+          llvm::outs() << "Feasibility at instruction " << I << ": " << kindStr << ", id: " << entry.second.getFormulaId() << "\n";
         }
       }
     }
+
+    llvm::outs() << "\n";
+
 
     const llvm::Instruction *terminator = BB.getTerminator();
     auto latticeElementExists = FeasibilityResult->containsNode(terminator);
@@ -161,14 +171,7 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
       if (ItZ != ResMap.end()) {
         const auto &L = ItZ->second;
         //llvm::outs() << "Feasibility at terminator of " << BBName << ": " << L.getKind() << "\n";
-        if (L.isTop()) {
-          Info.Feasible = true;
-        }
-
-        if (L.isNormal()) {
-          // In this case the feasibility depends on the underlying formular.
-          // Formulars that can be resolved to true or false, are already simplified to Top or Bottom by the edge
-          // functions, so we can assume that Normal means "don't know, depends on formular".
+        if (L.isBottom()) {
           Info.Feasible = true;
         }
       }

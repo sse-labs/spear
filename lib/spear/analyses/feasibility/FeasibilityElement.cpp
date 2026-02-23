@@ -61,52 +61,6 @@ FeasibilityAnalysisManager::FeasibilityAnalysisManager(
   EnvRoots.push_back(nullptr);
 }
 
-// ============================================================================
-// Stable EF identity
-// ============================================================================
-
-FeasibilityAnalysisManager::EFStableId
-FeasibilityAnalysisManager::efStableId(const EF &F) const {
-  /*static std::atomic<uint64_t> dbg{0};
-  auto n = ++dbg;
-  if ((n % 10000) == 0) {
-    llvm::errs() << "[FDBG] efStableId calls=" << n
-                 << " nextId=" << NextEFStableId.load()
-                 << " mapSize=" << EFIdIntern.size() << "\n";
-  }*/
-
-  // fixed ids for canonical singletons (these must be truly canonical)
-  if (F.template isa<psr::EdgeIdentity<l_t>>()) return 1;
-  if (F.template isa<FeasibilityAllTopEF>())    return 2;
-  if (F.template isa<FeasibilityAllBottomEF>()) return 3;
-
-  // Use *concrete object address* as identity where possible.
-  const void *semantic = nullptr;
-
-  // Concrete Feasibility EFs:
-  if (auto *p = F.template dyn_cast<FeasibilityPHITranslateEF>())      semantic = p;
-  else if (auto *p = F.template dyn_cast<FeasibilityAddConstrainEF>()) semantic = p;
-  else if (auto *p = F.template dyn_cast<FeasibilityANDFormulaEF>())   semantic = p;
-  else if (auto *p = F.template dyn_cast<FeasibilityORFormulaEF>())    semantic = p;
-  else if (auto *p = F.template dyn_cast<FeasibilityComposeEF>())      semantic = p;
-  else if (auto *p = F.template dyn_cast<FeasibilityJoinEF>())         semantic = p;
-
-  // psr builtins beyond EdgeIdentity:
-  else if (auto *p = F.template dyn_cast<psr::AllTop<l_t>>())          semantic = p;
-  else if (auto *p = F.template dyn_cast<psr::AllBottom<l_t>>())       semantic = p;
-
-  // Fallback: wrapper identity (only if truly unknown).
-  if (!semantic)
-    semantic = F.getOpaqueValue();
-
-  std::lock_guard<std::mutex> L(EFIdInternMu);
-  auto it = EFIdIntern.find(semantic);
-  if (it != EFIdIntern.end()) return it->second;
-
-  EFStableId id = NextEFStableId.fetch_add(1, std::memory_order_relaxed);
-  EFIdIntern.emplace(semantic, id);
-  return id;
-}
 
 // ============================================================================
 // Formula creation / simplification (unchanged)
@@ -151,34 +105,6 @@ uint32_t FeasibilityAnalysisManager::mkAnd(uint32_t aId, uint32_t bId) {
   return id;
 }
 
-uint32_t FeasibilityAnalysisManager::mkOr(uint32_t aId, uint32_t bId) {
-  if (aId == FeasibilityElement::topId || bId == FeasibilityElement::topId)
-    return FeasibilityElement::topId;
-  if (aId == FeasibilityElement::bottomId)
-    return bId;
-  if (bId == FeasibilityElement::bottomId)
-    return aId;
-  if (aId == bId)
-    return aId;
-
-  if (aId > bId)
-    std::swap(aId, bId);
-
-  auto a = getExpression(aId);
-  auto b = getExpression(bId);
-
-  z3::expr res = mkOrSimplified(a, b);
-
-  if (auto pid = findFormulaId(res))
-    return *pid;
-
-  Formulas.push_back(res);
-  uint32_t id = (uint32_t)Formulas.size() - 1;
-  FormularsToId.emplace(res, id);
-  SatCache.push_back(SatTri::Unknown);
-  return id;
-}
-
 bool FeasibilityAnalysisManager::isBoolTrue(const z3::expr &e) {
   return e.is_true();
 }
@@ -189,20 +115,10 @@ bool FeasibilityAnalysisManager::isBoolFalse(const z3::expr &e) {
 bool FeasibilityAnalysisManager::isNotExpr(const z3::expr &e) {
   return e.is_app() && e.decl().decl_kind() == Z3_OP_NOT && e.num_args() == 1;
 }
-bool FeasibilityAnalysisManager::isNotOf(const z3::expr &a,
-                                         const z3::expr &b) {
+bool FeasibilityAnalysisManager::isNotOf(const z3::expr &a, const z3::expr &b) {
   return isNotExpr(a) && Z3_is_eq_ast(a.ctx(), a.arg(0), b);
 }
 
-void FeasibilityAnalysisManager::collectOrArgs(const z3::expr &e,
-                                               std::vector<z3::expr> &out) {
-  if (e.is_app() && e.decl().decl_kind() == Z3_OP_OR) {
-    for (unsigned i = 0; i < e.num_args(); ++i)
-      collectOrArgs(e.arg(i), out);
-  } else {
-    out.push_back(e);
-  }
-}
 
 void FeasibilityAnalysisManager::collectAndArgs(const z3::expr &e,
                                                 std::vector<z3::expr> &out) {
@@ -214,15 +130,6 @@ void FeasibilityAnalysisManager::collectAndArgs(const z3::expr &e,
   }
 }
 
-z3::expr FeasibilityAnalysisManager::mkNaryOr(
-    z3::context &ctx, const std::vector<z3::expr> &v) {
-  std::vector<Z3_ast> asts;
-  asts.reserve(v.size());
-  for (auto &e : v)
-    asts.push_back(e);
-  return z3::expr(ctx, Z3_mk_or(ctx, (unsigned)asts.size(), asts.data()));
-}
-
 z3::expr FeasibilityAnalysisManager::mkNaryAnd(
     z3::context &ctx, const std::vector<z3::expr> &v) {
   std::vector<Z3_ast> asts;
@@ -230,63 +137,6 @@ z3::expr FeasibilityAnalysisManager::mkNaryAnd(
   for (auto &e : v)
     asts.push_back(e);
   return z3::expr(ctx, Z3_mk_and(ctx, (unsigned)asts.size(), asts.data()));
-}
-
-z3::expr FeasibilityAnalysisManager::mkOrSimplified(const z3::expr &a,
-                                                    const z3::expr &b) {
-  z3::context &ctx = a.ctx();
-
-  std::vector<z3::expr> args;
-  args.reserve(8);
-  collectOrArgs(a, args);
-  collectOrArgs(b, args);
-
-  std::unordered_set<z3::expr, Z3ExprHash, Z3ExprEq> seen;
-  seen.reserve(args.size());
-
-  std::unordered_set<z3::expr, Z3ExprHash, Z3ExprEq> pos, neg;
-  pos.reserve(args.size());
-  neg.reserve(args.size());
-
-  std::vector<z3::expr> uniq;
-  uniq.reserve(args.size());
-
-  for (auto &x : args) {
-    if (isBoolTrue(x))
-      return ctx.bool_val(true);
-    if (isBoolFalse(x))
-      continue;
-
-    if (isNotExpr(x)) {
-      z3::expr base = x.arg(0);
-      if (pos.find(base) != pos.end())
-        return ctx.bool_val(true);
-      neg.insert(base);
-    } else {
-      if (neg.find(x) != neg.end())
-        return ctx.bool_val(true);
-      pos.insert(x);
-    }
-
-    if (seen.insert(x).second)
-      uniq.push_back(x);
-  }
-
-  if (uniq.empty())
-    return ctx.bool_val(false);
-  if (uniq.size() == 1)
-    return uniq[0];
-
-  std::sort(uniq.begin(), uniq.end(),
-            [](const z3::expr &lhs, const z3::expr &rhs) {
-              auto hl = Z3_get_ast_hash(lhs.ctx(), lhs);
-              auto hr = Z3_get_ast_hash(rhs.ctx(), rhs);
-              if (hl != hr) return hl < hr;
-              if (Z3_is_eq_ast(lhs.ctx(), lhs, rhs)) return false;
-              return Z3_ast(lhs) < Z3_ast(rhs);
-            });
-
-  return mkNaryOr(ctx, uniq);
 }
 
 z3::expr FeasibilityAnalysisManager::mkAndSimplified(const z3::expr &a,
@@ -414,71 +264,6 @@ bool FeasibilityAnalysisManager::isSat(uint32_t id) {
   return sat;
 }
 
-// ============================================================================
-// Join / Compose canonicalization helpers
-// ============================================================================
-
-void FeasibilityAnalysisManager::collectJoinOps(const EF &E,
-                                                llvm::SmallVectorImpl<EF> &out) const {
-  if (auto *J = E.template dyn_cast<FeasibilityJoinEF>()) {
-    collectJoinOps(J->Left, out);
-    collectJoinOps(J->Right, out);
-    return;
-  }
-  out.push_back(E);
-}
-
-// ✅ FIXED: compute stable ids ONCE, then sort+dedup by those ids.
-// This removes the efStableId() explosion from sort comparators.
-void FeasibilityAnalysisManager::normalizeJoinOps(llvm::SmallVectorImpl<EF> &ops) const {
-  bool hasTop = false;
-
-  llvm::SmallVector<EF, 16> tmp;
-  tmp.reserve(ops.size());
-
-  for (auto &E : ops) {
-    if (E.template isa<FeasibilityAllBottomEF>() ||
-        E.template isa<psr::AllBottom<l_t>>()) {
-      continue;
-    }
-    if (E.template isa<FeasibilityAllTopEF>() ||
-        E.template isa<psr::AllTop<l_t>>()) {
-      hasTop = true;
-      break;
-    }
-    tmp.push_back(E);
-  }
-
-  ops.clear();
-  if (hasTop) {
-    ops.push_back(AllTopEF);
-    return;
-  }
-  if (tmp.empty()) {
-    ops.push_back(AllBottomEF);
-    return;
-  }
-
-  llvm::SmallVector<std::pair<EFStableId, EF>, 16> tagged;
-  tagged.reserve(tmp.size());
-  for (auto &E : tmp)
-    tagged.emplace_back(efStableId(E), E);
-
-  llvm::sort(tagged, [](const auto &a, const auto &b) {
-    return a.first < b.first;
-  });
-
-  tagged.erase(std::unique(tagged.begin(), tagged.end(),
-                           [](const auto &a, const auto &b) {
-                             return a.first == b.first;
-                           }),
-               tagged.end());
-
-  ops.reserve(tagged.size());
-  for (auto &p : tagged)
-    ops.push_back(p.second);
-}
-
 void FeasibilityAnalysisManager::collectComposeChainLeft(
     const EF &E, llvm::SmallVectorImpl<EF> &out) const {
   if (auto *C = E.template dyn_cast<FeasibilityComposeEF>()) {
@@ -555,132 +340,6 @@ FeasibilityAnalysisManager::internComposeById(EFStableId aId, const EF &A,
   }
 }
 
-FeasibilityAnalysisManager::EF
-FeasibilityAnalysisManager::internComposeOpaque(EFStableId aId, const EF &A,
-                                                EFStableId bId, const EF &B) {
-  static std::atomic<uint64_t> dbg{0};
-  uint64_t n = ++dbg;
-  if (n % 10000 == 0) {
-    llvm::errs() << "[FDBG] ComposeIntern hits=" << ComposeInternHits
-                 << " miss=" << ComposeInternMiss
-                 << " size=" << ComposeIntern.size() << "\n";
-  }
-  return internComposeById(aId, A, bId, B);
-}
-
-FeasibilityAnalysisManager::EF
-FeasibilityAnalysisManager::internCompose(const EF &A0, const EF &B0) {
-  // Fast paths
-  if (A0.template isa<psr::EdgeIdentity<l_t>>()) return B0;
-  if (B0.template isa<psr::EdgeIdentity<l_t>>()) return A0;
-  if (A0.template isa<FeasibilityAllBottomEF>()) return A0;
-  if (B0.template isa<FeasibilityAllBottomEF>()) return B0;
-  if (A0.template isa<FeasibilityAllTopEF>()) return A0;
-  if (B0.template isa<FeasibilityAllTopEF>()) return B0;
-
-  // Canonicalize: right-associate + remove identities + reuse singletons
-  llvm::SmallVector<EF, 16> chain;
-  chain.reserve(8);
-
-  llvm::SmallVector<EF, 16> left;
-  collectComposeChainLeft(A0, left);
-
-  for (auto &E : left) chain.push_back(E);
-  chain.push_back(B0);
-
-  normalizeComposeChain(chain);
-
-  if (chain.size() == 1) return chain[0];
-
-  // ✅ FIXED: keep accId so we don't call efStableId(acc) multiple times per step.
-  EF acc = chain.back();
-  EFStableId accId = efStableId(acc);
-
-  for (int i = (int)chain.size() - 2; i >= 0; --i) {
-    const EF &A = chain[i];
-    const EFStableId aId = efStableId(A);
-    acc = internComposeById(aId, A, accId, acc);
-    accId = efStableId(acc); // one call per fold step
-  }
-
-  return acc;
-}
-
-// ============================================================================
-// Interning: Join (n-ary cache keyed by stable ids)
-// ============================================================================
-
-FeasibilityAnalysisManager::EF
-FeasibilityAnalysisManager::buildBalancedJoinTree(const llvm::SmallVectorImpl<EF> &ops,
-                                                  size_t lo, size_t hi) const {
-  if (hi - lo == 1) return ops[lo];
-  size_t mid = lo + (hi - lo) / 2;
-  EF L = buildBalancedJoinTree(ops, lo, mid);
-  EF R = buildBalancedJoinTree(ops, mid, hi);
-  return EF(std::in_place_type<FeasibilityJoinEF>,
-            const_cast<FeasibilityAnalysisManager *>(this), L, R);
-}
-
-FeasibilityAnalysisManager::EF
-FeasibilityAnalysisManager::internJoinOpaque(EFStableId /*aId*/, const EF &A,
-                                             EFStableId /*bId*/, const EF &B) {
-  static std::atomic<uint64_t> dbg{0};
-  uint64_t n = ++dbg;
-  if (n % 1000 == 0) {
-    llvm::errs() << "[FDBG] JoinIntern hits=" << JoinInternHits
-                 << " miss=" << JoinInternMiss
-                 << " inserts=" << JoinInternInserts
-                 << " size=" << JoinInternNary.size() << "\n";
-  }
-  // Join is fully canonicalized n-ary in internJoin()
-  return internJoin(A, B);
-}
-
-FeasibilityAnalysisManager::EF
-FeasibilityAnalysisManager::internJoin(const EF &A0, const EF &B0) {
-  // absorbers / neutrals
-  if (A0.template isa<FeasibilityAllTopEF>())    return A0;
-  if (B0.template isa<FeasibilityAllTopEF>())    return B0;
-  if (A0.template isa<FeasibilityAllBottomEF>()) return B0;
-  if (B0.template isa<FeasibilityAllBottomEF>()) return A0;
-
-  llvm::SmallVector<EF, 16> ops;
-  ops.reserve(8);
-
-  collectJoinOps(A0, ops);
-  collectJoinOps(B0, ops);
-
-  // ✅ FIXED: normalize without comparator-calling efStableId
-  normalizeJoinOps(ops);
-
-  if (ops.size() == 1)
-    return ops[0];
-
-  // Build EFVecKey from stable ids (one efStableId call per operand).
-  EFVecKey key;
-  key.ids.reserve(ops.size());
-  for (const EF &x : ops)
-    key.ids.push_back(efStableId(x));
-
-  // n-ary cache lookup
-  {
-    std::lock_guard<std::mutex> L(JoinInternMu);
-    if (auto it = JoinInternNary.find(key); it != JoinInternNary.end()) {
-      ++JoinInternHits;
-      return it->second;
-    }
-  }
-  ++JoinInternMiss;
-
-  EF acc = buildBalancedJoinTree(ops, 0, ops.size());
-
-  {
-    std::lock_guard<std::mutex> L(JoinInternMu);
-    auto [it, inserted] = JoinInternNary.emplace(std::move(key), acc);
-    if (inserted) ++JoinInternInserts;
-    return it->second;
-  }
-}
 
 // ============================================================================
 // Environments (unchanged)
@@ -820,19 +479,6 @@ uint32_t FeasibilityAnalysisManager::applyPhiPack(uint32_t inEnvId,
   }
 }
 
-FeasibilityAnalysisManager::EFStableId
-FeasibilityAnalysisManager::efStableIdFromOpaque(const void *opaque) const {
-  if (!opaque) return 0;
-
-  std::lock_guard<std::mutex> L(EFIdInternMu);
-  auto it = EFIdIntern.find(opaque);
-  if (it != EFIdIntern.end()) return it->second;
-
-  EFStableId id = NextEFStableId.fetch_add(1, std::memory_order_relaxed);
-  EFIdIntern.emplace(opaque, id);
-  return id;
-}
-
 // ===================== FeasibilityElement =====================
 
 FeasibilityElement
@@ -842,29 +488,45 @@ FeasibilityElement::createElement(FeasibilityAnalysisManager *man,
   return FeasibilityElement(type, formulaId, man, envId);
 }
 
-FeasibilityElement FeasibilityElement::join(FeasibilityElement &other) const {
-  if (this->isBottom()) return *this;
-  if (other.isBottom()) return other;
-  if (this->isTop()) return other;
-  if (other.isTop()) return *this;
+FeasibilityElement FeasibilityElement::join(FeasibilityElement &Other) const {
+  // New semantics:
+  //   Top    = UNREACHED
+  //   Bottom = REACHED baseline
+  //   Normal = REACHED with info
+  const bool thisUnreached  = this->isTop();
+  const bool otherUnreached = Other.isTop();
 
-  uint32_t newPC = manager->mkOr(this->formularID, other.formularID);
+  // Unreached only if BOTH are unreached.
+  if (thisUnreached && otherUnreached) {
+    return FeasibilityElement::createElement(getManager(),
+                                             FeasibilityElement::topId,
+                                             Kind::Top,
+                                             /*envId=*/0);
+  }
 
-  // env join must be finite-height, otherwise loops can diverge
-  uint32_t newEnv = (this->envId == other.envId) ? this->envId : 0;
-
-  return FeasibilityElement(Kind::Normal, newPC, manager, newEnv);
+  // Otherwise: reached (baseline reset)
+  return FeasibilityElement::createElement(getManager(),
+                                           FeasibilityElement::topId, // PC=true baseline
+                                           Kind::Bottom,
+                                           /*envId=*/0);
 }
 
 std::string FeasibilityElement::toString() const {
-  if (kind == Kind::Bottom) return "⊥";
-  if (kind == Kind::Top) return "⊤";
-  auto formula = this->manager->getExpression(this->formularID);
-  std::string s;
-  llvm::raw_string_ostream rso(s);
-  rso << formula.to_string();
-  rso.flush();
-  return s;
+  switch (kind) {
+    case Kind::Top:
+      return "UNREACHED";
+    case Kind::Bottom:
+      return "REACHED"; // baseline reached
+    case Kind::Normal: {
+      auto formula = manager->getExpression(formularID);
+      std::string s;
+      llvm::raw_string_ostream rso(s);
+      rso << "REACHED(pc=" << formularID << ", env=" << envId << "): " << formula.to_string();
+      rso.flush();
+      return s;
+    }
+  }
+  return "?";
 }
 
 std::ostream &operator<<(std::ostream &os,

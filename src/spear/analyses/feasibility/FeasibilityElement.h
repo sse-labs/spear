@@ -119,9 +119,6 @@ public:
   const EF &allTopEF() const noexcept { return AllTopEF; }
   const EF &allBottomEF() const noexcept { return AllBottomEF; }
 
-  // ===== stable EF ids =====
-  EFStableId efStableId(const EF &F) const;
-
   struct EnvNode {
     const EnvNode *parent;
     const llvm::Value *key;
@@ -222,7 +219,6 @@ public:
   std::optional<uint32_t> findFormulaId(const z3::expr &expr) const;
 
   uint32_t mkAnd(uint32_t aId, uint32_t bId);
-  uint32_t mkOr(uint32_t aId, uint32_t bId);
   uint32_t mkNot(z3::expr a);
   uint32_t mkAtomic(z3::expr a);
 
@@ -231,16 +227,11 @@ public:
   bool isNotExpr(const z3::expr &e);
   bool isNotOf(const z3::expr &a, const z3::expr &b);
 
-  void collectOrArgs(const z3::expr &e, std::vector<z3::expr> &out);
   void collectAndArgs(const z3::expr &e, std::vector<z3::expr> &out);
 
-  z3::expr mkNaryOr(z3::context &ctx, const std::vector<z3::expr> &v);
   z3::expr mkNaryAnd(z3::context &ctx, const std::vector<z3::expr> &v);
 
-  z3::expr mkOrSimplified(const z3::expr &a, const z3::expr &b);
   z3::expr mkAndSimplified(const z3::expr &a, const z3::expr &b);
-
-  EFStableId efStableIdFromOpaque(const void *opaque) const;
 
   // SAT depends ONLY on formula id.
   bool isSat(uint32_t id);
@@ -249,27 +240,13 @@ public:
   bool hasEnv(uint32_t id) const;
 
   const llvm::Value *lookupEnv(uint32_t envId, const llvm::Value *k) const;
-  const llvm::Value *lookupBinding(uint32_t envId,
-                                   const llvm::Value *key) const;
+  const llvm::Value *lookupBinding(uint32_t envId, const llvm::Value *key) const;
 
   const llvm::Value *resolve(uint32_t envId, const llvm::Value *v);
 
-  uint32_t extendEnv(uint32_t baseEnvId, const llvm::Value *k,
-                     const llvm::Value *v);
+  uint32_t extendEnv(uint32_t baseEnvId, const llvm::Value *k, const llvm::Value *v);
 
-  uint32_t applyPhiPack(uint32_t inEnvId, const llvm::BasicBlock *pred,
-                        const llvm::BasicBlock *succ);
-
-  // ---------- interning ----------
-  // General entry points used by edge-function implementations:
-  EF internCompose(const EF &A, const EF &B);
-  EF internJoin(const EF &A, const EF &B);
-
-  // Opaque fast-paths: caller already computed stable ids.
-  EF internComposeOpaque(EFStableId aId, const EF &A,
-                         EFStableId bId, const EF &B);
-  EF internJoinOpaque(EFStableId aId, const EF &A,
-                      EFStableId bId, const EF &B);
+  uint32_t applyPhiPack(uint32_t inEnvId, const llvm::BasicBlock *pred, const llvm::BasicBlock *succ);
 
   z3::expr simplify(z3::expr input);
 
@@ -283,7 +260,6 @@ public:
 
   std::deque<EnvNode> EnvPool;
   std::vector<const EnvNode *> EnvRoots;
-
   std::unordered_map<EnvKey, uint32_t, EnvKeyHash> EnvIntern;
 
   std::unordered_map<PhiKey, uint32_t, PhiKeyHash> PhiCache;
@@ -298,24 +274,13 @@ public:
   uint64_t ResolveCacheMiss = 0;
   uint64_t ResolveCacheInserts = 0;
 
-  // ===== stable id interning (opaque pointer -> stable id) =====
-  mutable std::unordered_map<const void *, EFStableId> EFIdIntern;
-  mutable std::mutex EFIdInternMu;
-  mutable std::atomic<EFStableId> NextEFStableId{10}; // reserve 0..9
-
   // ===== compose/join interning =====
   std::unordered_map<EFPairKey, EF, EFPairHash> ComposeIntern;
-  std::unordered_map<EFVecKey, EF, EFVecKeyHash> JoinInternNary;
   mutable std::mutex ComposeInternMu;
-  mutable std::mutex JoinInternMu;
 
   uint64_t ComposeInternHits = 0;
   uint64_t ComposeInternMiss = 0;
   uint64_t ComposeInternInserts = 0;
-
-  uint64_t JoinInternHits = 0;
-  uint64_t JoinInternMiss = 0;
-  uint64_t JoinInternInserts = 0;
 
   z3::solver Solver;
 
@@ -325,18 +290,11 @@ private:
   EF AllTopEF;
   EF AllBottomEF;
 
-  // ===== helpers for join/compose canonicalization =====
-  void collectJoinOps(const EF &E, llvm::SmallVectorImpl<EF> &out) const;
-  void normalizeJoinOps(llvm::SmallVectorImpl<EF> &ops) const;
 
   void collectComposeChainLeft(const EF &E, llvm::SmallVectorImpl<EF> &out) const;
   void normalizeComposeChain(llvm::SmallVectorImpl<EF> &chain) const;
 
-  EF internComposeById(EFStableId aId, const EF &A,
-                       EFStableId bId, const EF &B);
-
-  EF buildBalancedJoinTree(const llvm::SmallVectorImpl<EF> &ops,
-                           size_t lo, size_t hi) const;
+  EF internComposeById(EFStableId aId, const EF &A, EFStableId bId, const EF &B);
 };
 
 std::string toString(const std::optional<FeasibilityElement> &E);

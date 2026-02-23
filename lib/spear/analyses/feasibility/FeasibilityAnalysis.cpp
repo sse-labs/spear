@@ -102,8 +102,9 @@ FeasibilityAnalysis::initialSeeds() {
     // Kind = Top
     l_t init = l_t::createElement(
         this->manager.get(),
-        l_t::topId,
-        l_t::Kind::Top, 0);
+        l_t::topId,          // pc = true baseline
+        l_t::Kind::Bottom,   // REACHED baseline (yes, Bottom kind now means “reached”)
+    0);
 
     for (n_t SP : ICFG->getStartPointsOf(Main)) {
         Seeds.addSeed(SP, Zero, init);
@@ -135,14 +136,10 @@ psr::EdgeFunction<FeasibilityAnalysis::l_t> FeasibilityAnalysis::allTopFunction(
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {
-    // Path-condition domain with join = OR.
-    // Top  := true  (least restrictive)  -> absorbing for OR
-    // Bottom := false (infeasible)       -> identity for OR
-
-    if (Lhs.isBottom() || Rhs.isBottom()) return bottomElement();
-    if (Lhs.isTop()) return Rhs;
-    if (Rhs.isTop()) return Lhs;
-    return Lhs.join(Rhs); // mkOr
+    llvm::errs() << "[FDBG] VALUE.join U1=" << (Lhs.isTop()?"T":"F")
+             << " U2=" << (Rhs.isTop()?"T":"F")
+             << " -> " << ((Lhs.isTop() && Rhs.isTop())?"T":"F") << "\n";
+    return Lhs.join(Rhs);
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType
