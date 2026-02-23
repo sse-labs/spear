@@ -252,7 +252,7 @@ FeasibilityAnalysis::EdgeFunctionType FeasibilityAnalysis::getNormalEdgeFunction
                 // If we can shortcut, i.e the constant condition is not
                 // satisfied on this edge, we return bottom, as the path condition on this edge is false.
                 if (!edgeTaken) {
-                    return EF(std::in_place_type<FeasibilityAllBottomEF>);
+                    return EF(std::in_place_type<FeasibilityAllTopEF>);
                 }
 
                 // Check if we encountered a phi. If not just return identity
