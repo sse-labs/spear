@@ -10,6 +10,7 @@
 #include <llvm/IR/Type.h>
 
 #include "analyses/feasibility/FeasibilityAnalysis.h"
+#include "analyses/feasibility/FeasibilityAnalysisManager.h"
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
 
 namespace Feasibility {
@@ -247,6 +248,25 @@ bool Util::setSat(std::vector<z3::expr> set, z3::context *ctx) {
         solver.add(atom);
     }
     return solver.check() == z3::sat;
+}
+
+
+FeasibilityAnalysisManager *Util::pickManager(FeasibilityAnalysisManager *M, const l_t &source) {
+    if (source.getManager())
+        return source.getManager();
+    return M;
+}
+
+bool Util::isIdEF(const EF &ef) noexcept {
+    return ef.template isa<psr::EdgeIdentity<l_t>>();
+}
+
+bool Util::isAllTopEF(const EF &ef) noexcept {
+    return ef.template isa<psr::AllTop<l_t>>();
+}
+
+bool Util::isAllBottomEF(const EF &ef) noexcept {
+    return ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>();
 }
 
 } // namespace Feasibility::Util

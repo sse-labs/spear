@@ -1,17 +1,8 @@
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
 
+#include "analyses/feasibility/FeasibilityAnalysisManager.h"
+
 namespace Feasibility {
-
-// ============================================================================
-// Helpers (no caching; "make it exist first")
-// ============================================================================
-
-static inline FeasibilityAnalysisManager *pickManager(FeasibilityAnalysisManager *M,
-                                                      const l_t &source) {
-  if (source.getManager())
-    return source.getManager();
-  return M;
-}
 
 template <typename T, unsigned N>
 static llvm::SmallVector<T, N> concatDedup(const llvm::SmallVector<T, N> &A,
@@ -89,10 +80,10 @@ EF FeasibilityAllBottomEF::join(psr::EdgeFunctionRef<FeasibilityAllBottomEF>,
 // ============================================================================
 
 bool FeasibilityAddAtomsEF::operator==(const FeasibilityAddAtomsEF &o) const noexcept {
-  if (Atoms.size() != o.Atoms.size())
+  if (atoms.size() != o.atoms.size())
     return false;
-  for (size_t i = 0; i < Atoms.size(); ++i) {
-    if (!(Atoms[i] == o.Atoms[i]))
+  for (size_t i = 0; i < atoms.size(); ++i) {
+    if (!(atoms[i] == o.atoms[i]))
       return false;
   }
   return true;
@@ -107,20 +98,20 @@ l_t FeasibilityAddAtomsEF::computeTarget(const l_t &source) const {
   if (source.isBottom())
     return source;
 
-  auto *M = pickManager(manager, source);
+  auto *M = Util::pickManager(manager, source);
   if (!M) return source;
 
   uint32_t env = source.getEnvId();
   uint32_t pc  = source.getFormulaId();
 
-  for (const auto &A : Atoms) {
-    if (!A.I) continue;
+  for (const auto &A : atoms) {
+    if (!A.icmp) continue;
 
     if (A.PredBB && A.SuccBB)
-      env = M->applyPhiPack(env, A.PredBB, A.SuccBB);
+      env = manager->applyPhiPack(env, A.PredBB, A.SuccBB);
 
-    z3::expr atom = Util::createConstraintFromICmp(M, A.I, A.TrueEdge, env);
-    pc = M->addAtom(pc, atom);
+    z3::expr atom = Util::createConstraintFromICmp(M, A.icmp, A.TrueEdge, env);
+    pc = manager->addAtom(pc, atom);
   }
 
   if (pc == l_t::topId)
@@ -132,15 +123,15 @@ l_t FeasibilityAddAtomsEF::computeTarget(const l_t &source) const {
 EF FeasibilityAddAtomsEF::compose(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisFunc,
                                   const EF &secondFunction) {
   // this ∘ g: apply g first, then apply this
-  if (isIdEF(secondFunction))
+  if (Util::isIdEF(secondFunction))
     return EF(thisFunc);
 
-  if (isAllBottomEF(secondFunction))
+  if (Util::isAllBottomEF(secondFunction))
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
 
   // AddAtoms ∘ AddAtoms = AddAtoms(concat atoms)
   if (auto *g = secondFunction.template dyn_cast<FeasibilityAddAtomsEF>()) {
-    auto merged = concatDedup<LazyAtom, 4>(g->Atoms, thisFunc->Atoms);
+    auto merged = concatDedup<LazyAtom, 4>(g->atoms, thisFunc->atoms);
     if (merged.empty())
       return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
     return EF(std::in_place_type<FeasibilityAddAtomsEF>, thisFunc->manager, std::move(merged));
@@ -158,15 +149,15 @@ EF FeasibilityAddAtomsEF::join(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisF
 
   // Join with Identity:
   // (add A) ⊔ (id) guarantees nothing in common => Identity
-  if (isIdEF(B))
+  if (Util::isIdEF(B))
     return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
 
-  if (isAllBottomEF(B))
+  if (Util::isAllBottomEF(B))
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
 
   // AddAtoms ⊔ AddAtoms = AddAtoms(intersection of atoms)
   if (auto *g = otherFunc.template dyn_cast<FeasibilityAddAtomsEF>()) {
-    auto inter = intersectVec<LazyAtom, 4>(thisFunc->Atoms, g->Atoms);
+    auto inter = intersectVec<LazyAtom, 4>(thisFunc->atoms, g->atoms);
     if (inter.empty())
       return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
     return EF(std::in_place_type<FeasibilityAddAtomsEF>, thisFunc->manager, std::move(inter));

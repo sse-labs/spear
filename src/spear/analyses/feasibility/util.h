@@ -5,6 +5,7 @@
 
 #ifndef SPEAR_UTIL_H
 #define SPEAR_UTIL_H
+
 #include <atomic>
 
 #include "FeasibilityAnalysis.h"
@@ -15,8 +16,11 @@
 
 namespace Feasibility {
 
+using l_t = FeasibilityElement;
+using EF  = psr::EdgeFunction<l_t>;
+
 class Util {
- public:
+public:
 
     /**
      * DEBUG HELPER: Dump the current state of the analysis
@@ -28,7 +32,8 @@ class Util {
      * @param analysis LoopBoundIDEAnalysis to dump from
      * @param fact Fact to dump
      */
-    static void dumpFact(Feasibility::FeasibilityAnalysis *analysis, FeasibilityDomain::d_t fact);
+    static void dumpFact(Feasibility::FeasibilityAnalysis *analysis,
+                         FeasibilityDomain::d_t fact);
 
     /**
      * Dump Instruction
@@ -48,87 +53,74 @@ class Util {
      */
     static void dumpEFKind(const Feasibility::FeasibilityAnalysis::EdgeFunctionType &E);
 
-
     /*
-     * Z3 helper functions to create formulas from LLVM values, e.g., to create a formula representing the value
-     * of a variable at a certain program point. These are used in the edge functions to create the constraints that
-     * we add to the path condition.
+     * Z3 helper functions to create formulas from LLVM values, e.g., to create a formula representing
+     * the value of a variable at a certain program point. These are used in the edge functions to
+     * create the constraints that we add to the path condition.
      */
 
     /**
-     * Create a fresh bitvector variable for a given LLVM value. This is used to represent the value of a variable at
-     * a certain program point, when we do not have a concrete value for it
+     * Create a fresh bitvector variable for a given LLVM value. This is used to represent the value
+     * of a variable at a certain program point when we do not have a concrete value for it
      * (e.g., because it is derived from a load instruction).
-     * @param key
-     * @param bitwidth
-     * @param prefix
-     * @param context
-     * @return
      */
-    static z3::expr createFreshBitVal(const llvm::Value *key, unsigned bitwidth, const char *prefix, z3::context *context);
+    static z3::expr createFreshBitVal(const llvm::Value *key,
+                                      unsigned bitwidth,
+                                      const char *prefix,
+                                      z3::context *context);
 
     /**
-     * Create a z3 expression representing the value of a given LLVM value. This is used to create constraints from LLVM values.
-     * If the value is a constant, we create a formula representing the constant value. If the value is not a constant, we create a fresh variable for it.
-     * @param V LLVM value to create a formula for
-     * @param context Z3 context to create the formula in
-     * @return An optional z3 expression representing the value of the given LLVM value. The optional is empty if we cannot create a formula for the given value (e.g., if it is of an unsupported type).
+     * Create a z3 expression representing the value of a given LLVM value.
+     * If the value is a constant, we create a formula representing the constant value.
+     * If the value is not a constant, we create a fresh variable for it.
      */
-    static std::optional<z3::expr> createBitVal(const llvm::Value *V, z3::context *context);
+    static std::optional<z3::expr> createBitVal(const llvm::Value *V,
+                                               z3::context *context);
 
     /**
-     * Create a z3 expression representing the value of a given LLVM value, if it is an integer constant. This is used to create constraints from LLVM values.
-     * If the value is a constant integer, we create a formula representing the constant value. If the value is not a constant integer, we return an empty optional.
-     * @param val LLVM value to create a formula for
-     * @param context Z3 context to create the formula in
-     * @return An optional z3 expression representing the value of the given LLVM value if it is an integer constant, or an empty optional otherwise.
+     * Create a z3 expression representing the value of a given LLVM value if it is an integer
+     * constant.
      */
-    static std::optional<z3::expr> createIntVal(const llvm::Value *val, z3::context *context);
+    static std::optional<z3::expr> createIntVal(const llvm::Value *val,
+                                               z3::context *context);
 
     /**
-     * Create a z3 expression representing the value of a given LLVM value, if it is a pointer constant. This is used to create constraints from LLVM values.
-     * If the value is a constant pointer, we create a formula representing the constant value. If the value is not a constant pointer, we return an empty optional.
-     * @param val LLVM value to create a formula for
-     * @param context Z3 context to create the formula in
-     * @return An optional z3 expression representing the value of the given LLVM value if it is a constant pointer, or an empty optional otherwise.
+     * Create a symbolic bitvector for the given LLVM value.
      */
-    static z3::expr mkSymBV(const llvm::Value *val, unsigned bitwidth, const char *prefix, z3::context *Ctx);
+    static z3::expr mkSymBV(const llvm::Value *val,
+                            unsigned bitwidth,
+                            const char *prefix,
+                            z3::context *Ctx);
 
     /**
-     * Find the given formula in the manager and return its ID, or create a new entry for it if it does not exist yet.
-     * This is used to manage the formulas that we create from LLVM values and constraints, and to avoid creating
-     * duplicate formulas for the same constraint.
-     * @param manager
-     * @param formula
-     * @return
+     * Create a new z3 expression from the given ICmp instruction representing the constraint
+     * imposed on the path condition.
      */
-    static uint32_t findOrAddFormulaId(FeasibilityAnalysisManager *manager, z3::expr formula);
+    static z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager,
+                                             const llvm::ICmpInst *ICmp,
+                                             bool areWeInTheTrueBranch,
+                                             uint32_t envId);
 
     /**
-     * Create a new z3 expression from the given ICmp instruction,
-     * representing the constraint that the ICmp instruction imposes on the path condition.
-     * This is used in the edge functions to create the constraints that we add to the path condition
-     * when we encounter a branch instruction with an ICmp condition.
-     * @param ICmp
-     * @param areWeInTheTrueBranch
-     * @return
-     */
-    static z3::expr createConstraintFromICmp(FeasibilityAnalysisManager *manager, const llvm::ICmpInst* ICmp, bool areWeInTheTrueBranch, uint32_t envId);
-
-    /**
-     * Check if the given block starts with a phinode
-     * @param block
-     * @return
+     * Check if the given block starts with a PHI node.
      */
     static bool blockStartsWithPhi(const llvm::BasicBlock *block);
 
-    static void uniqAppend(llvm::SmallVector<uint32_t, 4> &out, uint32_t id);
 
-    static bool isRealPred(const llvm::BasicBlock *Pred, const llvm::BasicBlock *Succ);
+    static bool isRealPred(const llvm::BasicBlock *Pred,
+                           const llvm::BasicBlock *Succ);
 
     static bool setSat(std::vector<z3::expr> set, z3::context *ctx);
+
+    static bool isIdEF(const EF &ef) noexcept;
+
+    static bool isAllTopEF(const EF &ef) noexcept;
+
+    static bool isAllBottomEF(const EF &ef) noexcept;
+
+    static FeasibilityAnalysisManager *pickManager(FeasibilityAnalysisManager *M, const l_t &source);
 };
 
-}
+} // namespace Feasibility
 
-#endif //SPEAR_UTIL_H
+#endif // SPEAR_UTIL_H

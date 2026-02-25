@@ -15,7 +15,13 @@
 
 namespace Feasibility {
 
-using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *, const llvm::Value *, Feasibility::FeasibilityElement>;
+/**
+ * Resulttype of the analysis, which is a mapping from instructions to their corresponding feasibility elements.
+ */
+using ResultsTy = psr::OwningSolverResults<
+    const llvm::Instruction *,
+    const llvm::Value *,
+    Feasibility::FeasibilityElement>;
 
 /**
  * FeasibilityWrapper class
@@ -35,11 +41,15 @@ public:
                        llvm::FunctionAnalysisManager *analysisManager);
 
     /**
-     * Return the internal list of LoopClassifier objects
-     * @return
+     * Return the resulting formular per instruction information.
+     * @return A unique pointer to the results of the analysis,
+     * which is a mapping from instructions to their corresponding feasibility elements.
      */
-    std::unique_ptr<ResultsTy> getResults() const;
+    [[nodiscard]] std::unique_ptr<ResultsTy> getResults() const;
 
+    /**
+     * Internal shared pointer to the used analysis problem instance
+     */
     std::shared_ptr<Feasibility::FeasibilityAnalysis> problem;
 
 private:
