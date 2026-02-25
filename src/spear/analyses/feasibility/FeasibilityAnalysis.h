@@ -6,8 +6,8 @@
 #ifndef SPEAR_FEASIBILITYANALYSIS_H
 #define SPEAR_FEASIBILITYANALYSIS_H
 
-#include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>   // must come early
-#include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>          // also must be complete
+#include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>
+#include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
 #include <phasar/PhasarLLVM/Domain/LLVMAnalysisDomain.h>
 
 #include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>

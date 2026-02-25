@@ -21,6 +21,7 @@ namespace Feasibility {
  * The linking between the nodes represents the nesting of environments as phi nodes also might be nested.
  */
 class EnvNode {
+public:
     /**
      * Possible previous node, representing the parent environment. nullptr if this is the root node.
      */

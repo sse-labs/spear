@@ -121,7 +121,7 @@ FeasibilityAnalysis::l_t FeasibilityAnalysis::topElement() {
 
 FeasibilityElement FeasibilityAnalysis::bottomElement() {
     // Create a new Feasibility element with bottom properties
-    return FeasibilityElement::createElement(this->manager.get(), FeasibilityElement::bottomId, FeasibilityElement::Kind::Bottom);
+    return FeasibilityElement::createElement(this->manager.get(), FeasibilityElement::topId, FeasibilityElement::Kind::Bottom);
 }
 
 FeasibilityElement FeasibilityAnalysis::emptyElement() {

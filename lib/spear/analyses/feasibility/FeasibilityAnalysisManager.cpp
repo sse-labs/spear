@@ -20,12 +20,6 @@ FeasibilityAnalysisManager::FeasibilityAnalysisManager(
   // Sets[1] keep empty as placeholder; Bottom is represented by Kind::Bottom.
 }
 
-const FeasibilityAnalysisManager::ExprSet &
-FeasibilityAnalysisManager::getSet(uint32_t id) const {
-  // Caller must ensure id is valid.
-  return Sets.at(id);
-}
-
 std::vector<z3::expr> FeasibilityAnalysisManager::getPureSet(uint32_t id) const {
   if (id >= Sets.size())
     return {};  // or throw std::out_of_range("invalid set id");
@@ -46,12 +40,14 @@ std::size_t FeasibilityAnalysisManager::hashSet(const ExprSet &S) {
 }
 
 uint32_t FeasibilityAnalysisManager::internSet(const ExprSet &S) {
-  if (S.empty()) return FeasibilityElement::topId;
+  if (S.empty()) {
+    return FeasibilityElement::topId;
+  }
 
   const std::size_t h = hashSet(S);
 
   std::lock_guard<std::mutex> lock(SetsMutex);
-  auto &bucket = InternBuckets[h];
+  auto &bucket = SetsCache[h];
 
   // Check existing candidates for equality to avoid hash collision issues.
   for (uint32_t cand : bucket) {
@@ -73,7 +69,7 @@ uint32_t FeasibilityAnalysisManager::addAtom(uint32_t baseId,
     return baseId;
   }
 
-  ExprSet S = getSet(baseId); // copy
+  ExprSet S = getSet(baseId);
   S.insert(atom);
   return internSet(S);
 }
@@ -88,7 +84,7 @@ uint32_t FeasibilityAnalysisManager::intersect(uint32_t aId, uint32_t bId) {
 
   ExprSet Out;
   std::set_intersection(A.begin(), A.end(), B.begin(), B.end(),
-                        std::inserter(Out, Out.begin()), ExprLess{});
+                        std::inserter(Out, Out.begin()), ExpressionComperator{});
 
   return internSet(Out);
 }
@@ -99,8 +95,8 @@ std::optional<uint32_t> FeasibilityAnalysisManager::findSingletonId(const z3::ex
   const std::size_t h = hashSet(S);
 
   std::lock_guard<std::mutex> lock(SetsMutex);
-  auto it = InternBuckets.find(h);
-  if (it == InternBuckets.end()) return std::nullopt;
+  auto it = SetsCache.find(h);
+  if (it == SetsCache.end()) return std::nullopt;
 
   for (uint32_t cand : it->second) {
     auto set = getSet(cand);
@@ -118,10 +114,14 @@ bool FeasibilityAnalysisManager::hasEnv(uint32_t id) const noexcept {
   return id < EnvRoots.size();
 }
 
-const llvm::Value *FeasibilityAnalysisManager::lookupEnv(
-    uint32_t envId, const llvm::Value *k) const {
-  if (!k) return nullptr;
-  if (envId == 0 || envId >= EnvRoots.size()) return nullptr;
+const llvm::Value *FeasibilityAnalysisManager::lookupEnv(uint32_t envId, const llvm::Value *k) const {
+  if (!k) {
+    return nullptr;
+  }
+
+  if (envId == 0 || envId >= EnvRoots.size()) {
+    return nullptr;
+  }
 
   for (auto *n = EnvRoots[envId]; n; n = n->parent) {
     if (n->key == k)
@@ -160,7 +160,7 @@ uint32_t FeasibilityAnalysisManager::extendEnv(uint32_t baseEnvId,
   EnvKey ek{baseEnvId, k, v};
 
   std::lock_guard<std::mutex> L(EnvInternMu);
-  if (auto it = EnvIntern.find(ek); it != EnvIntern.end()) {
+  if (auto it = EnvCache.find(ek); it != EnvCache.end()) {
     return it->second;
   }
 
@@ -168,7 +168,7 @@ uint32_t FeasibilityAnalysisManager::extendEnv(uint32_t baseEnvId,
   EnvRoots.push_back(&EnvPool.back());
   const uint32_t newId = static_cast<uint32_t>(EnvRoots.size() - 1);
 
-  EnvIntern.emplace(ek, newId);
+  EnvCache.emplace(ek, newId);
   return newId;
 }
 
