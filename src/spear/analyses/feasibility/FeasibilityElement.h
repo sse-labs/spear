@@ -28,12 +28,11 @@ namespace Feasibility {
 // Forward declaration
 class FeasibilityAnalysisManager;
 
-// ============================================================================
-// ICMP and phi aware propagation atom
-//
-// Each LazyAtom carries the CFG edge (Pred->Succ) whose PHIs must be applied
-// before evaluating the ICmp atom.
-// ============================================================================
+/**
+* ICMP and phi aware propagation atom
+  * Each LazyAtom carries the CFG edge (Pred->Succ) whose PHIs must be applied
+  * before evaluating the ICmp atom.
+  */
 struct LazyAtom {
   /**
    * Previous block the atom is coming from
