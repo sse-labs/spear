@@ -75,9 +75,7 @@ FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM,
                                         const psr::LLVMBasedICFG *ICFG)
     : base_t(IRDB, {"main"},
     std::optional<d_t>(static_cast<d_t>(psr::LLVMZeroValue::getInstance()))) {
-    // Currently we don't use other analyses, therefore we do not need the function analysis manager
-    (void)FAM;
-
+    
     manager = std::make_unique<FeasibilityAnalysisManager>(std::make_unique<z3::context>());
     this->ICFG = ICFG;
 }

@@ -43,7 +43,7 @@ PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   auto &FAM = AM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*mod).getManager();
 
-  runAnalysis(&FAM);
+  runAnalysis(M, &FAM);
 
   return PreservedAnalyses::all();
 }
@@ -66,7 +66,7 @@ void PhasarHandlerPass::runOnModule(llvm::Module &M) {
   run(M, MAM);
 }
 
-void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
+void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManager *FAM) {
   //loopboundwrapper = make_unique<LoopBound::LoopBoundWrapper>(HA, FAM);
   feasibilitywrapper = make_unique<Feasibility::FeasibilityWrapper>(HA, FAM);
 

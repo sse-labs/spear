@@ -125,7 +125,7 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
     std::vector<std::string> Entrypoints;
 
     // Internal: construct analysis problem and run PhASAR solver.
-    void runAnalysis(llvm::FunctionAnalysisManager *FAM);
+    void runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManager *FAM);
 
     static std::string blockName(const llvm::BasicBlock &BB);
     static const llvm::Instruction *pickQueryInst(const llvm::BasicBlock &BB);
