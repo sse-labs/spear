@@ -8,6 +8,7 @@
 
 #include <deque>
 #include <set>
+#include <llvm/ADT/SmallPtrSet.h>
 
 #include "FeasibilityElement.h"
 #include "FeasibilityEnvironment.h"
@@ -211,6 +212,19 @@ private:
      * or nullptr if no binding is found.
      */
     const llvm::Value *lookupEnv(uint32_t envId, const llvm::Value *key) const;
+
+    /**
+     * Fold the given value in the environment represented by envId to find the most concrete value corresponding to it.
+     * This method iterates over the environment to find the root value corresponding to val, and then tries to fold
+     * it if possible to get a more concrete value.
+     * @param val Value to fold in the environment.
+     * @param envId Environment ID representing the environment in which to fold the value.
+     * @param Visiting Visiting set to avoid infinite recursion on cyclic graphs.
+     * This is a set of LLVM values that are currently being visited during the folding process.
+     * @return Folded llvm::Value corresponding to the given value in the environment represented by envId,
+     * or the original value if no more concrete value can be found.
+     */
+    const llvm::Value *fold(const llvm::Value *val, uint32_t envId, llvm::SmallPtrSet<const llvm::Value*, 32> &Visiting) const;
 
     /**
      * Helper method to make sure that the empty environment (envId 0) is initialized in the environment storage.

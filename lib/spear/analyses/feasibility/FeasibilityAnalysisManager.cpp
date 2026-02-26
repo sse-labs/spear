@@ -4,6 +4,10 @@
 
 #include "analyses/feasibility/FeasibilityAnalysisManager.h"
 
+#include <llvm/ADT/SmallPtrSet.h>
+#include <llvm/Analysis/ConstantFolding.h>
+#include <llvm/IR/Module.h>
+
 namespace Feasibility {
 
 FeasibilityAnalysisManager::FeasibilityAnalysisManager(std::unique_ptr<z3::context> ctx)
@@ -137,32 +141,121 @@ const llvm::Value *FeasibilityAnalysisManager::lookupEnv(uint32_t envId, const l
   return nullptr;
 }
 
-const llvm::Value *FeasibilityAnalysisManager::resolve(uint32_t envId, const llvm::Value *val) const {
-  // If no value is given, we cannot resolve anything, so we return nullptr immediately.
+const llvm::Value* FeasibilityAnalysisManager::fold(const llvm::Value *val, uint32_t envId, llvm::SmallPtrSet<const llvm::Value*, 32> &Visiting) const {
+  // If the value is null, we cannot fold it, so we return nullptr immediately.
   if (!val) {
+    return nullptr;
+  }
+
+  // Insert this node to the visiting set to avoid infinite recursion on cyclic graphs.
+  // If we have already visited this node, we return it as is without folding.
+  if (!Visiting.insert(val).second) {
+    // If we cycle back to a value we've already seen, we stop folding to avoid infinite recursion on cyclic graphs.
     return val;
   }
 
-  // If envId is out of bounds, we return the original value to indicate that no resolution could be performed.
-  // This also handles the case of envId 0, which represents the empty environment with no bindings,
-  // so we return the original value in this case as well.
-  if (envId == 0 || envId >= EnvRoots.size()) {
-    return val;
+  const llvm::Value *localVal = val;
+
+  // If we are in a non-empty environment, we first try to resolve the value in the environment to get a more
+  // concrete value before we attempt to fold it.
+  if (envId != 0 && envId < EnvRoots.size()) {
+    while (true) {
+      const llvm::Value *next = lookupEnv(envId, localVal);
+      if (!next || next == localVal) break;
+      localVal = next;
+    }
   }
 
-  // One-step resolution is usually enough for PHI substitution, but we do a
-  // small fixed-point to handle chains safely (a -> b -> c).
-  const llvm::Value *cur = val;
+  // If the value is a constant, abort recursion and return constant value
+  if (llvm::isa<llvm::Constant>(localVal)) {
+    return localVal;
+  }
 
-  while (true) {
-    const llvm::Value *next = lookupEnv(envId, cur);
+  // Fold cast instructions
+  if (auto *CI = llvm::dyn_cast<llvm::CastInst>(localVal)) {
+    // Fold first operand
+    const llvm::Value *OpV = fold(CI->getOperand(0), envId, Visiting);
 
-    if (!next || next == cur) {
-      return cur;
+    // Check if the first operand becomes a constant after folding, if so we can try to fold the cast
+    // instruction itself.
+    if (auto *COp = llvm::dyn_cast_or_null<llvm::Constant>(const_cast<llvm::Value*>(OpV))) {
+      // Get the data layout from the module to be able to fold the cast instruction.
+      // If we do not have a module, we cannot fold the cast instruction.
+      // The module should exist if the cast instruction is valid, so this should not be an issue in practice.
+      if (const llvm::Module *M = CI->getModule()) {
+        const llvm::DataLayout &DL = M->getDataLayout();
+
+        // Constant fold the cast instruction with the folded operand.
+        // If folding is successful, we return the folded constant.
+        if (llvm::Constant *Folded = llvm::ConstantFoldCastOperand(CI->getOpcode(), COp, CI->getType(), DL)) {
+          return Folded;
+        }
+      }
     }
 
-    cur = next;
+    // cant fold
+    return localVal;
   }
+
+  // Fold binary operators
+  if (auto *BO = llvm::dyn_cast<llvm::BinaryOperator>(localVal)) {
+    // Fold each operand of the binary operator recursively to get more concrete values for the operands before we
+    // attempt to fold the binary operator itself.
+    const llvm::Value *left = fold(BO->getOperand(0), envId, Visiting);
+    const llvm::Value *right = fold(BO->getOperand(1), envId, Visiting);
+
+    // Cast the folded operands to constants if possible, as llvm::ConstantFoldBinaryOpOperands requires constant
+    // operands to fold the binary operator.
+    auto *castedLeft = llvm::dyn_cast_or_null<llvm::Constant>(const_cast<llvm::Value*>(left));
+    auto *castedRight = llvm::dyn_cast_or_null<llvm::Constant>(const_cast<llvm::Value*>(right));
+
+    // Check that both operands become constants after folding, if so we can try to fold the binary operator itself.
+    if (castedLeft && castedRight) {
+      // Again check for the existence of the module to get the data layout for folding,
+      // as the binary operator should be valid if we have a valid module.
+      if (const llvm::Module *M = BO->getModule()) {
+        const llvm::DataLayout &DL = M->getDataLayout();
+
+        // Fold the constants with the binary operator. If folding is successful, we return the folded constant.
+        if (llvm::Constant *Folded = llvm::ConstantFoldBinaryOpOperands(BO->getOpcode(),
+                                                                    castedLeft,
+                                                                    castedRight,
+                                                                    DL)) {
+          return Folded;
+        }
+      }
+    }
+
+    // cant fold
+    return localVal;
+  }
+
+  return localVal;
+}
+
+const llvm::Value *FeasibilityAnalysisManager::resolve(uint32_t envId, const llvm::Value *val) const {
+  // If we have no value what should we do
+  if (!val) {
+    return nullptr;
+  }
+
+  // Iterate over the environment chain to find the most concrete value for val in the given environment.
+  const llvm::Value *cur = val;
+  if (envId != 0 && envId < EnvRoots.size()) {
+    while (true) {
+      const llvm::Value *next = lookupEnv(envId, cur);
+      if (!next || next == cur) break;
+      cur = next;
+    }
+  }
+
+  llvm::SmallPtrSet<const llvm::Value*, 32> Visiting;
+
+  // After we found the root of the binding chain for val in the given environment,
+  // we try to fold it if possible to get a more concrete value.
+  auto folded = fold(cur, envId, Visiting);
+
+  return folded;
 }
 
 uint32_t FeasibilityAnalysisManager::extendEnv(uint32_t baseEnvId, const llvm::Value *key, const llvm::Value *val) {
