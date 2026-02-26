@@ -3,50 +3,49 @@
  * All rights reserved.
  */
 
-#include "analyses/feasibility/FeasibilityWrapper.h"
-
 #include <phasar/DataFlow/IfdsIde/Solver/IDESolver.h>
-#include <phasar/DataFlow/Mono/Solver/IntraMonoSolver.h>
-#include <phasar/PhasarLLVM/TypeHierarchy/DIBasedTypeHierarchy.h>
-#include "phasar/Pointer/AliasInfo.h"
-#include "phasar/PhasarLLVM/Pointer/LLVMAliasSet.h"
 #include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>
 #include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
-#include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>
 #include <llvm/Support/raw_ostream.h>
 
-
+#include "analyses/feasibility/FeasibilityWrapper.h"
 #include "analyses/feasibility/FeasibilityAnalysis.h"
 #include "analyses/feasibility/util.h"
 
 Feasibility::FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
                                                     llvm::FunctionAnalysisManager *analysisManager) {
+
+    // Make sure that the helper analyses are available.
     if (!helperAnalyses) {
-        return; // Missing helper analyses
+        return;
     }
-    this->FAM = analysisManager; // Store analysis manager
 
-    llvm::Module *module = helperAnalyses->getProjectIRDB().getModule(); // Project module
+    this->FAM = analysisManager;
+
+    // Get the module under analysis
+    llvm::Module *module = helperAnalyses->getProjectIRDB().getModule();
     if (!module) {
-        llvm::errs() << "[LB] module not found\n";
-        return; // Abort if module is missing
+        llvm::errs() << Util::debugtag << "module not found\n";
+        return;
     }
 
+    // Get the IRDB and ICFG from the helper analyses, which are needed to set up the analysis problem.
     auto &IRDB = helperAnalyses->getProjectIRDB();
     auto &interproceduralCFG = helperAnalyses->getICFG(); // Interprocedural CFG
-    auto &PTImpl = helperAnalyses->getAliasInfo();
-    psr::AliasInfoRef<const llvm::Value *, const llvm::Instruction *> PT(&PTImpl);
 
-    this->problem = std::make_shared<Feasibility::FeasibilityAnalysis>(Feasibility::FeasibilityAnalysis(analysisManager, &IRDB, &interproceduralCFG));
+    // Create a new instance of the feasibility analysis problem, which will be solved by the IDE solver.
+    this->problem = std::make_shared<FeasibilityAnalysis>(FeasibilityAnalysis(analysisManager, &IRDB, &interproceduralCFG));
 
-    if (F_DEBUG_ENABLED) {
+    if (Util::F_DebugEnabled) {
         llvm::errs() << F_TAG << " Starting IDESolver.solve()\n";
     }
 
+    // Solve the analysis problem using the IDE solver and store the results in the cachedResults member variable.
     auto analysisResult = psr::solveIDEProblem(*this->problem.get(), interproceduralCFG);
+    // Query the result of the analysis
     this->cachedResults = std::make_unique<ResultsTy>(std::move(analysisResult));
 
-    if (F_DEBUG_ENABLED) {
+    if (Util::F_DebugEnabled) {
         llvm::errs() << F_TAG << " Finished IDESolver.solve()\n";
     }
 }

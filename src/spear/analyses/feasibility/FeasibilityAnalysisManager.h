@@ -6,6 +6,9 @@
 #ifndef SPEAR_FEASIBILITYANALYSISMANAGER_H
 #define SPEAR_FEASIBILITYANALYSISMANAGER_H
 
+#include <deque>
+#include <set>
+
 #include "FeasibilityElement.h"
 #include "FeasibilityEnvironment.h"
 
@@ -59,7 +62,7 @@ public:
      * Get the Z3 context used by this manager. This is needed for creating and manipulating Z3 expressions.
      * @return Const reference to the Z3 context used by this manager.
      */
-    const z3::context &getContext() const {
+     z3::context &getContext() {
         return *Context;
     }
 

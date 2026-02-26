@@ -6,18 +6,17 @@
 #ifndef SPEAR_FEASIBILITYANALYSIS_H
 #define SPEAR_FEASIBILITYANALYSIS_H
 
-#include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>
-#include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
-#include <phasar/PhasarLLVM/Domain/LLVMAnalysisDomain.h>
-
-#include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>
-#include <phasar/DataFlow/IfdsIde/FlowFunctions.h>
 #include "analyses/feasibility/FeasibilityAnalysisManager.h"
 
 #include <llvm/Analysis/LoopInfo.h>
 
 #include "FeasibilityElement.h"
 
+#include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>
+#include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
+#include <phasar/PhasarLLVM/Domain/LLVMAnalysisDomain.h>
+#include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>
+#include <phasar/DataFlow/IfdsIde/FlowFunctions.h>
 #include <memory>
 
 
@@ -50,11 +49,23 @@ public:
     using FlowFunctionPtrType = typename base_t::FlowFunctionPtrType;
     using EdgeFunctionType = psr::EdgeFunction<l_t>;
 
-    // New implementation uses a state store (owns z3::context and persistent state).
-    std::unique_ptr<FeasibilityAnalysisManager> manager;
+    /**
+     * Analysis constructor, initializes the manager and sets up the analysis with the provided components.
+     * @param FAM Helper component to access llvm analyses.
+     * @param IRDB LLVM IR database, providing access to the LLVM IR of the program being analyzed.
+     * @param ICFG Interprocedural control flow graph,
+     * providing the structure of the program's control flow across function boundaries.
+     */
+    explicit FeasibilityAnalysis(
+        llvm::FunctionAnalysisManager *FAM,
+        const psr::LLVMProjectIRDB *IRDB,
+        const psr::LLVMBasedICFG *ICFG);
 
-    explicit FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, const psr::LLVMBasedICFG *ICFG);
-
+    /**
+     * Method to check if a given fact is the zero value of the analysis.
+     * @param Fact Fact to check for being the zero value.
+     * @return true if the fact is the zero value, false otherwise.
+     */
     bool isZeroValue(d_t Fact) const noexcept override;
 
     /**
@@ -74,20 +85,62 @@ public:
     EdgeFunctionType getNormalEdgeFunction(n_t Curr, d_t CurrNode, n_t Succ, d_t SuccNode) override;
 
 private:
-    [[nodiscard]] psr::InitialSeeds<n_t, d_t, l_t> initialSeeds() override;
+    /**
+     * Manager component of the analysis, responsible for managing the state of the analysis, including
+     * the storage of formulas (as sets of atomic formulas) and environments (variable bindings).
+     * Implemented as unique pointer to ensure proper ownership and lifetime management,
+     * as the manager is shared across all elements of the lattice.
+     */
+    std::unique_ptr<FeasibilityAnalysisManager> manager;
 
-    [[nodiscard]] d_t zeroValue() const;
-
-    l_t topElement() override;
-
-    l_t bottomElement() override;
-
-    l_t emptyElement();
-
-    l_t join(l_t Lhs, l_t Rhs) override;
-
+    /**
+     * Internal reference to the interprocedural control flow graph (ICFG) of the program being analyzed.
+     */
     const psr::LLVMBasedICFG *ICFG = nullptr;
 
+    /**
+     * Generates the initial seeds for the analysis, which are the starting points for the data flow analysis.
+     * @return Set of initial seeds, where each seed is a pair of a node and a set of facts.
+     */
+    [[nodiscard]] psr::InitialSeeds<n_t, d_t, l_t> initialSeeds() override;
+
+    /**
+     * Generate a new zero value for the analysis.
+     * @return Returns a zero value
+     */
+    [[nodiscard]] d_t zeroValue() const;
+
+    /**
+     * Generate a top lattice element
+     * @return Returns a top element
+     */
+    l_t topElement() override;
+
+    /**
+     * Generate a bottom lattice element
+     * @return Returns a bottom element
+     */
+    l_t bottomElement() override;
+
+    /**
+     * Generate an empty lattice element
+     * @return Returns an empty element
+     */
+    l_t emptyElement();
+
+    /**
+     * Join function of the analysis. Calculates the join of two lattice elements.
+     * The join is delegated to the lattice elements themselves.
+     * @param Lhs Left-hand side element to join
+     * @param Rhs Right-hand side element to join
+     * @return Joined lattice element
+     */
+    l_t join(l_t Lhs, l_t Rhs) override;
+
+    /**
+     * Returns an edge function that maps any input to the top element of the lattice.
+     * @return Returns phasars internal all top function, which maps any input to the top element of the lattice.
+     */
     psr::EdgeFunction<l_t> allTopFunction() override;
 
     /**
@@ -182,4 +235,3 @@ private:
 } // namespace Feasibility
 
 #endif //SPEAR_FEASIBILITYANALYSIS_H
-

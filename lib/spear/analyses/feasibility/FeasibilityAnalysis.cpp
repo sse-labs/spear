@@ -70,8 +70,9 @@ public:
 };
 
 
-FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB,
-                                         const psr::LLVMBasedICFG *ICFG)
+FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM,
+                                        const psr::LLVMProjectIRDB *IRDB,
+                                        const psr::LLVMBasedICFG *ICFG)
     : base_t(IRDB, {"main"},
     std::optional<d_t>(static_cast<d_t>(psr::LLVMZeroValue::getInstance()))) {
     // Currently we don't use other analyses, therefore we do not need the function analysis manager
@@ -115,22 +116,26 @@ bool FeasibilityAnalysis::isZeroValue(d_t Fact) const noexcept{
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::topElement() {
-    // Create a new Feasibility element with top properties
-    return FeasibilityElement::createElement(this->manager.get(), FeasibilityElement::topId, FeasibilityElement::Kind::Top);
+    // Create a new Feasibility element with empty properties
+    return emptyElement();
 }
 
 FeasibilityElement FeasibilityAnalysis::bottomElement() {
     // Create a new Feasibility element with bottom properties
-    return FeasibilityElement::createElement(this->manager.get(), FeasibilityElement::topId, FeasibilityElement::Kind::Bottom);
+    return FeasibilityElement::createElement(this->manager.get(),
+                                    FeasibilityElement::topId,
+                                            FeasibilityElement::Kind::Bottom);
 }
 
 FeasibilityElement FeasibilityAnalysis::emptyElement() {
     // Create a new Feasibility element with empty properties
-    return FeasibilityElement::createElement(this->manager.get(), FeasibilityElement::topId, FeasibilityElement::Kind::Empty);
+    return FeasibilityElement::createElement(this->manager.get(),
+                                    FeasibilityElement::topId,
+                                            FeasibilityElement::Kind::Empty);
 }
 
 psr::EdgeFunction<l_t> FeasibilityAnalysis::allTopFunction() {
-    return psr::AllTop<l_t>{};
+    return psr::AllTop<l_t>{emptyElement()};
 }
 
 FeasibilityAnalysis::l_t FeasibilityAnalysis::join(l_t Lhs, l_t Rhs) {

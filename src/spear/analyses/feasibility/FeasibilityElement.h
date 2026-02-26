@@ -6,19 +6,12 @@
 #ifndef SPEAR_FEASIBILITYELEMENT_H
 #define SPEAR_FEASIBILITYELEMENT_H
 
-#include <cstdint>
-#include <deque>
 #include <optional>
-#include <set>
 #include <string>
-#include <unordered_map>
-#include <vector>
-#include <mutex>
 
 #include <llvm/Support/raw_ostream.h>
 #include <z3++.h>
 #include <llvm/IR/Instructions.h>
-#include <llvm/IR/Value.h>
 
 #include <phasar/DataFlow/IfdsIde/EdgeFunction.h>
 
@@ -96,14 +89,14 @@ public:
    * Type enum for the kind of element.
    * Top represents the trivially true set, Bottom represents an error state, Normal represents a
    * specific set of atomic formulas, and Empty represents an explicitly empty set.
-   * - Top represent the empty set where no constrains apply, i.e., the formula is trivially true.
    * - Bottom represents an error state, which is not represented by a formula set but directly by the Kind::Bottom.
    * - Normal represents a specific set of atomic formulas, which is represented by a formula ID that can be looked up
    * in the manager's formula storage.
    * - Empty represents an explicitly empty set of formulas, which is represented with a different kind to distinguish
+   * it realizes the top element in our lattice
    * it from the trivially true set. Used for initialization.
    */
-  enum class Kind : uint8_t { Top = 0, Bottom = 1, Normal = 2, Empty = 3 };
+  enum class Kind : uint8_t { Bottom = 1, Normal = 2, Empty = 3 };
 
   /**
    * Id of the trivially true set (Top), which is represented by the empty set of formulas.
@@ -122,7 +115,7 @@ public:
    * Dummy constructor to create a default Top element.
    * The actual initialization should be done through the createElement factory method.
    */
-  FeasibilityElement() noexcept : kind(Kind::Top), formularID(topId), manager(nullptr), envId(0) {}
+  FeasibilityElement() noexcept : kind(Kind::Empty), formularID(topId), manager(nullptr), envId(0) {}
 
   /**
    * Create a new FeasibilityElement with the given manager, formula ID, kind, and environment ID.
@@ -141,7 +134,7 @@ public:
    * @return true if the element is Top, false otherwise
    */
   bool isTop() const noexcept {
-    return kind == Kind::Top;
+    return kind == Kind::Empty;
   }
 
   /**
@@ -284,7 +277,7 @@ private:
    * Default is Top, which represents the empty set of formulas (i.e., true).
    *
    */
-  Kind kind{Kind::Top};
+  Kind kind{Kind::Empty};
 
   /**
    * Formula ID representing the set of atomic formulas this element corresponds to.

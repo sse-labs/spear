@@ -193,7 +193,7 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
         // If it does, we check the kind of the lattice element. If it's not bottom, the block is feasible.
         const auto &entry = it->second;
 
-        const auto *Mgr = entry.getManager();
+        auto *Mgr = entry.getManager();
         uint32_t FId = entry.getFormulaId();
 
         std::vector<z3::expr> set = Mgr->getPureSet(FId);
@@ -204,7 +204,7 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
         if (ItSat != SatCache.end()) {
           isSat = ItSat->second;
         } else {
-          isSat = Feasibility::Util::setSat(set, Mgr->Context.get());
+          isSat = Feasibility::Util::setSat(set, &Mgr->getContext());
           SatCache.emplace(std::move(Sig), isSat);
         }
 
