@@ -6,6 +6,9 @@
 #include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>
 #include <phasar/PhasarLLVM/DataFlow/IfdsIde/LLVMZeroValue.h>
 
+#include <utility>
+#include <memory>
+
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
 #include "analyses/feasibility/FeasibilityAnalysis.h"
 
@@ -21,7 +24,7 @@ class DebugFlow final : public psr::FlowFunction<D, ContainerT> {
     Feasibility::FeasibilityAnalysis ::n_t Curr;
     Feasibility::FeasibilityAnalysis ::n_t Succ;
 
-public:
+ public:
     DebugFlow(std::shared_ptr<psr::FlowFunction<D, ContainerT>> Inner,
               const char *Name,
               Feasibility::FeasibilityAnalysis  *A,
@@ -38,21 +41,21 @@ public:
 
 template <typename D, typename ContainerT>
 class IdentityFlow final : public psr::FlowFunction<D, ContainerT> {
-public:
+ public:
     ContainerT computeTargets(D Src) override { return ContainerT{Src}; }
 };
 
 
 template <typename D, typename ContainerT>
 class KeepLocalOnCallToRet final : public psr::FlowFunction<D, ContainerT> {
-public:
+ public:
     ContainerT computeTargets(D Src) override { return ContainerT{Src}; }
 };
 
 
 template <typename D, typename ContainerT>
 class EmptyFlow final : public psr::FlowFunction<D, ContainerT> {
-public:
+ public:
     ContainerT computeTargets(D) override { return ContainerT{}; }
 };
 
@@ -60,7 +63,7 @@ public:
 template <typename D, typename ContainerT>
 class ZeroOnlyFlow final : public psr::FlowFunction<D, ContainerT> {
     Feasibility::FeasibilityAnalysis *A;
-public:
+ public:
     explicit ZeroOnlyFlow(Feasibility::FeasibilityAnalysis *A) : A(A) {}
     ContainerT computeTargets(D Src) override {
         return A->isZeroValue(static_cast<Feasibility::FeasibilityAnalysis::d_t>(Src))
@@ -75,7 +78,6 @@ FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM,
                                         const psr::LLVMBasedICFG *ICFG)
     : base_t(IRDB, {"main"},
     std::optional<d_t>(static_cast<d_t>(psr::LLVMZeroValue::getInstance()))) {
-    
     manager = std::make_unique<FeasibilityAnalysisManager>(std::make_unique<z3::context>());
     this->ICFG = ICFG;
 }
@@ -109,7 +111,7 @@ FeasibilityAnalysis::d_t FeasibilityAnalysis::zeroValue() const {
     return static_cast<d_t>(psr::LLVMZeroValue::getInstance());
 }
 
-bool FeasibilityAnalysis::isZeroValue(d_t Fact) const noexcept{
+bool FeasibilityAnalysis::isZeroValue(d_t Fact) const noexcept {
     return base_t::isZeroValue(Fact);
 }
 

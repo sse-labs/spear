@@ -3,12 +3,12 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_UTIL_H
-#define SPEAR_UTIL_H
+#ifndef SRC_SPEAR_ANALYSES_FEASIBILITY_UTIL_H_
+#define SRC_SPEAR_ANALYSES_FEASIBILITY_UTIL_H_
+
+#include <string>
 
 #include "FeasibilityAnalysis.h"
-
-#define F_TAG "[FDBG]"
 
 namespace Feasibility {
 
@@ -22,7 +22,7 @@ using EF  = psr::EdgeFunction<l_t>;
  *
 */
 class Util {
-public:
+ public:
     static constexpr std::string debugtag = "[FDBG] ";
     static constexpr std::atomic<bool> F_DebugEnabled{false};
 
@@ -133,6 +133,6 @@ public:
     static FeasibilityAnalysisManager *pickManager(FeasibilityAnalysisManager *manager, const l_t &source);
 };
 
-} // namespace Feasibility
+}  // namespace Feasibility
 
-#endif // SPEAR_UTIL_H
+#endif  // SRC_SPEAR_ANALYSES_FEASIBILITY_UTIL_H_

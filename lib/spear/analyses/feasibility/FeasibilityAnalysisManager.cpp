@@ -1,12 +1,16 @@
-//
-// Created by mkrebs on 25.02.26.
-//
-
-#include "analyses/feasibility/FeasibilityAnalysisManager.h"
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+ */
 
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/IR/Module.h>
+
+#include <utility>
+#include <vector>
+
+#include "analyses/feasibility/FeasibilityAnalysisManager.h"
 
 namespace Feasibility {
 
@@ -141,7 +145,9 @@ const llvm::Value *FeasibilityAnalysisManager::lookupEnv(uint32_t envId, const l
   return nullptr;
 }
 
-const llvm::Value* FeasibilityAnalysisManager::fold(const llvm::Value *val, uint32_t envId, llvm::SmallPtrSet<const llvm::Value*, 32> &Visiting) const {
+const llvm::Value* FeasibilityAnalysisManager::fold(const llvm::Value *val,
+                                                    uint32_t envId,
+                                                    llvm::SmallPtrSet<const llvm::Value*, 32> &Visiting) const {
   // If the value is null, we cannot fold it, so we return nullptr immediately.
   if (!val) {
     return nullptr;
@@ -369,4 +375,4 @@ uint32_t FeasibilityAnalysisManager::applyPhiPack(uint32_t inEnvId,
   return env;
 }
 
-}
+}  // namespace Feasibility

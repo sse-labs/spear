@@ -9,6 +9,8 @@
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Type.h>
 
+#include <string>
+
 #include "analyses/feasibility/FeasibilityAnalysis.h"
 #include "analyses/feasibility/FeasibilityAnalysisManager.h"
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
@@ -96,7 +98,7 @@ void Util::dumpEF(const Feasibility::FeasibilityAnalysis::EdgeFunctionType &edge
 void Util::dumpEFKind(const EF &E) {
     llvm::errs() << "[EFKind=";
 
-   if (E.template isa<FeasibilityAllBottomEF>()) {
+    if (E.template isa<FeasibilityAllBottomEF>()) {
         llvm::errs() << "FeasibilityAllBottomEF";
     } else if (llvm::isa<psr::AllTop<FeasibilityAnalysis::l_t>>(E)) {
         llvm::errs() << "psr::AllTop";
@@ -104,9 +106,7 @@ void Util::dumpEFKind(const EF &E) {
         llvm::errs() << "psr::AllBottom";
     } else if (llvm::isa<psr::EdgeIdentity<FeasibilityAnalysis::l_t>>(E)) {
         llvm::errs() << "psr::EdgeIdentity";
-    }
-
-    else {
+    } else {
         llvm::errs() << "UNKNOWN";
     }
 
@@ -269,4 +269,4 @@ bool Util::isAllBottomEF(const EF &ef) noexcept {
     return ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>();
 }
 
-} // namespace Feasibility::Util
+}  // namespace Feasibility

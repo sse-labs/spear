@@ -3,6 +3,7 @@
  * All rights reserved.
  */
 
+#include <string>
 #include <sstream>
 
 #include "analyses/feasibility/FeasibilityAnalysisManager.h"
@@ -75,4 +76,4 @@ std::string toString(const std::optional<FeasibilityElement> &E) {
   return E->toString();
 }
 
-} // namespace Feasibility
+}  // namespace Feasibility

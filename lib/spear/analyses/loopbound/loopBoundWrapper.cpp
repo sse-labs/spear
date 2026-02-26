@@ -17,7 +17,6 @@
 #include "analyses/loopbound/LoopBound.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
 
-#include "analyses/feasibility/FeasibilityWrapper.h"
 #include "analyses/loopbound/util.h"
 
 LoopBound::LoopBoundWrapper::LoopBoundWrapper(
@@ -112,7 +111,7 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(
 
 std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(
     llvm::FunctionAnalysisManager *analysisManager, llvm::LoopInfo &loopInfo) {
-    (void)analysisManager; // may be null / unconfigured; don't depend on it here.
+    (void)analysisManager;  // may be null / unconfigured don't depend on it here.
 
     if (!this->isConstant && this->BaseLoad) {
         const llvm::Function *currentFunction = this->BaseLoad->getFunction();
@@ -269,8 +268,6 @@ void LoopBound::LoopBoundWrapper::printClassifiers() {
 std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::findLoopCheckExpr(
 const LoopBound::LoopParameterDescription &description,
 llvm::FunctionAnalysisManager *analysisManager, llvm::LoopInfo &loopInfo) {
-    (void)analysisManager; // do not depend on FAM registration here
-
     if (!description.loop || !description.icmp) return std::nullopt;  // Missing loop or compare
 
     const llvm::Value *leftOperand  = description.icmp->getOperand(0);  // Left operand

@@ -3,15 +3,20 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_FEASIBILITYANALYSISMANAGER_H
-#define SPEAR_FEASIBILITYANALYSISMANAGER_H
-
-#include <deque>
-#include <set>
-#include <llvm/ADT/SmallPtrSet.h>
+#ifndef SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYANALYSISMANAGER_H_
+#define SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYANALYSISMANAGER_H_
 
 #include "FeasibilityElement.h"
 #include "FeasibilityEnvironment.h"
+
+#include <llvm/ADT/SmallPtrSet.h>
+#include <phasar/DataFlow/IfdsIde/EdgeFunction.h>
+
+#include <deque>
+#include <set>
+#include <memory>
+#include <unordered_map>
+#include <vector>
 
 namespace Feasibility {
 
@@ -35,7 +40,7 @@ struct ExpressionComperator {
  * The manager also holds the Z3 context and solver used for formula manipulation and satisfiability checking.
  */
 class FeasibilityAnalysisManager {
-public:
+ public:
     using l_t = Feasibility::FeasibilityElement;
     using EF = psr::EdgeFunction<l_t>;
 
@@ -142,7 +147,7 @@ public:
      */
     std::vector<z3::expr> getPureSet(uint32_t id) const;
 
-private:
+ private:
     /**
      * Internal storage for the Z3 context used by this manager.
      */
@@ -224,7 +229,8 @@ private:
      * @return Folded llvm::Value corresponding to the given value in the environment represented by envId,
      * or the original value if no more concrete value can be found.
      */
-    const llvm::Value *fold(const llvm::Value *val, uint32_t envId, llvm::SmallPtrSet<const llvm::Value*, 32> &Visiting) const;
+    const llvm::Value *fold(const llvm::Value *val, uint32_t envId,
+        llvm::SmallPtrSet<const llvm::Value*, 32> &Visiting) const;
 
     /**
      * Helper method to make sure that the empty environment (envId 0) is initialized in the environment storage.
@@ -235,13 +241,14 @@ private:
 
     /**
     * Compute a hash value for the given set of atomic formulas. This is used for caching sets in the set cache map.
-    * The hash is computed based on the AST ids of the Z3 expressions in the set, as these uniquely identify the expressions.
+    * The hash is computed based on the AST ids of the Z3 expressions in the set, as these uniquely identify the
+    * expressions.
     * @param set Set of atomic formulas to hash, represented as a sorted set of Z3 expressions.
     * @return Hash value for the given set of atomic formulas.
     */
     static std::size_t hashSet(const ExprSet &set);
 };
 
-} // namespace Feasibility
+}  // namespace Feasibility
 
-#endif // SPEAR_FEASIBILITYANALYSISMANAGER_H
+#endif  // SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYANALYSISMANAGER_H_

@@ -3,17 +3,16 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_FEASIBILITYELEMENT_H
-#define SPEAR_FEASIBILITYELEMENT_H
+#ifndef SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYELEMENT_H_
+#define SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYELEMENT_H_
+
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/IR/Instructions.h>
+#include <z3++.h>
 
 #include <optional>
 #include <string>
 
-#include <llvm/Support/raw_ostream.h>
-#include <z3++.h>
-#include <llvm/IR/Instructions.h>
-
-#include <phasar/DataFlow/IfdsIde/EdgeFunction.h>
 
 namespace Feasibility {
 
@@ -84,7 +83,7 @@ struct LazyAtom {
  * It can be Top (representing the empty set, i.e., true), Bottom (error state), Normal (a specific formula), or Empty ().
  */
 class FeasibilityElement {
-public:
+ public:
   /**
    * Type enum for the kind of element.
    * Top represents the trivially true set, Bottom represents an error state, Normal represents a
@@ -260,7 +259,7 @@ public:
     return !(*this == other);
   }
 
-private:
+ private:
   /**
    * Private constructor for FeasibilityElement. This is used by the createElement factory method to create new
    * elements with specific properties.
@@ -273,7 +272,8 @@ private:
       : kind(kind), formularID(formularID), manager(manager), envId(envid) {}
 
   /**
-   * Kind of the element (Top, Bottom, Normal, Empty). This determines the general properties of the element in the lattice.
+   * Kind of the element (Top, Bottom, Normal, Empty). This determines the general properties of the element in the
+   * lattice.
    * Default is Top, which represents the empty set of formulas (i.e., true).
    *
    */
@@ -315,6 +315,6 @@ std::string toString(const std::optional<FeasibilityElement> &element);
  */
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const FeasibilityElement &element);
 
-} // namespace Feasibility
+}  // namespace Feasibility
 
-#endif // SPEAR_FEASIBILITYELEMENT_H
+#endif  // SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYELEMENT_H_

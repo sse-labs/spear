@@ -8,10 +8,11 @@
 
 #include <llvm/IR/PassManager.h>
 #include <phasar/PhasarLLVM/HelperAnalyses.h>
-#include <memory>
 #include <phasar/DataFlow/IfdsIde/SolverResults.h>
 
 #include "FeasibilityAnalysis.h"
+
+#include <memory>
 
 namespace Feasibility {
 
@@ -19,9 +20,9 @@ namespace Feasibility {
  * Resulttype of the analysis, which is a mapping from instructions to their corresponding feasibility elements.
  */
 using ResultsTy = psr::OwningSolverResults<
-    const llvm::Instruction *,
-    const llvm::Value *,
-    Feasibility::FeasibilityElement>;
+const llvm::Instruction *,
+const llvm::Value *,
+Feasibility::FeasibilityElement>;
 
 /**
  * FeasibilityWrapper class
@@ -30,7 +31,7 @@ using ResultsTy = psr::OwningSolverResults<
  * querying.
  */
 class FeasibilityWrapper {
-public:
+ public:
     /**
      * FeasibiltyWrapper constructor. That creates a new wrapper that executes the feasibility analysis
      * and stores the results for later querying.
@@ -52,7 +53,7 @@ public:
      */
     std::shared_ptr<Feasibility::FeasibilityAnalysis> problem;
 
-private:
+ private:
     // Internal storage of the analysis results calculated by phasar
     std::unique_ptr<ResultsTy> cachedResults;
 
@@ -61,6 +62,6 @@ private:
     llvm::FunctionAnalysisManager *FAM = nullptr;
 };
 
-}
+}  // namespace Feasibility
 
 #endif  // SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYWRAPPER_H_

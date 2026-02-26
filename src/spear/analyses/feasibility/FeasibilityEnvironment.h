@@ -9,8 +9,9 @@
  *
  */
 
-#ifndef SPEAR_FEASIBILITYENVIRONMENT_H
-#define SPEAR_FEASIBILITYENVIRONMENT_H
+#ifndef SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYENVIRONMENT_H_
+#define SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYENVIRONMENT_H_
+
 #include <llvm/IR/Value.h>
 
 namespace Feasibility {
@@ -21,7 +22,7 @@ namespace Feasibility {
  * The linking between the nodes represents the nesting of environments as phi nodes also might be nested.
  */
 class EnvNode {
-public:
+ public:
     /**
      * Possible previous node, representing the parent environment. nullptr if this is the root node.
      */
@@ -95,6 +96,6 @@ struct EnvKeyHash {
     }
 };
 
-}
+}  // namespace Feasibility
 
-#endif //SPEAR_FEASIBILITYENVIRONMENT_H
+#endif  // SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYENVIRONMENT_H_

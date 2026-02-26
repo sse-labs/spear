@@ -281,6 +281,6 @@ class LoopBoundWrapper {
     void printClassifiers();
 };
 
-}
+}  // namespace LoopBound
 
 #endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUNDWRAPPER_H_

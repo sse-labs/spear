@@ -3,6 +3,8 @@
  * All rights reserved.
  */
 
+#include <utility>
+
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
 #include "analyses/feasibility/FeasibilityAnalysisManager.h"
 
@@ -168,7 +170,6 @@ EF FeasibilityAddAtomsEF::compose(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> th
 
 EF FeasibilityAddAtomsEF::join(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisFunc,
                                const psr::EdgeFunction<l_t> &otherFunc) {
-
   // Join with Identity does nothing
   if (Util::isIdEF(otherFunc)) {
     return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
@@ -210,4 +211,4 @@ bool FeasibilityAddAtomsEF::operator==(const FeasibilityAddAtomsEF &o) const noe
   return true;
 }
 
-} // namespace Feasibility
+}  // namespace Feasibility

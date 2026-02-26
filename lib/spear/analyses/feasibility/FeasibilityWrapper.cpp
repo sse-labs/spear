@@ -8,13 +8,15 @@
 #include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <utility>
+#include <memory>
+
 #include "analyses/feasibility/FeasibilityWrapper.h"
 #include "analyses/feasibility/FeasibilityAnalysis.h"
 #include "analyses/feasibility/util.h"
 
 Feasibility::FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
                                                     llvm::FunctionAnalysisManager *analysisManager) {
-
     // Make sure that the helper analyses are available.
     if (!helperAnalyses) {
         return;
@@ -31,13 +33,15 @@ Feasibility::FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperA
 
     // Get the IRDB and ICFG from the helper analyses, which are needed to set up the analysis problem.
     auto &IRDB = helperAnalyses->getProjectIRDB();
-    auto &interproceduralCFG = helperAnalyses->getICFG(); // Interprocedural CFG
+    // Interprocedural CFG
+    auto &interproceduralCFG = helperAnalyses->getICFG();
 
     // Create a new instance of the feasibility analysis problem, which will be solved by the IDE solver.
-    this->problem = std::make_shared<FeasibilityAnalysis>(FeasibilityAnalysis(analysisManager, &IRDB, &interproceduralCFG));
+    this->problem = std::make_shared<FeasibilityAnalysis>(
+        FeasibilityAnalysis(analysisManager, &IRDB, &interproceduralCFG));
 
     if (Util::F_DebugEnabled) {
-        llvm::errs() << F_TAG << " Starting IDESolver.solve()\n";
+        llvm::errs() << Util::debugtag << " Starting IDESolver.solve()\n";
     }
 
     // Solve the analysis problem using the IDE solver and store the results in the cachedResults member variable.
@@ -46,7 +50,7 @@ Feasibility::FeasibilityWrapper::FeasibilityWrapper(std::shared_ptr<psr::HelperA
     this->cachedResults = std::make_unique<ResultsTy>(std::move(analysisResult));
 
     if (Util::F_DebugEnabled) {
-        llvm::errs() << F_TAG << " Finished IDESolver.solve()\n";
+        llvm::errs() << Util::debugtag << " Finished IDESolver.solve()\n";
     }
 }
 

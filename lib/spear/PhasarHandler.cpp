@@ -16,9 +16,11 @@
 #include <utility>
 #include <string>
 #include <memory>
+#include <deque>
+#include <unordered_map>
+#include <vector>
 
-#include "../../src/spear/analyses/loopbound/LoopBound.h"
-#include "../../src/spear/analyses/loopbound/util.h"
+#include "analyses/loopbound/LoopBound.h"
 #include "analyses/feasibility/util.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
 
@@ -67,12 +69,13 @@ void PhasarHandlerPass::runOnModule(llvm::Module &M) {
 }
 
 void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManager *FAM) {
-  //loopboundwrapper = make_unique<LoopBound::LoopBoundWrapper>(HA, FAM);
+  // loopboundwrapper = make_unique<LoopBound::LoopBoundWrapper>(HA, FAM);
   feasibilitywrapper = make_unique<Feasibility::FeasibilityWrapper>(HA, FAM);
 
-  feasibilityProblem = feasibilitywrapper->problem; // Store the problem instance for later querying
+  // Store the problem instance for later querying
+  feasibilityProblem = feasibilitywrapper->problem;
 
-  //LoopBoundResult = loopboundwrapper->getResults();
+  // LoopBoundResult = loopboundwrapper->getResults();
   FeasibilityResult = feasibilitywrapper->getResults();
 }
 
@@ -133,8 +136,7 @@ bool PhasarHandlerPass::constains(std::vector<llvm::BasicBlock *> visited, llvm:
   return false;
 }
 
-PhasarHandlerPass::FeasibilityMap
-PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
+PhasarHandlerPass::FeasibilityMap PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
   FeasibilityMap ResultMap;
 
   if (!FeasibilityResult || !Func) {
@@ -143,25 +145,19 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
 
   const llvm::Value *Zero = feasibilityProblem ? feasibilityProblem->getZeroValue() : nullptr;
 
-  struct SetSigHash {
-    size_t operator()(const SetSigKey &K) const noexcept {
-      // Same idea as DenseMap hash, but return size_t
-      return (size_t)llvm::hash_combine(K.Mgr,
-        llvm::hash_combine_range(K.AstIds.begin(), K.AstIds.end()));
-    }
-  };
-
   // Create the worklist and visited set for a simple CFG traversal to query feasibility at block entries.
   auto firstBlock = &Func->getEntryBlock();
   std::deque<llvm::BasicBlock*> worklist{firstBlock};
   llvm::DenseMap<const llvm::BasicBlock*, BlockFeasInfo> visited;
-  std::unordered_map<SetSigKey, bool, SetSigHash> SatCache;
-  SatCache.reserve(128); // optional
+  std::unordered_map<SetSatnessKey, bool, SetSatnessHash> SatCache;
+  SatCache.reserve(128);
 
-  // At all blocks to the visited set with default entries to ensure we don't revisit them. We will fill in the actual feasibility info in the next loop.
+  // At all blocks to the visited set with default entries to ensure we don't revisit them.
+  // We will fill in the actual feasibility info in the next loop.
   for (auto &BB : *Func) {
     const std::string BBName = blockName(BB);
-    visited[&BB] = BlockFeasInfo{}; // default entry
+    // Initialize each entry
+    visited[&BB] = BlockFeasInfo{};
   }
 
   // Iterate over the worklist until its empty
@@ -173,10 +169,9 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
     // Check if we have already visited this block. If so, skip it.
     const std::string BBName = blockName(*BB);
 
-    // llvm::errs() << "Solving for " << BBName << "\n";
-
+    // If we have already visited this block, skip it to avoid infinite loops in cyclic CFGs.
     if (visited[BB].visited) {
-      continue; // already visited
+      continue;
     }
 
     // Mark this block as visited
@@ -197,10 +192,11 @@ PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
         uint32_t FId = entry.getFormulaId();
 
         std::vector<z3::expr> set = Mgr->getPureSet(FId);
-        SetSigKey Sig = makeSig(Mgr, set);
+        SetSatnessKey Sig = makeSetSattnessCacheEntry(Mgr, set);
 
         auto ItSat = SatCache.find(Sig);
-        bool isSat;
+        bool isSat = false;
+
         if (ItSat != SatCache.end()) {
           isSat = ItSat->second;
         } else {
@@ -229,121 +225,4 @@ std::string PhasarHandlerPass::blockName(const llvm::BasicBlock &BB) {
              ? BB.getName().str()
              : "<unnamed_bb_" + std::to_string(reinterpret_cast<uintptr_t>(&BB)) +
                    ">";
-}
-
-// Pick a stable instruction to query inside a block:
-// - first non-PHI instruction if present
-// - otherwise the terminator
-const llvm::Instruction *PhasarHandlerPass::pickQueryInst(
-    const llvm::BasicBlock &BB) {
-  const llvm::BasicBlock *Cur = &BB;
-  llvm::SmallPtrSet<const llvm::BasicBlock *, 8> Visited;
-
-  while (Cur && !Visited.contains(Cur)) {
-    Visited.insert(Cur);
-
-    if (!Cur->empty()) {
-      // Prefer first non-PHI
-      for (const llvm::Instruction &I : *Cur) {
-        if (!llvm::isa<llvm::PHINode>(&I)) return &I;
-      }
-      // otherwise terminator
-      const llvm::Instruction *T = Cur->getTerminator();
-      // If it's an unconditional trampoline, follow it
-      if (auto *Br = llvm::dyn_cast<llvm::BranchInst>(T)) {
-        if (!Br->isConditional()) {
-          Cur = Br->getSuccessor(0);
-          continue;
-        }
-      }
-      return T;
-    }
-
-    return nullptr;
-  }
-
-  // loop / weird CFG: fall back
-  return BB.getTerminator();
-}
-
-
-bool PhasarHandlerPass::isNodeFeasibleForZero(const llvm::Instruction *I,
-                                              const llvm::Value *Zero) const {
-  if (!FeasibilityResult || !I || !Zero)
-    return false;
-  if (!FeasibilityResult->containsNode(I))
-    return false;
-
-  const auto ResMap = FeasibilityResult->resultsAt(I);
-  auto It = ResMap.find(Zero);
-  if (It == ResMap.end())
-    return false;
-
-  const auto &L = It->second;
-  return !L.isBottom();
-}
-
-std::optional<Feasibility::FeasibilityAnalysis::l_t>
-PhasarHandlerPass::getLatticeAtNodeForZero(const llvm::Instruction *I,
-                                           const llvm::Value *Zero) const {
-  if (!FeasibilityResult || !I || !Zero) return std::nullopt;
-  if (!FeasibilityResult->containsNode(I)) return std::nullopt;
-
-  const auto ResMap = FeasibilityResult->resultsAt(I);
-  auto It = ResMap.find(Zero);
-  if (It == ResMap.end()) return std::nullopt;
-
-  return It->second;
-}
-
-const llvm::Instruction *
-PhasarHandlerPass::pickSuccNodeFromICFG(const llvm::Instruction *PredTerm,
-                                        const llvm::BasicBlock *SuccBB) const {
-  if (!HA || !PredTerm || !SuccBB) return nullptr;
-
-  const auto &ICFG = HA->getICFG();
-
-  for (auto Succ : ICFG.getSuccsOf(PredTerm)) {
-    if (Succ && Succ->getParent() == SuccBB) {
-      return Succ;
-    }
-  }
-  return nullptr;
-}
-
-bool PhasarHandlerPass::isEdgeFeasible(const llvm::BasicBlock *PredBB,
-                                       const llvm::BasicBlock *SuccBB,
-                                       const llvm::Value *Zero) const {
-  if (!PredBB || !SuccBB || !Zero) return false;
-
-  const llvm::Instruction *PredTerm = PredBB->getTerminator();
-  if (!PredTerm) return false;
-
-  // 1) Get L at predecessor terminator from IDE result
-  auto LpredOpt = getLatticeAtNodeForZero(PredTerm, Zero);
-  if (!LpredOpt) return false; // no result => treat as unreachable for reporting
-  const auto &Lpred = *LpredOpt;
-
-  // If predecessor is already infeasible, edge can't be feasible
-  if (Lpred.isBottom())
-    return false;
-
-  // 2) Find the exact successor node used by the ICFG for this edge
-  const llvm::Instruction *SuccNode = pickSuccNodeFromICFG(PredTerm, SuccBB);
-  if (!SuccNode) {
-    // If we can't identify the succ node, be conservative: don't prune
-    return true;
-  }
-
-  // 3) Apply the analysis' own edge function for Zero along this edge
-  // NOTE: Types depend on your feasibilityProblem type. For IDE problems, this is typical.
-  auto EF = feasibilityProblem->getNormalEdgeFunction(
-      const_cast<llvm::Instruction *>(PredTerm),
-      const_cast<llvm::Value *>(Zero),
-      const_cast<llvm::Instruction *>(SuccNode),
-      const_cast<llvm::Value *>(Zero));
-
-  auto Lsucc = EF.computeTarget(Lpred);
-
-  return !Lsucc.isBottom();
 }

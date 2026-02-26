@@ -3,21 +3,22 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_FEASIBILITYANALYSIS_H
-#define SPEAR_FEASIBILITYANALYSIS_H
-
-#include "analyses/feasibility/FeasibilityAnalysisManager.h"
+#ifndef SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYANALYSIS_H_
+#define SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYANALYSIS_H_
 
 #include <llvm/Analysis/LoopInfo.h>
-
-#include "FeasibilityElement.h"
-
 #include <phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h>
 #include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
 #include <phasar/PhasarLLVM/Domain/LLVMAnalysisDomain.h>
 #include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>
 #include <phasar/DataFlow/IfdsIde/FlowFunctions.h>
+
 #include <memory>
+#include <set>
+
+#include "analyses/feasibility/FeasibilityAnalysisManager.h"
+#include "FeasibilityElement.h"
+
 
 
 namespace Feasibility {
@@ -32,7 +33,7 @@ struct FeasibilityDomain : psr::LLVMAnalysisDomainDefault {
 };
 
 class FeasibilityAnalysis final  : public psr::IDETabulationProblem<FeasibilityDomain, std::set<const llvm::Value *>> {
-public:
+ public:
     /**
     * Derive types of the analysis from the base class definition for usage inside the class.
     */
@@ -84,7 +85,7 @@ public:
      */
     EdgeFunctionType getNormalEdgeFunction(n_t Curr, d_t CurrNode, n_t Succ, d_t SuccNode) override;
 
-private:
+ private:
     /**
      * Manager component of the analysis, responsible for managing the state of the analysis, including
      * the storage of formulas (as sets of atomic formulas) and environments (variable bindings).
@@ -232,6 +233,6 @@ private:
                                              llvm::ArrayRef<f_t> Callees) override;
 };
 
-} // namespace Feasibility
+}  // namespace Feasibility
 
-#endif //SPEAR_FEASIBILITYANALYSIS_H
+#endif  // SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYANALYSIS_H_

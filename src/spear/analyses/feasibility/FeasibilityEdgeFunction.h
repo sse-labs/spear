@@ -1,10 +1,17 @@
-#ifndef SPEAR_FEASIBILITYEDGEFUNCTION_H
-#define SPEAR_FEASIBILITYEDGEFUNCTION_H
+/*
+* Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+ */
+
+#ifndef SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYEDGEFUNCTION_H_
+#define SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYEDGEFUNCTION_H_
 
 #include <phasar/DataFlow/IfdsIde/EdgeFunction.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instructions.h>
+
+#include <utility>
 
 #include "FeasibilityElement.h"
 #include "analyses/feasibility/util.h"
@@ -12,7 +19,7 @@
 namespace Feasibility {
 
 using l_t = FeasibilityElement;
-using EF  = psr::EdgeFunction<l_t>;
+using EF = psr::EdgeFunction<l_t>;
 
 /**
  * AllBottomEF realizes the unreachable error state of the analysis
@@ -139,6 +146,7 @@ struct FeasibilityAddAtomsEF {
 };
 
 
-} // namespace Feasibility
+}  // namespace Feasibility
 
-#endif // SPEAR_FEASIBILITYEDGEFUNCTION_H
+#endif  // SRC_SPEAR_ANALYSES_FEASIBILITY_FEASIBILITYEDGEFUNCTION_H_
+
