@@ -16,6 +16,8 @@
 
 #include "LoopBound.h"
 
+namespace LoopBound {
+
 /**
  * Phasar result type
  * Used to shorthand any interaction with the analysis result
@@ -196,7 +198,7 @@ class LoopBoundWrapper {
      * @param helperAnalyses Phasar help analyses to access phasars analysis information
      * @param FAM FunctionAnalysisManager to access llvm analysis information
      */
-    LoopBoundWrapper(std::unique_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManager *FAM);
+    LoopBoundWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManager *FAM);
 
     /**
      * Store the given loop and its subloops in the given vector
@@ -227,6 +229,12 @@ class LoopBoundWrapper {
     static std::optional<CheckExpr> findLoopCheckExpr(
         const LoopBound::LoopParameterDescription &description, llvm::FunctionAnalysisManager *FAM,
         llvm::LoopInfo &LIInfo);
+
+    /**
+     * Return the internal list of LoopClassifier objects
+     * @return
+     */
+    std::unique_ptr<ResultsTy> getResults() const;
 
  private:
     // Internal storage of the analysis results calculated by phasar
@@ -272,5 +280,7 @@ class LoopBoundWrapper {
      */
     void printClassifiers();
 };
+
+}  // namespace LoopBound
 
 #endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUNDWRAPPER_H_

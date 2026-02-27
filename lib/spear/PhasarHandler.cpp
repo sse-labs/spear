@@ -16,10 +16,12 @@
 #include <utility>
 #include <string>
 #include <memory>
-#include <catch2/internal/catch_unique_ptr.hpp>
+#include <deque>
+#include <unordered_map>
+#include <vector>
 
-#include "../../src/spear/analyses/loopbound/LoopBound.h"
-#include "../../src/spear/analyses/loopbound/util.h"
+#include "analyses/loopbound/LoopBound.h"
+#include "analyses/feasibility/util.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
 
 using llvm::Module;
@@ -29,18 +31,21 @@ using llvm::ModuleAnalysisManager;
 PhasarHandlerPass::PhasarHandlerPass()
     : mod(nullptr),
       HA(nullptr),
-      AnalysisResult(nullptr),
+      LoopBoundResult(nullptr),
+      FeasibilityResult(nullptr),
       Entrypoints({std::string("main")}) {}
 
 PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   mod = &M;
-  HA = std::make_unique<psr::HelperAnalyses>(&M, Entrypoints);
-  AnalysisResult.reset();
+  HA = std::make_shared<psr::HelperAnalyses>(&M, Entrypoints);
+  LoopBoundResult.reset();
+  FeasibilityResult.reset();
 
-  auto &FAM =
-      AM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*mod).getManager();
+  llvm::errs() << M << "\n";
 
-  runAnalysis(&FAM);
+  auto &FAM = AM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*mod).getManager();
+
+  runAnalysis(M, &FAM);
 
   return PreservedAnalyses::all();
 }
@@ -63,21 +68,27 @@ void PhasarHandlerPass::runOnModule(llvm::Module &M) {
   run(M, MAM);
 }
 
-void PhasarHandlerPass::runAnalysis(llvm::FunctionAnalysisManager *FAM) {
-  loopboundwrapper = make_unique<LoopBoundWrapper>((std::move(HA)), FAM);
+void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManager *FAM) {
+  // loopboundwrapper = make_unique<LoopBound::LoopBoundWrapper>(HA, FAM);
+  feasibilitywrapper = make_unique<Feasibility::FeasibilityWrapper>(HA, FAM);
+
+  // Store the problem instance for later querying
+  feasibilityProblem = feasibilitywrapper->problem;
+
+  // LoopBoundResult = loopboundwrapper->getResults();
+  FeasibilityResult = feasibilitywrapper->getResults();
 }
 
 void PhasarHandlerPass::dumpState() const {
-  if (AnalysisResult && HA) {
-    AnalysisResult->dumpResults(HA->getICFG());
+  if (LoopBoundResult && HA) {
+    LoopBoundResult->dumpResults(HA->getICFG());
   }
 }
 
-PhasarHandlerPass::BoundVarMap
-PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
+PhasarHandlerPass::BoundVarMap PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
   BoundVarMap ResultMap;
 
-  if (!AnalysisResult || !Func)
+  if (!LoopBoundResult || !Func)
     return ResultMap;
 
   using DomainVal = LoopBound::DeltaInterval;
@@ -92,11 +103,11 @@ PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
     auto &BBEntry = ResultMap[BBName];
 
     for (const llvm::Instruction &Inst : BB) {
-      if (!AnalysisResult->containsNode(&Inst))
+      if (!LoopBoundResult->containsNode(&Inst))
         continue;
 
       const llvm::Value *Bottom = nullptr;
-      auto Res = AnalysisResult->resultsAtInLLVMSSA(&Inst, Bottom);
+      auto Res = LoopBoundResult->resultsAtInLLVMSSA(&Inst, Bottom);
 
       for (const auto &ResElement : Res) {
         const llvm::Value *Val = ResElement.first;
@@ -114,4 +125,104 @@ PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
   }
 
   return ResultMap;
+}
+
+bool PhasarHandlerPass::constains(std::vector<llvm::BasicBlock *> visited, llvm::BasicBlock *BB) const {
+  for (auto *V : visited) {
+    if (V == BB) {
+      return true;
+    }
+  }
+  return false;
+}
+
+PhasarHandlerPass::FeasibilityMap PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
+  FeasibilityMap ResultMap;
+
+  if (!FeasibilityResult || !Func) {
+    return ResultMap;
+  }
+
+  const llvm::Value *Zero = feasibilityProblem ? feasibilityProblem->getZeroValue() : nullptr;
+
+  // Create the worklist and visited set for a simple CFG traversal to query feasibility at block entries.
+  auto firstBlock = &Func->getEntryBlock();
+  std::deque<llvm::BasicBlock*> worklist{firstBlock};
+  llvm::DenseMap<const llvm::BasicBlock*, BlockFeasInfo> visited;
+  std::unordered_map<SetSatnessKey, bool, SetSatnessHash> SatCache;
+  SatCache.reserve(128);
+
+  // At all blocks to the visited set with default entries to ensure we don't revisit them.
+  // We will fill in the actual feasibility info in the next loop.
+  for (auto &BB : *Func) {
+    const std::string BBName = blockName(BB);
+    // Initialize each entry
+    visited[&BB] = BlockFeasInfo{};
+  }
+
+  // Iterate over the worklist until its empty
+  while (!worklist.empty()) {
+    // Get the first entry
+    llvm::BasicBlock *BB = worklist.front();
+    worklist.pop_front();
+
+    // Check if we have already visited this block. If so, skip it.
+    const std::string BBName = blockName(*BB);
+
+    // If we have already visited this block, skip it to avoid infinite loops in cyclic CFGs.
+    if (visited[BB].visited) {
+      continue;
+    }
+
+    // Mark this block as visited
+    visited[BB].visited = true;
+
+    // Query feasibility at the last instruction of the block (terminator),
+    // which is the most stable point to query for block entry feasibility.
+    if (const llvm::Instruction *Term = BB->getTerminator()) {
+      // Query the analysis result for the terminator instruction and check if it contains an entry for the zero value.
+      auto res = FeasibilityResult->resultsAt(Term);
+      auto it = res.find(Zero);
+
+      if (it != res.end()) {
+        // If it does, we check the kind of the lattice element. If it's not bottom, the block is feasible.
+        const auto &entry = it->second;
+
+        auto *Mgr = entry.getManager();
+        uint32_t FId = entry.getFormulaId();
+
+        std::vector<z3::expr> set = Mgr->getPureSet(FId);
+        SetSatnessKey Sig = makeSetSattnessCacheEntry(Mgr, set);
+
+        auto ItSat = SatCache.find(Sig);
+        bool isSat = false;
+
+        if (ItSat != SatCache.end()) {
+          isSat = ItSat->second;
+        } else {
+          isSat = Feasibility::Util::setSat(set, &Mgr->getContext());
+          SatCache.emplace(std::move(Sig), isSat);
+        }
+
+        ResultMap[BBName].Feasible = isSat;
+        ResultMap[BBName].HasZeroAtEntry = true;
+        ResultMap[BBName].visited = true;
+
+        if (isSat) {
+          auto sucss = llvm::successors(BB);
+          worklist.insert(worklist.end(), sucss.begin(), sucss.end());
+        }
+      }
+    }
+  }
+
+  return ResultMap;
+}
+
+
+std::string PhasarHandlerPass::blockName(const llvm::BasicBlock &BB) {
+  return BB.hasName()
+             ? BB.getName().str()
+             : "<unnamed_bb_" + std::to_string(reinterpret_cast<uintptr_t>(&BB)) +
+                   ">";
 }
