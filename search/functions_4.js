@@ -5,5 +5,6 @@ var searchData=
   ['edgetop_2',['edgeTop',['../namespaceLoopBound.html#af38065a6b802c3132ebf93515c85d327',1,'LoopBound']]],
   ['empty_3',['empty',['../classLoopBound_1_1DeltaInterval.html#a75aa6d5531217272df440678aa0163af',1,'LoopBound::DeltaInterval']]],
   ['escapedotlabel_4',['escapeDotLabel',['../classHLAC_1_1Util.html#a757cdfafb9d12c0861f820bb7c964211',1,'HLAC::Util']]],
-  ['extractconstincfromstore_5',['extractConstIncFromStore',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#ac4153e6a8fe163a7cced06dd35935d8a',1,'LoopBound::LoopBoundIDEAnalysis']]]
+  ['extendenv_5',['extendEnv',['../classFeasibility_1_1FeasibilityAnalysisManager.html#acd1200a3cbc899b2160eaec6ff221c75',1,'Feasibility::FeasibilityAnalysisManager']]],
+  ['extractconstincfromstore_6',['extractConstIncFromStore',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#ac4153e6a8fe163a7cced06dd35935d8a',1,'LoopBound::LoopBoundIDEAnalysis']]]
 ];

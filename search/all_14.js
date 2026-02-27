@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['valuetype_0',['valueType',['../classLoopBound_1_1DeltaInterval.html#a03dc108d6883416b2bb455c64bb4fd3f',1,'LoopBound::DeltaInterval']]],
-  ['valuetypetostr_1',['valuetypetostr',['../classLoopBound_1_1DeltaInterval.html#ae2d7371b2417011f60afe9643fc33fd8',1,'LoopBound::DeltaInterval::valueTypeToStr(ValueType type) const'],['../classLoopBound_1_1DeltaInterval.html#aea8042a7a0adb8efa1b6d62aa7b2e945',1,'LoopBound::DeltaInterval::valueTypeToStr(ValueType type)']]]
+  ['upperbound_0',['upperbound',['../structLoopBound_1_1DeltaIntervalAdditive.html#a62f4aae519b795ad11740704ba8f23c6',1,'LoopBound::DeltaIntervalAdditive::upperBound'],['../structLoopBound_1_1DeltaIntervalMultiplicative.html#a92f64b3319d28b31dab60fb82ee1e7d4',1,'LoopBound::DeltaIntervalMultiplicative::upperBound'],['../structLoopBound_1_1DeltaIntervalDivision.html#aeb89ec24741423f3c49cdd09d4d08626',1,'LoopBound::DeltaIntervalDivision::upperBound']]],
+  ['util_1',['util',['../classFeasibility_1_1Util.html',1,'Feasibility::Util'],['../classHLAC_1_1Util.html',1,'HLAC::Util']]]
 ];

@@ -80,6 +80,8 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html">CheckExpr</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1DeltaInterval.html">DeltaInterval</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structLoopBound_1_1DeltaIntervalAdditive.html">DeltaIntervalAdditive</a></td></tr>
@@ -100,6 +102,10 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structLoopBound_1_1LoopBoundIncrementInstance.html">LoopBoundIncrementInstance</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1LoopBoundWrapper.html">LoopBoundWrapper</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1LoopClassifier.html">LoopClassifier</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structLoopBound_1_1LoopCounterICMP.html">LoopCounterICMP</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structLoopBound_1_1LoopParameterDescription.html">LoopParameterDescription</a></td></tr>
@@ -113,6 +119,8 @@ using&#160;</td><td class="memItemRight" valign="bottom"><b>l_t</b> = <a class="
 <tr class="memitem:ae8652a09024861c97d2ba2eb2e274134" id="r_ae8652a09024861c97d2ba2eb2e274134"><td class="memItemLeft" align="right" valign="top"><a id="ae8652a09024861c97d2ba2eb2e274134" name="ae8652a09024861c97d2ba2eb2e274134"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>EF</b> = psr::EdgeFunction&lt; <a class="el" href="classLoopBound_1_1DeltaInterval.html">l_t</a> &gt;</td></tr>
 <tr class="separator:ae8652a09024861c97d2ba2eb2e274134"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0be9b3685c21940b21bb2661236f30b5" id="r_a0be9b3685c21940b21bb2661236f30b5"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceLoopBound.html#a0be9b3685c21940b21bb2661236f30b5">ResultsTy</a> = psr::OwningSolverResults&lt; const llvm::Instruction *, const llvm::Value *, <a class="el" href="classLoopBound_1_1DeltaInterval.html">LoopBound::DeltaInterval</a> &gt;</td></tr>
+<tr class="separator:a0be9b3685c21940b21bb2661236f30b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
@@ -163,7 +171,23 @@ EF&#160;</td><td class="memItemRight" valign="bottom"><b>edgeIdentity</b> ()</td
 <p>DeltaIntervalCollect Collects possible increments observed along a path and merges them conservatively. This is the only edge function that actively changes the delta interval during analysis.</p>
 <p><a class="el" href="structLoopBound_1_1DeltaIntervalTop.html">DeltaIntervalTop</a> Represents an unknown transformation. Dominates joins and poisons compositions.</p>
 <p><a class="el" href="structLoopBound_1_1DeltaIntervalBottom.html">DeltaIntervalBottom</a> Represents an impossible or killed path. Absorbing element for composition. </p>
-</div><h2 class="groupheader">Enumeration Type Documentation</h2>
+</div><h2 class="groupheader">Typedef Documentation</h2>
+<a id="a0be9b3685c21940b21bb2661236f30b5" name="a0be9b3685c21940b21bb2661236f30b5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0be9b3685c21940b21bb2661236f30b5">&#9670;&#160;</a></span>ResultsTy</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="namespaceLoopBound.html#a0be9b3685c21940b21bb2661236f30b5">LoopBound::ResultsTy</a> = typedef psr::OwningSolverResults&lt;const llvm::Instruction *, const llvm::Value *, <a class="el" href="classLoopBound_1_1DeltaInterval.html">LoopBound::DeltaInterval</a>&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Phasar result type Used to shorthand any interaction with the analysis result </p>
+
+</div>
+</div>
+<h2 class="groupheader">Enumeration Type Documentation</h2>
 <a id="a7c54a9f40f78bc05e04204a9f18e74df" name="a7c54a9f40f78bc05e04204a9f18e74df"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a7c54a9f40f78bc05e04204a9f18e74df">&#9670;&#160;</a></span>LoopType</h2>
 

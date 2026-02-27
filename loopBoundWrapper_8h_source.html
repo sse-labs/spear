@@ -99,158 +99,167 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#include &quot;LoopBound.h&quot;</span></div>
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="keyword">using </span>ResultsTy = psr::OwningSolverResults&lt;<span class="keyword">const</span> llvm::Instruction *,</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="keyword">const</span> llvm::Value *, <a class="code hl_class" href="classLoopBound_1_1DeltaInterval.html">LoopBound::DeltaInterval</a>&gt;;  <span class="comment">// Phasar solver results alias</span></div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span> </div>
-<div class="foldopen" id="foldopen00034" data-start="{" data-end="};">
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno"><a class="line" href="classCheckExpr.html">   34</a></span><span class="keyword">class </span><a class="code hl_class" href="classCheckExpr.html">CheckExpr</a> {</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno"><a class="line" href="classCheckExpr.html#a034edf828ee12457de18cc27444fe13d">   40</a></span>    <span class="keyword">const</span> llvm::Value *<a class="code hl_variable" href="classCheckExpr.html#a034edf828ee12457de18cc27444fe13d">Base</a> = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno"><a class="line" href="classCheckExpr.html#ac5f49197de70be0f7255653bf9797f1a">   45</a></span>    <span class="keyword">const</span> llvm::LoadInst *<a class="code hl_variable" href="classCheckExpr.html#ac5f49197de70be0f7255653bf9797f1a">BaseLoad</a> = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno"><a class="line" href="classCheckExpr.html#afa2f37ffa62a3e47c3b729376b5eb335">   50</a></span>    int64_t <a class="code hl_variable" href="classCheckExpr.html#afa2f37ffa62a3e47c3b729376b5eb335">Offset</a> = 0;</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno"><a class="line" href="classCheckExpr.html#a159b0f28740fd41e90fb4049161f4c01">   55</a></span>    <span class="keywordtype">bool</span> <a class="code hl_variable" href="classCheckExpr.html#a159b0f28740fd41e90fb4049161f4c01">isConstant</a> = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno"><a class="line" href="classCheckExpr.html#a835a647e136601319ad5bc1cb5ca702e">   60</a></span>    std::optional&lt;int64_t&gt; <a class="code hl_variable" href="classCheckExpr.html#a835a647e136601319ad5bc1cb5ca702e">DivBy</a>;</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span> </div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno"><a class="line" href="classCheckExpr.html#a864e2eae3e582ca9c843835d5b84ad1e">   65</a></span>    std::optional&lt;int64_t&gt; <a class="code hl_variable" href="classCheckExpr.html#a864e2eae3e582ca9c843835d5b84ad1e">MulBy</a>;</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span> </div>
-<div class="foldopen" id="foldopen00073" data-start="{" data-end="}">
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno"><a class="line" href="classCheckExpr.html#aa43bc33e1b274cb82fc2acdcfa67cb19">   73</a></span>    <a class="code hl_function" href="classCheckExpr.html#aa43bc33e1b274cb82fc2acdcfa67cb19">CheckExpr</a>(<span class="keyword">const</span> llvm::Value *base, <span class="keyword">const</span> llvm::LoadInst *baseload,  int64_t offset, <span class="keywordtype">bool</span> constant) :</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    <a class="code hl_variable" href="classCheckExpr.html#a034edf828ee12457de18cc27444fe13d">Base</a>(base), <a class="code hl_variable" href="classCheckExpr.html#ac5f49197de70be0f7255653bf9797f1a">BaseLoad</a>(baseload), <a class="code hl_variable" href="classCheckExpr.html#afa2f37ffa62a3e47c3b729376b5eb335">Offset</a>(offset), <a class="code hl_variable" href="classCheckExpr.html#a159b0f28740fd41e90fb4049161f4c01">isConstant</a>(constant) {}</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespaceLoopBound.html">LoopBound</a> {</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno"><a class="line" href="namespaceLoopBound.html#a0be9b3685c21940b21bb2661236f30b5">   25</a></span><span class="keyword">using </span><a class="code hl_typedef" href="namespaceLoopBound.html#a0be9b3685c21940b21bb2661236f30b5">ResultsTy</a> = psr::OwningSolverResults&lt;<span class="keyword">const</span> llvm::Instruction *,</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="keyword">const</span> llvm::Value *, <a class="code hl_class" href="classLoopBound_1_1DeltaInterval.html">LoopBound::DeltaInterval</a>&gt;;  <span class="comment">// Phasar solver results alias</span></div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
+<div class="foldopen" id="foldopen00036" data-start="{" data-end="};">
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno"><a class="line" href="classLoopBound_1_1CheckExpr.html">   36</a></span><span class="keyword">class </span><a class="code hl_class" href="classLoopBound_1_1CheckExpr.html">CheckExpr</a> {</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno"><a class="line" href="classLoopBound_1_1CheckExpr.html#a484c295c27ceecd446739d2d18259945">   42</a></span>    <span class="keyword">const</span> llvm::Value *<a class="code hl_variable" href="classLoopBound_1_1CheckExpr.html#a484c295c27ceecd446739d2d18259945">Base</a> = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno"><a class="line" href="classLoopBound_1_1CheckExpr.html#abdd9f5dceb36096d21989f8f47c1a7c4">   47</a></span>    <span class="keyword">const</span> llvm::LoadInst *<a class="code hl_variable" href="classLoopBound_1_1CheckExpr.html#abdd9f5dceb36096d21989f8f47c1a7c4">BaseLoad</a> = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno"><a class="line" href="classLoopBound_1_1CheckExpr.html#abe4c99ccb00cc9391621cbe57dace9c8">   52</a></span>    int64_t <a class="code hl_variable" href="classLoopBound_1_1CheckExpr.html#abe4c99ccb00cc9391621cbe57dace9c8">Offset</a> = 0;</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno"><a class="line" href="classLoopBound_1_1CheckExpr.html#ad474b71b8447762c275ee8b8ae94259e">   57</a></span>    <span class="keywordtype">bool</span> <a class="code hl_variable" href="classLoopBound_1_1CheckExpr.html#ad474b71b8447762c275ee8b8ae94259e">isConstant</a> = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno"><a class="line" href="classLoopBound_1_1CheckExpr.html#a7992c7d7f1af2a7b1727659bff22b52d">   62</a></span>    std::optional&lt;int64_t&gt; <a class="code hl_variable" href="classLoopBound_1_1CheckExpr.html#a7992c7d7f1af2a7b1727659bff22b52d">DivBy</a>;</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno"><a class="line" href="classLoopBound_1_1CheckExpr.html#ace1d83f355b8664bc1a21a843101e3ff">   67</a></span>    std::optional&lt;int64_t&gt; <a class="code hl_variable" href="classLoopBound_1_1CheckExpr.html#ace1d83f355b8664bc1a21a843101e3ff">MulBy</a>;</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span> </div>
+<div class="foldopen" id="foldopen00075" data-start="{" data-end="}">
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno"><a class="line" href="classLoopBound_1_1CheckExpr.html#a8e3b99fa6bfb7c7a109a4478fe2e0e12">   75</a></span>    <a class="code hl_function" href="classLoopBound_1_1CheckExpr.html#a8e3b99fa6bfb7c7a109a4478fe2e0e12">CheckExpr</a>(<span class="keyword">const</span> llvm::Value *base, <span class="keyword">const</span> llvm::LoadInst *baseload,  int64_t offset, <span class="keywordtype">bool</span> constant) :</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <a class="code hl_variable" href="classLoopBound_1_1CheckExpr.html#a484c295c27ceecd446739d2d18259945">Base</a>(base), <a class="code hl_variable" href="classLoopBound_1_1CheckExpr.html#abdd9f5dceb36096d21989f8f47c1a7c4">BaseLoad</a>(baseload), <a class="code hl_variable" href="classLoopBound_1_1CheckExpr.html#abe4c99ccb00cc9391621cbe57dace9c8">Offset</a>(offset), <a class="code hl_variable" href="classLoopBound_1_1CheckExpr.html#ad474b71b8447762c275ee8b8ae94259e">isConstant</a>(constant) {}</div>
 </div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span> </div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno"><a class="line" href="classCheckExpr.html#a6f65fd5ef85dbf36c843b3b05cdec8ea">   82</a></span>    std::optional&lt;int64_t&gt; <a class="code hl_function" href="classCheckExpr.html#a6f65fd5ef85dbf36c843b3b05cdec8ea">calculateCheck</a>(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &amp;LIInfo);</div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>};</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno"><a class="line" href="classLoopBound_1_1CheckExpr.html#aae39631c1217d62cb5bc1ea4aa513ba5">   84</a></span>    std::optional&lt;int64_t&gt; <a class="code hl_function" href="classLoopBound_1_1CheckExpr.html#aae39631c1217d62cb5bc1ea4aa513ba5">calculateCheck</a>(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &amp;LIInfo);</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>};</div>
 </div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span> </div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span> </div>
-<div class="foldopen" id="foldopen00090" data-start="{" data-end="};">
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno"><a class="line" href="classLoopClassifier.html">   90</a></span><span class="keyword">class </span><a class="code hl_class" href="classLoopClassifier.html">LoopClassifier</a> {</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    <span class="comment">// Which loop the classifier belongs to</span></div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    llvm::Loop *loop;</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span> </div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    <span class="comment">// Which function the loop belongs to</span></div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    llvm::Function *function;</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span> </div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    <span class="comment">// Increment representation</span></div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    std::optional&lt;LoopBound::DeltaInterval&gt; increment;</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span> </div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    <span class="comment">// Possible bound calculated from the parameters</span></div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    std::optional&lt;LoopBound::DeltaInterval&gt; bound;</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="comment">// Init value</span></div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    std::optional&lt;int64_t&gt; init;</div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span> </div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    <span class="comment">// Loop bound</span></div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    std::optional&lt;int64_t&gt; check;</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span> </div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    <span class="comment">// Comparison operator</span></div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    llvm::CmpInst::Predicate predicate;</div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span> </div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    <span class="comment">// Looptype</span></div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    <a class="code hl_enumeration" href="namespaceLoopBound.html#a7c54a9f40f78bc05e04204a9f18e74df">LoopBound::LoopType</a> type;</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span> </div>
-<div class="foldopen" id="foldopen00125" data-start="{" data-end="}">
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno"><a class="line" href="classLoopClassifier.html#a2162bf4957eae20203c903372ac2287f">  125</a></span>    <a class="code hl_function" href="classLoopClassifier.html#a2162bf4957eae20203c903372ac2287f">LoopClassifier</a>(</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        llvm::Function *func,</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>        llvm::Loop *loop,</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        std::optional&lt;LoopBound::DeltaInterval&gt; increment,</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>        std::optional&lt;int64_t&gt; init,</div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>        llvm::CmpInst::Predicate pred,</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>        std::optional&lt;int64_t&gt; check,</div>
-<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>        <a class="code hl_enumeration" href="namespaceLoopBound.html#a7c54a9f40f78bc05e04204a9f18e74df">LoopBound::LoopType</a> type)</div>
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    : function(func), loop(loop), increment(increment), init(init), predicate(pred), check(check), type(type) {</div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>        this-&gt;bound = <a class="code hl_function" href="classLoopClassifier.html#a0adfbcf3f7e84aa2e0d2ea966c9ee449">calculateBound</a>();</div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    }</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span> </div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span> </div>
+<div class="foldopen" id="foldopen00092" data-start="{" data-end="};">
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopClassifier.html">   92</a></span><span class="keyword">class </span><a class="code hl_class" href="classLoopBound_1_1LoopClassifier.html">LoopClassifier</a> {</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span> <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    <span class="comment">// Which loop the classifier belongs to</span></div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    llvm::Loop *loop;</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span> </div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    <span class="comment">// Which function the loop belongs to</span></div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    llvm::Function *function;</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span> </div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    <span class="comment">// Increment representation</span></div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    std::optional&lt;LoopBound::DeltaInterval&gt; increment;</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span> </div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <span class="comment">// Possible bound calculated from the parameters</span></div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    std::optional&lt;LoopBound::DeltaInterval&gt; bound;</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span> </div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    <span class="comment">// Init value</span></div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    std::optional&lt;int64_t&gt; init;</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> </div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    <span class="comment">// Loop bound</span></div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    std::optional&lt;int64_t&gt; check;</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    <span class="comment">// Comparison operator</span></div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    llvm::CmpInst::Predicate predicate;</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span> </div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    <span class="comment">// Looptype</span></div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    <a class="code hl_enumeration" href="namespaceLoopBound.html#a7c54a9f40f78bc05e04204a9f18e74df">LoopBound::LoopType</a> type;</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
+<div class="foldopen" id="foldopen00127" data-start="{" data-end="}">
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopClassifier.html#aebb04d9b81c2fc5a0544b85dcc2b5455">  127</a></span>    <a class="code hl_function" href="classLoopBound_1_1LoopClassifier.html#aebb04d9b81c2fc5a0544b85dcc2b5455">LoopClassifier</a>(</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        llvm::Function *func,</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>        llvm::Loop *loop,</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>        std::optional&lt;LoopBound::DeltaInterval&gt; increment,</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>        std::optional&lt;int64_t&gt; init,</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>        llvm::CmpInst::Predicate pred,</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>        std::optional&lt;int64_t&gt; check,</div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>        <a class="code hl_enumeration" href="namespaceLoopBound.html#a7c54a9f40f78bc05e04204a9f18e74df">LoopBound::LoopType</a> type)</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    : function(func), loop(loop), increment(increment), init(init), predicate(pred), check(check), type(type) {</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>        this-&gt;bound = <a class="code hl_function" href="classLoopBound_1_1LoopClassifier.html#afc9639ee0f60335b8fab4cce6da29caf">calculateBound</a>();</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>    }</div>
 </div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span> </div>
-<div class="line"><a id="l00141" name="l00141"></a><span class="lineno"><a class="line" href="classLoopClassifier.html#a0adfbcf3f7e84aa2e0d2ea966c9ee449">  141</a></span>    std::optional&lt;LoopBound::DeltaInterval&gt; <a class="code hl_function" href="classLoopClassifier.html#a0adfbcf3f7e84aa2e0d2ea966c9ee449">calculateBound</a>();</div>
-<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span> </div>
-<div class="foldopen" id="foldopen00147" data-start="{" data-end="}">
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno"><a class="line" href="classLoopClassifier.html#a89076136832b5744bc91c0d34d735eb6">  147</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="classLoopClassifier.html#a89076136832b5744bc91c0d34d735eb6">isBoundable</a>()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>        <span class="keywordflow">return</span> check.has_value();</div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    }</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span> </div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopClassifier.html#afc9639ee0f60335b8fab4cce6da29caf">  143</a></span>    std::optional&lt;LoopBound::DeltaInterval&gt; <a class="code hl_function" href="classLoopBound_1_1LoopClassifier.html#afc9639ee0f60335b8fab4cce6da29caf">calculateBound</a>();</div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span> </div>
+<div class="foldopen" id="foldopen00149" data-start="{" data-end="}">
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopClassifier.html#ab60e34f91b4104ef0ee187406e68f3ba">  149</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="classLoopBound_1_1LoopClassifier.html#ab60e34f91b4104ef0ee187406e68f3ba">isBoundable</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>        <span class="keywordflow">return</span> check.has_value();</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    }</div>
 </div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span> </div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span> <span class="keyword">private</span>:</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    <span class="keyword">static</span> std::optional&lt;int64_t&gt; solveAdditiveBound(llvm::CmpInst::Predicate predicate,</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>                                      int64_t init, int64_t check, int64_t increment);</div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span> </div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    <span class="keyword">static</span> std::optional&lt;int64_t&gt; solveMultiplicativeBound(llvm::CmpInst::Predicate predicate,</div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>                                      int64_t init, int64_t check, int64_t increment);</div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span> </div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    <span class="keyword">static</span> std::optional&lt;int64_t&gt; solveDivisionBound(llvm::CmpInst::Predicate predicate,</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>                                      int64_t init, int64_t check, int64_t increment);</div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>};</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span> </div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span> <span class="keyword">private</span>:</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    <span class="keyword">static</span> std::optional&lt;int64_t&gt; solveAdditiveBound(llvm::CmpInst::Predicate predicate,</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>                                      int64_t init, int64_t check, int64_t increment);</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span> </div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    <span class="keyword">static</span> std::optional&lt;int64_t&gt; solveMultiplicativeBound(llvm::CmpInst::Predicate predicate,</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>                                      int64_t init, int64_t check, int64_t increment);</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span> </div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    <span class="keyword">static</span> std::optional&lt;int64_t&gt; solveDivisionBound(llvm::CmpInst::Predicate predicate,</div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>                                      int64_t init, int64_t check, int64_t increment);</div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>};</div>
 </div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span> </div>
-<div class="foldopen" id="foldopen00192" data-start="{" data-end="};">
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno"><a class="line" href="classLoopBoundWrapper.html">  192</a></span><span class="keyword">class </span><a class="code hl_class" href="classLoopBoundWrapper.html">LoopBoundWrapper</a> {</div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span> <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno"><a class="line" href="classLoopBoundWrapper.html#a897cec67e475e64078c299ab60dba5d5">  199</a></span>    <a class="code hl_function" href="classLoopBoundWrapper.html#a897cec67e475e64078c299ab60dba5d5">LoopBoundWrapper</a>(std::unique_ptr&lt;psr::HelperAnalyses&gt; helperAnalyses, llvm::FunctionAnalysisManager *FAM);</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span> </div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno"><a class="line" href="classLoopBoundWrapper.html#a64403e51b6805feb5c2a7505a21ba0e8">  206</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="classLoopBoundWrapper.html#a64403e51b6805feb5c2a7505a21ba0e8">collectLoops</a>(llvm::Loop *L, std::vector&lt;llvm::Loop *&gt; &amp;Out);</div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span> </div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno"><a class="line" href="classLoopBoundWrapper.html#a7e1e1749f665960b761b6d758c5583cc">  212</a></span>    std::vector&lt;LoopClassifier&gt; <a class="code hl_function" href="classLoopBoundWrapper.html#a7e1e1749f665960b761b6d758c5583cc">getClassifiers</a>();</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span> </div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno"><a class="line" href="classLoopBoundWrapper.html#abb47fab92ef67859b740d21ea6584cdb">  219</a></span>    <span class="keyword">static</span> std::optional&lt;CheckExpr&gt; <a class="code hl_function" href="classLoopBoundWrapper.html#abb47fab92ef67859b740d21ea6584cdb">peelBasePlusConst</a>(<span class="keyword">const</span> llvm::Value *V);</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span> </div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno"><a class="line" href="classLoopBoundWrapper.html#aa7732f83ae5ba36d1cbbe1786316b873">  227</a></span>    <span class="keyword">static</span> std::optional&lt;CheckExpr&gt; <a class="code hl_function" href="classLoopBoundWrapper.html#aa7732f83ae5ba36d1cbbe1786316b873">findLoopCheckExpr</a>(</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>        <span class="keyword">const</span> <a class="code hl_struct" href="structLoopBound_1_1LoopParameterDescription.html">LoopBound::LoopParameterDescription</a> &amp;description, llvm::FunctionAnalysisManager *FAM,</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>        llvm::LoopInfo &amp;LIInfo);</div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span> </div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span> <span class="keyword">private</span>:</div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    <span class="comment">// Internal storage of the analysis results calculated by phasar</span></div>
-<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    std::unique_ptr&lt;ResultsTy&gt; cachedResults;</div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span> </div>
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    <span class="comment">// Loops found by llvm in the current program</span></div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    std::vector&lt;llvm::Loop *&gt; loops;</div>
-<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span> </div>
-<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    <span class="comment">// Internal storage of our constructed loop classifiers</span></div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    std::vector&lt;LoopClassifier&gt; loopClassifiers;</div>
-<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span> </div>
-<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    <span class="comment">// Internal storage of the analysis manager so we can access llvms analysis information later on without</span></div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    <span class="comment">// passing it down to our functions</span></div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    llvm::FunctionAnalysisManager *FAM;</div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span> </div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    <span class="keyword">const</span> llvm::StoreInst *findStoreIncOfLoop(<span class="keyword">const</span> <a class="code hl_struct" href="structLoopBound_1_1LoopParameterDescription.html">LoopBound::LoopParameterDescription</a> &amp;description);</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span> </div>
+<div class="foldopen" id="foldopen00194" data-start="{" data-end="};">
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopBoundWrapper.html">  194</a></span><span class="keyword">class </span><a class="code hl_class" href="classLoopBound_1_1LoopBoundWrapper.html">LoopBoundWrapper</a> {</div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span> <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopBoundWrapper.html#ae01be73945b898ee1ff855aa1cde4c52">  201</a></span>    <a class="code hl_function" href="classLoopBound_1_1LoopBoundWrapper.html#ae01be73945b898ee1ff855aa1cde4c52">LoopBoundWrapper</a>(std::shared_ptr&lt;psr::HelperAnalyses&gt; helperAnalyses, llvm::FunctionAnalysisManager *FAM);</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span> </div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopBoundWrapper.html#ad22ff3e72b4d0659c43ff56d395787f5">  208</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="classLoopBound_1_1LoopBoundWrapper.html#ad22ff3e72b4d0659c43ff56d395787f5">collectLoops</a>(llvm::Loop *L, std::vector&lt;llvm::Loop *&gt; &amp;Out);</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span> </div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopBoundWrapper.html#a892c2ff2586d4b5281967bad67e9799c">  214</a></span>    std::vector&lt;LoopClassifier&gt; <a class="code hl_function" href="classLoopBound_1_1LoopBoundWrapper.html#a892c2ff2586d4b5281967bad67e9799c">getClassifiers</a>();</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span> </div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopBoundWrapper.html#abcd8812aca095d1fd8a3b13b2805b6db">  221</a></span>    <span class="keyword">static</span> std::optional&lt;CheckExpr&gt; <a class="code hl_function" href="classLoopBound_1_1LoopBoundWrapper.html#abcd8812aca095d1fd8a3b13b2805b6db">peelBasePlusConst</a>(<span class="keyword">const</span> llvm::Value *V);</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span> </div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopBoundWrapper.html#a8d79267601928d46ce295549a58402c9">  229</a></span>    <span class="keyword">static</span> std::optional&lt;CheckExpr&gt; <a class="code hl_function" href="classLoopBound_1_1LoopBoundWrapper.html#a8d79267601928d46ce295549a58402c9">findLoopCheckExpr</a>(</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>        <span class="keyword">const</span> <a class="code hl_struct" href="structLoopBound_1_1LoopParameterDescription.html">LoopBound::LoopParameterDescription</a> &amp;description, llvm::FunctionAnalysisManager *FAM,</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        llvm::LoopInfo &amp;LIInfo);</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span> </div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno"><a class="line" href="classLoopBound_1_1LoopBoundWrapper.html#adc3df27f566c130efbd4b234361cd955">  237</a></span>    std::unique_ptr&lt;ResultsTy&gt; <a class="code hl_function" href="classLoopBound_1_1LoopBoundWrapper.html#adc3df27f566c130efbd4b234361cd955">getResults</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span> </div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span> <span class="keyword">private</span>:</div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    <span class="comment">// Internal storage of the analysis results calculated by phasar</span></div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    std::unique_ptr&lt;ResultsTy&gt; cachedResults;</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span> </div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    <span class="comment">// Loops found by llvm in the current program</span></div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    std::vector&lt;llvm::Loop *&gt; loops;</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span> </div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    <span class="comment">// Internal storage of our constructed loop classifiers</span></div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    std::vector&lt;LoopClassifier&gt; loopClassifiers;</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span> </div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    <span class="comment">// Internal storage of the analysis manager so we can access llvms analysis information later on without</span></div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    <span class="comment">// passing it down to our functions</span></div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    llvm::FunctionAnalysisManager *FAM;</div>
 <div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span> </div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    <span class="keywordtype">bool</span> hasCachedValueAt(<span class="keyword">const</span> llvm::Instruction *I, <span class="keyword">const</span> llvm::Value *Fact) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    <span class="keyword">const</span> llvm::StoreInst *findStoreIncOfLoop(<span class="keyword">const</span> <a class="code hl_struct" href="structLoopBound_1_1LoopParameterDescription.html">LoopBound::LoopParameterDescription</a> &amp;description);</div>
 <div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span> </div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    std::optional&lt;LoopBound::DeltaInterval&gt; queryIntervalAtInstuction(</div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    <span class="keyword">const</span> llvm::Instruction *inst, <span class="keyword">const</span> llvm::Value *fact);</div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span> </div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    <span class="keywordtype">void</span> printClassifiers();</div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>};</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    <span class="keywordtype">bool</span> hasCachedValueAt(<span class="keyword">const</span> llvm::Instruction *I, <span class="keyword">const</span> llvm::Value *Fact) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span> </div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    std::optional&lt;LoopBound::DeltaInterval&gt; queryIntervalAtInstuction(</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    <span class="keyword">const</span> llvm::Instruction *inst, <span class="keyword">const</span> llvm::Value *fact);</div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span> </div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    <span class="keywordtype">void</span> printClassifiers();</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>};</div>
 </div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span> </div>
-<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span><span class="preprocessor">#endif  </span><span class="comment">// SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUNDWRAPPER_H_</span></div>
-<div class="ttc" id="aclassCheckExpr_html"><div class="ttname"><a href="classCheckExpr.html">CheckExpr</a></div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:34</div></div>
-<div class="ttc" id="aclassCheckExpr_html_a034edf828ee12457de18cc27444fe13d"><div class="ttname"><a href="classCheckExpr.html#a034edf828ee12457de18cc27444fe13d">CheckExpr::Base</a></div><div class="ttdeci">const llvm::Value * Base</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:40</div></div>
-<div class="ttc" id="aclassCheckExpr_html_a159b0f28740fd41e90fb4049161f4c01"><div class="ttname"><a href="classCheckExpr.html#a159b0f28740fd41e90fb4049161f4c01">CheckExpr::isConstant</a></div><div class="ttdeci">bool isConstant</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:55</div></div>
-<div class="ttc" id="aclassCheckExpr_html_a6f65fd5ef85dbf36c843b3b05cdec8ea"><div class="ttname"><a href="classCheckExpr.html#a6f65fd5ef85dbf36c843b3b05cdec8ea">CheckExpr::calculateCheck</a></div><div class="ttdeci">std::optional&lt; int64_t &gt; calculateCheck(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &amp;LIInfo)</div></div>
-<div class="ttc" id="aclassCheckExpr_html_a835a647e136601319ad5bc1cb5ca702e"><div class="ttname"><a href="classCheckExpr.html#a835a647e136601319ad5bc1cb5ca702e">CheckExpr::DivBy</a></div><div class="ttdeci">std::optional&lt; int64_t &gt; DivBy</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:60</div></div>
-<div class="ttc" id="aclassCheckExpr_html_a864e2eae3e582ca9c843835d5b84ad1e"><div class="ttname"><a href="classCheckExpr.html#a864e2eae3e582ca9c843835d5b84ad1e">CheckExpr::MulBy</a></div><div class="ttdeci">std::optional&lt; int64_t &gt; MulBy</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:65</div></div>
-<div class="ttc" id="aclassCheckExpr_html_aa43bc33e1b274cb82fc2acdcfa67cb19"><div class="ttname"><a href="classCheckExpr.html#aa43bc33e1b274cb82fc2acdcfa67cb19">CheckExpr::CheckExpr</a></div><div class="ttdeci">CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload, int64_t offset, bool constant)</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:73</div></div>
-<div class="ttc" id="aclassCheckExpr_html_ac5f49197de70be0f7255653bf9797f1a"><div class="ttname"><a href="classCheckExpr.html#ac5f49197de70be0f7255653bf9797f1a">CheckExpr::BaseLoad</a></div><div class="ttdeci">const llvm::LoadInst * BaseLoad</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:45</div></div>
-<div class="ttc" id="aclassCheckExpr_html_afa2f37ffa62a3e47c3b729376b5eb335"><div class="ttname"><a href="classCheckExpr.html#afa2f37ffa62a3e47c3b729376b5eb335">CheckExpr::Offset</a></div><div class="ttdeci">int64_t Offset</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:50</div></div>
-<div class="ttc" id="aclassLoopBoundWrapper_html"><div class="ttname"><a href="classLoopBoundWrapper.html">LoopBoundWrapper</a></div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:192</div></div>
-<div class="ttc" id="aclassLoopBoundWrapper_html_a64403e51b6805feb5c2a7505a21ba0e8"><div class="ttname"><a href="classLoopBoundWrapper.html#a64403e51b6805feb5c2a7505a21ba0e8">LoopBoundWrapper::collectLoops</a></div><div class="ttdeci">void collectLoops(llvm::Loop *L, std::vector&lt; llvm::Loop * &gt; &amp;Out)</div></div>
-<div class="ttc" id="aclassLoopBoundWrapper_html_a7e1e1749f665960b761b6d758c5583cc"><div class="ttname"><a href="classLoopBoundWrapper.html#a7e1e1749f665960b761b6d758c5583cc">LoopBoundWrapper::getClassifiers</a></div><div class="ttdeci">std::vector&lt; LoopClassifier &gt; getClassifiers()</div></div>
-<div class="ttc" id="aclassLoopBoundWrapper_html_a897cec67e475e64078c299ab60dba5d5"><div class="ttname"><a href="classLoopBoundWrapper.html#a897cec67e475e64078c299ab60dba5d5">LoopBoundWrapper::LoopBoundWrapper</a></div><div class="ttdeci">LoopBoundWrapper(std::unique_ptr&lt; psr::HelperAnalyses &gt; helperAnalyses, llvm::FunctionAnalysisManager *FAM)</div></div>
-<div class="ttc" id="aclassLoopBoundWrapper_html_aa7732f83ae5ba36d1cbbe1786316b873"><div class="ttname"><a href="classLoopBoundWrapper.html#aa7732f83ae5ba36d1cbbe1786316b873">LoopBoundWrapper::findLoopCheckExpr</a></div><div class="ttdeci">static std::optional&lt; CheckExpr &gt; findLoopCheckExpr(const LoopBound::LoopParameterDescription &amp;description, llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &amp;LIInfo)</div></div>
-<div class="ttc" id="aclassLoopBoundWrapper_html_abb47fab92ef67859b740d21ea6584cdb"><div class="ttname"><a href="classLoopBoundWrapper.html#abb47fab92ef67859b740d21ea6584cdb">LoopBoundWrapper::peelBasePlusConst</a></div><div class="ttdeci">static std::optional&lt; CheckExpr &gt; peelBasePlusConst(const llvm::Value *V)</div></div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span> </div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>}  <span class="comment">// namespace LoopBound</span></div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span> </div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span><span class="preprocessor">#endif  </span><span class="comment">// SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPBOUNDWRAPPER_H_</span></div>
+<div class="ttc" id="aclassLoopBound_1_1CheckExpr_html"><div class="ttname"><a href="classLoopBound_1_1CheckExpr.html">LoopBound::CheckExpr</a></div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:36</div></div>
+<div class="ttc" id="aclassLoopBound_1_1CheckExpr_html_a484c295c27ceecd446739d2d18259945"><div class="ttname"><a href="classLoopBound_1_1CheckExpr.html#a484c295c27ceecd446739d2d18259945">LoopBound::CheckExpr::Base</a></div><div class="ttdeci">const llvm::Value * Base</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:42</div></div>
+<div class="ttc" id="aclassLoopBound_1_1CheckExpr_html_a7992c7d7f1af2a7b1727659bff22b52d"><div class="ttname"><a href="classLoopBound_1_1CheckExpr.html#a7992c7d7f1af2a7b1727659bff22b52d">LoopBound::CheckExpr::DivBy</a></div><div class="ttdeci">std::optional&lt; int64_t &gt; DivBy</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:62</div></div>
+<div class="ttc" id="aclassLoopBound_1_1CheckExpr_html_a8e3b99fa6bfb7c7a109a4478fe2e0e12"><div class="ttname"><a href="classLoopBound_1_1CheckExpr.html#a8e3b99fa6bfb7c7a109a4478fe2e0e12">LoopBound::CheckExpr::CheckExpr</a></div><div class="ttdeci">CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload, int64_t offset, bool constant)</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:75</div></div>
+<div class="ttc" id="aclassLoopBound_1_1CheckExpr_html_aae39631c1217d62cb5bc1ea4aa513ba5"><div class="ttname"><a href="classLoopBound_1_1CheckExpr.html#aae39631c1217d62cb5bc1ea4aa513ba5">LoopBound::CheckExpr::calculateCheck</a></div><div class="ttdeci">std::optional&lt; int64_t &gt; calculateCheck(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &amp;LIInfo)</div></div>
+<div class="ttc" id="aclassLoopBound_1_1CheckExpr_html_abdd9f5dceb36096d21989f8f47c1a7c4"><div class="ttname"><a href="classLoopBound_1_1CheckExpr.html#abdd9f5dceb36096d21989f8f47c1a7c4">LoopBound::CheckExpr::BaseLoad</a></div><div class="ttdeci">const llvm::LoadInst * BaseLoad</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:47</div></div>
+<div class="ttc" id="aclassLoopBound_1_1CheckExpr_html_abe4c99ccb00cc9391621cbe57dace9c8"><div class="ttname"><a href="classLoopBound_1_1CheckExpr.html#abe4c99ccb00cc9391621cbe57dace9c8">LoopBound::CheckExpr::Offset</a></div><div class="ttdeci">int64_t Offset</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:52</div></div>
+<div class="ttc" id="aclassLoopBound_1_1CheckExpr_html_ace1d83f355b8664bc1a21a843101e3ff"><div class="ttname"><a href="classLoopBound_1_1CheckExpr.html#ace1d83f355b8664bc1a21a843101e3ff">LoopBound::CheckExpr::MulBy</a></div><div class="ttdeci">std::optional&lt; int64_t &gt; MulBy</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:67</div></div>
+<div class="ttc" id="aclassLoopBound_1_1CheckExpr_html_ad474b71b8447762c275ee8b8ae94259e"><div class="ttname"><a href="classLoopBound_1_1CheckExpr.html#ad474b71b8447762c275ee8b8ae94259e">LoopBound::CheckExpr::isConstant</a></div><div class="ttdeci">bool isConstant</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:57</div></div>
 <div class="ttc" id="aclassLoopBound_1_1DeltaInterval_html"><div class="ttname"><a href="classLoopBound_1_1DeltaInterval.html">LoopBound::DeltaInterval</a></div><div class="ttdef"><b>Definition</b> DeltaInterval.h:17</div></div>
-<div class="ttc" id="aclassLoopClassifier_html"><div class="ttname"><a href="classLoopClassifier.html">LoopClassifier</a></div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:90</div></div>
-<div class="ttc" id="aclassLoopClassifier_html_a0adfbcf3f7e84aa2e0d2ea966c9ee449"><div class="ttname"><a href="classLoopClassifier.html#a0adfbcf3f7e84aa2e0d2ea966c9ee449">LoopClassifier::calculateBound</a></div><div class="ttdeci">std::optional&lt; LoopBound::DeltaInterval &gt; calculateBound()</div></div>
-<div class="ttc" id="aclassLoopClassifier_html_a2162bf4957eae20203c903372ac2287f"><div class="ttname"><a href="classLoopClassifier.html#a2162bf4957eae20203c903372ac2287f">LoopClassifier::LoopClassifier</a></div><div class="ttdeci">LoopClassifier(llvm::Function *func, llvm::Loop *loop, std::optional&lt; LoopBound::DeltaInterval &gt; increment, std::optional&lt; int64_t &gt; init, llvm::CmpInst::Predicate pred, std::optional&lt; int64_t &gt; check, LoopBound::LoopType type)</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:125</div></div>
-<div class="ttc" id="aclassLoopClassifier_html_a89076136832b5744bc91c0d34d735eb6"><div class="ttname"><a href="classLoopClassifier.html#a89076136832b5744bc91c0d34d735eb6">LoopClassifier::isBoundable</a></div><div class="ttdeci">bool isBoundable() const</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:147</div></div>
-<div class="ttc" id="anamespaceLoopBound_html_a7c54a9f40f78bc05e04204a9f18e74df"><div class="ttname"><a href="namespaceLoopBound.html#a7c54a9f40f78bc05e04204a9f18e74df">LoopBound::LoopType</a></div><div class="ttdeci">LoopType</div><div class="ttdef"><b>Definition</b> LoopBound.h:51</div></div>
-<div class="ttc" id="astructLoopBound_1_1LoopParameterDescription_html"><div class="ttname"><a href="structLoopBound_1_1LoopParameterDescription.html">LoopBound::LoopParameterDescription</a></div><div class="ttdef"><b>Definition</b> LoopBound.h:65</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopBoundWrapper_html"><div class="ttname"><a href="classLoopBound_1_1LoopBoundWrapper.html">LoopBound::LoopBoundWrapper</a></div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:194</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopBoundWrapper_html_a892c2ff2586d4b5281967bad67e9799c"><div class="ttname"><a href="classLoopBound_1_1LoopBoundWrapper.html#a892c2ff2586d4b5281967bad67e9799c">LoopBound::LoopBoundWrapper::getClassifiers</a></div><div class="ttdeci">std::vector&lt; LoopClassifier &gt; getClassifiers()</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopBoundWrapper_html_a8d79267601928d46ce295549a58402c9"><div class="ttname"><a href="classLoopBound_1_1LoopBoundWrapper.html#a8d79267601928d46ce295549a58402c9">LoopBound::LoopBoundWrapper::findLoopCheckExpr</a></div><div class="ttdeci">static std::optional&lt; CheckExpr &gt; findLoopCheckExpr(const LoopBound::LoopParameterDescription &amp;description, llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &amp;LIInfo)</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopBoundWrapper_html_abcd8812aca095d1fd8a3b13b2805b6db"><div class="ttname"><a href="classLoopBound_1_1LoopBoundWrapper.html#abcd8812aca095d1fd8a3b13b2805b6db">LoopBound::LoopBoundWrapper::peelBasePlusConst</a></div><div class="ttdeci">static std::optional&lt; CheckExpr &gt; peelBasePlusConst(const llvm::Value *V)</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopBoundWrapper_html_ad22ff3e72b4d0659c43ff56d395787f5"><div class="ttname"><a href="classLoopBound_1_1LoopBoundWrapper.html#ad22ff3e72b4d0659c43ff56d395787f5">LoopBound::LoopBoundWrapper::collectLoops</a></div><div class="ttdeci">void collectLoops(llvm::Loop *L, std::vector&lt; llvm::Loop * &gt; &amp;Out)</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopBoundWrapper_html_adc3df27f566c130efbd4b234361cd955"><div class="ttname"><a href="classLoopBound_1_1LoopBoundWrapper.html#adc3df27f566c130efbd4b234361cd955">LoopBound::LoopBoundWrapper::getResults</a></div><div class="ttdeci">std::unique_ptr&lt; ResultsTy &gt; getResults() const</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopBoundWrapper_html_ae01be73945b898ee1ff855aa1cde4c52"><div class="ttname"><a href="classLoopBound_1_1LoopBoundWrapper.html#ae01be73945b898ee1ff855aa1cde4c52">LoopBound::LoopBoundWrapper::LoopBoundWrapper</a></div><div class="ttdeci">LoopBoundWrapper(std::shared_ptr&lt; psr::HelperAnalyses &gt; helperAnalyses, llvm::FunctionAnalysisManager *FAM)</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopClassifier_html"><div class="ttname"><a href="classLoopBound_1_1LoopClassifier.html">LoopBound::LoopClassifier</a></div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:92</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopClassifier_html_ab60e34f91b4104ef0ee187406e68f3ba"><div class="ttname"><a href="classLoopBound_1_1LoopClassifier.html#ab60e34f91b4104ef0ee187406e68f3ba">LoopBound::LoopClassifier::isBoundable</a></div><div class="ttdeci">bool isBoundable() const</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:149</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopClassifier_html_aebb04d9b81c2fc5a0544b85dcc2b5455"><div class="ttname"><a href="classLoopBound_1_1LoopClassifier.html#aebb04d9b81c2fc5a0544b85dcc2b5455">LoopBound::LoopClassifier::LoopClassifier</a></div><div class="ttdeci">LoopClassifier(llvm::Function *func, llvm::Loop *loop, std::optional&lt; LoopBound::DeltaInterval &gt; increment, std::optional&lt; int64_t &gt; init, llvm::CmpInst::Predicate pred, std::optional&lt; int64_t &gt; check, LoopBound::LoopType type)</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:127</div></div>
+<div class="ttc" id="aclassLoopBound_1_1LoopClassifier_html_afc9639ee0f60335b8fab4cce6da29caf"><div class="ttname"><a href="classLoopBound_1_1LoopClassifier.html#afc9639ee0f60335b8fab4cce6da29caf">LoopBound::LoopClassifier::calculateBound</a></div><div class="ttdeci">std::optional&lt; LoopBound::DeltaInterval &gt; calculateBound()</div></div>
+<div class="ttc" id="anamespaceLoopBound_html"><div class="ttname"><a href="namespaceLoopBound.html">LoopBound</a></div><div class="ttdef"><b>Definition</b> DeltaInterval.h:12</div></div>
+<div class="ttc" id="anamespaceLoopBound_html_a0be9b3685c21940b21bb2661236f30b5"><div class="ttname"><a href="namespaceLoopBound.html#a0be9b3685c21940b21bb2661236f30b5">LoopBound::ResultsTy</a></div><div class="ttdeci">psr::OwningSolverResults&lt; const llvm::Instruction *, const llvm::Value *, LoopBound::DeltaInterval &gt; ResultsTy</div><div class="ttdef"><b>Definition</b> loopBoundWrapper.h:26</div></div>
+<div class="ttc" id="anamespaceLoopBound_html_a7c54a9f40f78bc05e04204a9f18e74df"><div class="ttname"><a href="namespaceLoopBound.html#a7c54a9f40f78bc05e04204a9f18e74df">LoopBound::LoopType</a></div><div class="ttdeci">LoopType</div><div class="ttdef"><b>Definition</b> LoopBound.h:53</div></div>
+<div class="ttc" id="astructLoopBound_1_1LoopParameterDescription_html"><div class="ttname"><a href="structLoopBound_1_1LoopParameterDescription.html">LoopBound::LoopParameterDescription</a></div><div class="ttdef"><b>Definition</b> LoopBound.h:67</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

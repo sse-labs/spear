@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Bachelorarbeit: CheckExpr Class Reference</title>
+<title>Bachelorarbeit: LoopBound::CheckExpr Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -67,13 +67,17 @@ $(function() {
 </div>
 </div>
 
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="namespaceLoopBound.html">LoopBound</a></li><li class="navelem"><a class="el" href="classLoopBound_1_1CheckExpr.html">CheckExpr</a></li>  </ul>
+</div>
 </div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
-<a href="classCheckExpr-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">CheckExpr Class Reference</div></div>
+<a href="classLoopBound_1_1CheckExpr-members.html">List of all members</a>  </div>
+  <div class="headertitle"><div class="title">LoopBound::CheckExpr Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
@@ -81,32 +85,32 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:aa43bc33e1b274cb82fc2acdcfa67cb19" id="r_aa43bc33e1b274cb82fc2acdcfa67cb19"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCheckExpr.html#aa43bc33e1b274cb82fc2acdcfa67cb19">CheckExpr</a> (const llvm::Value *base, const llvm::LoadInst *baseload, int64_t offset, bool constant)</td></tr>
-<tr class="separator:aa43bc33e1b274cb82fc2acdcfa67cb19"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6f65fd5ef85dbf36c843b3b05cdec8ea" id="r_a6f65fd5ef85dbf36c843b3b05cdec8ea"><td class="memItemLeft" align="right" valign="top">std::optional&lt; int64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCheckExpr.html#a6f65fd5ef85dbf36c843b3b05cdec8ea">calculateCheck</a> (llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &amp;LIInfo)</td></tr>
-<tr class="separator:a6f65fd5ef85dbf36c843b3b05cdec8ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e3b99fa6bfb7c7a109a4478fe2e0e12" id="r_a8e3b99fa6bfb7c7a109a4478fe2e0e12"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#a8e3b99fa6bfb7c7a109a4478fe2e0e12">CheckExpr</a> (const llvm::Value *base, const llvm::LoadInst *baseload, int64_t offset, bool constant)</td></tr>
+<tr class="separator:a8e3b99fa6bfb7c7a109a4478fe2e0e12"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae39631c1217d62cb5bc1ea4aa513ba5" id="r_aae39631c1217d62cb5bc1ea4aa513ba5"><td class="memItemLeft" align="right" valign="top">std::optional&lt; int64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#aae39631c1217d62cb5bc1ea4aa513ba5">calculateCheck</a> (llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &amp;LIInfo)</td></tr>
+<tr class="separator:aae39631c1217d62cb5bc1ea4aa513ba5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a034edf828ee12457de18cc27444fe13d" id="r_a034edf828ee12457de18cc27444fe13d"><td class="memItemLeft" align="right" valign="top">const llvm::Value *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCheckExpr.html#a034edf828ee12457de18cc27444fe13d">Base</a> = nullptr</td></tr>
-<tr class="separator:a034edf828ee12457de18cc27444fe13d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac5f49197de70be0f7255653bf9797f1a" id="r_ac5f49197de70be0f7255653bf9797f1a"><td class="memItemLeft" align="right" valign="top">const llvm::LoadInst *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCheckExpr.html#ac5f49197de70be0f7255653bf9797f1a">BaseLoad</a> = nullptr</td></tr>
-<tr class="separator:ac5f49197de70be0f7255653bf9797f1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afa2f37ffa62a3e47c3b729376b5eb335" id="r_afa2f37ffa62a3e47c3b729376b5eb335"><td class="memItemLeft" align="right" valign="top">int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCheckExpr.html#afa2f37ffa62a3e47c3b729376b5eb335">Offset</a> = 0</td></tr>
-<tr class="separator:afa2f37ffa62a3e47c3b729376b5eb335"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a159b0f28740fd41e90fb4049161f4c01" id="r_a159b0f28740fd41e90fb4049161f4c01"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCheckExpr.html#a159b0f28740fd41e90fb4049161f4c01">isConstant</a> = false</td></tr>
-<tr class="separator:a159b0f28740fd41e90fb4049161f4c01"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a835a647e136601319ad5bc1cb5ca702e" id="r_a835a647e136601319ad5bc1cb5ca702e"><td class="memItemLeft" align="right" valign="top">std::optional&lt; int64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCheckExpr.html#a835a647e136601319ad5bc1cb5ca702e">DivBy</a></td></tr>
-<tr class="separator:a835a647e136601319ad5bc1cb5ca702e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a864e2eae3e582ca9c843835d5b84ad1e" id="r_a864e2eae3e582ca9c843835d5b84ad1e"><td class="memItemLeft" align="right" valign="top">std::optional&lt; int64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCheckExpr.html#a864e2eae3e582ca9c843835d5b84ad1e">MulBy</a></td></tr>
-<tr class="separator:a864e2eae3e582ca9c843835d5b84ad1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a484c295c27ceecd446739d2d18259945" id="r_a484c295c27ceecd446739d2d18259945"><td class="memItemLeft" align="right" valign="top">const llvm::Value *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#a484c295c27ceecd446739d2d18259945">Base</a> = nullptr</td></tr>
+<tr class="separator:a484c295c27ceecd446739d2d18259945"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abdd9f5dceb36096d21989f8f47c1a7c4" id="r_abdd9f5dceb36096d21989f8f47c1a7c4"><td class="memItemLeft" align="right" valign="top">const llvm::LoadInst *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#abdd9f5dceb36096d21989f8f47c1a7c4">BaseLoad</a> = nullptr</td></tr>
+<tr class="separator:abdd9f5dceb36096d21989f8f47c1a7c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abe4c99ccb00cc9391621cbe57dace9c8" id="r_abe4c99ccb00cc9391621cbe57dace9c8"><td class="memItemLeft" align="right" valign="top">int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#abe4c99ccb00cc9391621cbe57dace9c8">Offset</a> = 0</td></tr>
+<tr class="separator:abe4c99ccb00cc9391621cbe57dace9c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad474b71b8447762c275ee8b8ae94259e" id="r_ad474b71b8447762c275ee8b8ae94259e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#ad474b71b8447762c275ee8b8ae94259e">isConstant</a> = false</td></tr>
+<tr class="separator:ad474b71b8447762c275ee8b8ae94259e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7992c7d7f1af2a7b1727659bff22b52d" id="r_a7992c7d7f1af2a7b1727659bff22b52d"><td class="memItemLeft" align="right" valign="top">std::optional&lt; int64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#a7992c7d7f1af2a7b1727659bff22b52d">DivBy</a></td></tr>
+<tr class="separator:a7992c7d7f1af2a7b1727659bff22b52d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace1d83f355b8664bc1a21a843101e3ff" id="r_ace1d83f355b8664bc1a21a843101e3ff"><td class="memItemLeft" align="right" valign="top">std::optional&lt; int64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#ace1d83f355b8664bc1a21a843101e3ff">MulBy</a></td></tr>
+<tr class="separator:ace1d83f355b8664bc1a21a843101e3ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Check Expression Class Models checks, loops run against. Allows for calculation of check values if they are no direct constant.</p>
 <p>We model loop checks as affine expression check = offset + i * scaling </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="aa43bc33e1b274cb82fc2acdcfa67cb19" name="aa43bc33e1b274cb82fc2acdcfa67cb19"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa43bc33e1b274cb82fc2acdcfa67cb19">&#9670;&#160;</a></span>CheckExpr()</h2>
+<a id="a8e3b99fa6bfb7c7a109a4478fe2e0e12" name="a8e3b99fa6bfb7c7a109a4478fe2e0e12"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8e3b99fa6bfb7c7a109a4478fe2e0e12">&#9670;&#160;</a></span>CheckExpr()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -115,7 +119,7 @@ Public Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">CheckExpr::CheckExpr </td>
+          <td class="memname">LoopBound::CheckExpr::CheckExpr </td>
           <td>(</td>
           <td class="paramtype">const llvm::Value *&#160;</td>
           <td class="paramname"><em>base</em>, </td>
@@ -162,14 +166,14 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a6f65fd5ef85dbf36c843b3b05cdec8ea" name="a6f65fd5ef85dbf36c843b3b05cdec8ea"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6f65fd5ef85dbf36c843b3b05cdec8ea">&#9670;&#160;</a></span>calculateCheck()</h2>
+<a id="aae39631c1217d62cb5bc1ea4aa513ba5" name="aae39631c1217d62cb5bc1ea4aa513ba5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae39631c1217d62cb5bc1ea4aa513ba5">&#9670;&#160;</a></span>calculateCheck()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::optional&lt; int64_t &gt; CheckExpr::calculateCheck </td>
+          <td class="memname">std::optional&lt; int64_t &gt; LoopBound::CheckExpr::calculateCheck </td>
           <td>(</td>
           <td class="paramtype">llvm::FunctionAnalysisManager *&#160;</td>
           <td class="paramname"><em>FAM</em>, </td>
@@ -199,14 +203,14 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
-<a id="a034edf828ee12457de18cc27444fe13d" name="a034edf828ee12457de18cc27444fe13d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a034edf828ee12457de18cc27444fe13d">&#9670;&#160;</a></span>Base</h2>
+<a id="a484c295c27ceecd446739d2d18259945" name="a484c295c27ceecd446739d2d18259945"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a484c295c27ceecd446739d2d18259945">&#9670;&#160;</a></span>Base</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const llvm::Value* CheckExpr::Base = nullptr</td>
+          <td class="memname">const llvm::Value* LoopBound::CheckExpr::Base = nullptr</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -214,14 +218,14 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="ac5f49197de70be0f7255653bf9797f1a" name="ac5f49197de70be0f7255653bf9797f1a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac5f49197de70be0f7255653bf9797f1a">&#9670;&#160;</a></span>BaseLoad</h2>
+<a id="abdd9f5dceb36096d21989f8f47c1a7c4" name="abdd9f5dceb36096d21989f8f47c1a7c4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abdd9f5dceb36096d21989f8f47c1a7c4">&#9670;&#160;</a></span>BaseLoad</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const llvm::LoadInst* CheckExpr::BaseLoad = nullptr</td>
+          <td class="memname">const llvm::LoadInst* LoopBound::CheckExpr::BaseLoad = nullptr</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -229,14 +233,14 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a835a647e136601319ad5bc1cb5ca702e" name="a835a647e136601319ad5bc1cb5ca702e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a835a647e136601319ad5bc1cb5ca702e">&#9670;&#160;</a></span>DivBy</h2>
+<a id="a7992c7d7f1af2a7b1727659bff22b52d" name="a7992c7d7f1af2a7b1727659bff22b52d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7992c7d7f1af2a7b1727659bff22b52d">&#9670;&#160;</a></span>DivBy</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::optional&lt;int64_t&gt; CheckExpr::DivBy</td>
+          <td class="memname">std::optional&lt;int64_t&gt; LoopBound::CheckExpr::DivBy</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -244,14 +248,14 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a159b0f28740fd41e90fb4049161f4c01" name="a159b0f28740fd41e90fb4049161f4c01"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a159b0f28740fd41e90fb4049161f4c01">&#9670;&#160;</a></span>isConstant</h2>
+<a id="ad474b71b8447762c275ee8b8ae94259e" name="ad474b71b8447762c275ee8b8ae94259e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad474b71b8447762c275ee8b8ae94259e">&#9670;&#160;</a></span>isConstant</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool CheckExpr::isConstant = false</td>
+          <td class="memname">bool LoopBound::CheckExpr::isConstant = false</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -259,14 +263,14 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a864e2eae3e582ca9c843835d5b84ad1e" name="a864e2eae3e582ca9c843835d5b84ad1e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a864e2eae3e582ca9c843835d5b84ad1e">&#9670;&#160;</a></span>MulBy</h2>
+<a id="ace1d83f355b8664bc1a21a843101e3ff" name="ace1d83f355b8664bc1a21a843101e3ff"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace1d83f355b8664bc1a21a843101e3ff">&#9670;&#160;</a></span>MulBy</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::optional&lt;int64_t&gt; CheckExpr::MulBy</td>
+          <td class="memname">std::optional&lt;int64_t&gt; LoopBound::CheckExpr::MulBy</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -274,14 +278,14 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="afa2f37ffa62a3e47c3b729376b5eb335" name="afa2f37ffa62a3e47c3b729376b5eb335"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afa2f37ffa62a3e47c3b729376b5eb335">&#9670;&#160;</a></span>Offset</h2>
+<a id="abe4c99ccb00cc9391621cbe57dace9c8" name="abe4c99ccb00cc9391621cbe57dace9c8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abe4c99ccb00cc9391621cbe57dace9c8">&#9670;&#160;</a></span>Offset</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int64_t CheckExpr::Offset = 0</td>
+          <td class="memname">int64_t LoopBound::CheckExpr::Offset = 0</td>
         </tr>
       </table>
 </div><div class="memdoc">

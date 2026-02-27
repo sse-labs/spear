@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['instructioncategory_0',['InstructionCategory',['../classInstructionCategory.html',1,'']]],
-  ['instructionelement_1',['InstructionElement',['../classInstructionElement.html',1,'']]]
+  ['hlac_0',['hlac',['../classHLAC_1_1hlac.html',1,'HLAC']]],
+  ['hlacwrapper_1',['HLACWrapper',['../classHLAC_1_1HLACWrapper.html',1,'HLAC']]]
 ];

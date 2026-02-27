@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['parent_0',['parent',['../classNode.html#a06d203029b4fd6f499b2879a7fda03a4',1,'Node']]],
-  ['profilepath_1',['profilePath',['../classCLIOptions.html#acdcf71d0a1c2150391c1385ed73b6084',1,'CLIOptions']]],
-  ['programpath_2',['programPath',['../classCLIOptions.html#a9b236845bceb70c730e0f3397fe90cbe',1,'CLIOptions']]]
+  ['name_0',['name',['../classFunctionTree.html#ad2dbd903ea3c8e056f002b998ebb7eae',1,'FunctionTree::name'],['../classHLAC_1_1GenericNode.html#a0846161d75459a69951eb59cb73a69b7',1,'HLAC::GenericNode::name']]],
+  ['nodes_1',['nodes',['../classHLAC_1_1LoopNode.html#a506b9bd038d5a4a2914e67018dedb3cb',1,'HLAC::LoopNode::Nodes'],['../classHLAC_1_1FunctionNode.html#a92fbf303476c11b2df4b1cdce474fe19',1,'HLAC::FunctionNode::Nodes'],['../classProgramGraph.html#ac8b6e895ca357755320fe3b5097b4109',1,'ProgramGraph::nodes']]]
 ];

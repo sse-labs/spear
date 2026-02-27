@@ -1,11 +1,25 @@
 var searchData=
 [
-  ['read_0',['read',['../classConfigParser.html#ada2e6706bf9da09632ab3580256f7d55',1,'ConfigParser::read()'],['../classProfileHandler.html#a2af31ac8536f4415244d87dbcd9daf89',1,'ProfileHandler::read()']]],
-  ['readmultiplier_1',['readMultiplier',['../classRegisterReader.html#a119b1f2fa4619881dd10e704650c1ca3',1,'RegisterReader']]],
-  ['red_2',['red',['../classColor.html#a66cc90002e84ded9053aa91c9678f8e6',1,'Color']]],
-  ['registerreader_3',['registerreader',['../classRegisterReader.html',1,'RegisterReader'],['../classRegisterReader.html#ae6c04ca1a23d22c2dcd5adcde62d6189',1,'RegisterReader::RegisterReader()']]],
-  ['removeloopedgesfromsubgraphs_4',['removeLoopEdgesFromSubGraphs',['../classLoopNode.html#ae2c48a161e3fca624295b9c608c6e560',1,'LoopNode']]],
-  ['removenode_5',['removeNode',['../classProgramGraph.html#a3d7172355f93bc903a9a3f6bdf215451',1,'ProgramGraph']]],
-  ['removeorphanededges_6',['removeOrphanedEdges',['../classProgramGraph.html#afc10742190eb8fa0610e975032d71491',1,'ProgramGraph']]],
-  ['replacenodeswithloopnode_7',['replaceNodesWithLoopNode',['../classProgramGraph.html#a2463f6a911a85ed865ad09c26dc5c3a6',1,'ProgramGraph']]]
+  ['parent_0',['parent',['../classFeasibility_1_1EnvNode.html#a7e2cd72c32a515c11a0e65d1eb7b2b0e',1,'Feasibility::EnvNode::parent'],['../classNode.html#a06d203029b4fd6f499b2879a7fda03a4',1,'Node::parent']]],
+  ['parse_1',['parse',['../classConfigParser.html#a07493adaa4feb9beb085dcfe01af3e3c',1,'ConfigParser']]],
+  ['parsecli_2',['parseCLI',['../classCLIHandler.html#aa6d510d2df0ffe8ee1c137a48a2955ae',1,'CLIHandler']]],
+  ['peelbaseplusconst_3',['peelBasePlusConst',['../classLoopBound_1_1LoopBoundWrapper.html#abcd8812aca095d1fd8a3b13b2805b6db',1,'LoopBound::LoopBoundWrapper']]],
+  ['phasarhandlerpass_4',['PhasarHandlerPass',['../classPhasarHandlerPass.html',1,'']]],
+  ['phasarresultregistry_5',['PhasarResultRegistry',['../classPhasarResultRegistry.html',1,'']]],
+  ['pickmanager_6',['pickManager',['../classFeasibility_1_1Util.html#a764a44afd27715e999224ad17607ffcb',1,'Feasibility::Util']]],
+  ['predbb_7',['PredBB',['../structFeasibility_1_1LazyAtom.html#a10f0faa6f5f7aa62d3954f96b3a076d3',1,'Feasibility::LazyAtom']]],
+  ['prettifyoperators_8',['prettifyOperators',['../classHLAC_1_1Util.html#a0217cc41af135a74995991ffc5f636fe',1,'HLAC::Util']]],
+  ['printdotrepresentation_9',['printdotrepresentation',['../classHLAC_1_1LoopNode.html#a0a69ade38fae2481e37591f5f8ba3caa',1,'HLAC::LoopNode::printDotRepresentation()'],['../classProgramGraph.html#afbe3107b10cdec049c59c5c5c804ca87',1,'ProgramGraph::printDotRepresentation()'],['../classHLAC_1_1hlac.html#a42f5220325a85f46b3984ffb003aeadd',1,'HLAC::hlac::printDotRepresentation()'],['../classHLAC_1_1CallNode.html#a85368ee9a1346feb501b8616d858f8c3',1,'HLAC::CallNode::printDotRepresentation()'],['../classHLAC_1_1FunctionNode.html#a5e638765a3873294520e47d758fa52e1',1,'HLAC::FunctionNode::printDotRepresentation()'],['../classHLAC_1_1Node.html#a508b5e523b10eeb72d62ab8476591aa0',1,'HLAC::Node::printDotRepresentation()'],['../classHLAC_1_1Edge.html#a9612b547d664f9eac192922858b3d686',1,'HLAC::Edge::printDotRepresentation()'],['../classHLAC_1_1GenericNode.html#aa133eb3e6d9964e50bfa2b81b4093f3f',1,'HLAC::GenericNode::printDotRepresentation()']]],
+  ['printedges_10',['printEdges',['../classProgramGraph.html#a9e653f7294600e06d970989638aa3d59',1,'ProgramGraph']]],
+  ['printnodes_11',['printNodes',['../classProgramGraph.html#a31499bd68418b43bda45e0d76799744b',1,'ProgramGraph']]],
+  ['printpreorder_12',['printpreorder',['../classLoopTree.html#ad97586e2ef41e7fa8f720ee920b3db34',1,'LoopTree::printPreOrder()'],['../classFunctionTree.html#ad338d9921dc8a5f50788079eb8c4b508',1,'FunctionTree::printPreorder()']]],
+  ['problem_13',['problem',['../classFeasibility_1_1FeasibilityWrapper.html#af1fb98bb1f85c4d8d316b130c58e5860',1,'Feasibility::FeasibilityWrapper']]],
+  ['profile_14',['profile',['../classDRAMProfiler.html#a6f5497ffd9b6dee2417f57000072f272',1,'DRAMProfiler::profile()'],['../classCPUProfiler.html#ac6db47ff8d35ee789ed3703c96b14097',1,'CPUProfiler::profile()'],['../classMetaProfiler.html#a9bf3701e464313e7d4fa9c5f99ba4a69',1,'MetaProfiler::profile()'],['../classProfiler.html#af50d7dfce1868917936dec58632a0284',1,'Profiler::profile()']]],
+  ['profilehandler_15',['profilehandler',['../classProfileHandler.html',1,'ProfileHandler'],['../classProfileHandler.html#a327cc7868566e947376546ac04d77ad2',1,'ProfileHandler::ProfileHandler()']]],
+  ['profileoptions_16',['ProfileOptions',['../classProfileOptions.html',1,'']]],
+  ['profilepath_17',['profilePath',['../classCLIOptions.html#acdcf71d0a1c2150391c1385ed73b6084',1,'CLIOptions']]],
+  ['profiler_18',['profiler',['../classProfiler.html',1,'Profiler'],['../classProfiler.html#a166d6773a7c9f8033fc4ef200b65251b',1,'Profiler::Profiler(int iterations, std::string tag)'],['../classProfiler.html#a675ebc9207b9aeace1d967c085abeacf',1,'Profiler::Profiler()']]],
+  ['profilingconfiguration_19',['ProfilingConfiguration',['../structProfilingConfiguration.html',1,'']]],
+  ['programgraph_20',['ProgramGraph',['../classProgramGraph.html',1,'']]],
+  ['programpath_21',['programPath',['../classCLIOptions.html#a9b236845bceb70c730e0f3397fe90cbe',1,'CLIOptions']]]
 ];

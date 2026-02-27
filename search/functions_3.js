@@ -7,5 +7,9 @@ var searchData=
   ['demangle_4',['demangle',['../classDeMangler.html#a45b711fcdabb9fc8c8321a0137374559',1,'DeMangler']]],
   ['dotrecordescape_5',['dotRecordEscape',['../classHLAC_1_1Util.html#a2722bb68a02b31332994854d3be41115',1,'HLAC::Util']]],
   ['dotsafedemangledname_6',['dotSafeDemangledName',['../classHLAC_1_1Util.html#a5a6384c0f393dc6f444551736264745b',1,'HLAC::Util']]],
-  ['dropreturntype_7',['dropReturnType',['../classHLAC_1_1Util.html#af81b37b4049d0b36f2ad62c019dbc0cc',1,'HLAC::Util']]]
+  ['dropreturntype_7',['dropReturnType',['../classHLAC_1_1Util.html#af81b37b4049d0b36f2ad62c019dbc0cc',1,'HLAC::Util']]],
+  ['dumpef_8',['dumpEF',['../classFeasibility_1_1Util.html#a89ac1af711afd9fb7524c1ac90b033a9',1,'Feasibility::Util']]],
+  ['dumpefkind_9',['dumpEFKind',['../classFeasibility_1_1Util.html#a2e3b7eb987026712ba56bd19900aca6d',1,'Feasibility::Util']]],
+  ['dumpfact_10',['dumpFact',['../classFeasibility_1_1Util.html#a77ba339dbe8f2fd640b5175cbb354166',1,'Feasibility::Util']]],
+  ['dumpinst_11',['dumpInst',['../classFeasibility_1_1Util.html#a444758bb687e96d4e3f8af49d85f7f88',1,'Feasibility::Util']]]
 ];
