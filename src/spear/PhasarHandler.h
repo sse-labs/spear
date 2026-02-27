@@ -39,9 +39,6 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
     using LoopBoundDomainVal = LoopBound::DeltaInterval;
     using FeasibilityDomainVal = Feasibility::FeasibilityElement;
 
-    using BoundVarMap = std::map<std::string,
-        std::map<std::string, std::pair<const llvm::Value *, LoopBoundDomainVal>>>;
-
     PhasarHandlerPass();
 
     // New pass manager entry point
@@ -52,9 +49,10 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
 
     void runOnModule(llvm::Module &M);
 
-    // Query all "bound variables" in a function, grouped per basic block.
-    // Requires that `run()` (and hence `runAnalysis()`) has been executed.
-    BoundVarMap queryBoundVars(llvm::Function *Func) const;
+
+    LoopBound::LoopFunctionMap queryLoopBounds() const;
+
+    LoopBound::LoopToBoundMap queryBoundsOfFunction(llvm::Function *Func) const;
 
     /**
      * Query the feasibility information for all functions in the module
@@ -71,6 +69,8 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
     Feasibility::BlockFeasibilityMap queryFeasibilityOfFunction(llvm::Function *Func) const;
 
     std::unique_ptr<LoopBound::LoopBoundWrapper> loopboundwrapper = nullptr;
+    std::shared_ptr<LoopBound::LoopBoundIDEAnalysis> loopboundProblem;
+
     std::unique_ptr<Feasibility::FeasibilityWrapper> feasibilitywrapper = nullptr;
     std::shared_ptr<Feasibility::FeasibilityAnalysis> feasibilityProblem;
 

@@ -83,11 +83,13 @@ class KeepLocalOnCallToRet final : public psr::FlowFunction<D, ContainerT> {
 namespace LoopBound {
 
 LoopBoundIDEAnalysis::LoopBoundIDEAnalysis(llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB,
-                                           std::vector<llvm::Loop *> *loops)
+                                           std::vector<llvm::Loop *> loopPassDown)
     : base_t(IRDB, {"main"},
              std::optional<d_t>(
                  static_cast<d_t>(psr::LLVMZeroValue::getInstance()))) {
-  this->loops = loops;
+
+  this->loops = loopPassDown;
+  this->LoopDescriptions = {};
   this->findLoopCounters(FAM);
 }
 
@@ -641,7 +643,7 @@ llvm::FunctionAnalysisManager *FAM, const llvm::Value *Addr, llvm::Loop *loop) {
 }
 
 void LoopBoundIDEAnalysis::findLoopCounters(llvm::FunctionAnalysisManager *FAM) {
-  for (auto loop : *this->loops) {
+  for (auto loop : this->loops) {
     llvm::SmallVector<llvm::BasicBlock *, 8> ExitingBlocks;
     loop->getExitingBlocks(ExitingBlocks);
 
@@ -667,6 +669,7 @@ void LoopBoundIDEAnalysis::findLoopCounters(llvm::FunctionAnalysisManager *FAM) 
       if (RootA && RootA->getFunction() != LoopF) continue;
 
       LoopParameterDescription description = {
+          LoopF,
           loop,
           icmp,
           info->Roots[0],
@@ -693,10 +696,11 @@ void LoopBoundIDEAnalysis::findLoopCounters(llvm::FunctionAnalysisManager *FAM) 
 }
 
 std::optional<LoopCounterICMP>
-LoopBoundIDEAnalysis::findCounterFromICMP(llvm::ICmpInst *inst,
-                                         llvm::Loop *loop) {
+LoopBoundIDEAnalysis::findCounterFromICMP(llvm::ICmpInst *inst, llvm::Loop *loop) {
   llvm::Value *LHS = inst->getOperand(0);
   llvm::Value *RHS = inst->getOperand(1);
+
+  llvm::errs() << *inst << "\n";
 
   auto leftSideRoots  = sliceBackwards(LHS, loop);
   auto rightSideRoots = sliceBackwards(RHS, loop);

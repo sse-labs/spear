@@ -28,7 +28,6 @@
 #include "profilers/MetaProfiler.h"
 
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
-#include "src/spear/PhasarResultRegistry.h"
 
 
 void runProfileRoutine(CLIOptions opts) {
@@ -122,7 +121,7 @@ void runAnalysisRoutine(CLIOptions opts) {
 
     // Store results for later use
     auto MainFn = module_up->getFunction("main");
-    auto loopboundResults = PH.queryBoundVars(MainFn);
+    auto loopboundResults = PH.queryLoopBounds();
     auto start = std::chrono::high_resolution_clock::now();
     auto feasibilityResults = PH.queryFeasibilty();
     auto end = std::chrono::high_resolution_clock::now();
@@ -140,8 +139,6 @@ void runAnalysisRoutine(CLIOptions opts) {
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Runtime: " << duration.count() << " ms\n";
-
-    PhasarResultRegistry::get().store(loopboundResults);
 
     // modulePassManager already ran above (don't run twice unless you intend to).
     // modulePassManager.addPass(Energy(opts.profilePath));

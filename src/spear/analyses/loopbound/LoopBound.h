@@ -26,7 +26,6 @@
 #include <phasar/PhasarLLVM/Domain/LLVMAnalysisDomain.h>
 
 #include <phasar/DataFlow/IfdsIde/IDETabulationProblem.h>
-#include <phasar/DataFlow/IfdsIde/EdgeFunctions.h>
 
 #include <llvm/IR/Instructions.h>
 #include <llvm/Analysis/LoopInfo.h>
@@ -34,9 +33,16 @@
 #include <set>
 #include <vector>
 
+#include "CheckExpr.h"
 #include "DeltaInterval.h"
+#include "LoopClassifier.h"
 
 namespace LoopBound {
+
+using BoundVarMap = std::map<std::string, std::map<std::string, std::pair<const llvm::Value *, LoopBound::DeltaInterval>>>;
+
+using LoopToBoundMap = std::unordered_map<std::string, DeltaInterval>;
+using LoopFunctionMap = std::map<std::string, LoopToBoundMap>;
 
 /**
  * Internal representation of the counter corresponding to one loop.
@@ -45,31 +51,6 @@ struct LoopCounterICMP {
     llvm::Value *CounterSide = nullptr;      // Operator with counter variable
     llvm::Value *InvariantSide = nullptr;    // Operator the counter is checked against
     std::vector<const llvm::Value *> Roots;  // Counter the ICMP is build uppon
-};
-
-/**
- * Enumeration of different loop types that can be detected during analysis.
- */
-enum LoopType {
-    NORMAL_LOOP,           // A standard counting loop with clear bounds
-    MALFORMED_LOOP,        // A loop with malformed or unclear structure
-    SYMBOLIC_BOUND_LOOP,   // A loop with symbolic (non-constant) bounds
-    NON_COUNTING_LOOP,     // A loop that doesn't follow counting pattern
-    NESTED_LOOP,           // A loop nested inside another loop
-    UNKNOWN_LOOP
-};
-
-/**
- * Internal description of the loop we are analyzing.
- * Stores information about the loop, the counter and the related scalar values
- * attached to them
- */
-struct LoopParameterDescription {
-    llvm::Loop *loop = nullptr;  // The loop the description is based upon
-    llvm::ICmpInst *icmp = nullptr;  // The ICMP instruction of the loop
-    const llvm::Value *counterRoot = nullptr;  // The instruction defining the counter of the loop
-    std::optional<int64_t> init = std::nullopt;  // Initial value of the loop
-    LoopType type = LoopType::UNKNOWN_LOOP;
 };
 
 /**
@@ -114,10 +95,9 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
     /**
      * Explicit constructor that creates a new instance of the LoopBound analysis.
      * @param IRDB LLVM IR database of the file(s) under analysis
-     * @param loops Vector containing all loops found in the current program
      */
     explicit LoopBoundIDEAnalysis(
-    llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, std::vector<llvm::Loop*> *loops);
+    llvm::FunctionAnalysisManager *FAM, const psr::LLVMProjectIRDB *IRDB, std::vector<llvm::Loop*> loops);
 
     /**
      * Analyzes the given store instruction to find the increment that is occuring to the given root variable.
@@ -166,16 +146,19 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      */
     static std::optional<LoopCounterICMP> findCounterFromICMP(llvm::ICmpInst *inst, llvm::Loop *loop);
 
+
  private:
+    // Loops found by llvm in the current program
+    std::vector<llvm::Loop *> loops;
+
+    // Internal storage of our constructed loop classifiers
+    std::vector<LoopClassifier> loopClassifiers;
+
+
     /**
      * Internal representation of the loop parameter descriptions
      */
     std::vector<LoopParameterDescription> LoopDescriptions;
-
-    /**
-     * Internal storage of loops
-     */
-    std::vector<llvm::Loop*> *loops;
 
     /**
      * Method to seed the analysis with the start facts

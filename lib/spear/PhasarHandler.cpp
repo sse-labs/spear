@@ -70,13 +70,14 @@ void PhasarHandlerPass::runOnModule(llvm::Module &M) {
 }
 
 void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManager *FAM) {
-  // loopboundwrapper = make_unique<LoopBound::LoopBoundWrapper>(HA, FAM);
+  loopboundwrapper = make_unique<LoopBound::LoopBoundWrapper>(HA, FAM);
   feasibilitywrapper = make_unique<Feasibility::FeasibilityWrapper>(HA, FAM);
 
   // Store the problem instance for later querying
+  loopboundProblem = loopboundwrapper->problem;
   feasibilityProblem = feasibilitywrapper->problem;
 
-  // LoopBoundResult = loopboundwrapper->getResults();
+  LoopBoundResult = loopboundwrapper->getResults();
   FeasibilityResult = feasibilitywrapper->getResults();
 }
 
@@ -86,43 +87,34 @@ void PhasarHandlerPass::dumpState() const {
   }
 }
 
-PhasarHandlerPass::BoundVarMap PhasarHandlerPass::queryBoundVars(llvm::Function *Func) const {
-  BoundVarMap ResultMap;
+LoopBound::LoopFunctionMap PhasarHandlerPass::queryLoopBounds() const {
+  LoopBound::LoopFunctionMap LoopFunctionInfo;
 
-  if (!LoopBoundResult || !Func)
-    return ResultMap;
-
-  using DomainVal = LoopBound::DeltaInterval;
-
-  for (const llvm::BasicBlock &BB : *Func) {
-    std::string BBName =
-        BB.hasName()
-            ? BB.getName().str()
-            : "<unnamed_bb_" +
-                  std::to_string(reinterpret_cast<uintptr_t>(&BB)) + ">";
-
-    auto &BBEntry = ResultMap[BBName];
-
-    for (const llvm::Instruction &Inst : BB) {
-      if (!LoopBoundResult->containsNode(&Inst))
-        continue;
-
-      const llvm::Value *Bottom = nullptr;
-      auto Res = LoopBoundResult->resultsAtInLLVMSSA(&Inst, Bottom);
-
-      for (const auto &ResElement : Res) {
-        const llvm::Value *Val = ResElement.first;
-        const DomainVal &DomVal = ResElement.second;
-
-        std::string Key =
-            Val->hasName()
-                ? Val->getName().str()
-                : "<unnamed_" + std::to_string(reinterpret_cast<uintptr_t>(Val)) +
-                      ">";
-
-        BBEntry[Key] = std::make_pair(Val, DomVal);
+  for (auto &Func : mod->functions()) {
+    if (!Func.isDeclaration()) {
+      auto FuncLoopBoundInfo = queryBoundsOfFunction(&Func);
+      if (!FuncLoopBoundInfo.empty()) {
+        LoopFunctionInfo[Func.getName().str()] = std::move(FuncLoopBoundInfo);
       }
     }
+  }
+
+  return LoopFunctionInfo;
+}
+
+LoopBound::LoopToBoundMap PhasarHandlerPass::queryBoundsOfFunction(llvm::Function *Func) const {
+  LoopBound::LoopToBoundMap ResultMap;
+
+  if (!LoopBoundResult || !Func) {
+    return ResultMap;
+  }
+
+  auto loopdescs = loopboundProblem->getLoopParameterDescriptions();
+  auto loopmap = loopboundwrapper->getLoopParameterDescriptionMap();
+
+  llvm::errs() << "Loops in function :" << "\n";
+  for (auto &desc : loopmap[Func->getName().str()]) {
+    llvm::errs() << "\t" << desc.loop->getName() << "\n";
   }
 
   return ResultMap;

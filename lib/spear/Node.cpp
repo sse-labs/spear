@@ -11,7 +11,6 @@
 #include "ProgramGraph.h"
 #include "DeMangler.h"
 #include "PhasarHandler.h"
-#include "PhasarResultRegistry.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
 
