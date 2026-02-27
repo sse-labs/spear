@@ -124,14 +124,18 @@ void runAnalysisRoutine(CLIOptions opts) {
     auto MainFn = module_up->getFunction("main");
     auto loopboundResults = PH.queryBoundVars(MainFn);
     auto start = std::chrono::high_resolution_clock::now();
-    auto feasibilityResults = PH.queryFeasibility(MainFn);
+    auto feasibilityResults = PH.queryFeasibilty();
     auto end = std::chrono::high_resolution_clock::now();
 
 
-    for (const auto &entry : feasibilityResults) {
-        std::string feasStr = entry.second.Feasible? "REACHABLE": "UNREACHABLE";
+    for (const auto &functionEntry : feasibilityResults) {
+        llvm::outs() << "Feasibility information for function: " << functionEntry.first << "\n";
+        for (const auto &blockEntry : functionEntry.second) {
+            std::string feasStr = blockEntry.second.Feasible? "REACHABLE": "UNREACHABLE";
 
-        std::cout << "Feasibility results for block: " << entry.first << " => " << feasStr << "\n";
+            llvm::outs() << "\t Block: " << blockEntry.first << " => " << feasStr << "\n";
+        }
+        llvm::outs() << "\n";
     }
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

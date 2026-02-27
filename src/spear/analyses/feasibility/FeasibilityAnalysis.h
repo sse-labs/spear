@@ -15,6 +15,9 @@
 
 #include <memory>
 #include <set>
+#include <map>
+#include <string>
+#include <unordered_map>
 
 #include "analyses/feasibility/FeasibilityAnalysisManager.h"
 #include "FeasibilityElement.h"
@@ -22,6 +25,30 @@
 
 
 namespace Feasibility {
+
+/**
+ * Struct to store the feasibility information for a basic block,
+ * including whether it is feasible, whether it has a zero value at entry, and whether it has
+ * been visited during analysis.
+ */
+struct BlockFeasInfo {
+    bool Feasible = false;
+    Feasibility::FeasibilityElement ZeroAtEntry;
+    bool HasZeroAtEntry = false;
+    bool visited = false;
+};
+
+/**
+ * Type for the mapping from basic block names to their feasibility information, used to store the results of
+ * the analysis.
+ */
+using BlockFeasibilityMap = std::map<std::string, BlockFeasInfo>;
+
+/**
+ * Type for the mapping from function names to their basic block feasibility information, used to store the results of
+ * the analysis.
+ */
+using FunctionFeasibilityMap = std::unordered_map<std::string, BlockFeasibilityMap>;
 
 /**
  * Domain definition of the LoopBoundAnalysis

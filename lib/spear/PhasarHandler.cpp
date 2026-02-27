@@ -33,7 +33,8 @@ PhasarHandlerPass::PhasarHandlerPass()
       HA(nullptr),
       LoopBoundResult(nullptr),
       FeasibilityResult(nullptr),
-      Entrypoints({std::string("main")}) {}
+// We should check if this is really valid here...
+      Entrypoints({"__ALL__"}) {}
 
 PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   mod = &M;
@@ -136,11 +137,26 @@ bool PhasarHandlerPass::constains(std::vector<llvm::BasicBlock *> visited, llvm:
   return false;
 }
 
-PhasarHandlerPass::FeasibilityMap PhasarHandlerPass::queryFeasibility(llvm::Function *Func) const {
-  FeasibilityMap ResultMap;
+Feasibility::FunctionFeasibilityMap PhasarHandlerPass::queryFeasibilty() const {
+  Feasibility::FunctionFeasibilityMap FeasibilityInfo;
+
+  for (auto &Func : mod->functions()) {
+    if (!Func.isDeclaration()) {
+      auto FuncFeasMap = queryFeasibilityOfFunction(&Func);
+      if (!FuncFeasMap.empty()) {
+        FeasibilityInfo[Func.getName().str()] = std::move(FuncFeasMap);
+      }
+    }
+  }
+
+  return FeasibilityInfo;
+}
+
+Feasibility::BlockFeasibilityMap PhasarHandlerPass::queryFeasibilityOfFunction(llvm::Function *Func) const {
+  Feasibility::BlockFeasibilityMap BlockFeasibilityMap;
 
   if (!FeasibilityResult || !Func) {
-    return ResultMap;
+    return BlockFeasibilityMap;
   }
 
   const llvm::Value *Zero = feasibilityProblem ? feasibilityProblem->getZeroValue() : nullptr;
@@ -148,7 +164,7 @@ PhasarHandlerPass::FeasibilityMap PhasarHandlerPass::queryFeasibility(llvm::Func
   // Create the worklist and visited set for a simple CFG traversal to query feasibility at block entries.
   auto firstBlock = &Func->getEntryBlock();
   std::deque<llvm::BasicBlock*> worklist{firstBlock};
-  llvm::DenseMap<const llvm::BasicBlock*, BlockFeasInfo> visited;
+  llvm::DenseMap<const llvm::BasicBlock*, Feasibility::BlockFeasInfo> visited;
   std::unordered_map<SetSatnessKey, bool, SetSatnessHash> SatCache;
   SatCache.reserve(128);
 
@@ -157,7 +173,7 @@ PhasarHandlerPass::FeasibilityMap PhasarHandlerPass::queryFeasibility(llvm::Func
   for (auto &BB : *Func) {
     const std::string BBName = blockName(BB);
     // Initialize each entry
-    visited[&BB] = BlockFeasInfo{};
+    visited[&BB] = Feasibility::BlockFeasInfo{};
   }
 
   // Iterate over the worklist until its empty
@@ -204,9 +220,9 @@ PhasarHandlerPass::FeasibilityMap PhasarHandlerPass::queryFeasibility(llvm::Func
           SatCache.emplace(std::move(Sig), isSat);
         }
 
-        ResultMap[BBName].Feasible = isSat;
-        ResultMap[BBName].HasZeroAtEntry = true;
-        ResultMap[BBName].visited = true;
+        BlockFeasibilityMap[BBName].Feasible = isSat;
+        BlockFeasibilityMap[BBName].HasZeroAtEntry = true;
+        BlockFeasibilityMap[BBName].visited = true;
 
         if (isSat) {
           auto sucss = llvm::successors(BB);
@@ -216,7 +232,7 @@ PhasarHandlerPass::FeasibilityMap PhasarHandlerPass::queryFeasibility(llvm::Func
     }
   }
 
-  return ResultMap;
+  return BlockFeasibilityMap;
 }
 
 

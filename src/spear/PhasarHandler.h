@@ -30,18 +30,6 @@ class Value;
 class Instruction;
 }  // namespace llvm
 
-/**
- * Struct to store the feasibility information for a basic block,
- * including whether it is feasible, whether it has a zero value at entry, and whether it has
- * been visited during analysis.
- */
-struct BlockFeasInfo {
-    bool Feasible = false;
-    Feasibility::FeasibilityElement ZeroAtEntry;
-    bool HasZeroAtEntry = false;
-    bool visited = false;
-};
-
 // A ModulePass that runs PhASAR's IDELinearConstantAnalysis and provides
 // a helper to query the resulting lattice values for each basic block.
 //
@@ -53,8 +41,6 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
 
     using BoundVarMap = std::map<std::string,
         std::map<std::string, std::pair<const llvm::Value *, LoopBoundDomainVal>>>;
-
-    using FeasibilityMap = std::unordered_map<std::string, BlockFeasInfo>;
 
     PhasarHandlerPass();
 
@@ -69,7 +55,20 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
     // Query all "bound variables" in a function, grouped per basic block.
     // Requires that `run()` (and hence `runAnalysis()`) has been executed.
     BoundVarMap queryBoundVars(llvm::Function *Func) const;
-    FeasibilityMap queryFeasibility(llvm::Function *Func) const;
+
+    /**
+     * Query the feasibility information for all functions in the module
+     * @return Mapping from function names to their basic block feasibility information
+     */
+    Feasibility::FunctionFeasibilityMap queryFeasibilty() const;
+
+    /**
+     * Query the feasibility information for each basic block of the given function,
+     * including whether the block is feasible and whether it has a zero value at entry.
+     * @param Func Function to query the feasibility information for
+     * @return A map from basic block names to their feasibility information
+     */
+    Feasibility::BlockFeasibilityMap queryFeasibilityOfFunction(llvm::Function *Func) const;
 
     std::unique_ptr<LoopBound::LoopBoundWrapper> loopboundwrapper = nullptr;
     std::unique_ptr<Feasibility::FeasibilityWrapper> feasibilitywrapper = nullptr;
