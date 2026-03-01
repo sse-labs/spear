@@ -28,13 +28,19 @@ using llvm::Module;
 using llvm::PreservedAnalyses;
 using llvm::ModuleAnalysisManager;
 
-PhasarHandlerPass::PhasarHandlerPass()
+PhasarHandlerPass::PhasarHandlerPass(bool runLoopBoundAnalysis, bool runFeasibilityAnalysis, bool showDebugOutput)
     : mod(nullptr),
       HA(nullptr),
       LoopBoundResult(nullptr),
       FeasibilityResult(nullptr),
-// We should check if this is really valid here...
-      Entrypoints({"__ALL__"}) {}
+      Entrypoints({"__ALL__"}) {
+
+  this->config = {
+    .RUNLOOPBOUNDANALYSIS = runLoopBoundAnalysis,
+    .RUNFEASIBILITYANALYSIS = runFeasibilityAnalysis,
+    .SHOWDEBUGOUTPUT = showDebugOutput
+  };
+}
 
 PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   mod = &M;
@@ -42,7 +48,9 @@ PreservedAnalyses PhasarHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   LoopBoundResult.reset();
   FeasibilityResult.reset();
 
-  llvm::errs() << M << "\n";
+  if (config.SHOWDEBUGOUTPUT) {
+    llvm::errs() << M << "\n";
+  }
 
   auto &FAM = AM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*mod).getManager();
 
@@ -70,15 +78,30 @@ void PhasarHandlerPass::runOnModule(llvm::Module &M) {
 }
 
 void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManager *FAM) {
-  loopboundwrapper = make_unique<LoopBound::LoopBoundWrapper>(HA, FAM);
-  feasibilitywrapper = make_unique<Feasibility::FeasibilityWrapper>(HA, FAM);
 
-  // Store the problem instance for later querying
-  loopboundProblem = loopboundwrapper->problem;
-  feasibilityProblem = feasibilitywrapper->problem;
+  if (!config.RUNFEASIBILITYANALYSIS && !config.RUNLOOPBOUNDANALYSIS) {
+    llvm::errs() << "No Phasar-based analysis selected. Please select at least one analysis to run.\n";
+    return;
+  }
 
-  LoopBoundResult = loopboundwrapper->getResults();
-  FeasibilityResult = feasibilitywrapper->getResults();
+  if (config.RUNFEASIBILITYANALYSIS) {
+    llvm::errs() << "Running Feasibility Analysis...\n";
+    feasibilitywrapper = make_unique<Feasibility::FeasibilityWrapper>(HA, FAM);
+    feasibilityProblem = feasibilitywrapper->problem;
+    FeasibilityResult = feasibilitywrapper->getResults();
+  }
+
+  if (config.RUNLOOPBOUNDANALYSIS) {
+    llvm::errs() << "Running Loop Bound Analysis...\n";
+    loopboundwrapper = make_unique<LoopBound::LoopBoundWrapper>(HA, FAM);
+    loopboundProblem = loopboundwrapper->problem;
+    LoopBoundResult = loopboundwrapper->getResults();
+  }
+
+  if (config.RUNFEASIBILITYANALYSIS && config.RUNLOOPBOUNDANALYSIS) {
+    llvm::errs() << "Running both analyses is currently not supported due to potential interference. Please run them separately.\n";
+    return;
+  }
 }
 
 void PhasarHandlerPass::dumpState() const {

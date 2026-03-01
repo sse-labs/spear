@@ -30,6 +30,13 @@ class Value;
 class Instruction;
 }  // namespace llvm
 
+struct AnalysisConfig {
+    bool RUNLOOPBOUNDANALYSIS = true;
+    bool RUNFEASIBILITYANALYSIS = true;
+    bool SHOWDEBUGOUTPUT = false;
+};
+
+
 // A ModulePass that runs PhASAR's IDELinearConstantAnalysis and provides
 // a helper to query the resulting lattice values for each basic block.
 //
@@ -39,7 +46,10 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
     using LoopBoundDomainVal = LoopBound::DeltaInterval;
     using FeasibilityDomainVal = Feasibility::FeasibilityElement;
 
-    PhasarHandlerPass();
+    PhasarHandlerPass(
+        bool runLoopBoundAnalysis = false,
+        bool runFeasibilityAnalysis = false,
+        bool showDebugOutput = false);
 
     // New pass manager entry point
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
@@ -75,6 +85,8 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
     std::shared_ptr<Feasibility::FeasibilityAnalysis> feasibilityProblem;
 
     bool constains(std::vector<llvm::BasicBlock *> visited, llvm::BasicBlock *BB) const;
+
+    AnalysisConfig config;
 
  private:
     // Backing module – only valid during/after `run()`.

@@ -8,7 +8,6 @@
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/IR/Operator.h>
 
-#include <phasar/PhasarLLVM/ControlFlow/LLVMBasedCFG.h>
 #include <phasar/PhasarLLVM/DataFlow/IfdsIde/LLVMZeroValue.h>
 
 #include <atomic>
@@ -699,8 +698,6 @@ std::optional<LoopCounterICMP>
 LoopBoundIDEAnalysis::findCounterFromICMP(llvm::ICmpInst *inst, llvm::Loop *loop) {
   llvm::Value *LHS = inst->getOperand(0);
   llvm::Value *RHS = inst->getOperand(1);
-
-  llvm::errs() << *inst << "\n";
 
   auto leftSideRoots  = sliceBackwards(LHS, loop);
   auto rightSideRoots = sliceBackwards(RHS, loop);
