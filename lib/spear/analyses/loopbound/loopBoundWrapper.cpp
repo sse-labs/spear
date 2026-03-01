@@ -139,8 +139,7 @@ std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(
     return std::nullopt;
 }
 
-void LoopBound::LoopBoundWrapper::collectLoops(
-    llvm::Loop *loop, std::vector<llvm::Loop *> &outputLoops) {
+void LoopBound::LoopBoundWrapper::collectLoops(llvm::Loop *loop, std::vector<llvm::Loop *> &outputLoops) {
     if (!loop) {
         return;  // Nothing to collect
     }

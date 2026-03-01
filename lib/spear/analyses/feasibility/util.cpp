@@ -179,8 +179,10 @@ z3::expr Util::createConstraintFromICmp(FeasibilityAnalysisManager *manager,
     if (!c0 || !c1) {
         // If we cannot create a formula for one of the operands,
         // we return a default formula (true) that does not constrain the analysis.
-        llvm::errs() << "WARNING: Could not create constraint from ICmp instruction " << *ICmp
-        << " because we could not create formulas for its operands.\n";
+        if (F_DebugEnabled) {
+            llvm::errs() << "WARNING: Could not create constraint from ICmp instruction " << *ICmp
+             << " because we could not create formulas for its operands.\n";
+        }
         return manager->getContext().bool_val(true);
     }
 

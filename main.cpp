@@ -77,6 +77,8 @@ void runAnalysisRoutine(CLIOptions opts) {
     llvm::CGSCCAnalysisManager cGSCCAnalysisManager;
     llvm::ModuleAnalysisManager moduleAnalysisManager;
     llvm::ModulePassManager modulePassManager;
+    llvm::FunctionPassManager functionPassManager;
+    llvm::CGSCCPassManager callgraphPassManager;
 
     auto module_up = llvm::parseIRFile(opts.programPath, error, context).release();
     if (!module_up) {
@@ -93,19 +95,15 @@ void runAnalysisRoutine(CLIOptions opts) {
             moduleAnalysisManager);
 
     // Build function pipeline once, then move it exactly once.
-    llvm::FunctionPassManager functionPassManager;
     functionPassManager.addPass(llvm::InstructionNamerPass());
     functionPassManager.addPass(llvm::PromotePass());
     functionPassManager.addPass(llvm::LoopSimplifyPass());
     functionPassManager.addPass(llvm::LCSSAPass());
     functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::LoopRotatePass()));
-    functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::IndVarSimplifyPass()));
 
     modulePassManager.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(functionPassManager)));
+    functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::IndVarSimplifyPass()));
 
-    // IMPORTANT: actually run the NewPM pipeline to materialize proxies/analysis state
-    // before any external code queries analyses from a FAM.
-    modulePassManager.run(*module_up, moduleAnalysisManager);
 
     PhasarHandlerPass PH;
     PH.runOnModule(*module_up);
@@ -126,6 +124,13 @@ void runAnalysisRoutine(CLIOptions opts) {
     auto feasibilityResults = PH.queryFeasibilty();
     auto end = std::chrono::high_resolution_clock::now();
 
+
+    for (auto &[funcName, loopInfo] : loopboundResults) {
+        std::cout << "Function: " << funcName << "\n";
+        for (auto &loopEntry : loopInfo) {
+            std::cout << "\tLoop: " << loopEntry.first << ", Bound: " << loopEntry.second << "\n";
+        }
+    }
 
     for (const auto &functionEntry : feasibilityResults) {
         llvm::outs() << "Feasibility information for function: " << functionEntry.first << "\n";

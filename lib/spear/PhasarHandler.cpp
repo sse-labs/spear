@@ -112,9 +112,10 @@ LoopBound::LoopToBoundMap PhasarHandlerPass::queryBoundsOfFunction(llvm::Functio
   auto loopdescs = loopboundProblem->getLoopParameterDescriptions();
   auto loopmap = loopboundwrapper->getLoopParameterDescriptionMap();
 
-  llvm::errs() << "Loops in function :" << "\n";
   for (auto &desc : loopmap[Func->getName().str()]) {
-    llvm::errs() << "\t" << desc.loop->getName() << "\n";
+    if (desc.bound) {
+      ResultMap[desc.loop->getName().str()] = desc.bound.value();
+    }
   }
 
   return ResultMap;

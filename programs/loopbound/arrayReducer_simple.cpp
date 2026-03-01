@@ -27,6 +27,10 @@ int main(){
         sum += a1;
     }
 
+    if (length == 0) {
+        std::cout << "This will never be printed, but prevents the compiler from optimizing away the loop.\n";
+    }
+
     std::cout << "Sum of array: " << sum << "\n";
 
     return 0;
