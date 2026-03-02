@@ -7,8 +7,10 @@
 #define SRC_SPEAR_ANALYSES_FEASIBILITY_UTIL_H_
 
 #include <string>
+#include <vector>
 
 #include "FeasibilityAnalysis.h"
+#include "FeasibilitySetSatness.h"
 
 namespace Feasibility {
 
@@ -131,6 +133,16 @@ class Util {
      * @return A valid manager to use
      */
     static FeasibilityAnalysisManager *pickManager(FeasibilityAnalysisManager *manager, const l_t &source);
+
+    /**
+     * Create a cache key for the given set of formulas by hashing their AST ids in sorted order.
+     * @param Mgr FeasibilityAnalysisManager to access the z3 context for hashing the formulas
+     * @param Set Set of formulas to create the cache key for.
+     * @return SetSatnessKey representing the given set of formulas, which can be used as a key for caching the
+     * satisfiability result of the set.
+     */
+    static SetSatnessKey makeSetSattnessCacheEntry(const Feasibility::FeasibilityAnalysisManager *Mgr,
+                                                   const std::vector<z3::expr> &Set);
 };
 
 }  // namespace Feasibility

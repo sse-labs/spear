@@ -78,7 +78,6 @@ void PhasarHandlerPass::runOnModule(llvm::Module &M) {
 }
 
 void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManager *FAM) {
-
   if (!config.RUNFEASIBILITYANALYSIS && !config.RUNLOOPBOUNDANALYSIS) {
     llvm::errs() << "No Phasar-based analysis selected. Please select at least one analysis to run.\n";
     return;
@@ -99,14 +98,9 @@ void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManag
   }
 
   if (config.RUNFEASIBILITYANALYSIS && config.RUNLOOPBOUNDANALYSIS) {
-    llvm::errs() << "Running both analyses is currently not supported due to potential interference. Please run them separately.\n";
+    llvm::errs() << "Running both analyses is currently not supported due to potential interference. "
+                    "Please run them separately.\n";
     return;
-  }
-}
-
-void PhasarHandlerPass::dumpState() const {
-  if (LoopBoundResult && HA) {
-    LoopBoundResult->dumpResults(HA->getICFG());
   }
 }
 
@@ -142,15 +136,6 @@ LoopBound::LoopToBoundMap PhasarHandlerPass::queryBoundsOfFunction(llvm::Functio
   }
 
   return ResultMap;
-}
-
-bool PhasarHandlerPass::constains(std::vector<llvm::BasicBlock *> visited, llvm::BasicBlock *BB) const {
-  for (auto *V : visited) {
-    if (V == BB) {
-      return true;
-    }
-  }
-  return false;
 }
 
 Feasibility::FunctionFeasibilityMap PhasarHandlerPass::queryFeasibilty() const {
@@ -224,7 +209,7 @@ Feasibility::BlockFeasibilityMap PhasarHandlerPass::queryFeasibilityOfFunction(l
         uint32_t FId = entry.getFormulaId();
 
         std::vector<z3::expr> set = Mgr->getPureSet(FId);
-        SetSatnessKey Sig = makeSetSattnessCacheEntry(Mgr, set);
+        SetSatnessKey Sig = Feasibility::Util::makeSetSattnessCacheEntry(Mgr, set);
 
         auto ItSat = SatCache.find(Sig);
         bool isSat = false;

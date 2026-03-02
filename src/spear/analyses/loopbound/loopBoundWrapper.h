@@ -8,23 +8,38 @@
 
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/PassManager.h>
+#include <llvm/IR/Dominators.h>
 #include <phasar/DataFlow/IfdsIde/SolverResults.h>
 #include <phasar/PhasarLLVM/HelperAnalyses.h>
-#include "llvm/IR/Dominators.h"            // llvm::DominatorTree
 
 #include <memory>
 #include <vector>
+#include <string>
+#include <unordered_map>
 
 #include "LoopBound.h"
 
 namespace LoopBound {
 
 /**
+ * LoopCache struct
+ * Caches the dominator tree and loop info for a function to avoid recalculating it multiple times during our analysis
+ */
+struct LoopCache {
+    // Dominator tree of the function
+    llvm::DominatorTree DT;
+    // Loop info of the function
+    llvm::LoopInfo LI;
+
+    explicit LoopCache(llvm::Function &F) : DT(F), LI(DT) {}
+};
+
+/**
  * Phasar result type
  * Used to shorthand any interaction with the analysis result
  */
 using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *,
-const llvm::Value *, LoopBound::DeltaInterval>;  // Phasar solver results alias
+const llvm::Value *, LoopBound::DeltaInterval>;
 
 
 /**
@@ -83,27 +98,42 @@ class LoopBoundWrapper {
      */
     std::shared_ptr<LoopBound::LoopBoundIDEAnalysis> problem;
 
+    /**
+     * Getter to return the internal list of LoopParameterDescriptions as a map from function name
+     * to the corresponding descriptions
+     * @return Map from function name to vector of LoopParameterDescriptions corresponding to the loops in the function
+     */
     std::unordered_map<std::string, std::vector<LoopBound::LoopClassifier>> getLoopParameterDescriptionMap();
 
-    struct LoopCache {
-        llvm::DominatorTree DT;
-        llvm::LoopInfo LI;
-
-        explicit LoopCache(llvm::Function &F) : DT(F), LI(DT) {}
-    };
-
-    llvm::DenseMap<const llvm::Function*, std::unique_ptr<LoopCache>> LoopCaches;
-    std::vector<llvm::Loop*> Loops; // now valid while LoopCaches entries live
  private:
-    // Internal storage of the analysis results calculated by phasar
+    /**
+     * Internal map from function to the corresponding LoopCache, which contains the dominator tree and loop
+     * info of the function
+     */
+    llvm::DenseMap<const llvm::Function*, std::unique_ptr<LoopCache>> LoopCaches;
+
+    /**
+     * Internal vector of loops found by llvm in the current program, which are used as starting points for our
+     * analysis and to construct our loop classifiers
+     */
+    std::vector<llvm::Loop*> Loops;
+
+    /**
+     * Internal storage of the analysis results, which can be queried for loop increment values at given instructions
+     * and facts.
+     */
     std::unique_ptr<ResultsTy> cachedResults;
 
-
-    // Internal storage of our constructed loop classifiers
+    /**
+     * Internal storage of our constructed loop classifiers, which contain the information about the loops and their
+     * parameters found by our analysis
+     */
     std::vector<LoopClassifier> loopClassifiers;
 
-    // Internal storage of the analysis manager so we can access llvms analysis information later on without
-    // passing it down to our functions
+    /**
+     * Internal storage of the analysis manager so we can access llvms analysis information later on without
+     * passing it down to our functions
+     */
     llvm::FunctionAnalysisManager *FAM;
 
     /**
@@ -128,8 +158,8 @@ class LoopBoundWrapper {
      * @param fact Fact that should be analysed at the given instruction
      * @return Returns a DeltaInterval instance representing the loop increment if it can be found
      */
-    std::optional<LoopBound::DeltaInterval> queryIntervalAtInstuction(
-    const llvm::Instruction *inst, const llvm::Value *fact);
+    std::optional<LoopBound::DeltaInterval> queryIntervalAtInstuction(const llvm::Instruction *inst,
+    const llvm::Value *fact);
 
     /**
      * Print the internally safed loop classifiers

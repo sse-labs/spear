@@ -3,15 +3,20 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_CHECKEXPR_H
-#define SPEAR_CHECKEXPR_H
+#ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_CHECKEXPR_H_
+#define SRC_SPEAR_ANALYSES_LOOPBOUND_CHECKEXPR_H_
+
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/Value.h>
 
-namespace LoopBound {
+#include <utility>
+#include <unordered_map>
+#include <map>
+#include <string>
 
+namespace LoopBound {
 /**
  * Check Expression Class
  * Models checks, loops run against.
@@ -21,7 +26,7 @@ namespace LoopBound {
  * check = offset + i * scaling
 */
 class CheckExpr {
-public:
+ public:
     /**
      * Base Value the expression is based on.
      * Should be a memory root derived from a load instruction
@@ -59,8 +64,9 @@ public:
      * @param baseload Load of the memory root
      * @param offset Constant offset
      */
-    CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload,  int64_t offset, bool constant) :
-    Base(base), BaseLoad(baseload), Offset(offset), isConstant(constant) {}
+    CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload, int64_t offset, bool constant) : Base(base),
+        BaseLoad(baseload), Offset(offset), isConstant(constant) {
+    }
 
     /**
      * Calculate the actual check value from the stored information
@@ -70,7 +76,6 @@ public:
      */
     std::optional<int64_t> calculateCheck(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &LIInfo);
 };
+}  // namespace LoopBound
 
-}
-
-#endif //SPEAR_CHECKEXPR_H
+#endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_CHECKEXPR_H_

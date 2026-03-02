@@ -6,7 +6,6 @@
 #ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_DELTAINTERVAL_H_
 #define SRC_SPEAR_ANALYSES_LOOPBOUND_DELTAINTERVAL_H_
 
-#include <cstdint>
 #include <string>
 
 namespace LoopBound {

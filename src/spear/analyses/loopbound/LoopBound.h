@@ -32,6 +32,10 @@
 
 #include <set>
 #include <vector>
+#include <string>
+#include <map>
+#include <unordered_map>
+#include <utility>
 
 #include "CheckExpr.h"
 #include "DeltaInterval.h"
@@ -39,7 +43,8 @@
 
 namespace LoopBound {
 
-using BoundVarMap = std::map<std::string, std::map<std::string, std::pair<const llvm::Value *, LoopBound::DeltaInterval>>>;
+using BoundVarMap = std::map<std::string,
+std::map<std::string, std::pair<const llvm::Value *, LoopBound::DeltaInterval>>>;
 
 using LoopToBoundMap = std::unordered_map<std::string, DeltaInterval>;
 using LoopFunctionMap = std::map<std::string, LoopToBoundMap>;
@@ -146,14 +151,12 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
      */
     static std::optional<LoopCounterICMP> findCounterFromICMP(llvm::ICmpInst *inst, llvm::Loop *loop);
 
-
  private:
     // Loops found by llvm in the current program
     std::vector<llvm::Loop *> loops;
 
     // Internal storage of our constructed loop classifiers
     std::vector<LoopClassifier> loopClassifiers;
-
 
     /**
      * Internal representation of the loop parameter descriptions

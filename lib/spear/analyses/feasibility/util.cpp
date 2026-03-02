@@ -10,10 +10,12 @@
 #include <llvm/IR/Type.h>
 
 #include <string>
+#include <vector>
 
 #include "analyses/feasibility/FeasibilityAnalysis.h"
 #include "analyses/feasibility/FeasibilityAnalysisManager.h"
 #include "analyses/feasibility/FeasibilityEdgeFunction.h"
+#include "analyses/feasibility/FeasibilitySetSatness.h"
 
 namespace Feasibility {
 
@@ -269,6 +271,30 @@ bool Util::isAllTopEF(const EF &ef) noexcept {
 
 bool Util::isAllBottomEF(const EF &ef) noexcept {
     return ef.template isa<FeasibilityAllBottomEF>() || ef.template isa<psr::AllBottom<l_t>>();
+}
+
+SetSatnessKey Util::makeSetSattnessCacheEntry(
+                            const Feasibility::FeasibilityAnalysisManager *Mgr,
+                            const std::vector<z3::expr> &Set) {
+    // Create a cache key for the given set of formulas by hashing their AST ids in sorted order.
+    SetSatnessKey K;
+    K.Mgr = Mgr;
+    K.AstIds.reserve(Set.size());
+
+    // Insert the z3 expressions from the given set to the cache key as their AST ids, which uniquely identify
+    // the expressions. We need to sort the AST ids to ensure that the order of the formulas in the s
+    // et does not affect the hash value.
+    for (const z3::expr &E : Set) {
+        K.AstIds.push_back(Z3_get_ast_id(E.ctx(), E));
+    }
+
+    // Sort the AST ids to ensure that the order of the formulas in the set does not affect the hash value.
+    llvm::sort(K.AstIds);
+
+    // Establish uniqueness on the aST ids to ensure that the same set of formulas always results in the
+    // same cache key, even if it contains duplicate formulas.
+    K.AstIds.erase(std::unique(K.AstIds.begin(), K.AstIds.end()), K.AstIds.end());
+    return K;
 }
 
 }  // namespace Feasibility

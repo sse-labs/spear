@@ -13,6 +13,8 @@
 #include <utility>
 #include <memory>
 #include <vector>
+#include <string>
+#include <unordered_map>
 
 #include "analyses/loopbound/LoopBound.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
@@ -47,18 +49,19 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(
         if (F.isDeclaration()) continue;
         if (F.getName().startswith("llvm.")) continue;
 
-        auto Cache = std::make_unique<LoopCache>(F); // builds DT and LI
+        auto Cache = std::make_unique<LoopCache>(F);
 
         // Collect all Loop* from this function's LoopInfo
         for (llvm::Loop *Top : Cache->LI.getTopLevelLoops()) {
-            collectLoops(Top, Loops); // stores Loop* that point into Cache->LI
+            collectLoops(Top, Loops);
         }
 
         LoopCaches[&F] = std::move(Cache);
     }
 
+    this->problem = std::make_shared<LoopBoundIDEAnalysis>(LoopBound::LoopBoundIDEAnalysis(
+        analysisManager, &helperAnalyses->getProjectIRDB(), this->Loops));
 
-    this->problem = std::make_shared<LoopBoundIDEAnalysis>(LoopBound::LoopBoundIDEAnalysis(analysisManager, &helperAnalyses->getProjectIRDB(), this->Loops));
     auto analysisResult = psr::solveIDEProblem(*this->problem, interproceduralCFG);
     this->cachedResults = std::make_unique<ResultsTy>(std::move(analysisResult));
 
@@ -216,8 +219,9 @@ const llvm::StoreInst *LoopBound::LoopBoundWrapper::findStoreIncOfLoop(
     return nullptr;  // No increment store found
 }
 
-std::unordered_map<std::string, std::vector<LoopBound::LoopClassifier>> LoopBound::LoopBoundWrapper::getLoopParameterDescriptionMap() {
-    std::unordered_map<std::string, std::vector<LoopClassifier> > result;
+std::unordered_map<std::string, std::vector<LoopBound::LoopClassifier>>
+LoopBound::LoopBoundWrapper::getLoopParameterDescriptionMap() {std::unordered_map<std::string,
+                                                                std::vector<LoopClassifier> > result;
 
     for (auto &desc : getClassifiers()) {
         if (!desc.loop || !desc.function) continue;  // Skip incomplete descriptions

@@ -3,8 +3,9 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_LOOPCLASSIFIER_H
-#define SPEAR_LOOPCLASSIFIER_H
+#ifndef SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPCLASSIFIER_H_
+#define SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPCLASSIFIER_H_
+
 #include <llvm/Analysis/LoopInfo.h>
 
 #include "DeltaInterval.h"
@@ -137,6 +138,6 @@ class LoopClassifier {
                                       int64_t init, int64_t check, int64_t increment);
 };
 
-}
+}  // namespace LoopBound
 
-#endif //SPEAR_LOOPCLASSIFIER_H
+#endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_LOOPCLASSIFIER_H_
