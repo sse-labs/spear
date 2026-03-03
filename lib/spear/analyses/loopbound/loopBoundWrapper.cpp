@@ -13,6 +13,8 @@
 #include <utility>
 #include <memory>
 #include <vector>
+#include <string>
+#include <unordered_map>
 
 #include "analyses/loopbound/LoopBound.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
@@ -38,28 +40,32 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(
     return;
   }
 
-  this->loops.clear();
-  this->loopClassifiers.clear();
+    Loops.clear();
+    loopClassifiers.clear();
+    LoopCaches.clear();
 
-  for (llvm::Function &function : *module) {
-    if (function.isDeclaration()) continue;
-    if (function.getName().startswith("llvm.")) continue;
+    // Build and keep DT+LI per function alive
+    for (llvm::Function &F : *module) {
+        if (F.isDeclaration()) continue;
+        if (F.getName().startswith("llvm.")) continue;
 
-    // Build DT + LoopInfo locally => no FAM registration required.
-    llvm::DominatorTree DT(function);
-    llvm::LoopInfo LI(DT);
+        auto Cache = std::make_unique<LoopCache>(F);
 
-    for (llvm::Loop *topLevelLoop : LI.getTopLevelLoops()) {
-      collectLoops(topLevelLoop, this->loops);
+        // Collect all Loop* from this function's LoopInfo
+        for (llvm::Loop *Top : Cache->LI.getTopLevelLoops()) {
+            collectLoops(Top, Loops);
+        }
+
+        LoopCaches[&F] = std::move(Cache);
     }
-  }
 
-  LoopBound::LoopBoundIDEAnalysis analysisProblem(
-      analysisManager, &helperAnalyses->getProjectIRDB(), &this->loops);
-  auto analysisResult = psr::solveIDEProblem(analysisProblem, interproceduralCFG);
-  this->cachedResults = std::make_unique<ResultsTy>(std::move(analysisResult));
+    this->problem = std::make_shared<LoopBoundIDEAnalysis>(LoopBound::LoopBoundIDEAnalysis(
+        analysisManager, &helperAnalyses->getProjectIRDB(), this->Loops));
 
-  const auto loopDescriptions = analysisProblem.getLoopParameterDescriptions();
+    auto analysisResult = psr::solveIDEProblem(*this->problem, interproceduralCFG);
+    this->cachedResults = std::make_unique<ResultsTy>(std::move(analysisResult));
+
+  const auto loopDescriptions = this->problem->getLoopParameterDescriptions();
 
   for (const auto &description : loopDescriptions) {
     if (!description.loop || !description.counterRoot || !description.icmp) {
@@ -136,8 +142,7 @@ std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(
     return std::nullopt;
 }
 
-void LoopBound::LoopBoundWrapper::collectLoops(
-    llvm::Loop *loop, std::vector<llvm::Loop *> &outputLoops) {
+void LoopBound::LoopBoundWrapper::collectLoops(llvm::Loop *loop, std::vector<llvm::Loop *> &outputLoops) {
     if (!loop) {
         return;  // Nothing to collect
     }
@@ -212,6 +217,22 @@ const llvm::StoreInst *LoopBound::LoopBoundWrapper::findStoreIncOfLoop(
         }
     }
     return nullptr;  // No increment store found
+}
+
+std::unordered_map<std::string, std::vector<LoopBound::LoopClassifier>>
+LoopBound::LoopBoundWrapper::getLoopParameterDescriptionMap() {std::unordered_map<std::string,
+                                                                std::vector<LoopClassifier> > result;
+
+    for (auto &desc : getClassifiers()) {
+        if (!desc.loop || !desc.function) continue;  // Skip incomplete descriptions
+        llvm::Function *parentFunction = desc.loop->getHeader()->getParent();
+        if (!parentFunction) continue;
+        if (parentFunction->isDeclaration() || parentFunction->getName().startswith("llvm.")) continue;
+
+        result[parentFunction->getName().str()].push_back(desc);
+    }
+
+    return result;
 }
 
 void LoopBound::LoopBoundWrapper::printClassifiers() {

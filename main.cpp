@@ -28,7 +28,6 @@
 #include "profilers/MetaProfiler.h"
 
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
-#include "src/spear/PhasarResultRegistry.h"
 
 
 void runProfileRoutine(CLIOptions opts) {
@@ -78,6 +77,8 @@ void runAnalysisRoutine(CLIOptions opts) {
     llvm::CGSCCAnalysisManager cGSCCAnalysisManager;
     llvm::ModuleAnalysisManager moduleAnalysisManager;
     llvm::ModulePassManager modulePassManager;
+    llvm::FunctionPassManager functionPassManager;
+    llvm::CGSCCPassManager callgraphPassManager;
 
     auto module_up = llvm::parseIRFile(opts.programPath, error, context).release();
     if (!module_up) {
@@ -93,8 +94,23 @@ void runAnalysisRoutine(CLIOptions opts) {
             loopAnalysisManager, functionAnalysisManager, cGSCCAnalysisManager,
             moduleAnalysisManager);
 
+
+    llvm::ModulePassManager PreMPM;
+    llvm::FunctionPassManager PreFPM;
+    PreFPM.addPass(llvm::InstructionNamerPass());
+
+    PhasarHandlerPass LoopBoundPhasarHandler(true, false);
+    LoopBoundPhasarHandler.runOnModule(*module_up);
+    auto loopboundResults = LoopBoundPhasarHandler.queryLoopBounds();
+
+    for (auto &[funcName, loopInfo] : loopboundResults) {
+        std::cout << "Function: " << funcName << "\n";
+        for (auto &loopEntry : loopInfo) {
+            std::cout << "\tLoop: " << loopEntry.first << ", Bound: " << loopEntry.second << "\n";
+        }
+    }
+
     // Build function pipeline once, then move it exactly once.
-    llvm::FunctionPassManager functionPassManager;
     functionPassManager.addPass(llvm::InstructionNamerPass());
     functionPassManager.addPass(llvm::PromotePass());
     functionPassManager.addPass(llvm::LoopSimplifyPass());
@@ -102,14 +118,26 @@ void runAnalysisRoutine(CLIOptions opts) {
     functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::LoopRotatePass()));
     functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::IndVarSimplifyPass()));
 
+
     modulePassManager.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(functionPassManager)));
 
     // IMPORTANT: actually run the NewPM pipeline to materialize proxies/analysis state
     // before any external code queries analyses from a FAM.
     modulePassManager.run(*module_up, moduleAnalysisManager);
 
-    PhasarHandlerPass PH;
-    PH.runOnModule(*module_up);
+    PhasarHandlerPass FeasibilityPhasarHandler(false, true);
+    FeasibilityPhasarHandler.runOnModule(*module_up);
+    auto feasibilityResults = FeasibilityPhasarHandler.queryFeasibilty();
+
+    for (const auto &functionEntry : feasibilityResults) {
+        llvm::outs() << "Feasibility information for function: " << functionEntry.first << "\n";
+        for (const auto &blockEntry : functionEntry.second) {
+            std::string feasStr = blockEntry.second.Feasible? "REACHABLE": "UNREACHABLE";
+
+            llvm::outs() << "\t Block: " << blockEntry.first << " => " << feasStr << "\n";
+        }
+        llvm::outs() << "\n";
+    }
 
     /*Modelchecker McheckerInstance;
     auto mcheckercontext = McheckerInstance.getContext();
@@ -121,23 +149,32 @@ void runAnalysisRoutine(CLIOptions opts) {
     std::cout << "Modelchecker result: " << checkres << "\n";*/
 
     // Store results for later use
-    auto MainFn = module_up->getFunction("main");
-    auto loopboundResults = PH.queryBoundVars(MainFn);
+    /*auto MainFn = module_up->getFunction("main");
+    auto loopboundResults = PH.queryLoopBounds();
     auto start = std::chrono::high_resolution_clock::now();
-    auto feasibilityResults = PH.queryFeasibility(MainFn);
+    auto feasibilityResults = PH.queryFeasibilty();
     auto end = std::chrono::high_resolution_clock::now();
 
 
-    for (const auto &entry : feasibilityResults) {
-        std::string feasStr = entry.second.Feasible? "REACHABLE": "UNREACHABLE";
+    for (auto &[funcName, loopInfo] : loopboundResults) {
+        std::cout << "Function: " << funcName << "\n";
+        for (auto &loopEntry : loopInfo) {
+            std::cout << "\tLoop: " << loopEntry.first << ", Bound: " << loopEntry.second << "\n";
+        }
+    }
 
-        std::cout << "Feasibility results for block: " << entry.first << " => " << feasStr << "\n";
+    for (const auto &functionEntry : feasibilityResults) {
+        llvm::outs() << "Feasibility information for function: " << functionEntry.first << "\n";
+        for (const auto &blockEntry : functionEntry.second) {
+            std::string feasStr = blockEntry.second.Feasible? "REACHABLE": "UNREACHABLE";
+
+            llvm::outs() << "\t Block: " << blockEntry.first << " => " << feasStr << "\n";
+        }
+        llvm::outs() << "\n";
     }
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Runtime: " << duration.count() << " ms\n";
-
-    PhasarResultRegistry::get().store(loopboundResults);
+    std::cout << "Runtime: " << duration.count() << " ms\n";*/
 
     // modulePassManager already ran above (don't run twice unless you intend to).
     // modulePassManager.addPass(Energy(opts.profilePath));

@@ -76,7 +76,7 @@ class ZeroOnlyFlow final : public psr::FlowFunction<D, ContainerT> {
 FeasibilityAnalysis::FeasibilityAnalysis(llvm::FunctionAnalysisManager *FAM,
                                         const psr::LLVMProjectIRDB *IRDB,
                                         const psr::LLVMBasedICFG *ICFG)
-    : base_t(IRDB, {"main"},
+    : base_t(IRDB, {"__ALL__"},
     std::optional<d_t>(static_cast<d_t>(psr::LLVMZeroValue::getInstance()))) {
     manager = std::make_unique<FeasibilityAnalysisManager>(std::make_unique<z3::context>());
     this->ICFG = ICFG;
@@ -87,20 +87,34 @@ psr::InitialSeeds<FeasibilityAnalysis::n_t, FeasibilityAnalysis::d_t, Feasibilit
 FeasibilityAnalysis::initialSeeds() {
     psr::InitialSeeds<n_t, d_t, l_t> Seeds;
 
-    // We only analyse outgoing from the main function
-    auto *Main = this->getProjectIRDB()->getFunctionDefinition("main");
-    if (!Main || Main->isDeclaration()) {
-        // if this error case occurs we are not in a valid program...
-        return Seeds;
-    }
-
-    // Start with a zero fact and an empty element
     const d_t Zero = this->getZeroValue();
     l_t init = emptyElement();
 
-    // For each starting point of main we add a set with the empty element
-    for (n_t SP : ICFG->getStartPointsOf(Main)) {
-        Seeds.addSeed(SP, Zero, init);
+    if (this->EntryPoints.size() == 1 && this->EntryPoints[0] == "__ALL__") {
+        // Add seeds for all entry points
+        for (auto func : this->IRDB->getAllFunctions()) {
+            if (!func || func->isDeclaration()) {
+                continue;
+            }
+
+            for (n_t SP : ICFG->getStartPointsOf(func)) {
+                Seeds.addSeed(SP, Zero, init);
+            }
+        }
+    } else {
+        // Add seeds only for specified entry points
+        for (auto &entry : this->EntryPoints) {
+            llvm::errs() << "Adding entry point: " << entry << "\n";
+            auto *funcDef = this->getProjectIRDB()->getFunctionDefinition(entry);
+
+            if (!funcDef || funcDef->isDeclaration()) {
+                continue;
+            }
+
+            for (n_t SP : ICFG->getStartPointsOf(funcDef)) {
+                Seeds.addSeed(SP, Zero, init);
+            }
+        }
     }
 
     return Seeds;

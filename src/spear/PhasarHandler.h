@@ -13,12 +13,10 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 #include <unordered_map>
 
 #include "analyses/feasibility/FeasibilityElement.h"
-#include "analyses/feasibility/FeasibilitySetSatness.h"
 #include "analyses/feasibility/FeasibilityWrapper.h"
 #include "analyses/loopbound/LoopBound.h"
 
@@ -31,69 +29,142 @@ class Instruction;
 }  // namespace llvm
 
 /**
- * Struct to store the feasibility information for a basic block,
- * including whether it is feasible, whether it has a zero value at entry, and whether it has
- * been visited during analysis.
+ * Analysis configuration struct. Allows us to configure the analysis execution
  */
-struct BlockFeasInfo {
-    bool Feasible = false;
-    Feasibility::FeasibilityElement ZeroAtEntry;
-    bool HasZeroAtEntry = false;
-    bool visited = false;
+struct AnalysisConfig {
+    bool RUNLOOPBOUNDANALYSIS = true;
+    bool RUNFEASIBILITYANALYSIS = true;
+    bool SHOWDEBUGOUTPUT = false;
 };
 
-// A ModulePass that runs PhASAR's IDELinearConstantAnalysis and provides
-// a helper to query the resulting lattice values for each basic block.
-//
-// This is written for the LLVM "new" pass manager (PassBuilder).
+
+/**
+ * The PhasarHandlerPass used to run our Phasar-based analyses. This pass can be added to the llvm pass manager and
+ * will run the configured analyses on the module under analysis.
+ */
 class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
  public:
     using LoopBoundDomainVal = LoopBound::DeltaInterval;
     using FeasibilityDomainVal = Feasibility::FeasibilityElement;
 
-    using BoundVarMap = std::map<std::string,
-        std::map<std::string, std::pair<const llvm::Value *, LoopBoundDomainVal>>>;
+    /**
+     * Main constructor. Allows to configure whether the loop bound and feasibility analysis should be executed and
+     * whether debug output should be printed.
+     * @param runLoopBoundAnalysis Whether the loop bound analysis should be executed
+     * @param runFeasibilityAnalysis Whether the feasibility analysis should be executed
+     * @param showDebugOutput Whether debug output should be printed during the analysis execution
+     */
+    PhasarHandlerPass(
+        bool runLoopBoundAnalysis = false,
+        bool runFeasibilityAnalysis = false,
+        bool showDebugOutput = false);
 
-    using FeasibilityMap = std::unordered_map<std::string, BlockFeasInfo>;
-
-    PhasarHandlerPass();
-
-    // New pass manager entry point
+    /**
+     * Run the analysis on the given module, using the provided ModuleAnalysisManager to retrieve necessary analyses for
+     * the PhASAR analysis problem. The results of the analysis will be stored internally and
+     * @param M Module to run the analysis on
+     * @param AM ModuleAnalysisManager to retrieve necessary analyses for the PhASAR analysis problem
+     * @return A PreservedAnalyses object indicating which analyses are preserved after running this pass.
+     * In our case, we return PreservedAnalyses::all() to indicate that all analyses are preserved, as our pass does
+     * not modify the module in a way that would invalidate any analyses.
+     */
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 
-    // Debug helper: dump full PhASAR results
-    void dumpState() const;
-
+    /**
+     * Run the analysis on the given module.
+     * @param M Module to run the analysis on
+     */
     void runOnModule(llvm::Module &M);
 
-    // Query all "bound variables" in a function, grouped per basic block.
-    // Requires that `run()` (and hence `runAnalysis()`) has been executed.
-    BoundVarMap queryBoundVars(llvm::Function *Func) const;
-    FeasibilityMap queryFeasibility(llvm::Function *Func) const;
+    /**
+     * Query the loop bound information for all functions in the module
+     * @return A LoopFunctionMap containing the loop bound information for all functions in the module,
+     * where each function name maps to a LoopToBoundMap that contains the loop names and their corresponding bounds.
+     */
+    LoopBound::LoopFunctionMap queryLoopBounds() const;
 
+    /**
+     * Query the loop bound information for each loop in the given function, returning a mapping from loop names to
+     * their corresponding bounds.
+     * @param Func Function to query the loop bound information for
+     * @return LoopToBoundMap containing the loop bound information for each loop in the given function,
+     * where each loop name maps to its corresponding bound.
+     */
+    LoopBound::LoopToBoundMap queryBoundsOfFunction(llvm::Function *Func) const;
+
+    /**
+     * Query the feasibility information for all functions in the module
+     * @return Mapping from function names to their basic block feasibility information
+     */
+    Feasibility::FunctionFeasibilityMap queryFeasibilty() const;
+
+    /**
+     * Query the feasibility information for each basic block of the given function,
+     * including whether the block is feasible and whether it has a zero value at entry.
+     * @param Func Function to query the feasibility information for
+     * @return A map from basic block names to their feasibility information
+     */
+    Feasibility::BlockFeasibilityMap queryFeasibilityOfFunction(llvm::Function *Func) const;
+
+    /**
+     * Pointer to the loop bound analysis wrapper, which provides helper functions to query the analysis results and
+     * access the underlying PhASAR analysis problem instance.
+     */
     std::unique_ptr<LoopBound::LoopBoundWrapper> loopboundwrapper = nullptr;
+
+    /**
+     * Pointer to the loop bound analysis problem instance, which contains the actual implementation of the analysis and
+     * the internal representation of the loops and their parameters.
+     */
+    std::shared_ptr<LoopBound::LoopBoundIDEAnalysis> loopboundProblem;
+
+    /**
+     * Pointer to the feasibility analysis wrapper, which provides helper functions to query the analysis results and
+     * access the underlying PhASAR analysis problem instance.
+     */
     std::unique_ptr<Feasibility::FeasibilityWrapper> feasibilitywrapper = nullptr;
+
+    /**
+     * Pointer to the feasibility analysis problem instance, which contains the actual implementation of the analysis
+     * and the internal representation of the basic blocks and their feasibility information.
+     */
     std::shared_ptr<Feasibility::FeasibilityAnalysis> feasibilityProblem;
 
-    bool constains(std::vector<llvm::BasicBlock *> visited, llvm::BasicBlock *BB) const;
-
  private:
-    // Backing module – only valid during/after `run()`.
+    /**
+     * Function entry points to start the analysis from.
+     */
+    std::vector<std::string> Entrypoints;
+
+    /**
+     * Configuration options for the analysis, set by the constructor and used to control which analyses are executed
+     * and whether debug output is printed during the analysis execution.
+     */
+    AnalysisConfig config;
+
+    /**
+     * Module under analysis, stored as a pointer for easier access throughout the class.
+     */
     llvm::Module *mod;
 
-    // PhASAR helper analyses
+    /**
+     * Helper analyses provided by PhASAR, which allow us to easily retrieve necessary analyses for our analysis
+     * problems
+     */
     std::shared_ptr<psr::HelperAnalyses> HA;
 
-    // Solver results: PhASAR’s IDE solver result wrapper.
+    /**
+     * Internal results of the loop bound analysis
+     */
     std::unique_ptr<psr::OwningSolverResults<const llvm::Instruction *, const llvm::Value *, LoopBound::DeltaInterval>>
     LoopBoundResult;
 
+    /**
+    * Internal results of the feasibility analysis
+    */
     std::unique_ptr<psr::OwningSolverResults<const llvm::Instruction *, const llvm::Value *,
     Feasibility::FeasibilityElement>>
     FeasibilityResult;
-
-    // Function entrypoints
-    std::vector<std::string> Entrypoints;
 
     /**
      * Execute the analysis on the given module, using the provided FunctionAnalysisManager to
@@ -110,30 +181,6 @@ class PhasarHandlerPass : public llvm::PassInfoMixin<PhasarHandlerPass> {
      * generated based on the block's address.
      */
     static std::string blockName(const llvm::BasicBlock &BB);
-
-    static inline SetSatnessKey makeSetSattnessCacheEntry(
-                            const Feasibility::FeasibilityAnalysisManager *Mgr,
-                            const std::vector<z3::expr> &Set) {
-        // Create a cache key for the given set of formulas by hashing their AST ids in sorted order.
-        SetSatnessKey K;
-        K.Mgr = Mgr;
-        K.AstIds.reserve(Set.size());
-
-        // Inser the z3 expressions from the given set to the cache key as their AST ids, which uniquely identify
-        // the expressions. We need to sort the AST ids to ensure that the order of the formulas in the s
-        // et does not affect the hash value.
-        for (const z3::expr &E : Set) {
-            K.AstIds.push_back(Z3_get_ast_id(E.ctx(), E));
-        }
-
-        // Sort the AST ids to ensure that the order of the formulas in the set does not affect the hash value.
-        llvm::sort(K.AstIds);
-
-        // Establish uniqueness on the aST ids to ensure that the same set of formulas always results in the
-        // same cache key, even if it contains duplicate formulas.
-        K.AstIds.erase(std::unique(K.AstIds.begin(), K.AstIds.end()), K.AstIds.end());
-        return K;
-    }
 };
 
 #endif  // SRC_SPEAR_PHASARHANDLER_H_

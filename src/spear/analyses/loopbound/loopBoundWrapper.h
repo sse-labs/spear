@@ -8,182 +8,39 @@
 
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/PassManager.h>
+#include <llvm/IR/Dominators.h>
 #include <phasar/DataFlow/IfdsIde/SolverResults.h>
 #include <phasar/PhasarLLVM/HelperAnalyses.h>
 
 #include <memory>
 #include <vector>
+#include <string>
+#include <unordered_map>
 
 #include "LoopBound.h"
 
 namespace LoopBound {
 
 /**
+ * LoopCache struct
+ * Caches the dominator tree and loop info for a function to avoid recalculating it multiple times during our analysis
+ */
+struct LoopCache {
+    // Dominator tree of the function
+    llvm::DominatorTree DT;
+    // Loop info of the function
+    llvm::LoopInfo LI;
+
+    explicit LoopCache(llvm::Function &F) : DT(F), LI(DT) {}
+};
+
+/**
  * Phasar result type
  * Used to shorthand any interaction with the analysis result
  */
 using ResultsTy = psr::OwningSolverResults<const llvm::Instruction *,
-const llvm::Value *, LoopBound::DeltaInterval>;  // Phasar solver results alias
+const llvm::Value *, LoopBound::DeltaInterval>;
 
-/**
- * Check Expression Class
- * Models checks, loops run against.
- * Allows for calculation of check values if they are no direct constant.
- *
- * We model loop checks as affine expression
- * check = offset + i * scaling
-*/
-class CheckExpr {
- public:
-    /**
-     * Base Value the expression is based on.
-     * Should be a memory root derived from a load instruction
-    */
-    const llvm::Value *Base = nullptr;
-
-    /**
-     * Corresponding load instruction of the vase value
-     */
-    const llvm::LoadInst *BaseLoad = nullptr;
-
-    /**
-     * Represents the offset of our calculation
-     */
-    int64_t Offset = 0;
-
-    /**
-     * Flag to distinguish loaded checks from constants
-     */
-    bool isConstant = false;
-
-    /**
-     * Division value to represent the scaling factor 1/scaling
-     */
-    std::optional<int64_t> DivBy;
-
-    /**
-     * Multiplication value to represent the scaling factor scaling
-     */
-    std::optional<int64_t> MulBy;
-
-    /**
-     * Constructor
-     * @param base Memory root the check is based on
-     * @param baseload Load of the memory root
-     * @param offset Constant offset
-     */
-    CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload,  int64_t offset, bool constant) :
-    Base(base), BaseLoad(baseload), Offset(offset), isConstant(constant) {}
-
-    /**
-     * Calculate the actual check value from the stored information
-     * @param FAM FunctionAnalysisManger used to deduce constnats
-     * @param LIInfo LoopInfo to infer loop related constants
-     * @return Possible calculated check value
-     */
-    std::optional<int64_t> calculateCheck(llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &LIInfo);
-};
-
-
-/**
- * LoopClassifier Class
- * Description of an analyzed loop.
- */
-class LoopClassifier {
- public:
-    // Which loop the classifier belongs to
-    llvm::Loop *loop;
-
-    // Which function the loop belongs to
-    llvm::Function *function;
-
-    // Increment representation
-    std::optional<LoopBound::DeltaInterval> increment;
-
-    // Possible bound calculated from the parameters
-    std::optional<LoopBound::DeltaInterval> bound;
-
-    // Init value
-    std::optional<int64_t> init;
-
-    // Loop bound
-    std::optional<int64_t> check;
-
-    // Comparison operator
-    llvm::CmpInst::Predicate predicate;
-
-    // Looptype
-    LoopBound::LoopType type;
-
-    /**
-     * Simple constructor
-     * @param loop The loop we are analysing
-     * @param increment The DeltaInterval from the loopbound analysis describing the possible
-     * increments of the loop counter
-     * @param init Initial value of the loop counter found by our analysis
-     * @param pred ICMP instruction used by the loop
-     * @param check Constant value we are checking the loop variable against
-     */
-    LoopClassifier(
-        llvm::Function *func,
-        llvm::Loop *loop,
-        std::optional<LoopBound::DeltaInterval> increment,
-        std::optional<int64_t> init,
-        llvm::CmpInst::Predicate pred,
-        std::optional<int64_t> check,
-        LoopBound::LoopType type)
-    : function(func), loop(loop), increment(increment), init(init), predicate(pred), check(check), type(type) {
-        this->bound = calculateBound();
-    }
-
-    /**
-     * Calculate the possible loop bound from the stored information
-     * @return The possible loopbound
-     */
-    std::optional<LoopBound::DeltaInterval> calculateBound();
-
-    /**
-     * Checks if we found a check value. Otherwise, no bound calculation is possible
-     * @return true if a check value exists, false otherwise
-     */
-    bool isBoundable() const {
-        return check.has_value();
-    }
-
- private:
-    /**
-     * Performs the actual bound calculation depending on the predicate
-     * @param predicate Predicate relevant for the bound
-     * @param init Init value of the loop
-     * @param check Check the counter is running against
-     * @param increment Concrete increment per loop iteration
-     * @return Possible calculated bound
-     */
-    static std::optional<int64_t> solveAdditiveBound(llvm::CmpInst::Predicate predicate,
-                                      int64_t init, int64_t check, int64_t increment);
-
-    /**
-    * Performs the actual bound calculation depending on the predicate
-    * @param predicate Predicate relevant for the bound
-    * @param init Init value of the loop
-    * @param check Check the counter is running against
-    * @param increment Concrete increment per loop iteration
-    * @return Possible calculated bound
-    */
-    static std::optional<int64_t> solveMultiplicativeBound(llvm::CmpInst::Predicate predicate,
-                                      int64_t init, int64_t check, int64_t increment);
-
-    /**
-    * Performs the actual bound calculation depending on the predicate
-    * @param predicate Predicate relevant for the bound
-    * @param init Init value of the loop
-    * @param check Check the counter is running against
-    * @param increment Concrete increment per loop iteration
-    * @return Possible calculated bound
-    */
-    static std::optional<int64_t> solveDivisionBound(llvm::CmpInst::Predicate predicate,
-                                      int64_t init, int64_t check, int64_t increment);
-};
 
 /**
  * LoopBoundWrapper class
@@ -213,7 +70,7 @@ class LoopBoundWrapper {
      */
     std::vector<LoopClassifier> getClassifiers();
 
-    /**
+    /**g
      * Calculate Checkexpression recursively from the given value.
      * @param V Value to analyse
      * @return The constructed Checkexpression if possible
@@ -236,18 +93,47 @@ class LoopBoundWrapper {
      */
     std::unique_ptr<ResultsTy> getResults() const;
 
+    /**
+     * Internal shared pointer to the used analysis problem instance
+     */
+    std::shared_ptr<LoopBound::LoopBoundIDEAnalysis> problem;
+
+    /**
+     * Getter to return the internal list of LoopParameterDescriptions as a map from function name
+     * to the corresponding descriptions
+     * @return Map from function name to vector of LoopParameterDescriptions corresponding to the loops in the function
+     */
+    std::unordered_map<std::string, std::vector<LoopBound::LoopClassifier>> getLoopParameterDescriptionMap();
+
  private:
-    // Internal storage of the analysis results calculated by phasar
+    /**
+     * Internal map from function to the corresponding LoopCache, which contains the dominator tree and loop
+     * info of the function
+     */
+    llvm::DenseMap<const llvm::Function*, std::unique_ptr<LoopCache>> LoopCaches;
+
+    /**
+     * Internal vector of loops found by llvm in the current program, which are used as starting points for our
+     * analysis and to construct our loop classifiers
+     */
+    std::vector<llvm::Loop*> Loops;
+
+    /**
+     * Internal storage of the analysis results, which can be queried for loop increment values at given instructions
+     * and facts.
+     */
     std::unique_ptr<ResultsTy> cachedResults;
 
-    // Loops found by llvm in the current program
-    std::vector<llvm::Loop *> loops;
-
-    // Internal storage of our constructed loop classifiers
+    /**
+     * Internal storage of our constructed loop classifiers, which contain the information about the loops and their
+     * parameters found by our analysis
+     */
     std::vector<LoopClassifier> loopClassifiers;
 
-    // Internal storage of the analysis manager so we can access llvms analysis information later on without
-    // passing it down to our functions
+    /**
+     * Internal storage of the analysis manager so we can access llvms analysis information later on without
+     * passing it down to our functions
+     */
     llvm::FunctionAnalysisManager *FAM;
 
     /**
@@ -272,8 +158,8 @@ class LoopBoundWrapper {
      * @param fact Fact that should be analysed at the given instruction
      * @return Returns a DeltaInterval instance representing the loop increment if it can be found
      */
-    std::optional<LoopBound::DeltaInterval> queryIntervalAtInstuction(
-    const llvm::Instruction *inst, const llvm::Value *fact);
+    std::optional<LoopBound::DeltaInterval> queryIntervalAtInstuction(const llvm::Instruction *inst,
+    const llvm::Value *fact);
 
     /**
      * Print the internally safed loop classifiers
