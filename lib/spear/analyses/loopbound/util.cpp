@@ -246,8 +246,8 @@ const llvm::StoreInst *findDominatingStoreToObject(const llvm::LoadInst *loadIns
         return nullptr;
     }
 
-    for (const llvm::BasicBlock &basicBlock: *function) {
-        for (const llvm::Instruction &instruction: basicBlock) {
+    for (const llvm::BasicBlock &basicBlock : *function) {
+        for (const llvm::Instruction &instruction : basicBlock) {
             auto *storeInst = llvm::dyn_cast<llvm::StoreInst>(&instruction);
             if (!storeInst) {
                 continue;
@@ -277,7 +277,7 @@ const llvm::StoreInst *findDominatingStoreToObject(const llvm::LoadInst *loadIns
             if (storeInst->getParent() == loadInst->getParent() && bestStore->getParent() == loadInst->getParent()) {
                 const llvm::BasicBlock *block = loadInst->getParent();
                 const llvm::StoreInst *lastSeenStore = nullptr;
-                for (const llvm::Instruction &currentInst: *block) {
+                for (const llvm::Instruction &currentInst : *block) {
                     if (&currentInst == bestStore)
                         lastSeenStore = bestStore;
                     if (&currentInst == storeInst)
@@ -364,8 +364,8 @@ std::optional<int64_t> tryDeduceConstFromLoad(
     llvm::Loop *currentLoop = loopInfo.getLoopFor(loadInst->getParent());
     if (currentLoop) {
         for (llvm::Loop *loopLevel = currentLoop; loopLevel != nullptr; loopLevel = loopLevel->getParentLoop()) {
-            for (llvm::BasicBlock *loopBlock: loopLevel->blocks()) {
-                for (llvm::Instruction &instruction: *loopBlock) {
+            for (llvm::BasicBlock *loopBlock : loopLevel->blocks()) {
+                for (llvm::Instruction &instruction : *loopBlock) {
                     auto *storeInst = llvm::dyn_cast<llvm::StoreInst>(&instruction);
                     if (!storeInst)
                         continue;
@@ -527,7 +527,7 @@ bool loopIsUniform(llvm::Loop *loop, llvm::DominatorTree &dominatorTree) {
     llvm::SmallVector<llvm::BasicBlock *, 8> exitingBlocks;
     loop->getExitingBlocks(exitingBlocks);
 
-    for (llvm::BasicBlock *exitingBlock: exitingBlocks) {
+    for (llvm::BasicBlock *exitingBlock : exitingBlocks) {
         auto *branchInst = llvm::dyn_cast<llvm::BranchInst>(exitingBlock->getTerminator());
         if (!branchInst || !branchInst->isConditional())
             continue;
@@ -607,8 +607,8 @@ bool loopIsCounting(llvm::Loop *loop, llvm::ICmpInst *icmpCondition) {
     // Look for a store to that root inside the loop that we can parse as increment
     bool foundIncrementStore = false;
 
-    for (llvm::BasicBlock *loopBlock: loop->blocks()) {
-        for (llvm::Instruction &instruction: *loopBlock) {
+    for (llvm::BasicBlock *loopBlock : loop->blocks()) {
+        for (llvm::Instruction &instruction : *loopBlock) {
             auto *storeInst = llvm::dyn_cast<llvm::StoreInst>(&instruction);
             if (!storeInst)
                 continue;
@@ -638,8 +638,8 @@ static bool isMemoryRootWrittenInLoop(const llvm::Value *baseMemory,
 
     const llvm::Value *normalizedBase = LoopBound::Util::stripAddr(baseMemory);
 
-    for (llvm::BasicBlock *loopBlock: loop->blocks()) {
-        for (llvm::Instruction &instruction: *loopBlock) {
+    for (llvm::BasicBlock *loopBlock : loop->blocks()) {
+        for (llvm::Instruction &instruction : *loopBlock) {
             auto *storeInst = llvm::dyn_cast<llvm::StoreInst>(&instruction);
             if (!storeInst)
                 continue;
@@ -699,9 +699,10 @@ void collectMemRootsFromScalarExpr(const llvm::Value *val, llvm::SmallPtrSetImpl
             continue;
         }
 
-        // If we neither encountered a load nor a ptr type, we deal with the operands of the instruction to find more roots.
+        // If we neither encountered a load nor a ptr type, we deal with the operands of the instruction to
+        // find more roots.
         if (auto *I = llvm::dyn_cast<llvm::Instruction>(Cur)) {
-            for (const llvm::Value *Op: I->operands()) {
+            for (const llvm::Value *Op : I->operands()) {
                 Worklist.push_back(Op);
             }
 
@@ -709,7 +710,7 @@ void collectMemRootsFromScalarExpr(const llvm::Value *val, llvm::SmallPtrSetImpl
         }
 
         if (auto *CE = llvm::dyn_cast<llvm::ConstantExpr>(Cur)) {
-            for (const llvm::Value *Op: CE->operands()) {
+            for (const llvm::Value *Op : CE->operands()) {
                 Worklist.push_back(Op);
             }
             continue;
@@ -719,16 +720,20 @@ void collectMemRootsFromScalarExpr(const llvm::Value *val, llvm::SmallPtrSetImpl
 
 bool loopIsDependentNested(const LoopParameterDescription &description,
                            llvm::LoopInfo &loopInfo) {
-    if (!description.loop || !description.icmp || !description.counterRoot)
+    if (!description.loop || !description.icmp || !description.counterRoot) {
         return false;
+    }
 
     llvm::Loop *currentLoop = description.loop;
     llvm::Loop *parentLoop = currentLoop->getParentLoop();
-    if (!parentLoop)
+    if (!parentLoop) {
         return false;
+    }
 
     const llvm::Value *counterRoot = LoopBound::Util::stripAddr(description.counterRoot);
-    if (!counterRoot) return false;
+    if (!counterRoot) {
+        return false;
+    }
 
     const llvm::Value *op0 = LoopBound::Util::stripCasts(description.icmp->getOperand(0));
     const llvm::Value *op1 = LoopBound::Util::stripCasts(description.icmp->getOperand(1));
@@ -743,17 +748,20 @@ bool loopIsDependentNested(const LoopParameterDescription &description,
 
     // Require exactly one side to use the counter root
     const llvm::Value *boundValue = nullptr;
-    if (op0UsesCounter && !op1UsesCounter) boundValue = op1;
-    else if (!op0UsesCounter && op1UsesCounter) boundValue = op0;
-    else return false;
+    if (op0UsesCounter && !op1UsesCounter) {
+        boundValue = op1;
+    } else if (!op0UsesCounter && op1UsesCounter) {
+        boundValue = op0;
+    } else {
+        return false;
+    }
 
-    // Bound is "dependent nested" if it uses any root written in any enclosing loop
+    // Bound is dependent nested if it uses any root written in any enclosing loop
     llvm::SmallPtrSet<const llvm::Value *, 8> boundRoots;
     collectMemRootsFromScalarExpr(boundValue, boundRoots);
 
     for (llvm::Loop *L = parentLoop; L != nullptr; L = L->getParentLoop()) {
-        for (const llvm::Value *R: boundRoots) {
-            // Optional: ignore global constants / readonly (your choice)
+        for (const llvm::Value *R : boundRoots) {
             if (isMemoryRootWrittenInLoop(R, L)) {
                 return true;
             }
@@ -763,8 +771,7 @@ bool loopIsDependentNested(const LoopParameterDescription &description,
 }
 
 LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription description,
-llvm::FunctionAnalysisManager *analysisManager) {
-
+                                      llvm::FunctionAnalysisManager *analysisManager) {
     auto *preheaderBlock = description.loop->getLoopPreheader();
     auto *parentFunction = preheaderBlock->getParent();
 
@@ -838,4 +845,4 @@ LoopType strToLoopType(const std::string &loopTypeString) {
     }
     return LoopType::UNKNOWN_LOOP;
 }
-} // namespace LoopBound::Util
+}  // namespace LoopBound::Util
