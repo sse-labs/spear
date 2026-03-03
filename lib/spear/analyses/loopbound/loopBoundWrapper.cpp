@@ -287,57 +287,77 @@ void LoopBound::LoopBoundWrapper::printClassifiers() {
 }
 
 std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::findLoopCheckExpr(
-const LoopBound::LoopParameterDescription &description,
-llvm::FunctionAnalysisManager *analysisManager, llvm::LoopInfo &loopInfo) {
-    if (!description.loop || !description.icmp) return std::nullopt;  // Missing loop or compare
+const LoopBound::LoopParameterDescription &description, llvm::FunctionAnalysisManager *analysisManager,
+llvm::LoopInfo &loopInfo) {
+    if (!description.loop || !description.icmp || !description.counterRoot) {
+        return std::nullopt;
+    }
 
-    const llvm::Value *leftOperand  = description.icmp->getOperand(0);  // Left operand
-    const llvm::Value *rightOperand = description.icmp->getOperand(1);  // Right operand
 
-    const llvm::Value *leftRoot =
-        LoopBound::Util::getMemRootFromValue(leftOperand);  // Left memory root
-    const llvm::Value *rightRoot =
-        LoopBound::Util::getMemRootFromValue(rightOperand);  // Right memory root
+    const llvm::Value *op0 = LoopBound::Util::stripCasts(description.icmp->getOperand(0));
+    const llvm::Value *op1 = LoopBound::Util::stripCasts(description.icmp->getOperand(1));
 
-    const llvm::Value *otherSideValue = nullptr;  // Non-counter operand
+    const llvm::Value *counterRoot = LoopBound::Util::stripAddr(description.counterRoot);
+    if (!counterRoot) return std::nullopt;
 
-    if (leftRoot && leftRoot == description.counterRoot) {
-        otherSideValue = rightOperand;  // Counter on left
-    } else if (rightRoot && rightRoot == description.counterRoot) {
-        otherSideValue = leftOperand;  // Counter on right
+    llvm::SmallPtrSet<const llvm::Value *, 8> roots0;
+    llvm::SmallPtrSet<const llvm::Value *, 8> roots1;
+
+    // Collect possible roots from scalar values
+    Util::collectMemRootsFromScalarExpr(op0, roots0);
+    Util::collectMemRootsFromScalarExpr(op1, roots1);
+
+    const bool op0IsCounter = roots0.contains(counterRoot);
+    const bool op1IsCounter = roots1.contains(counterRoot);
+
+    const llvm::Value *otherSideValue = nullptr;
+
+    if (op0IsCounter && !op1IsCounter) {
+        otherSideValue = op1;
+    } else if (!op0IsCounter && op1IsCounter) {
+        otherSideValue = op0;
     } else {
-        return std::nullopt;  // Counter not found
+        // Can't even identify counter side -> no check expr
+        return std::nullopt;
     }
 
-    otherSideValue = LoopBound::Util::stripCasts(otherSideValue);  // Normalize
+    otherSideValue = LoopBound::Util::stripCasts(otherSideValue);
 
-    if (auto *constantValue = llvm::dyn_cast<llvm::Constant>(otherSideValue)) {
-        if (auto *constExpr = llvm::dyn_cast<llvm::ConstantExpr>(constantValue)) {
-            if (constExpr->isCast()) {
-                if (auto *innerConst = llvm::dyn_cast<llvm::Constant>(constExpr->getOperand(0)))
-                    constantValue = innerConst;  // Strip constant cast
-            }
+    // 1) constant int
+    if (auto *C = llvm::dyn_cast<llvm::Constant>(otherSideValue)) {
+        if (auto *CE = llvm::dyn_cast<llvm::ConstantExpr>(C)) {
+          if (CE->isCast())
+            if (auto *Inner = llvm::dyn_cast<llvm::Constant>(CE->getOperand(0)))
+              C = Inner;
         }
-        if (auto *constInt = llvm::dyn_cast<llvm::ConstantInt>(constantValue)) {
-            return LoopBound::CheckExpr{nullptr, nullptr, constInt->getSExtValue(), true};  // Constant check
-        }
-    }
-
-    if (auto expression = peelBasePlusConst(otherSideValue)) {
-        return *expression;  // Derived check expression
-    }
-
-    if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(otherSideValue)) {
-        if (auto *functionPtr = const_cast<llvm::Function *>(loadInst->getFunction())) {
-            llvm::DominatorTree dominatorTree(*functionPtr);
-            if (auto constValue =
-                LoopBound::Util::tryDeduceConstFromLoad(loadInst, dominatorTree, loopInfo)) {
-                return LoopBound::CheckExpr{nullptr, nullptr, *constValue, false};  // Fallback constant
-            }
+        if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(C)) {
+          return LoopBound::CheckExpr{nullptr, nullptr, CI->getSExtValue(), true, false};
         }
     }
 
-    return std::nullopt;  // No expression found
+    // 2) base + const
+    if (auto expr = peelBasePlusConst(otherSideValue)) {
+        return *expr;
+    }
+
+    // 3) load -> try deduce const
+    if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(otherSideValue)) {
+        if (auto *F = const_cast<llvm::Function *>(LI->getFunction())) {
+          llvm::DominatorTree DT(*F);
+          if (auto CV = LoopBound::Util::tryDeduceConstFromLoad(LI, DT, loopInfo)) {
+            return LoopBound::CheckExpr{nullptr, nullptr, *CV, false, false};
+          }
+        }
+    }
+
+    LoopBound::CheckExpr Unknown(nullptr, nullptr, -255, false, true);
+
+    // Fallback or unknown values. This mitigates classifier throw away, if we encounter a nested loop
+    if (Util::loopIsDependentNested(description, loopInfo)) {
+        return Unknown;
+    }
+
+    return Unknown;
 }
 
 std::vector<LoopBound::LoopClassifier> LoopBound::LoopBoundWrapper::getClassifiers() {
@@ -350,7 +370,7 @@ std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::peelBasePlusCon
 
     if (auto *constInt = llvm::dyn_cast<llvm::ConstantInt>(value)) {
         // Constant expression
-        return LoopBound::CheckExpr{nullptr, nullptr, constInt->getSExtValue(), true};
+        return LoopBound::CheckExpr{nullptr, nullptr, constInt->getSExtValue(), true, false};
     }
 
     if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(value)) {
@@ -358,7 +378,7 @@ std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::peelBasePlusCon
         if (!rootValue) rootValue = LoopBound::Util::stripAddr(loadInst->getPointerOperand());
         rootValue = LoopBound::Util::stripAddr(rootValue);
 
-        return LoopBound::CheckExpr{rootValue, loadInst, 0, false};  // Base load with zero offset
+        return LoopBound::CheckExpr{rootValue, loadInst, 0, false, false};  // Base load with zero offset
     }
 
     if (auto *binaryOp = llvm::dyn_cast<llvm::BinaryOperator>(value)) {

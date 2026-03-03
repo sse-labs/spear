@@ -110,6 +110,8 @@ void runAnalysisRoutine(CLIOptions opts) {
         }
     }
 
+    std::cout << "\n";
+
     // Build function pipeline once, then move it exactly once.
     functionPassManager.addPass(llvm::InstructionNamerPass());
     functionPassManager.addPass(llvm::PromotePass());

@@ -59,14 +59,18 @@ class CheckExpr {
     std::optional<int64_t> MulBy;
 
     /**
+     * Fallback if we cannot deduce the check value
+     */
+    bool isUnknown = false;
+
+    /**
      * Constructor
      * @param base Memory root the check is based on
      * @param baseload Load of the memory root
      * @param offset Constant offset
      */
-    CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload, int64_t offset, bool constant) : Base(base),
-        BaseLoad(baseload), Offset(offset), isConstant(constant) {
-    }
+    CheckExpr(const llvm::Value *base, const llvm::LoadInst *baseload, int64_t offset, bool constant, bool isUnknown)
+    : Base(base), BaseLoad(baseload), Offset(offset), isConstant(constant), isUnknown(isUnknown) {}
 
     /**
      * Calculate the actual check value from the stored information

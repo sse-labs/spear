@@ -260,6 +260,13 @@ bool loopIsDependentNested(const LoopParameterDescription &desc,
  */
 std::string LoopTypeToString(LoopBound::LoopType type);
 
+/**
+ * Traces a given scalar expression to its memory roots and collects them in the given set.
+ * @param val Value to analyze
+ * @param OutRoots Set to store the collected memory roots
+ */
+void collectMemRootsFromScalarExpr(const llvm::Value *val, llvm::SmallPtrSetImpl<const llvm::Value *> &OutRoots);
+
 }  // namespace LoopBound::Util
 
 #endif  // SRC_SPEAR_ANALYSES_LOOPBOUND_UTIL_H_
