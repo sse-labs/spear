@@ -111,6 +111,8 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:a10ca1adce9d72b10f2d6c1796a6ed033"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a764a44afd27715e999224ad17607ffcb" id="r_a764a44afd27715e999224ad17607ffcb"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classFeasibility_1_1FeasibilityAnalysisManager.html">FeasibilityAnalysisManager</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classFeasibility_1_1Util.html#a764a44afd27715e999224ad17607ffcb">pickManager</a> (<a class="el" href="classFeasibility_1_1FeasibilityAnalysisManager.html">FeasibilityAnalysisManager</a> *manager, const <a class="el" href="classFeasibility_1_1FeasibilityElement.html">l_t</a> &amp;source)</td></tr>
 <tr class="separator:a764a44afd27715e999224ad17607ffcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a554044851ed06b86d77a9b08f560c275" id="r_a554044851ed06b86d77a9b08f560c275"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classFeasibility_1_1Util.html#a554044851ed06b86d77a9b08f560c275">makeSetSattnessCacheEntry</a> (const <a class="el" href="classFeasibility_1_1FeasibilityAnalysisManager.html">Feasibility::FeasibilityAnalysisManager</a> *Mgr, const std::vector&lt; z3::expr &gt; &amp;Set)</td></tr>
+<tr class="separator:a554044851ed06b86d77a9b08f560c275"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
@@ -499,6 +501,50 @@ static constexpr std::atomic&lt; bool &gt;&#160;</td><td class="memItemRight" va
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if the edge function is an identity function, false otherwise </dd></dl>
+
+</div>
+</div>
+<a id="a554044851ed06b86d77a9b08f560c275" name="a554044851ed06b86d77a9b08f560c275"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a554044851ed06b86d77a9b08f560c275">&#9670;&#160;</a></span>makeSetSattnessCacheEntry()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> Feasibility::Util::makeSetSattnessCacheEntry </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classFeasibility_1_1FeasibilityAnalysisManager.html">Feasibility::FeasibilityAnalysisManager</a> *&#160;</td>
+          <td class="paramname"><em>Mgr</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; z3::expr &gt; &amp;&#160;</td>
+          <td class="paramname"><em>Set</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Create a cache key for the given set of formulas by hashing their AST ids in sorted order. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">Mgr</td><td><a class="el" href="classFeasibility_1_1FeasibilityAnalysisManager.html">FeasibilityAnalysisManager</a> to access the z3 context for hashing the formulas </td></tr>
+    <tr><td class="paramname">Set</td><td>Set of formulas to create the cache key for. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> representing the given set of formulas, which can be used as a key for caching the satisfiability result of the set. </dd></dl>
 
 </div>
 </div>

@@ -77,6 +77,8 @@ $(function() {
   <div class="headertitle"><div class="title">PhasarHandlerPass Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p><code>#include &lt;<a class="el" href="PhasarHandler_8h_source.html">PhasarHandler.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for PhasarHandlerPass:</div>
 <div class="dyncontent">
@@ -92,46 +94,288 @@ using&#160;</td><td class="memItemRight" valign="bottom"><b>LoopBoundDomainVal</
 <tr class="memitem:a9a7a669567b4b59e984f28131a344aa5" id="r_a9a7a669567b4b59e984f28131a344aa5"><td class="memItemLeft" align="right" valign="top"><a id="a9a7a669567b4b59e984f28131a344aa5" name="a9a7a669567b4b59e984f28131a344aa5"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>FeasibilityDomainVal</b> = <a class="el" href="classFeasibility_1_1FeasibilityElement.html">Feasibility::FeasibilityElement</a></td></tr>
 <tr class="separator:a9a7a669567b4b59e984f28131a344aa5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aff07eb428124d70986f6f5ae0deed219" id="r_aff07eb428124d70986f6f5ae0deed219"><td class="memItemLeft" align="right" valign="top"><a id="aff07eb428124d70986f6f5ae0deed219" name="aff07eb428124d70986f6f5ae0deed219"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>BoundVarMap</b> = std::map&lt; std::string, std::map&lt; std::string, std::pair&lt; const llvm::Value *, <a class="el" href="classLoopBound_1_1DeltaInterval.html">LoopBoundDomainVal</a> &gt; &gt; &gt;</td></tr>
-<tr class="separator:aff07eb428124d70986f6f5ae0deed219"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adbc9d0449402e69c4598b3cfb48b85ba" id="r_adbc9d0449402e69c4598b3cfb48b85ba"><td class="memItemLeft" align="right" valign="top"><a id="adbc9d0449402e69c4598b3cfb48b85ba" name="adbc9d0449402e69c4598b3cfb48b85ba"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>FeasibilityMap</b> = std::unordered_map&lt; std::string, <a class="el" href="structBlockFeasInfo.html">BlockFeasInfo</a> &gt;</td></tr>
-<tr class="separator:adbc9d0449402e69c4598b3cfb48b85ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a195394de4d638f0045fde17c4f7038be" id="r_a195394de4d638f0045fde17c4f7038be"><td class="memItemLeft" align="right" valign="top"><a id="a195394de4d638f0045fde17c4f7038be" name="a195394de4d638f0045fde17c4f7038be"></a>
-llvm::PreservedAnalyses&#160;</td><td class="memItemRight" valign="bottom"><b>run</b> (llvm::Module &amp;M, llvm::ModuleAnalysisManager &amp;AM)</td></tr>
+<tr class="memitem:a1c4c06872bbaa7f1e2f38fa3bdff782c" id="r_a1c4c06872bbaa7f1e2f38fa3bdff782c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#a1c4c06872bbaa7f1e2f38fa3bdff782c">PhasarHandlerPass</a> (bool runLoopBoundAnalysis=false, bool runFeasibilityAnalysis=false, bool showDebugOutput=false)</td></tr>
+<tr class="separator:a1c4c06872bbaa7f1e2f38fa3bdff782c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a195394de4d638f0045fde17c4f7038be" id="r_a195394de4d638f0045fde17c4f7038be"><td class="memItemLeft" align="right" valign="top">llvm::PreservedAnalyses&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#a195394de4d638f0045fde17c4f7038be">run</a> (llvm::Module &amp;M, llvm::ModuleAnalysisManager &amp;AM)</td></tr>
 <tr class="separator:a195394de4d638f0045fde17c4f7038be"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4bd491be4930635370e1e8ab5ed34e73" id="r_a4bd491be4930635370e1e8ab5ed34e73"><td class="memItemLeft" align="right" valign="top"><a id="a4bd491be4930635370e1e8ab5ed34e73" name="a4bd491be4930635370e1e8ab5ed34e73"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>dumpState</b> () const</td></tr>
-<tr class="separator:a4bd491be4930635370e1e8ab5ed34e73"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae03895a260ad2eea6a74aad422169a7d" id="r_ae03895a260ad2eea6a74aad422169a7d"><td class="memItemLeft" align="right" valign="top"><a id="ae03895a260ad2eea6a74aad422169a7d" name="ae03895a260ad2eea6a74aad422169a7d"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>runOnModule</b> (llvm::Module &amp;M)</td></tr>
+<tr class="memitem:ae03895a260ad2eea6a74aad422169a7d" id="r_ae03895a260ad2eea6a74aad422169a7d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#ae03895a260ad2eea6a74aad422169a7d">runOnModule</a> (llvm::Module &amp;M)</td></tr>
 <tr class="separator:ae03895a260ad2eea6a74aad422169a7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5fdf98052cdd3df915f28b42ac32b632" id="r_a5fdf98052cdd3df915f28b42ac32b632"><td class="memItemLeft" align="right" valign="top"><a id="a5fdf98052cdd3df915f28b42ac32b632" name="a5fdf98052cdd3df915f28b42ac32b632"></a>
-BoundVarMap&#160;</td><td class="memItemRight" valign="bottom"><b>queryBoundVars</b> (llvm::Function *Func) const</td></tr>
-<tr class="separator:a5fdf98052cdd3df915f28b42ac32b632"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4ca01518307d5e0d4a62eb286a5dcd37" id="r_a4ca01518307d5e0d4a62eb286a5dcd37"><td class="memItemLeft" align="right" valign="top"><a id="a4ca01518307d5e0d4a62eb286a5dcd37" name="a4ca01518307d5e0d4a62eb286a5dcd37"></a>
-FeasibilityMap&#160;</td><td class="memItemRight" valign="bottom"><b>queryFeasibility</b> (llvm::Function *Func) const</td></tr>
-<tr class="separator:a4ca01518307d5e0d4a62eb286a5dcd37"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a22a0f93762f0e0c03e21e59605d3312f" id="r_a22a0f93762f0e0c03e21e59605d3312f"><td class="memItemLeft" align="right" valign="top"><a id="a22a0f93762f0e0c03e21e59605d3312f" name="a22a0f93762f0e0c03e21e59605d3312f"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>constains</b> (std::vector&lt; llvm::BasicBlock * &gt; visited, llvm::BasicBlock *BB) const</td></tr>
-<tr class="separator:a22a0f93762f0e0c03e21e59605d3312f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17f09c510fad4d643e1965381f45c924" id="r_a17f09c510fad4d643e1965381f45c924"><td class="memItemLeft" align="right" valign="top">LoopBound::LoopFunctionMap&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#a17f09c510fad4d643e1965381f45c924">queryLoopBounds</a> () const</td></tr>
+<tr class="separator:a17f09c510fad4d643e1965381f45c924"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9fbebfadfc7a65671bb4fb35e18c6760" id="r_a9fbebfadfc7a65671bb4fb35e18c6760"><td class="memItemLeft" align="right" valign="top">LoopBound::LoopToBoundMap&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#a9fbebfadfc7a65671bb4fb35e18c6760">queryBoundsOfFunction</a> (llvm::Function *Func) const</td></tr>
+<tr class="separator:a9fbebfadfc7a65671bb4fb35e18c6760"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acdaa61a7615487b22904e7e192dccb26" id="r_acdaa61a7615487b22904e7e192dccb26"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespaceFeasibility.html#a0c683b51b80f49800479be328ea2454c">Feasibility::FunctionFeasibilityMap</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#acdaa61a7615487b22904e7e192dccb26">queryFeasibilty</a> () const</td></tr>
+<tr class="separator:acdaa61a7615487b22904e7e192dccb26"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add07cf90a6ba6720bde0ae0c79485b03" id="r_add07cf90a6ba6720bde0ae0c79485b03"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespaceFeasibility.html#a1dbbf717b24ad745ee47bd147459330c">Feasibility::BlockFeasibilityMap</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#add07cf90a6ba6720bde0ae0c79485b03">queryFeasibilityOfFunction</a> (llvm::Function *Func) const</td></tr>
+<tr class="separator:add07cf90a6ba6720bde0ae0c79485b03"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a4654fc5d8fa5c0699bb8847eaca16185" id="r_a4654fc5d8fa5c0699bb8847eaca16185"><td class="memItemLeft" align="right" valign="top"><a id="a4654fc5d8fa5c0699bb8847eaca16185" name="a4654fc5d8fa5c0699bb8847eaca16185"></a>
-std::unique_ptr&lt; <a class="el" href="classLoopBound_1_1LoopBoundWrapper.html">LoopBound::LoopBoundWrapper</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>loopboundwrapper</b> = nullptr</td></tr>
+<tr class="memitem:a4654fc5d8fa5c0699bb8847eaca16185" id="r_a4654fc5d8fa5c0699bb8847eaca16185"><td class="memItemLeft" align="right" valign="top">std::unique_ptr&lt; <a class="el" href="classLoopBound_1_1LoopBoundWrapper.html">LoopBound::LoopBoundWrapper</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#a4654fc5d8fa5c0699bb8847eaca16185">loopboundwrapper</a> = nullptr</td></tr>
 <tr class="separator:a4654fc5d8fa5c0699bb8847eaca16185"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a29ec9a6d6db8269b5d1640997df2cd8c" id="r_a29ec9a6d6db8269b5d1640997df2cd8c"><td class="memItemLeft" align="right" valign="top"><a id="a29ec9a6d6db8269b5d1640997df2cd8c" name="a29ec9a6d6db8269b5d1640997df2cd8c"></a>
-std::unique_ptr&lt; <a class="el" href="classFeasibility_1_1FeasibilityWrapper.html">Feasibility::FeasibilityWrapper</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>feasibilitywrapper</b> = nullptr</td></tr>
+<tr class="memitem:a858f853c8a8a2cb1de3b01b0751e68df" id="r_a858f853c8a8a2cb1de3b01b0751e68df"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="classLoopBound_1_1LoopBoundIDEAnalysis.html">LoopBound::LoopBoundIDEAnalysis</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#a858f853c8a8a2cb1de3b01b0751e68df">loopboundProblem</a></td></tr>
+<tr class="separator:a858f853c8a8a2cb1de3b01b0751e68df"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29ec9a6d6db8269b5d1640997df2cd8c" id="r_a29ec9a6d6db8269b5d1640997df2cd8c"><td class="memItemLeft" align="right" valign="top">std::unique_ptr&lt; <a class="el" href="classFeasibility_1_1FeasibilityWrapper.html">Feasibility::FeasibilityWrapper</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#a29ec9a6d6db8269b5d1640997df2cd8c">feasibilitywrapper</a> = nullptr</td></tr>
 <tr class="separator:a29ec9a6d6db8269b5d1640997df2cd8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aacccb8f447c9212816a6fa7122746c24" id="r_aacccb8f447c9212816a6fa7122746c24"><td class="memItemLeft" align="right" valign="top"><a id="aacccb8f447c9212816a6fa7122746c24" name="aacccb8f447c9212816a6fa7122746c24"></a>
-std::shared_ptr&lt; <a class="el" href="classFeasibility_1_1FeasibilityAnalysis.html">Feasibility::FeasibilityAnalysis</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>feasibilityProblem</b></td></tr>
+<tr class="memitem:aacccb8f447c9212816a6fa7122746c24" id="r_aacccb8f447c9212816a6fa7122746c24"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="classFeasibility_1_1FeasibilityAnalysis.html">Feasibility::FeasibilityAnalysis</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPhasarHandlerPass.html#aacccb8f447c9212816a6fa7122746c24">feasibilityProblem</a></td></tr>
 <tr class="separator:aacccb8f447c9212816a6fa7122746c24"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>The <a class="el" href="classPhasarHandlerPass.html">PhasarHandlerPass</a> used to run our Phasar-based analyses. This pass can be added to the llvm pass manager and will run the configured analyses on the module under analysis. </p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a1c4c06872bbaa7f1e2f38fa3bdff782c" name="a1c4c06872bbaa7f1e2f38fa3bdff782c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1c4c06872bbaa7f1e2f38fa3bdff782c">&#9670;&#160;</a></span>PhasarHandlerPass()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PhasarHandlerPass::PhasarHandlerPass </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>runLoopBoundAnalysis</em> = <code>false</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>runFeasibilityAnalysis</em> = <code>false</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>showDebugOutput</em> = <code>false</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Main constructor. Allows to configure whether the loop bound and feasibility analysis should be executed and whether debug output should be printed. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">runLoopBoundAnalysis</td><td>Whether the loop bound analysis should be executed </td></tr>
+    <tr><td class="paramname">runFeasibilityAnalysis</td><td>Whether the feasibility analysis should be executed </td></tr>
+    <tr><td class="paramname">showDebugOutput</td><td>Whether debug output should be printed during the analysis execution </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="a9fbebfadfc7a65671bb4fb35e18c6760" name="a9fbebfadfc7a65671bb4fb35e18c6760"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9fbebfadfc7a65671bb4fb35e18c6760">&#9670;&#160;</a></span>queryBoundsOfFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">LoopBound::LoopToBoundMap PhasarHandlerPass::queryBoundsOfFunction </td>
+          <td>(</td>
+          <td class="paramtype">llvm::Function *&#160;</td>
+          <td class="paramname"><em>Func</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Query the loop bound information for each loop in the given function, returning a mapping from loop names to their corresponding bounds. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">Func</td><td>Function to query the loop bound information for </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>LoopToBoundMap containing the loop bound information for each loop in the given function, where each loop name maps to its corresponding bound. </dd></dl>
+
+</div>
+</div>
+<a id="add07cf90a6ba6720bde0ae0c79485b03" name="add07cf90a6ba6720bde0ae0c79485b03"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add07cf90a6ba6720bde0ae0c79485b03">&#9670;&#160;</a></span>queryFeasibilityOfFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="namespaceFeasibility.html#a1dbbf717b24ad745ee47bd147459330c">Feasibility::BlockFeasibilityMap</a> PhasarHandlerPass::queryFeasibilityOfFunction </td>
+          <td>(</td>
+          <td class="paramtype">llvm::Function *&#160;</td>
+          <td class="paramname"><em>Func</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Query the feasibility information for each basic block of the given function, including whether the block is feasible and whether it has a zero value at entry. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">Func</td><td>Function to query the feasibility information for </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A map from basic block names to their feasibility information </dd></dl>
+
+</div>
+</div>
+<a id="acdaa61a7615487b22904e7e192dccb26" name="acdaa61a7615487b22904e7e192dccb26"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acdaa61a7615487b22904e7e192dccb26">&#9670;&#160;</a></span>queryFeasibilty()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="namespaceFeasibility.html#a0c683b51b80f49800479be328ea2454c">Feasibility::FunctionFeasibilityMap</a> PhasarHandlerPass::queryFeasibilty </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Query the feasibility information for all functions in the module </p><dl class="section return"><dt>Returns</dt><dd>Mapping from function names to their basic block feasibility information </dd></dl>
+
+</div>
+</div>
+<a id="a17f09c510fad4d643e1965381f45c924" name="a17f09c510fad4d643e1965381f45c924"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17f09c510fad4d643e1965381f45c924">&#9670;&#160;</a></span>queryLoopBounds()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">LoopBound::LoopFunctionMap PhasarHandlerPass::queryLoopBounds </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Query the loop bound information for all functions in the module </p><dl class="section return"><dt>Returns</dt><dd>A LoopFunctionMap containing the loop bound information for all functions in the module, where each function name maps to a LoopToBoundMap that contains the loop names and their corresponding bounds. </dd></dl>
+
+</div>
+</div>
+<a id="a195394de4d638f0045fde17c4f7038be" name="a195394de4d638f0045fde17c4f7038be"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a195394de4d638f0045fde17c4f7038be">&#9670;&#160;</a></span>run()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">llvm::PreservedAnalyses PhasarHandlerPass::run </td>
+          <td>(</td>
+          <td class="paramtype">llvm::Module &amp;&#160;</td>
+          <td class="paramname"><em>M</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">llvm::ModuleAnalysisManager &amp;&#160;</td>
+          <td class="paramname"><em>AM</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Run the analysis on the given module, using the provided ModuleAnalysisManager to retrieve necessary analyses for the PhASAR analysis problem. The results of the analysis will be stored internally and </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">M</td><td>Module to run the analysis on </td></tr>
+    <tr><td class="paramname">AM</td><td>ModuleAnalysisManager to retrieve necessary analyses for the PhASAR analysis problem </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A PreservedAnalyses object indicating which analyses are preserved after running this pass. In our case, we return PreservedAnalyses::all() to indicate that all analyses are preserved, as our pass does not modify the module in a way that would invalidate any analyses. </dd></dl>
+
+</div>
+</div>
+<a id="ae03895a260ad2eea6a74aad422169a7d" name="ae03895a260ad2eea6a74aad422169a7d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae03895a260ad2eea6a74aad422169a7d">&#9670;&#160;</a></span>runOnModule()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void PhasarHandlerPass::runOnModule </td>
+          <td>(</td>
+          <td class="paramtype">llvm::Module &amp;&#160;</td>
+          <td class="paramname"><em>M</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Run the analysis on the given module. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">M</td><td>Module to run the analysis on </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a id="aacccb8f447c9212816a6fa7122746c24" name="aacccb8f447c9212816a6fa7122746c24"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aacccb8f447c9212816a6fa7122746c24">&#9670;&#160;</a></span>feasibilityProblem</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt;<a class="el" href="classFeasibility_1_1FeasibilityAnalysis.html">Feasibility::FeasibilityAnalysis</a>&gt; PhasarHandlerPass::feasibilityProblem</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Pointer to the feasibility analysis problem instance, which contains the actual implementation of the analysis and the internal representation of the basic blocks and their feasibility information. </p>
+
+</div>
+</div>
+<a id="a29ec9a6d6db8269b5d1640997df2cd8c" name="a29ec9a6d6db8269b5d1640997df2cd8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29ec9a6d6db8269b5d1640997df2cd8c">&#9670;&#160;</a></span>feasibilitywrapper</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::unique_ptr&lt;<a class="el" href="classFeasibility_1_1FeasibilityWrapper.html">Feasibility::FeasibilityWrapper</a>&gt; PhasarHandlerPass::feasibilitywrapper = nullptr</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Pointer to the feasibility analysis wrapper, which provides helper functions to query the analysis results and access the underlying PhASAR analysis problem instance. </p>
+
+</div>
+</div>
+<a id="a858f853c8a8a2cb1de3b01b0751e68df" name="a858f853c8a8a2cb1de3b01b0751e68df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a858f853c8a8a2cb1de3b01b0751e68df">&#9670;&#160;</a></span>loopboundProblem</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt;<a class="el" href="classLoopBound_1_1LoopBoundIDEAnalysis.html">LoopBound::LoopBoundIDEAnalysis</a>&gt; PhasarHandlerPass::loopboundProblem</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Pointer to the loop bound analysis problem instance, which contains the actual implementation of the analysis and the internal representation of the loops and their parameters. </p>
+
+</div>
+</div>
+<a id="a4654fc5d8fa5c0699bb8847eaca16185" name="a4654fc5d8fa5c0699bb8847eaca16185"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4654fc5d8fa5c0699bb8847eaca16185">&#9670;&#160;</a></span>loopboundwrapper</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::unique_ptr&lt;<a class="el" href="classLoopBound_1_1LoopBoundWrapper.html">LoopBound::LoopBoundWrapper</a>&gt; PhasarHandlerPass::loopboundwrapper = nullptr</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Pointer to the loop bound analysis wrapper, which provides helper functions to query the analysis results and access the underlying PhASAR analysis problem instance. </p>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>src/spear/<a class="el" href="PhasarHandler_8h_source.html">PhasarHandler.h</a></li>
 </ul>

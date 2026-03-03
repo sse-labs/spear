@@ -79,6 +79,8 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeasibility_1_1BlockFeasInfo.html">BlockFeasInfo</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeasibility_1_1EnvKey.html">EnvKey</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeasibility_1_1EnvKeyHash.html">EnvKeyHash</a></td></tr>
@@ -108,6 +110,10 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
+<tr class="memitem:a1dbbf717b24ad745ee47bd147459330c" id="r_a1dbbf717b24ad745ee47bd147459330c"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceFeasibility.html#a1dbbf717b24ad745ee47bd147459330c">BlockFeasibilityMap</a> = std::map&lt; std::string, <a class="el" href="structFeasibility_1_1BlockFeasInfo.html">BlockFeasInfo</a> &gt;</td></tr>
+<tr class="separator:a1dbbf717b24ad745ee47bd147459330c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c683b51b80f49800479be328ea2454c" id="r_a0c683b51b80f49800479be328ea2454c"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceFeasibility.html#a0c683b51b80f49800479be328ea2454c">FunctionFeasibilityMap</a> = std::unordered_map&lt; std::string, <a class="el" href="namespaceFeasibility.html#a1dbbf717b24ad745ee47bd147459330c">BlockFeasibilityMap</a> &gt;</td></tr>
+<tr class="separator:a0c683b51b80f49800479be328ea2454c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a086a8780e3c469d365a3a694b5e6a285" id="r_a086a8780e3c469d365a3a694b5e6a285"><td class="memItemLeft" align="right" valign="top"><a id="a086a8780e3c469d365a3a694b5e6a285" name="a086a8780e3c469d365a3a694b5e6a285"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>l_t</b> = <a class="el" href="classFeasibility_1_1FeasibilityElement.html">FeasibilityElement</a></td></tr>
 <tr class="separator:a086a8780e3c469d365a3a694b5e6a285"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -127,6 +133,36 @@ Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Internal data structures for the environment component of the feasibility analysis. The environment tracks variable bindings (e.g., from PHI nodes) that are relevant for the path condition. </p>
 </div><h2 class="groupheader">Typedef Documentation</h2>
+<a id="a1dbbf717b24ad745ee47bd147459330c" name="a1dbbf717b24ad745ee47bd147459330c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1dbbf717b24ad745ee47bd147459330c">&#9670;&#160;</a></span>BlockFeasibilityMap</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="namespaceFeasibility.html#a1dbbf717b24ad745ee47bd147459330c">Feasibility::BlockFeasibilityMap</a> = typedef std::map&lt;std::string, <a class="el" href="structFeasibility_1_1BlockFeasInfo.html">BlockFeasInfo</a>&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Type for the mapping from basic block names to their feasibility information, used to store the results of the analysis. </p>
+
+</div>
+</div>
+<a id="a0c683b51b80f49800479be328ea2454c" name="a0c683b51b80f49800479be328ea2454c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c683b51b80f49800479be328ea2454c">&#9670;&#160;</a></span>FunctionFeasibilityMap</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="namespaceFeasibility.html#a0c683b51b80f49800479be328ea2454c">Feasibility::FunctionFeasibilityMap</a> = typedef std::unordered_map&lt;std::string, <a class="el" href="namespaceFeasibility.html#a1dbbf717b24ad745ee47bd147459330c">BlockFeasibilityMap</a>&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Type for the mapping from function names to their basic block feasibility information, used to store the results of the analysis. </p>
+
+</div>
+</div>
 <a id="a9242cb92ccea6fafa1f8f40d7228c188" name="a9242cb92ccea6fafa1f8f40d7228c188"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a9242cb92ccea6fafa1f8f40d7228c188">&#9670;&#160;</a></span>ResultsTy</h2>
 

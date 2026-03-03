@@ -76,6 +76,7 @@ $(function() {
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-static-methods">Static Public Member Functions</a> &#124;
+<a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classLoopBound_1_1LoopBoundWrapper-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">LoopBound::LoopBoundWrapper Class Reference</div></div>
 </div><!--header-->
@@ -93,6 +94,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a892c2ff2586d4b5281967bad67e9799c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adc3df27f566c130efbd4b234361cd955" id="r_adc3df27f566c130efbd4b234361cd955"><td class="memItemLeft" align="right" valign="top">std::unique_ptr&lt; <a class="el" href="namespaceLoopBound.html#a0be9b3685c21940b21bb2661236f30b5">ResultsTy</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1LoopBoundWrapper.html#adc3df27f566c130efbd4b234361cd955">getResults</a> () const</td></tr>
 <tr class="separator:adc3df27f566c130efbd4b234361cd955"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1a2fddee3434db8e03da394df82b987c" id="r_a1a2fddee3434db8e03da394df82b987c"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; std::string, std::vector&lt; <a class="el" href="classLoopBound_1_1LoopClassifier.html">LoopBound::LoopClassifier</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1LoopBoundWrapper.html#a1a2fddee3434db8e03da394df82b987c">getLoopParameterDescriptionMap</a> ()</td></tr>
+<tr class="separator:a1a2fddee3434db8e03da394df82b987c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -100,6 +103,11 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:abcd8812aca095d1fd8a3b13b2805b6db"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8d79267601928d46ce295549a58402c9" id="r_a8d79267601928d46ce295549a58402c9"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; <a class="el" href="classLoopBound_1_1CheckExpr.html">CheckExpr</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1LoopBoundWrapper.html#a8d79267601928d46ce295549a58402c9">findLoopCheckExpr</a> (const <a class="el" href="structLoopBound_1_1LoopParameterDescription.html">LoopBound::LoopParameterDescription</a> &amp;description, llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &amp;LIInfo)</td></tr>
 <tr class="separator:a8d79267601928d46ce295549a58402c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:abc9162ab216aebc56723c4528386c7f3" id="r_abc9162ab216aebc56723c4528386c7f3"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="classLoopBound_1_1LoopBoundIDEAnalysis.html">LoopBound::LoopBoundIDEAnalysis</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1LoopBoundWrapper.html#abc9162ab216aebc56723c4528386c7f3">problem</a></td></tr>
+<tr class="separator:abc9162ab216aebc56723c4528386c7f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classLoopBound_1_1LoopBoundWrapper.html">LoopBoundWrapper</a> class</p>
@@ -243,6 +251,24 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a1a2fddee3434db8e03da394df82b987c" name="a1a2fddee3434db8e03da394df82b987c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1a2fddee3434db8e03da394df82b987c">&#9670;&#160;</a></span>getLoopParameterDescriptionMap()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::unordered_map&lt; std::string, std::vector&lt; <a class="el" href="classLoopBound_1_1LoopClassifier.html">LoopBound::LoopClassifier</a> &gt; &gt; LoopBound::LoopBoundWrapper::getLoopParameterDescriptionMap </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Getter to return the internal list of LoopParameterDescriptions as a map from function name to the corresponding descriptions </p><dl class="section return"><dt>Returns</dt><dd>Map from function name to vector of LoopParameterDescriptions corresponding to the loops in the function </dd></dl>
+
+</div>
+</div>
 <a id="adc3df27f566c130efbd4b234361cd955" name="adc3df27f566c130efbd4b234361cd955"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#adc3df27f566c130efbd4b234361cd955">&#9670;&#160;</a></span>getResults()</h2>
 
@@ -284,13 +310,29 @@ Static Public Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Calculate Checkexpression recursively from the given value. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>g Calculate Checkexpression recursively from the given value. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">V</td><td>Value to analyse </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The constructed Checkexpression if possible </dd></dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a id="abc9162ab216aebc56723c4528386c7f3" name="abc9162ab216aebc56723c4528386c7f3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abc9162ab216aebc56723c4528386c7f3">&#9670;&#160;</a></span>problem</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt;<a class="el" href="classLoopBound_1_1LoopBoundIDEAnalysis.html">LoopBound::LoopBoundIDEAnalysis</a>&gt; LoopBound::LoopBoundWrapper::problem</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Internal shared pointer to the used analysis problem instance </p>
 
 </div>
 </div>
