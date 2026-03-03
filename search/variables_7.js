@@ -4,5 +4,6 @@ var searchData=
   ['isconstant_1',['isConstant',['../classLoopBound_1_1CheckExpr.html#ad474b71b8447762c275ee8b8ae94259e',1,'LoopBound::CheckExpr']]],
   ['islinkerfunction_2',['isLinkerFunction',['../classHLAC_1_1CallNode.html#afa5af8f2d1768c8aecd796c8695b054b',1,'HLAC::CallNode']]],
   ['ismainfunction_3',['isMainFunction',['../classHLAC_1_1FunctionNode.html#a673464e3e0b865afd0e1af0e7e47482e',1,'HLAC::FunctionNode']]],
-  ['iterations_4',['iterations',['../classLoopTree.html#af4addbd8bbbc207cb1d7735a785782e4',1,'LoopTree']]]
+  ['isunknown_4',['isUnknown',['../classLoopBound_1_1CheckExpr.html#a1fa07bcfcc9109d501592e0a0dbcd505',1,'LoopBound::CheckExpr']]],
+  ['iterations_5',['iterations',['../classLoopTree.html#af4addbd8bbbc207cb1d7735a785782e4',1,'LoopTree']]]
 ];

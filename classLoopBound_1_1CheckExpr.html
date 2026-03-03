@@ -85,8 +85,8 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a8e3b99fa6bfb7c7a109a4478fe2e0e12" id="r_a8e3b99fa6bfb7c7a109a4478fe2e0e12"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#a8e3b99fa6bfb7c7a109a4478fe2e0e12">CheckExpr</a> (const llvm::Value *base, const llvm::LoadInst *baseload, int64_t offset, bool constant)</td></tr>
-<tr class="separator:a8e3b99fa6bfb7c7a109a4478fe2e0e12"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac6c58dce5464ccc1c0abc337d63082e5" id="r_ac6c58dce5464ccc1c0abc337d63082e5"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#ac6c58dce5464ccc1c0abc337d63082e5">CheckExpr</a> (const llvm::Value *base, const llvm::LoadInst *baseload, int64_t offset, bool constant, bool <a class="el" href="classLoopBound_1_1CheckExpr.html#a1fa07bcfcc9109d501592e0a0dbcd505">isUnknown</a>)</td></tr>
+<tr class="separator:ac6c58dce5464ccc1c0abc337d63082e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aae39631c1217d62cb5bc1ea4aa513ba5" id="r_aae39631c1217d62cb5bc1ea4aa513ba5"><td class="memItemLeft" align="right" valign="top">std::optional&lt; int64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#aae39631c1217d62cb5bc1ea4aa513ba5">calculateCheck</a> (llvm::FunctionAnalysisManager *FAM, llvm::LoopInfo &amp;LIInfo)</td></tr>
 <tr class="separator:aae39631c1217d62cb5bc1ea4aa513ba5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -104,13 +104,15 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a7992c7d7f1af2a7b1727659bff22b52d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ace1d83f355b8664bc1a21a843101e3ff" id="r_ace1d83f355b8664bc1a21a843101e3ff"><td class="memItemLeft" align="right" valign="top">std::optional&lt; int64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#ace1d83f355b8664bc1a21a843101e3ff">MulBy</a></td></tr>
 <tr class="separator:ace1d83f355b8664bc1a21a843101e3ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1fa07bcfcc9109d501592e0a0dbcd505" id="r_a1fa07bcfcc9109d501592e0a0dbcd505"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLoopBound_1_1CheckExpr.html#a1fa07bcfcc9109d501592e0a0dbcd505">isUnknown</a> = false</td></tr>
+<tr class="separator:a1fa07bcfcc9109d501592e0a0dbcd505"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Check Expression Class Models checks, loops run against. Allows for calculation of check values if they are no direct constant.</p>
 <p>We model loop checks as affine expression check = offset + i * scaling </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a8e3b99fa6bfb7c7a109a4478fe2e0e12" name="a8e3b99fa6bfb7c7a109a4478fe2e0e12"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8e3b99fa6bfb7c7a109a4478fe2e0e12">&#9670;&#160;</a></span>CheckExpr()</h2>
+<a id="ac6c58dce5464ccc1c0abc337d63082e5" name="ac6c58dce5464ccc1c0abc337d63082e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac6c58dce5464ccc1c0abc337d63082e5">&#9670;&#160;</a></span>CheckExpr()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -140,7 +142,13 @@ Public Attributes</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>constant</em>&#160;</td>
+          <td class="paramname"><em>constant</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>isUnknown</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -260,6 +268,21 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Flag to distinguish loaded checks from constants </p>
+
+</div>
+</div>
+<a id="a1fa07bcfcc9109d501592e0a0dbcd505" name="a1fa07bcfcc9109d501592e0a0dbcd505"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1fa07bcfcc9109d501592e0a0dbcd505">&#9670;&#160;</a></span>isUnknown</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool LoopBound::CheckExpr::isUnknown = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Fallback if we cannot deduce the check value </p>
 
 </div>
 </div>

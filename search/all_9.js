@@ -31,6 +31,7 @@ var searchData=
   ['isnormal_28',['isNormal',['../classFeasibility_1_1FeasibilityElement.html#a6c34284f4944a33f4f1616c3ce964ae7',1,'Feasibility::FeasibilityElement']]],
   ['isprogramflowinstruction_29',['isProgramFlowInstruction',['../classInstructionCategory.html#a2a6d6a8096fd40e3070b956c43d8ff6c',1,'InstructionCategory']]],
   ['istop_30',['istop',['../classFeasibility_1_1FeasibilityElement.html#ae5f7525da4e89ddbe2f8f2f979664112',1,'Feasibility::FeasibilityElement::isTop()'],['../classLoopBound_1_1DeltaInterval.html#a519916b58ffc25e5b54684f4095756b4',1,'LoopBound::DeltaInterval::isTop()']]],
-  ['iszerovalue_31',['iszerovalue',['../classFeasibility_1_1FeasibilityAnalysis.html#ac70e0b7caa449950f3e2c007f96ffedf',1,'Feasibility::FeasibilityAnalysis::isZeroValue()'],['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a6d0bfd73702f3ff58ed056fcd35ba692',1,'LoopBound::LoopBoundIDEAnalysis::isZeroValue()']]],
-  ['iterations_32',['iterations',['../classLoopTree.html#af4addbd8bbbc207cb1d7735a785782e4',1,'LoopTree']]]
+  ['isunknown_31',['isUnknown',['../classLoopBound_1_1CheckExpr.html#a1fa07bcfcc9109d501592e0a0dbcd505',1,'LoopBound::CheckExpr']]],
+  ['iszerovalue_32',['iszerovalue',['../classFeasibility_1_1FeasibilityAnalysis.html#ac70e0b7caa449950f3e2c007f96ffedf',1,'Feasibility::FeasibilityAnalysis::isZeroValue()'],['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a6d0bfd73702f3ff58ed056fcd35ba692',1,'LoopBound::LoopBoundIDEAnalysis::isZeroValue()']]],
+  ['iterations_33',['iterations',['../classLoopTree.html#af4addbd8bbbc207cb1d7735a785782e4',1,'LoopTree']]]
 ];
