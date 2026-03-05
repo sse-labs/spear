@@ -1,44 +1,42 @@
 /*
  * Copyright (c) 2026 Maximilian Krebs
  * All rights reserved.
-*/
+ */
 
-#include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/Analysis/LoopInfo.h>
+#include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/IR/Dominators.h>
+#include <phasar.h>
 #include <phasar/DataFlow/IfdsIde/Solver/IDESolver.h>
 #include <phasar/PhasarLLVM/DB/LLVMProjectIRDB.h>
-#include <phasar.h>
 
-#include <utility>
 #include <memory>
-#include <vector>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "analyses/loopbound/LoopBound.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
 
 #include "analyses/loopbound/util.h"
 
-LoopBound::LoopBoundWrapper::LoopBoundWrapper(
-    std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
-    llvm::FunctionAnalysisManager *analysisManager) {
+LoopBound::LoopBoundWrapper::LoopBoundWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
+                                              llvm::FunctionAnalysisManager *analysisManager) {
+    if (!helperAnalyses) {
+        return;
+    }
 
-  if (!helperAnalyses) {
-    return;
-  }
+    // Keep pointer for other components that might still expect it, but do not
+    // use it to query LoopAnalysis/DT analyses (may be a different/unregistered FAM).
+    this->FAM = analysisManager;
 
-  // Keep pointer for other components that might still expect it, but do not
-  // use it to query LoopAnalysis/DT analyses (may be a different/unregistered FAM).
-  this->FAM = analysisManager;
-
-  auto &interproceduralCFG = helperAnalyses->getICFG();
-  llvm::Module *module = helperAnalyses->getProjectIRDB().getModule();
-  if (!module) {
-    llvm::errs() << "[LB] module not found\n";
-    return;
-  }
+    auto &interproceduralCFG = helperAnalyses->getICFG();
+    llvm::Module *module = helperAnalyses->getProjectIRDB().getModule();
+    if (!module) {
+        llvm::errs() << "[LB] module not found\n";
+        return;
+    }
 
     Loops.clear();
     loopClassifiers.clear();
@@ -46,8 +44,12 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(
 
     // Build and keep DT+LI per function alive
     for (llvm::Function &F : *module) {
-        if (F.isDeclaration()) continue;
-        if (F.getName().startswith("llvm.")) continue;
+        if (F.isDeclaration()) {
+            continue;
+        }
+        if (F.getName().startswith("llvm.")) {
+            continue;
+        }
 
         auto Cache = std::make_unique<LoopCache>(F);
 
@@ -59,65 +61,74 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(
         LoopCaches[&F] = std::move(Cache);
     }
 
-    this->problem = std::make_shared<LoopBoundIDEAnalysis>(LoopBound::LoopBoundIDEAnalysis(
-        analysisManager, &helperAnalyses->getProjectIRDB(), this->Loops));
+    this->problem = std::make_shared<LoopBoundIDEAnalysis>(
+            LoopBound::LoopBoundIDEAnalysis(analysisManager, &helperAnalyses->getProjectIRDB(), this->Loops));
 
     auto analysisResult = psr::solveIDEProblem(*this->problem, interproceduralCFG);
     this->cachedResults = std::make_unique<ResultsTy>(std::move(analysisResult));
 
-  const auto loopDescriptions = this->problem->getLoopParameterDescriptions();
+    const auto loopDescriptions = this->problem->getLoopParameterDescriptions();
 
-  for (const auto &description : loopDescriptions) {
-    if (!description.loop || !description.counterRoot || !description.icmp) {
-      continue;  // Skip incomplete descriptions
+    for (const auto &description : loopDescriptions) {
+        if (!description.loop || !description.counterRoot || !description.icmp) {
+            continue;  // Skip incomplete descriptions
+        }
+
+        llvm::BasicBlock *headerBlock = description.loop->getHeader();
+        if (!headerBlock) {
+            continue;  // Missing loop header
+        }
+
+        llvm::Function *parentFunction = headerBlock->getParent();
+        if (!parentFunction) {
+            continue;
+        }
+
+        if (parentFunction->isDeclaration() || parentFunction->getName().startswith("llvm.")) {
+            continue;
+        }
+
+        // Local DT + LoopInfo for the current parent function.
+        llvm::DominatorTree DT(*parentFunction);
+        llvm::LoopInfo loopInfo(DT);
+
+        const llvm::Value *counterRoot = LoopBound::Util::stripAddr(description.counterRoot);
+        if (!counterRoot) {
+            continue;
+        }
+
+        const llvm::StoreInst *incrementStore = this->findStoreIncOfLoop(description);
+
+        auto incrementInterval = queryIntervalAtInstuction(incrementStore, counterRoot);
+        auto predicate = description.icmp->getPredicate();
+
+        // Pass local DT+LoopInfo into helpers that need them.
+        auto checkExpression = findLoopCheckExpr(description, analysisManager, loopInfo);
+        if (!checkExpression) {
+            continue;
+        }
+
+        LoopType loopType = description.type;
+
+        if (incrementInterval == std::nullopt) {
+            loopType = LoopBound::UNKNOWN_LOOP;
+        }
+
+        LoopClassifier newLoopClassifier(parentFunction, description.loop, incrementInterval, description.init,
+                                         predicate, checkExpression->calculateCheck(analysisManager, loopInfo),
+                                         loopType);
+
+        this->loopClassifiers.push_back(std::move(newLoopClassifier));
     }
 
-    llvm::BasicBlock *headerBlock = description.loop->getHeader();
-    if (!headerBlock) {
-      continue;  // Missing loop header
+    if (LoopBound::Util::LB_DebugEnabled) {
+        printClassifiers();
     }
-
-    llvm::Function *parentFunction = headerBlock->getParent();
-    if (!parentFunction) continue;
-    if (parentFunction->isDeclaration() || parentFunction->getName().startswith("llvm.")) continue;
-
-    // Local DT + LoopInfo for the current parent function.
-    llvm::DominatorTree DT(*parentFunction);
-    llvm::LoopInfo loopInfo(DT);
-
-    const llvm::Value *counterRoot =
-        LoopBound::Util::stripAddr(description.counterRoot);
-    if (!counterRoot) continue;
-
-    const llvm::StoreInst *incrementStore = this->findStoreIncOfLoop(description);
-
-    auto incrementInterval = queryIntervalAtInstuction(incrementStore, counterRoot);
-    auto predicate = description.icmp->getPredicate();
-
-    // Pass local DT+LoopInfo into helpers that need them.
-    auto checkExpression = findLoopCheckExpr(description, analysisManager, loopInfo);
-    if (!checkExpression) continue;
-
-    LoopClassifier newLoopClassifier(
-        parentFunction,
-        description.loop,
-        incrementInterval,
-        description.init,
-        predicate,
-        checkExpression->calculateCheck(analysisManager, loopInfo),
-        description.type);
-
-    this->loopClassifiers.push_back(std::move(newLoopClassifier));
-  }
-
-  if (LoopBound::Util::LB_DebugEnabled) {
-      printClassifiers();
-  }
 }
 
-std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(
-    llvm::FunctionAnalysisManager *analysisManager, llvm::LoopInfo &loopInfo) {
-    (void)analysisManager;  // may be null / unconfigured don't depend on it here.
+std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(llvm::FunctionAnalysisManager *analysisManager,
+                                                            llvm::LoopInfo &loopInfo) {
+    (void) analysisManager;  // may be null / unconfigured don't depend on it here.
 
     if (!this->isConstant && this->BaseLoad) {
         const llvm::Function *currentFunction = this->BaseLoad->getFunction();
@@ -125,11 +136,14 @@ std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(
             // Build dominator tree locally (no FAM).
             llvm::DominatorTree dominatorTree(*const_cast<llvm::Function *>(currentFunction));
 
-            if (auto constValue =
-                LoopBound::Util::tryDeduceConstFromLoad(this->BaseLoad, dominatorTree, loopInfo)) {
+            if (auto constValue = LoopBound::Util::tryDeduceConstFromLoad(this->BaseLoad, dominatorTree, loopInfo)) {
                 auto combinedValue = *constValue + this->Offset;
-                if (MulBy) return combinedValue * MulBy.value();
-                if (DivBy) return combinedValue / DivBy.value();
+                if (MulBy) {
+                    return combinedValue * MulBy.value();
+                }
+                if (DivBy) {
+                    return combinedValue / DivBy.value();
+                }
                 return combinedValue;
             }
         }
@@ -154,26 +168,32 @@ void LoopBound::LoopBoundWrapper::collectLoops(llvm::Loop *loop, std::vector<llv
     }
 }
 
-bool LoopBound::LoopBoundWrapper::hasCachedValueAt(
-    const llvm::Instruction *instruction, const llvm::Value *factValue) const {
-    if (!this->cachedResults || !instruction || !factValue) return false;  // Validate inputs
+bool LoopBound::LoopBoundWrapper::hasCachedValueAt(const llvm::Instruction *instruction,
+                                                   const llvm::Value *factValue) const {
+    if (!this->cachedResults || !instruction || !factValue) {
+        return false;  // Validate inputs
+    }
 
     const llvm::Value *cleanFact = LoopBound::Util::stripAddr(factValue);  // Normalize fact
-    if (!cleanFact) return false;  // Invalid fact
+    if (!cleanFact) {
+        return false;  // Invalid fact
+    }
 
-    const auto &results = *this->cachedResults;  // Cached results
+    const auto &results = *this->cachedResults;                  // Cached results
     const auto &resultsAtInst = results.resultsAt(instruction);  // Results at instruction
 
     auto foundIt = resultsAtInst.find(cleanFact);
-    if (foundIt == resultsAtInst.end()) return false;  // No value cached
+    if (foundIt == resultsAtInst.end()) {
+        return false;  // No value cached
+    }
 
     const auto &intervalValue = foundIt->second;  // Extract interval
     return !intervalValue.isBottom() && !intervalValue.isTop() && !intervalValue.isEmpty();
 }
 
 std::optional<LoopBound::DeltaInterval>
-LoopBound::LoopBoundWrapper::queryIntervalAtInstuction(
-    const llvm::Instruction *instruction, const llvm::Value *factValue) {
+LoopBound::LoopBoundWrapper::queryIntervalAtInstuction(const llvm::Instruction *instruction,
+                                                       const llvm::Value *factValue) {
     if (!instruction || !factValue || !this->cachedResults) {
         return std::nullopt;  // Missing inputs
     }
@@ -191,14 +211,13 @@ LoopBound::LoopBoundWrapper::queryIntervalAtInstuction(
     return intervalValue;  // Return computed interval
 }
 
-const llvm::StoreInst *LoopBound::LoopBoundWrapper::findStoreIncOfLoop(
-    const LoopBound::LoopParameterDescription &description) {
+const llvm::StoreInst *
+LoopBound::LoopBoundWrapper::findStoreIncOfLoop(const LoopBound::LoopParameterDescription &description) {
     if (!description.loop || !description.counterRoot) {
         return nullptr;  // Missing loop or counter
     }
 
-    const llvm::Value *counterRoot =
-        LoopBound::Util::stripAddr(description.counterRoot);  // Normalize counter root
+    const llvm::Value *counterRoot = LoopBound::Util::stripAddr(description.counterRoot);  // Normalize counter root
     if (!counterRoot) {
         return nullptr;  // Invalid counter root
     }
@@ -210,8 +229,7 @@ const llvm::StoreInst *LoopBound::LoopBoundWrapper::findStoreIncOfLoop(
                 continue;  // Not a store
             }
 
-            if (LoopBound::LoopBoundIDEAnalysis::extractConstIncFromStore(
-                storeInst, counterRoot).has_value()) {
+            if (LoopBound::LoopBoundIDEAnalysis::extractConstIncFromStore(storeInst, counterRoot).has_value()) {
                 return storeInst;  // Found increment store
             }
         }
@@ -220,14 +238,20 @@ const llvm::StoreInst *LoopBound::LoopBoundWrapper::findStoreIncOfLoop(
 }
 
 std::unordered_map<std::string, std::vector<LoopBound::LoopClassifier>>
-LoopBound::LoopBoundWrapper::getLoopParameterDescriptionMap() {std::unordered_map<std::string,
-                                                                std::vector<LoopClassifier> > result;
+LoopBound::LoopBoundWrapper::getLoopParameterDescriptionMap() {
+    std::unordered_map<std::string, std::vector<LoopClassifier>> result;
 
     for (auto &desc : getClassifiers()) {
-        if (!desc.loop || !desc.function) continue;  // Skip incomplete descriptions
+        if (!desc.loop || !desc.function) {
+            continue;  // Skip incomplete descriptions
+        }
         llvm::Function *parentFunction = desc.loop->getHeader()->getParent();
-        if (!parentFunction) continue;
-        if (parentFunction->isDeclaration() || parentFunction->getName().startswith("llvm.")) continue;
+        if (!parentFunction) {
+            continue;
+        }
+        if (parentFunction->isDeclaration() || parentFunction->getName().startswith("llvm.")) {
+            continue;
+        }
 
         result[parentFunction->getName().str()].push_back(desc);
     }
@@ -239,16 +263,14 @@ void LoopBound::LoopBoundWrapper::printClassifiers() {
     llvm::errs() << "\nLoop Classifiers:\n";
     for (const auto &classifier : this->loopClassifiers) {
         llvm::errs() << "[LB] ==========================\n";
-        llvm::errs() << "[LB] " << "Function: "
-                     << classifier.function->getName() << "\n";
+        llvm::errs() << "[LB] " << "Function: " << classifier.function->getName() << "\n";
         llvm::errs() << "[LB] " << "Name: " << classifier.loop->getName() << "\n";
-        llvm::errs() << "[LB] " << "Type: "
-                     << LoopBound::Util::LoopTypeToString(classifier.type) << "\n";
+        llvm::errs() << "[LB] " << "Type: " << LoopBound::Util::LoopTypeToString(classifier.type) << "\n";
 
         if (classifier.increment) {
             llvm::errs() << "[LB] " << "Inc: "
-                         << "[" << classifier.increment->getLowerBound()
-                         << ", " << classifier.increment->getUpperBound() << "]" << "\n";
+                         << "[" << classifier.increment->getLowerBound() << ", "
+                         << classifier.increment->getUpperBound() << "]" << "\n";
         } else {
             llvm::errs() << "[LB] " << "Inc: " << "[" << "NONE" << "]" << "\n";
         }
@@ -260,8 +282,8 @@ void LoopBound::LoopBoundWrapper::printClassifiers() {
         }
 
         if (classifier.predicate) {
-            llvm::errs() << "[LB] " << "Predicate: "
-                         << LoopBound::Util::predicateToSymbol(classifier.predicate) << "\n";
+            llvm::errs() << "[LB] " << "Predicate: " << LoopBound::Util::predicateToSymbol(classifier.predicate)
+                         << "\n";
         } else {
             llvm::errs() << "[LB] " << "Predicate: " << "NONE" << "\n";
         }
@@ -274,8 +296,7 @@ void LoopBound::LoopBoundWrapper::printClassifiers() {
 
         if (classifier.bound) {
             llvm::errs() << "[LB] " << "Bound: "
-                         << "[" << classifier.bound->getLowerBound()
-                         << ", " << classifier.bound->getUpperBound() << "]"
+                         << "[" << classifier.bound->getLowerBound() << ", " << classifier.bound->getUpperBound() << "]"
                          << " (" << classifier.bound->getValueTypeAsStr() << ")" << "\n";
         } else {
             llvm::errs() << "[LB] " << "Bound: " << "UNBOUND" << "\n";
@@ -286,9 +307,10 @@ void LoopBound::LoopBoundWrapper::printClassifiers() {
     }
 }
 
-std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::findLoopCheckExpr(
-const LoopBound::LoopParameterDescription &description, llvm::FunctionAnalysisManager *analysisManager,
-llvm::LoopInfo &loopInfo) {
+std::optional<LoopBound::CheckExpr>
+LoopBound::LoopBoundWrapper::findLoopCheckExpr(const LoopBound::LoopParameterDescription &description,
+                                               llvm::FunctionAnalysisManager *analysisManager,
+                                               llvm::LoopInfo &loopInfo) {
     if (!description.loop || !description.icmp || !description.counterRoot) {
         return std::nullopt;
     }
@@ -298,7 +320,9 @@ llvm::LoopInfo &loopInfo) {
     const llvm::Value *op1 = LoopBound::Util::stripCasts(description.icmp->getOperand(1));
 
     const llvm::Value *counterRoot = LoopBound::Util::stripAddr(description.counterRoot);
-    if (!counterRoot) return std::nullopt;
+    if (!counterRoot) {
+        return std::nullopt;
+    }
 
     llvm::SmallPtrSet<const llvm::Value *, 8> roots0;
     llvm::SmallPtrSet<const llvm::Value *, 8> roots1;
@@ -326,12 +350,14 @@ llvm::LoopInfo &loopInfo) {
     // 1) constant int
     if (auto *C = llvm::dyn_cast<llvm::Constant>(otherSideValue)) {
         if (auto *CE = llvm::dyn_cast<llvm::ConstantExpr>(C)) {
-          if (CE->isCast())
-            if (auto *Inner = llvm::dyn_cast<llvm::Constant>(CE->getOperand(0)))
-              C = Inner;
+            if (CE->isCast()) {
+                if (auto *Inner = llvm::dyn_cast<llvm::Constant>(CE->getOperand(0))) {
+                    C = Inner;
+                }
+            }
         }
         if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(C)) {
-          return LoopBound::CheckExpr{nullptr, nullptr, CI->getSExtValue(), true, false};
+            return LoopBound::CheckExpr{nullptr, nullptr, CI->getSExtValue(), true, false};
         }
     }
 
@@ -343,10 +369,10 @@ llvm::LoopInfo &loopInfo) {
     // 3) load -> try deduce const
     if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(otherSideValue)) {
         if (auto *F = const_cast<llvm::Function *>(LI->getFunction())) {
-          llvm::DominatorTree DT(*F);
-          if (auto CV = LoopBound::Util::tryDeduceConstFromLoad(LI, DT, loopInfo)) {
-            return LoopBound::CheckExpr{nullptr, nullptr, *CV, false, false};
-          }
+            llvm::DominatorTree DT(*F);
+            if (auto CV = LoopBound::Util::tryDeduceConstFromLoad(LI, DT, loopInfo)) {
+                return LoopBound::CheckExpr{nullptr, nullptr, *CV, false, false};
+            }
         }
     }
 
@@ -365,7 +391,9 @@ std::vector<LoopBound::LoopClassifier> LoopBound::LoopBoundWrapper::getClassifie
 }
 
 std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::peelBasePlusConst(const llvm::Value *value) {
-    if (!value) return std::nullopt;  // Null input
+    if (!value) {
+        return std::nullopt;  // Null input
+    }
     value = LoopBound::Util::stripCasts(value);  // Strip casts
 
     if (auto *constInt = llvm::dyn_cast<llvm::ConstantInt>(value)) {
@@ -375,18 +403,18 @@ std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::peelBasePlusCon
 
     if (auto *loadInst = llvm::dyn_cast<llvm::LoadInst>(value)) {
         const llvm::Value *rootValue = LoopBound::Util::getMemRootFromValue(loadInst);
-        if (!rootValue) rootValue = LoopBound::Util::stripAddr(loadInst->getPointerOperand());
+        if (!rootValue) {
+            rootValue = LoopBound::Util::stripAddr(loadInst->getPointerOperand());
+        }
         rootValue = LoopBound::Util::stripAddr(rootValue);
 
         return LoopBound::CheckExpr{rootValue, loadInst, 0, false, false};  // Base load with zero offset
     }
 
     if (auto *binaryOp = llvm::dyn_cast<llvm::BinaryOperator>(value)) {
-        const auto opcode = binaryOp->getOpcode();  // Operation kind
-        const llvm::Value *leftOperand =
-            LoopBound::Util::stripCasts(binaryOp->getOperand(0));  // Left operand
-        const llvm::Value *rightOperand =
-            LoopBound::Util::stripCasts(binaryOp->getOperand(1));  // Right operand
+        const auto opcode = binaryOp->getOpcode();                                               // Operation kind
+        const llvm::Value *leftOperand = LoopBound::Util::stripCasts(binaryOp->getOperand(0));   // Left operand
+        const llvm::Value *rightOperand = LoopBound::Util::stripCasts(binaryOp->getOperand(1));  // Right operand
 
         if (opcode == llvm::Instruction::Add) {
             if (auto *rightConst = llvm::dyn_cast<llvm::ConstantInt>(rightOperand)) {
@@ -418,11 +446,11 @@ std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::peelBasePlusCon
             if (auto *rightConst = llvm::dyn_cast<llvm::ConstantInt>(rightOperand)) {
                 const int64_t scaleValue = rightConst->getSExtValue();
                 if (auto expression = peelBasePlusConst(leftOperand)) {
-                    if (expression->DivBy.has_value()) return std::nullopt;  // Disallow div then mul
+                    if (expression->DivBy.has_value()) {
+                        return std::nullopt;  // Disallow div then mul
+                    }
 
-                    expression->MulBy =
-                        expression->MulBy.has_value() ? (*expression->MulBy * scaleValue)
-                                                      : scaleValue;
+                    expression->MulBy = expression->MulBy.has_value() ? (*expression->MulBy * scaleValue) : scaleValue;
                     expression->Offset *= scaleValue;  // Scale offset
                     return expression;
                 }
@@ -430,11 +458,11 @@ std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::peelBasePlusCon
             if (auto *leftConst = llvm::dyn_cast<llvm::ConstantInt>(leftOperand)) {
                 const int64_t scaleValue = leftConst->getSExtValue();
                 if (auto expression = peelBasePlusConst(rightOperand)) {
-                    if (expression->DivBy.has_value()) return std::nullopt;  // Disallow div then mul
+                    if (expression->DivBy.has_value()) {
+                        return std::nullopt;  // Disallow div then mul
+                    }
 
-                    expression->MulBy =
-                        expression->MulBy.has_value() ? (*expression->MulBy * scaleValue)
-                                                      : scaleValue;
+                    expression->MulBy = expression->MulBy.has_value() ? (*expression->MulBy * scaleValue) : scaleValue;
                     expression->Offset *= scaleValue;  // Scale offset
                     return expression;
                 }
@@ -444,17 +472,21 @@ std::optional<LoopBound::CheckExpr> LoopBound::LoopBoundWrapper::peelBasePlusCon
 
         if (opcode == llvm::Instruction::SDiv || opcode == llvm::Instruction::UDiv) {
             auto *rightConst = llvm::dyn_cast<llvm::ConstantInt>(rightOperand);
-            if (!rightConst) return std::nullopt;  // Division requires constant
+            if (!rightConst) {
+                return std::nullopt;  // Division requires constant
+            }
 
             const int64_t divisorValue = rightConst->getSExtValue();
-            if (divisorValue == 0) return std::nullopt;  // Division by zero
+            if (divisorValue == 0) {
+                return std::nullopt;  // Division by zero
+            }
 
             if (auto expression = peelBasePlusConst(leftOperand)) {
-                if (expression->MulBy.has_value()) return std::nullopt;  // Disallow mul then div
+                if (expression->MulBy.has_value()) {
+                    return std::nullopt;  // Disallow mul then div
+                }
 
-                expression->DivBy =
-                    expression->DivBy.has_value() ? (*expression->DivBy * divisorValue)
-                                                  : divisorValue;
+                expression->DivBy = expression->DivBy.has_value() ? (*expression->DivBy * divisorValue) : divisorValue;
                 return expression;  // Store divisor
             }
             return std::nullopt;  // Not representable

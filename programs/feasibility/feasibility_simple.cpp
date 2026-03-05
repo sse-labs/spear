@@ -11,12 +11,6 @@ int main(){
         length++;
     }
 
-    length--;
-
-    for (int i = 0; i < length; i++) {
-        cheese++;
-    }
-
     cheese--;
 
     return 0;

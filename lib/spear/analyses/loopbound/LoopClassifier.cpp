@@ -188,6 +188,12 @@ std::optional<LoopBound::DeltaInterval> LoopBound::LoopClassifier::calculateBoun
             boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
+    if (type == LoopBound::UNKNOWN_LOOP) {
+        auto boundval = fallback["UNKNOWN_LOOP"];
+        return LoopBound::DeltaInterval::interval(boundval,
+            boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
+    }
+
     // Handle normal loop type
     if (type == LoopBound::NORMAL_LOOP) {
         // Check if properties are valid and exist

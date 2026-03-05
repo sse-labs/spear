@@ -84,14 +84,18 @@ void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManag
   }
 
   if (config.RUNFEASIBILITYANALYSIS) {
-    llvm::errs() << "Running Feasibility Analysis...\n";
+    if (config.SHOWDEBUGOUTPUT) {
+        llvm::errs() << "Running Feasibility Analysis...\n";
+    }
     feasibilitywrapper = make_unique<Feasibility::FeasibilityWrapper>(HA, FAM);
     feasibilityProblem = feasibilitywrapper->problem;
     FeasibilityResult = feasibilitywrapper->getResults();
   }
 
   if (config.RUNLOOPBOUNDANALYSIS) {
-    llvm::errs() << "Running Loop Bound Analysis...\n";
+    if (config.SHOWDEBUGOUTPUT) {
+        llvm::errs() << "Running Loop Bound Analysis...\n";
+    }
     loopboundwrapper = make_unique<LoopBound::LoopBoundWrapper>(HA, FAM);
     loopboundProblem = loopboundwrapper->problem;
     LoopBoundResult = loopboundwrapper->getResults();
