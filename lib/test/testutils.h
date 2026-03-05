@@ -5,23 +5,27 @@
 
 #pragma once
 
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include <catch2/catch_test_macros.hpp>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IRReader/IRReader.h>
 #include <llvm/Passes/PassBuilder.h>
+#include <llvm/Support/SourceMgr.h>
 #include <llvm/Transforms/Scalar/IndVarSimplify.h>
 #include <llvm/Transforms/Scalar/LoopRotation.h>
 #include <llvm/Transforms/Utils/InstructionNamer.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 
-#include "ConfigParser.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IRReader/IRReader.h"
-#include "llvm/Support/SourceMgr.h"
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
+#include <catch2/catch_test_macros.hpp>
+
+#include "ConfigParser.h"
 #include "PhasarHandler.h"
 
 
@@ -113,10 +117,8 @@ inline std::unique_ptr<SpearRun> runSpearOnFile(std::filesystem::path testroot, 
 inline void CHECK_INFEASIBLE_BLOCKS_STRICT(std::map<std::string, Feasibility::BlockFeasInfo> *blocks,
                                            const std::vector<std::string> &expectedInfeasible,
                                            const std::vector<std::string> &expectedAllBlocks) {
-
     const std::unordered_set<std::string> expectedBad(expectedInfeasible.begin(), expectedInfeasible.end());
     const std::unordered_set<std::string> expectedAll(expectedAllBlocks.begin(), expectedAllBlocks.end());
-
     // Ensure block universe matches
     CHECK(blocks->size() == expectedAll.size());
     for (const auto &name : expectedAll) {
