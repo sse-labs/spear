@@ -18,18 +18,41 @@
 
 #include "PhasarHandler.h"
 
+
+struct TestConfig {
+    bool runFeasibilityAnalysis = false;
+    bool runLoopBoundAnalysis = false;
+};
+
 struct SpearRun {
     std::unique_ptr<llvm::LLVMContext> Ctx;
     std::unique_ptr<llvm::Module> M;
+    TestConfig testConfig{};
+
     PhasarHandlerPass phasarHandler;
 
-    llvm::Module &module() { return *M; }
-    const llvm::Module &module() const { return *M; }
+    SpearRun(TestConfig config) {
+        testConfig = config;
+
+        phasarHandler = PhasarHandlerPass(
+            config.runLoopBoundAnalysis,
+            config.runFeasibilityAnalysis,
+            false
+        );
+    }
+
+    llvm::Module &module() {
+        return *M;
+    }
+
+    const llvm::Module &module() const {
+        return *M;
+    }
 };
 
-inline std::unique_ptr<SpearRun> runSpearOnFile(std::filesystem::path testroot, std::string strPath) {
-    auto R = std::make_unique<SpearRun>();
-    R->Ctx = std::make_unique<llvm::LLVMContext>();
+inline std::unique_ptr<SpearRun> runSpearOnFile(std::filesystem::path testroot, std::string strPath, TestConfig config) {
+    auto run = std::make_unique<SpearRun>(config);
+    run->Ctx = std::make_unique<llvm::LLVMContext>();
 
     std::cout << "Root: " << testroot.string() << std::endl;
     std::cout << "Path: " << strPath << std::endl;
@@ -38,11 +61,14 @@ inline std::unique_ptr<SpearRun> runSpearOnFile(std::filesystem::path testroot, 
     std::string combinedAsStr = combined.string();
 
     llvm::SMDiagnostic Err;
-    R->M = llvm::parseIRFile(combinedAsStr, Err, *R->Ctx);
+    run->M = llvm::parseIRFile(combinedAsStr, Err, *run->Ctx);
 
     INFO("Failed to parse IR file: " << strPath);
-    REQUIRE(R->M != nullptr);
+    REQUIRE(run->M != nullptr);
 
-    R->phasarHandler.runOnModule(*R->M);
-    return R;
+    run->phasarHandler.runOnModule(*run->M);
+
+
+
+    return run;
 }

@@ -6,301 +6,208 @@
 #include <catch2/catch_test_macros.hpp>
 #include "../testutils.h"
 
+TestConfig loopBoundConfig = {
+    .runFeasibilityAnalysis = false,
+    .runLoopBoundAnalysis = true
+};
 
 TEST_CASE("Arrayreducer_simple.ll") {
     auto Run = runSpearOnFile(
         std::filesystem::path(TEST_INPUT_DIR),
-        "programs/loopbound/compiled/arrayReducer_simple.ll");
+        "programs/loopbound/compiled/arrayReducer_simple.ll",
+        loopBoundConfig);
 
-    auto classifiers = Run->phasarHandler.loopboundwrapper->getClassifiers();
+    auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
-    INFO("Classifier size " << classifiers.size());
-    REQUIRE(classifiers.size() == 1);
+    auto mainClassifiers = classifierMap["main"];
 
-    auto firstClassifier = classifiers.at(0);
+    INFO("Classifier size " << mainClassifiers.size());
+    REQUIRE(mainClassifiers.size() == 1);
 
-    INFO("Classifier increment " << firstClassifier.increment);
-    REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        1, 1, LoopBound::DeltaInterval::ValueType::Additive));
+    auto firstClassifier = mainClassifiers["for.cond"];
 
-    INFO("Classifier init " << firstClassifier.init.value());
-    REQUIRE(firstClassifier.init.value() == 0);
-
-    INFO("Classifier predicate " << firstClassifier.predicate);
-    REQUIRE(firstClassifier.predicate == llvm::ICmpInst::Predicate::ICMP_SLT);
-
-    INFO("Classifier check " << firstClassifier.check.value());
-    REQUIRE(firstClassifier.check.value() == 9000);
-
-    INFO("Classifier bound " << firstClassifier.bound);
-    REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
+    INFO("Classifier increment " << "[" << firstClassifier.getLowerBound() << ", " << firstClassifier.getUpperBound() << "]");
+    REQUIRE(firstClassifier == LoopBound::DeltaInterval::interval(
         9000, 9000, LoopBound::DeltaInterval::ValueType::Additive));
 }
 
 TEST_CASE("Arrayreducer_complex.ll") {
     auto Run = runSpearOnFile(
         std::filesystem::path(TEST_INPUT_DIR),
-        "programs/loopbound/compiled/arrayReducer_complex.ll");
+        "programs/loopbound/compiled/arrayReducer_complex.ll",
+        loopBoundConfig);
 
-    auto classifiers = Run->phasarHandler.loopboundwrapper->getClassifiers();
+    auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
-    INFO("Classifier size " << classifiers.size());
-    REQUIRE(classifiers.size() == 1);
+    auto mainClassifiers = classifierMap["main"];
 
-    auto firstClassifier = classifiers.at(0);
+    INFO("Classifier size " << mainClassifiers.size());
+    REQUIRE(mainClassifiers.size() == 1);
 
-    INFO("Classifier increment " << firstClassifier.increment);
-    REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        4, 4, LoopBound::DeltaInterval::ValueType::Additive));
+    auto firstClassifier = mainClassifiers["for.cond"];
 
-    INFO("Classifier init " << firstClassifier.init.value());
-    REQUIRE(firstClassifier.init.value() == 0);
-
-    INFO("Classifier predicate " << firstClassifier.predicate);
-    REQUIRE(firstClassifier.predicate == llvm::ICmpInst::Predicate::ICMP_SLT);
-
-    INFO("Classifier check " << firstClassifier.check.value());
-    REQUIRE(firstClassifier.check.value() == 9000);
-
-    INFO("Classifier bound " << firstClassifier.bound);
-    REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
+    INFO("Classifier increment " << "[" << firstClassifier.getLowerBound() << ", " << firstClassifier.getUpperBound() << "]");
+    REQUIRE(firstClassifier == LoopBound::DeltaInterval::interval(
         2250, 2250, LoopBound::DeltaInterval::ValueType::Additive));
 }
 
 TEST_CASE("Arrayreducer_while.ll") {
     auto Run = runSpearOnFile(
         std::filesystem::path(TEST_INPUT_DIR),
-        "programs/loopbound/compiled/arrayReducer_while.ll");
+        "programs/loopbound/compiled/arrayReducer_while.ll",
+        loopBoundConfig);
 
-    auto classifiers = Run->phasarHandler.loopboundwrapper->getClassifiers();
+    auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
-    INFO("Classifier size " << classifiers.size());
-    REQUIRE(classifiers.size() == 1);
+    auto mainClassifiers = classifierMap["main"];
 
-    auto firstClassifier = classifiers.at(0);
+    INFO("Classifier size " << mainClassifiers.size());
+    REQUIRE(mainClassifiers.size() == 1);
 
-    INFO("Classifier increment " << firstClassifier.increment);
-    REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3, 3, LoopBound::DeltaInterval::ValueType::Additive));
+    auto firstClassifier = mainClassifiers["while.cond"];
 
-    INFO("Classifier init " << firstClassifier.init.value());
-    REQUIRE(firstClassifier.init.value() == 0);
-
-    INFO("Classifier predicate " << firstClassifier.predicate);
-    REQUIRE(firstClassifier.predicate == llvm::ICmpInst::Predicate::ICMP_SLT);
-
-    INFO("Classifier check " << firstClassifier.check.value());
-    REQUIRE(firstClassifier.check.value() == 9000);
-
-    INFO("Classifier bound " << firstClassifier.bound);
-    REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
+    INFO("Classifier increment " << "[" << firstClassifier.getLowerBound() << ", " << firstClassifier.getUpperBound() << "]");
+    REQUIRE(firstClassifier == LoopBound::DeltaInterval::interval(
         3000, 3000, LoopBound::DeltaInterval::ValueType::Additive));
 }
 
 TEST_CASE("Arrayreducer_whileif.ll") {
     auto Run = runSpearOnFile(
         std::filesystem::path(TEST_INPUT_DIR),
-        "programs/loopbound/compiled/arrayReducer_whileif.ll");
+        "programs/loopbound/compiled/arrayReducer_whileif.ll",
+        loopBoundConfig);
 
-    auto classifiers = Run->phasarHandler.loopboundwrapper->getClassifiers();
+    auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
-    INFO("Classifier size " << classifiers.size());
-    REQUIRE(classifiers.size() == 1);
+    auto mainClassifiers = classifierMap["main"];
 
-    auto firstClassifier = classifiers.at(0);
+    INFO("Classifier size " << mainClassifiers.size());
+    REQUIRE(mainClassifiers.size() == 1);
 
-    INFO("Classifier increment " << firstClassifier.increment);
-    REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3, 4, LoopBound::DeltaInterval::ValueType::Additive));
+    auto firstClassifier = mainClassifiers["while.cond"];
 
-    INFO("Classifier init " << firstClassifier.init.value());
-    REQUIRE(firstClassifier.init.value() == 0);
-
-    INFO("Classifier predicate " << firstClassifier.predicate);
-    REQUIRE(firstClassifier.predicate == llvm::ICmpInst::Predicate::ICMP_SLT);
-
-    INFO("Classifier check " << firstClassifier.check.value());
-    REQUIRE(firstClassifier.check.value() == 9000);
-
-    INFO("Classifier bound " << firstClassifier.bound);
-    REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
+    INFO("Classifier increment " << "[" << firstClassifier.getLowerBound() << ", " << firstClassifier.getUpperBound() << "]");
+    REQUIRE(firstClassifier == LoopBound::DeltaInterval::interval(
         2250, 3000, LoopBound::DeltaInterval::ValueType::Additive));
 }
 
 TEST_CASE("Arrayreducer_multiply.ll") {
     auto Run = runSpearOnFile(
         std::filesystem::path(TEST_INPUT_DIR),
-        "programs/loopbound/compiled/arrayReducer_multiply.ll");
+        "programs/loopbound/compiled/arrayReducer_multiply.ll",
+        loopBoundConfig);
 
-    auto classifiers = Run->phasarHandler.loopboundwrapper->getClassifiers();
+    auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
-    INFO("Classifier size " << classifiers.size());
-    REQUIRE(classifiers.size() == 1);
+    auto mainClassifiers = classifierMap["main"];
 
-    auto firstClassifier = classifiers.at(0);
+    INFO("Classifier size " << mainClassifiers.size());
+    REQUIRE(mainClassifiers.size() == 1);
 
-    INFO("Classifier increment " << firstClassifier.increment);
-    REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3, 3, LoopBound::DeltaInterval::ValueType::Multiplicative));
+    auto firstClassifier = mainClassifiers["while.cond"];
 
-    INFO("Classifier init " << firstClassifier.init.value());
-    REQUIRE(firstClassifier.init.value() == 1);
-
-    INFO("Classifier predicate " << firstClassifier.predicate);
-    REQUIRE(firstClassifier.predicate == llvm::ICmpInst::Predicate::ICMP_SLT);
-
-    INFO("Classifier check " << firstClassifier.check.value());
-    REQUIRE(firstClassifier.check.value() == 9000);
-
-    INFO("Classifier bound " << firstClassifier.bound);
-    REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
+    INFO("Classifier increment " << "[" << firstClassifier.getLowerBound() << ", " << firstClassifier.getUpperBound() << "]");
+    REQUIRE(firstClassifier == LoopBound::DeltaInterval::interval(
         9, 9, LoopBound::DeltaInterval::ValueType::Multiplicative));
 }
 
 TEST_CASE("Arrayreducer_negative.ll") {
     auto Run = runSpearOnFile(
         std::filesystem::path(TEST_INPUT_DIR),
-        "programs/loopbound/compiled/arrayReducer_negative.ll");
+        "programs/loopbound/compiled/arrayReducer_negative.ll",
+        loopBoundConfig);
 
-    auto classifiers = Run->phasarHandler.loopboundwrapper->getClassifiers();
+    auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
-    INFO("Classifier size " << classifiers.size());
-    REQUIRE(classifiers.size() == 1);
+    auto mainClassifiers = classifierMap["main"];
 
-    auto firstClassifier = classifiers.at(0);
+    INFO("Classifier size " << mainClassifiers.size());
+    REQUIRE(mainClassifiers.size() == 1);
 
-    INFO("Classifier increment " << firstClassifier.increment);
-    REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        -23, -23, LoopBound::DeltaInterval::ValueType::Additive));
+    auto firstClassifier = mainClassifiers["while.cond"];
 
-    INFO("Classifier init " << firstClassifier.init.value());
-    REQUIRE(firstClassifier.init.value() == 9000);
-
-    INFO("Classifier predicate " << firstClassifier.predicate);
-    REQUIRE(firstClassifier.predicate == llvm::ICmpInst::Predicate::ICMP_SGE);
-
-    INFO("Classifier check " << firstClassifier.check.value());
-    REQUIRE(firstClassifier.check.value() == 0);
-
-    INFO("Classifier bound " << firstClassifier.bound);
-    REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
+    INFO("Classifier increment " << "[" << firstClassifier.getLowerBound() << ", " << firstClassifier.getUpperBound() << "]");
+    REQUIRE(firstClassifier == LoopBound::DeltaInterval::interval(
         392, 392, LoopBound::DeltaInterval::ValueType::Additive));
 }
 
 TEST_CASE("Arrayreducer_nonlinearincrement.ll") {
     auto Run = runSpearOnFile(
         std::filesystem::path(TEST_INPUT_DIR),
-        "programs/loopbound/compiled/arrayReducer_nonlinearincrement.ll");
+        "programs/loopbound/compiled/arrayReducer_nonlinearincrement.ll",
+        loopBoundConfig);
 
-    auto classifiers = Run->phasarHandler.loopboundwrapper->getClassifiers();
+    auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
-    INFO("Classifier size " << classifiers.size());
-    REQUIRE(classifiers.size() == 1);
+    auto mainClassifiers = classifierMap["main"];
 
-    auto firstClassifier = classifiers.at(0);
+    INFO("Classifier size " << mainClassifiers.size());
+    REQUIRE(mainClassifiers.size() == 1);
 
-    INFO("Classifier increment " << firstClassifier.increment);
-    REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3, 3, LoopBound::DeltaInterval::ValueType::Multiplicative));
+    auto firstClassifier = mainClassifiers["for.cond"];
 
-    INFO("Classifier init " << firstClassifier.init.value());
-    REQUIRE(firstClassifier.init.value() == 1);
-
-    INFO("Classifier predicate " << firstClassifier.predicate);
-    REQUIRE(firstClassifier.predicate == llvm::ICmpInst::Predicate::ICMP_SLT);
-
-    INFO("Classifier check " << firstClassifier.check.value());
-    REQUIRE(firstClassifier.check.value() == 9000);
-
-    INFO("Classifier bound " << firstClassifier.bound);
-    REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
+    INFO("Classifier increment " << "[" << firstClassifier.getLowerBound() << ", " << firstClassifier.getUpperBound() << "]");
+    REQUIRE(firstClassifier == LoopBound::DeltaInterval::interval(
         9, 9, LoopBound::DeltaInterval::ValueType::Multiplicative));
 }
 
 TEST_CASE("Arrayreducer_nonlinearincrementDIV.ll") {
     auto Run = runSpearOnFile(
         std::filesystem::path(TEST_INPUT_DIR),
-        "programs/loopbound/compiled/arrayReducer_nonlinearincrementDIV.ll");
+        "programs/loopbound/compiled/arrayReducer_nonlinearincrementDIV.ll",
+        loopBoundConfig);
 
-    auto classifiers = Run->phasarHandler.loopboundwrapper->getClassifiers();
+    auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
-    INFO("Classifier size " << classifiers.size());
-    REQUIRE(classifiers.size() == 1);
+    auto mainClassifiers = classifierMap["main"];
 
-    auto firstClassifier = classifiers.at(0);
+    INFO("Classifier size " << mainClassifiers.size());
+    REQUIRE(mainClassifiers.size() == 1);
 
-    INFO("Classifier increment " << firstClassifier.increment);
-    REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3, 3, LoopBound::DeltaInterval::ValueType::Division));
+    auto firstClassifier = mainClassifiers["for.cond"];
 
-    INFO("Classifier init " << firstClassifier.init.value());
-    REQUIRE(firstClassifier.init.value() == 9000);
-
-    INFO("Classifier predicate " << firstClassifier.predicate);
-    REQUIRE(firstClassifier.predicate == llvm::ICmpInst::Predicate::ICMP_SGT);
-
-    INFO("Classifier check " << firstClassifier.check.value());
-    REQUIRE(firstClassifier.check.value() == 100);
-
-    INFO("Classifier bound " << firstClassifier.bound);
-    REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
+    INFO("Classifier increment " << "[" << firstClassifier.getLowerBound() << ", " << firstClassifier.getUpperBound() << "]");
+    REQUIRE(firstClassifier == LoopBound::DeltaInterval::interval(
         5, 5, LoopBound::DeltaInterval::ValueType::Division));
 }
 
 TEST_CASE("Arrayreducer_whilenonlinearincrementWithIFMultipleFamily.ll") {
     auto Run = runSpearOnFile(
         std::filesystem::path(TEST_INPUT_DIR),
-        "programs/loopbound/compiled/arrayReducer_whilenonlinearincrementWithIFMultipleFamily.ll");
+        "programs/loopbound/compiled/arrayReducer_whilenonlinearincrementWithIFMultipleFamily.ll",
+        loopBoundConfig);
 
-    auto classifiers = Run->phasarHandler.loopboundwrapper->getClassifiers();
+    auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
-    INFO("Classifier size " << classifiers.size());
-    REQUIRE(classifiers.size() == 1);
+    auto mainClassifiers = classifierMap["main"];
 
-    auto firstClassifier = classifiers.at(0);
+    /**
+     * TODO: The mixed families currently cause the classifier to be discarded, as we currently do not support mixed
+     * families. We should add support for this in the future, as it is a common pattern in real-world code and can
+     * lead to more precise results in some cases.
+     */
 
-    INFO("Classifier increment " << firstClassifier.increment);
-    REQUIRE(firstClassifier.increment == std::nullopt);
+    INFO("Classifier size " << mainClassifiers.size());
+    REQUIRE(mainClassifiers.empty());
 
-    INFO("Classifier init " << firstClassifier.init.value());
-    REQUIRE(firstClassifier.init.value() == 1);
-
-    INFO("Classifier predicate " << firstClassifier.predicate);
-    REQUIRE(firstClassifier.predicate == llvm::ICmpInst::Predicate::ICMP_SLT);
-
-    INFO("Classifier check " << firstClassifier.check.value());
-    REQUIRE(firstClassifier.check.value() == 9000);
-
-    INFO("Classifier bound " << firstClassifier.bound);
-    REQUIRE(firstClassifier.bound == std::nullopt);
 }
 
 TEST_CASE("Arrayreducer_whilenonlinearincrementWithIFOneFamily.ll") {
     auto Run = runSpearOnFile(
         std::filesystem::path(TEST_INPUT_DIR),
-        "programs/loopbound/compiled/arrayReducer_whilenonlinearincrementWithIFOneFamily.ll");
+        "programs/loopbound/compiled/arrayReducer_whilenonlinearincrementWithIFOneFamily.ll",
+        loopBoundConfig);
 
-    auto classifiers = Run->phasarHandler.loopboundwrapper->getClassifiers();
+    auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
-    INFO("Classifier size " << classifiers.size());
-    REQUIRE(classifiers.size() == 1);
+    auto mainClassifiers = classifierMap["main"];
 
-    auto firstClassifier = classifiers.at(0);
+    INFO("Classifier size " << mainClassifiers.size());
+    REQUIRE(mainClassifiers.size() == 1);
 
-    INFO("Classifier increment " << firstClassifier.increment);
-    REQUIRE(firstClassifier.increment == LoopBound::DeltaInterval::interval(
-        3, 12, LoopBound::DeltaInterval::ValueType::Multiplicative));
+    auto firstClassifier = mainClassifiers["while.cond"];
 
-    INFO("Classifier init " << firstClassifier.init.value());
-    REQUIRE(firstClassifier.init.value() == 1);
-
-    INFO("Classifier predicate " << firstClassifier.predicate);
-    REQUIRE(firstClassifier.predicate == llvm::ICmpInst::Predicate::ICMP_SLT);
-
-    INFO("Classifier check " << firstClassifier.check.value());
-    REQUIRE(firstClassifier.check.value() == 9000);
-
-    INFO("Classifier bound " << firstClassifier.bound);
-    REQUIRE(firstClassifier.bound == LoopBound::DeltaInterval::interval(
+    INFO("Classifier increment " << "[" << firstClassifier.getLowerBound() << ", " << firstClassifier.getUpperBound() << "]");
+    REQUIRE(firstClassifier == LoopBound::DeltaInterval::interval(
         4, 9, LoopBound::DeltaInterval::ValueType::Multiplicative));
 }
