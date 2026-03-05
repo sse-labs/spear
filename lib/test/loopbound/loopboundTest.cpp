@@ -10,7 +10,7 @@ TestConfig loopBoundConfig = {.runFeasibilityAnalysis = false, .runLoopBoundAnal
 
 TEST_CASE("Arrayreducer_simple.ll") {
     auto Run = runSpearOnFile(std::filesystem::path(TEST_INPUT_DIR),
-                              "programs/loopbound/compiled/arrayReducer_simple.ll", loopBoundConfig);
+                              "programs/loopbound/compiled/arrayReducer_simple.ll", loopBoundConfig, false);
 
     auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
@@ -29,7 +29,7 @@ TEST_CASE("Arrayreducer_simple.ll") {
 
 TEST_CASE("Arrayreducer_complex.ll") {
     auto Run = runSpearOnFile(std::filesystem::path(TEST_INPUT_DIR),
-                              "programs/loopbound/compiled/arrayReducer_complex.ll", loopBoundConfig);
+                              "programs/loopbound/compiled/arrayReducer_complex.ll", loopBoundConfig, false);
 
     auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
@@ -48,7 +48,7 @@ TEST_CASE("Arrayreducer_complex.ll") {
 
 TEST_CASE("Arrayreducer_while.ll") {
     auto Run = runSpearOnFile(std::filesystem::path(TEST_INPUT_DIR),
-                              "programs/loopbound/compiled/arrayReducer_while.ll", loopBoundConfig);
+                              "programs/loopbound/compiled/arrayReducer_while.ll", loopBoundConfig, false);
 
     auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
@@ -67,7 +67,7 @@ TEST_CASE("Arrayreducer_while.ll") {
 
 TEST_CASE("Arrayreducer_whileif.ll") {
     auto Run = runSpearOnFile(std::filesystem::path(TEST_INPUT_DIR),
-                              "programs/loopbound/compiled/arrayReducer_whileif.ll", loopBoundConfig);
+                              "programs/loopbound/compiled/arrayReducer_whileif.ll", loopBoundConfig, false);
 
     auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
@@ -86,7 +86,7 @@ TEST_CASE("Arrayreducer_whileif.ll") {
 
 TEST_CASE("Arrayreducer_multiply.ll") {
     auto Run = runSpearOnFile(std::filesystem::path(TEST_INPUT_DIR),
-                              "programs/loopbound/compiled/arrayReducer_multiply.ll", loopBoundConfig);
+                              "programs/loopbound/compiled/arrayReducer_multiply.ll", loopBoundConfig, false);
 
     auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
@@ -105,7 +105,7 @@ TEST_CASE("Arrayreducer_multiply.ll") {
 
 TEST_CASE("Arrayreducer_negative.ll") {
     auto Run = runSpearOnFile(std::filesystem::path(TEST_INPUT_DIR),
-                        "programs/loopbound/compiled/arrayReducer_negative.ll", loopBoundConfig);
+                        "programs/loopbound/compiled/arrayReducer_negative.ll", loopBoundConfig, false);
 
     auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
@@ -124,7 +124,7 @@ TEST_CASE("Arrayreducer_negative.ll") {
 
 TEST_CASE("Arrayreducer_nonlinearincrement.ll") {
     auto Run = runSpearOnFile(std::filesystem::path(TEST_INPUT_DIR),
-                        "programs/loopbound/compiled/arrayReducer_nonlinearincrement.ll", loopBoundConfig);
+                        "programs/loopbound/compiled/arrayReducer_nonlinearincrement.ll", loopBoundConfig, false);
 
     auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
@@ -144,7 +144,7 @@ TEST_CASE("Arrayreducer_nonlinearincrement.ll") {
 TEST_CASE("Arrayreducer_nonlinearincrementDIV.ll") {
     auto Run = runSpearOnFile(std::filesystem::path(TEST_INPUT_DIR),
                               "programs/loopbound/compiled/arrayReducer_nonlinearincrementDIV.ll",
-                              loopBoundConfig);
+                              loopBoundConfig, false);
 
     auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
@@ -164,7 +164,7 @@ TEST_CASE("Arrayreducer_nonlinearincrementDIV.ll") {
 TEST_CASE("Arrayreducer_whilenonlinearincrementWithIFMultipleFamily.ll") {
     auto Run = runSpearOnFile(std::filesystem::path(TEST_INPUT_DIR),
                     "programs/loopbound/compiled/arrayReducer_whilenonlinearincrementWithIFMultipleFamily.ll",
-                            loopBoundConfig);
+                            loopBoundConfig, false);
 
     auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
@@ -184,7 +184,7 @@ TEST_CASE("Arrayreducer_whilenonlinearincrementWithIFMultipleFamily.ll") {
 TEST_CASE("Arrayreducer_whilenonlinearincrementWithIFOneFamily.ll") {
     auto Run = runSpearOnFile(std::filesystem::path(TEST_INPUT_DIR),
                         "programs/loopbound/compiled/arrayReducer_whilenonlinearincrementWithIFOneFamily.ll",
-                        loopBoundConfig);
+                        loopBoundConfig, false);
 
     auto classifierMap = Run->phasarHandler.queryLoopBounds();
 
