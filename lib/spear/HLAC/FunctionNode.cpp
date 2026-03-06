@@ -21,8 +21,9 @@
 
 namespace HLAC {
 
-FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *function_analysis_manager) {
+FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *function_analysis_manager, ResultRegistry registry) {
     // Set the parameter of the FunctionNode
+    this->registry = registry;
     this->function = function;
     this->name = function->getName();
     this->isLinkerFunction = function->isDeclarationForLinker();
@@ -51,6 +52,9 @@ FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManag
             bb2node.emplace(&basic_block, raw);
         }
 
+
+        Feasibility::BlockFeasibilityMap blockMapping = registry.getFeasibilityResults().at(this->name);
+
         // Create all Edges from the basic blocks
         for (auto &basic_block : *function) {
             GenericNode *src = bb2node.at(&basic_block);
@@ -63,11 +67,23 @@ FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManag
                 const llvm::BasicBlock *succBB = term->getSuccessor(i);
 
                 auto it = bb2node.find(succBB);
-                if (it == bb2node.end()) continue;
+                if (it == bb2node.end()) {
+                    continue;
+                }
 
                 GenericNode *dst = it->second;
 
+                auto blockName = succBB->getName().str();
+
+                bool willEdgeBeFeasible = true;
+
+                if (blockMapping.find(blockName) != blockMapping.end()) {
+                    willEdgeBeFeasible = blockMapping.at(succBB->getName().str()).Feasible;
+                }
+
                 auto e = FunctionNode::makeEdge(src, dst);
+
+                e->feasibility = willEdgeBeFeasible;
 
                 this->Edges.push_back(std::move(e));
             }
@@ -150,8 +166,9 @@ void FunctionNode::constructCallNodes(bool considerDebugFunctions) {
 
 std::unique_ptr<FunctionNode> FunctionNode::makeNode(
     llvm::Function* function,
-    llvm::FunctionAnalysisManager *fam) {
-    auto fn = std::make_unique<FunctionNode>(function, fam);
+    llvm::FunctionAnalysisManager *fam,
+    ResultRegistry registry) {
+    auto fn = std::make_unique<FunctionNode>(function, fam, registry);
     return fn;
 }
 

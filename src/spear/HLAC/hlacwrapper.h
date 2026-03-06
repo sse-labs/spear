@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "HLAC/hlac.h"
+#include "analyses/ResultRegistry.h"
 
 namespace HLAC {
 
@@ -18,7 +19,7 @@ class HLACWrapper {
      * Create a new HLAC graph
      * @return Returns unique pointer to the constructed graph
      */
-    static std::unique_ptr<hlac> makeHLAC();
+    static std::unique_ptr<hlac> makeHLAC(ResultRegistry registry);
 };
 
 }  // namespace HLAC

@@ -1,93 +1,82 @@
 /*
  * Copyright (c) 2026 Maximilian Krebs
  * All rights reserved.
-*/
+ */
 
-#include <llvm/Passes/PassPlugin.h>
-#include <llvm/IR/Function.h>
-#include <llvm/Support/raw_ostream.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/Dominators.h>
+#include <llvm/IR/Function.h>
 #include <llvm/Passes/PassBuilder.h>
+#include <llvm/Passes/PassPlugin.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/FileSystem.h>
+#include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
-#include <vector>
+#include <memory>
 #include <string>
 #include <utility>
-#include <memory>
+#include <vector>
 
-#include "LLVMHandler.h"
-#include "ProfileHandler.h"
-#include "DeMangler.h"
-#include "PhasarHandler.h"
-#include "ProgramGraph.h"
-#include "FunctionTree.h"
-#include "EnergyFunction.h"
-#include "HLAC/hlac.h"
 #include "ConfigParser.h"
+#include "DeMangler.h"
+#include "EnergyFunction.h"
+#include "FunctionTree.h"
+#include "HLAC/hlac.h"
 #include "HLAC/hlacwrapper.h"
+#include "LLVMHandler.h"
+#include "PhasarHandler.h"
+#include "ProfileHandler.h"
+#include "ProgramGraph.h"
 
 #include <nlohmann/json.hpp>
 
-
+#include "analyses/ResultRegistry.h"
 
 using json = nlohmann::json;
 
-llvm::cl::opt<std::string> energyModelPath(
-    "profile",
-    llvm::cl::desc("Energymodel as JSON"),
-    llvm::cl::value_desc("filepath to .json file")
-);
+llvm::cl::opt<std::string> energyModelPath("profile", llvm::cl::desc("Energymodel as JSON"),
+                                           llvm::cl::value_desc("filepath to .json file"));
 
-llvm::cl::opt<std::string> modeParameter(
-    "mode",
-    llvm::cl::desc("Mode the analysis runs on"),
-    llvm::cl::value_desc("Please choose out of the options program/function")
-);
+llvm::cl::opt<std::string> modeParameter("mode", llvm::cl::desc("Mode the analysis runs on"),
+                                         llvm::cl::value_desc("Please choose out of the options program/function"));
 
-llvm::cl::opt<std::string> formatParameter(
-    "format",
-    llvm::cl::desc("Format to print as result"),
-    llvm::cl::value_desc("Please choose out of the options json/plain")
-);
+llvm::cl::opt<std::string> formatParameter("format", llvm::cl::desc("Format to print as result"),
+                                           llvm::cl::value_desc("Please choose out of the options json/plain"));
 
-llvm::cl::opt<std::string> analysisStrategyParameter(
-    "strategy",
-    llvm::cl::desc("The strategy to analyze"),
-    llvm::cl::value_desc("Please choose out of the options worst/average/best")
-);
+llvm::cl::opt<std::string>
+        analysisStrategyParameter("strategy", llvm::cl::desc("The strategy to analyze"),
+                                  llvm::cl::value_desc("Please choose out of the options worst/average/best"));
 
-llvm::cl::opt<std::string> loopboundParameter(
-    "loopbound",
-    llvm::cl::desc("A value to over-approximate loops, which upper bound can't be calculated"),
-    llvm::cl::value_desc("Please provide a positive integer value")
-);
+llvm::cl::opt<std::string>
+        loopboundParameter("loopbound",
+                           llvm::cl::desc("A value to over-approximate loops, which upper bound can't "
+                                          "be calculated"),
+                           llvm::cl::value_desc("Please provide a positive integer value"));
 
-llvm::cl::opt<std::string> deepCallsParameter(
-    "withcalls",
-    llvm::cl::desc("If flag is provided calls will contribute their own energy usage and the usage of the "
-                   "called function to the result"),
-    llvm::cl::value_desc("")
-);
-
-
+llvm::cl::opt<std::string>
+        deepCallsParameter("withcalls",
+                           llvm::cl::desc("If flag is provided calls will contribute their own energy "
+                                          "usage and the usage of the "
+                                          "called function to the result"),
+                           llvm::cl::value_desc(""));
 
 struct Energy : llvm::PassInfoMixin<Energy> {
     json energyJson;
     bool deepCallsEnabled;
     std::string forFunction;
-    std::chrono::time_point<
-        std::chrono::steady_clock, std::chrono::duration<uint64_t, std::ratio<1, 1000000000>>> stopwatch_start;
-    std::chrono::time_point<
-        std::chrono::steady_clock, std::chrono::duration<uint64_t, std::ratio<1, 1000000000>>> stopwatch_end;
+    std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<uint64_t, std::ratio<1, 1000000000>>>
+            stopwatch_start;
+    std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<uint64_t, std::ratio<1, 1000000000>>>
+            stopwatch_end;
+
+    ResultRegistry resultRegistry;
 
     /**
      * Constructor to run, when called from a method
      * @param filename Path to the .json file containing the energymodel
      */
-    explicit Energy(const std::string& filename) {
+    explicit Energy(const std::string &filename, ResultRegistry &registry) {
         if (llvm::sys::fs::exists(filename) && !llvm::sys::fs::is_directory(filename)) {
             // Create a JSONHandler object and read in the energypath
             ProfileHandler phandler;
@@ -97,6 +86,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             this->stopwatch_start = std::chrono::steady_clock::now();
             this->deepCallsEnabled = true;
             this->forFunction = std::move(forFunction);
+
+            this->resultRegistry = registry;
         }
     }
 
@@ -116,12 +107,19 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     }
 
     /**
-     * Construct the JSON-Object from which we will draw all necessary information for the output
-     * @param handler LLVMHandler so we can get the functionQueue
-     * @return Retuns a JSON-Object containing all needed information for the output
+     * Construct the JSON-Object from which we will draw all necessary information
+     * for the output
+     * @param funcpool Array of EnergyFunctions containing the information about the analyzed functions
+     * @param numberOfFuncs Number of functions in the funcpool
+     * @param duration Duration of the analysis
+     * @param forFunction If the analysis was only executed for a specific function, this parameter contains the name
+     * of the function. Otherwise, it is empty.
+     * output
      */
     static json constructOutputObject(EnergyFunction funcpool[],
-        int numberOfFuncs, double duration, std::string forFunction) {
+                                    int numberOfFuncs,
+                                    double duration,
+                                    std::string forFunction) {
         json outputObject = nullptr;
 
         if (ConfigParser::getAnalysisConfiguration().mode == Mode::PROGRAM) {
@@ -129,7 +127,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             outputObject["functions"] = json::array();
             outputObject["duration"] = duration;
 
-            for (int i=0; i < numberOfFuncs; i++) {
+            for (int i = 0; i < numberOfFuncs; i++) {
                 auto energyFunction = &funcpool[i];
                 std::string fName = energyFunction->func->getName().str();
 
@@ -141,15 +139,15 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 functionObject["numberOfInstructions"] = energyFunction->func->getInstructionCount();
 
                 if (!energyFunction->func->empty()) {
-                    functionObject["averageEnergyPerBlock"] = energyFunction->energy /
-                        static_cast<double>(energyFunction->func->size());
+                    functionObject["averageEnergyPerBlock"] =
+                            energyFunction->energy / static_cast<double>(energyFunction->func->size());
                 } else {
                     functionObject["averageEnergyPerBlock"] = 0;
                 }
 
                 if (energyFunction->func->getInstructionCount() > 0) {
-                    functionObject["averageEnergyPerInstruction"] = energyFunction->energy /
-                        static_cast<double>(energyFunction->func->getInstructionCount());
+                    functionObject["averageEnergyPerInstruction"] =
+                            energyFunction->energy / static_cast<double>(energyFunction->func->getInstructionCount());
                 } else {
                     functionObject["averageEnergyPerInstruction"] = 0;
                 }
@@ -161,7 +159,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             outputObject["functions"] = json::array();
             outputObject["duration"] = duration;
 
-            for (int i=0; i < numberOfFuncs; i++) {
+            for (int i = 0; i < numberOfFuncs; i++) {
                 auto energyFunction = &funcpool[i];
                 json functionObject = json::object();
                 std::string fName = energyFunction->func->getName().str();
@@ -173,9 +171,9 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 if (energyFunction->programGraph != nullptr) {
                     std::vector<Node *> nodelist = energyFunction->programGraph->getNodes();
                     if (!nodelist.empty()) {
-                        for (int j=0; j < nodelist.size(); j++) {
+                        for (int j = 0; j < nodelist.size(); j++) {
                             json nodeObject = json::object();
-                            Node* Node = nodelist[j];
+                            Node *Node = nodelist[j];
 
                             if (Node->block) {
                                 nodeObject["name"] = Node->block->getName().str();
@@ -193,7 +191,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             outputObject["functions"] = json::array();
             outputObject["duration"] = duration;
 
-            for (int i=0; i < numberOfFuncs; i++) {
+            for (int i = 0; i < numberOfFuncs; i++) {
                 auto energyFunction = &funcpool[i];
                 json functionObject = json::object();
                 std::string fName = energyFunction->func->getName().str();
@@ -201,8 +199,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 functionObject["external"] = energyFunction->func->isDeclarationForLinker();
                 const auto subProgram = energyFunction->func->getSubprogram();
                 if (subProgram != nullptr) {
-                    functionObject["file"] = subProgram->getFile()->getDirectory().str() +
-                        "/" + subProgram->getFile()->getFilename().str();
+                    functionObject["file"] = subProgram->getFile()->getDirectory().str() + "/" +
+                                             subProgram->getFile()->getFilename().str();
                 } else {
                     functionObject["file"] = "";
                 }
@@ -224,7 +222,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         } else if (ConfigParser::getAnalysisConfiguration().mode == Mode::GRAPH) {
             bool functionExists = false;
             if (!forFunction.empty()) {
-                for (int i=0; i < numberOfFuncs; i++) {
+                for (int i = 0; i < numberOfFuncs; i++) {
                     auto energyFunction = &funcpool[i];
                     json functionObject = json::object();
                     std::string fName = energyFunction->func->getName().str();
@@ -245,7 +243,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 llvm::outs() << "graph[fontname=Arial]\n";
                 llvm::outs() << "node[fontname=Arial, shape=\"rect\"]\n";
                 llvm::outs() << "edge[fontname=Arial]\n";
-                for (int i=0; i < numberOfFuncs; i++) {
+                for (int i = 0; i < numberOfFuncs; i++) {
                     auto energyFunction = &funcpool[i];
                     json functionObject = json::object();
                     std::string fName = energyFunction->func->getName().str();
@@ -259,15 +257,16 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                             llvm::outs() << "margin=40\n";
                             llvm::outs() << "bgcolor=white\n";
                             llvm::outs() << "cluster=true\n";
-                            llvm::outs() << "\tlabel=<<b>Function " + energyFunction->func->getName() +
-                                "</b><br/>" + std::to_string(maxEng) + " J>\n";
+                            llvm::outs() << "\tlabel=<<b>Function " + energyFunction->func->getName() + "</b><br/>" +
+                                                    std::to_string(maxEng) + " J>\n";
                             llvm::outs() << energyFunction->programGraph->printDotRepresentation();
                             llvm::outs() << "}" << "\n";
                         }
                     }
                 }
                 llvm::outs() << "subgraph scale {\n";
-                llvm::outs() << "scale_image [label=\"\" shape=none image=\"/usr/share/spear/scale.png\"];\n";
+                llvm::outs() << "scale_image [label=\"\" shape=none "
+                                "image=\"/usr/share/spear/scale.png\"];\n";
                 llvm::outs() << "margin=40\n";
                 llvm::outs() << "bgcolor=white\n";
                 llvm::outs() << "}";
@@ -294,7 +293,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      * Print the provided JSON-Object as string
      * @param outputObject JSON-Object containing information about the analysis
      */
-    static void outputMetricsPlain(json& outputObject) {
+    static void outputMetricsPlain(json &outputObject) {
         if (outputObject != nullptr) {
             if (ConfigParser::getAnalysisConfiguration().mode == Mode::PROGRAM) {
                 auto timeused = outputObject["duration"].get<double>();
@@ -305,30 +304,35 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                         // llvm::errs() << functionObject.toStyledString() << "\n\n\n";
                         llvm::outs() << "\n";
                         llvm::outs() << "Function " << functionObject["name"].dump() << "\n";
-                        llvm::outs() << "======================================================================"
-                        << "\n";
+                        llvm::outs() << "=================================================="
+                                        "===================="
+                                     << "\n";
                         llvm::outs() << "Estimated energy consumption: " << functionObject["energy"].get<double>()
-                        << " J\n";
+                                     << " J\n";
                         llvm::outs() << "Number of basic blocks: " << functionObject["numberOfBasicBlocks"].get<int>()
-                        << "\n";
+                                     << "\n";
                         llvm::outs() << "Number of instruction: " << functionObject["numberOfInstructions"].get<int>()
-                        << "\n";
+                                     << "\n";
                         llvm::outs() << "Ø energy per block: " << functionObject["averageEnergyPerBlock"].get<double>()
-                        << " J\n";
+                                     << " J\n";
                         llvm::outs() << "Ø energy per instruction: "
-                        << functionObject["averageEnergyPerInstruction"].get<double>() << " J\n";
-                        llvm::outs() << "======================================================================"
-                        << "\n";
+                                     << functionObject["averageEnergyPerInstruction"].get<double>() << " J\n";
+                        llvm::outs() << "=================================================="
+                                        "===================="
+                                     << "\n";
                         llvm::outs() << "\n";
                     }
                 }
                 llvm::outs() << "The Analysis took: " << timeused << " s\n";
             } else if (ConfigParser::getAnalysisConfiguration().mode == Mode::BLOCK) {
-                llvm::errs() << "Not implemented" <<"\n";
+                llvm::errs() << "Not implemented" << "\n";
             } else {
-                llvm::errs() << "Please specify the mode the pass should run on:\n\t-mode program analyzes the program "
-                                "starting in the main function\n\t-mode function analyzes all functions, "
-                                "without respect to calls" << "\n";
+                llvm::errs() << "Please specify the mode the pass should run "
+                                "on:\n\t-mode program analyzes the program "
+                                "starting in the main function\n\t-mode function "
+                                "analyzes all functions, "
+                                "without respect to calls"
+                             << "\n";
             }
         }
     }
@@ -341,17 +345,16 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      * @param analysisStrategy The strategy to analyze the function with
      * @return Returns the calculated ProgramGraph
      */
-    static void constructProgramRepresentation(ProgramGraph* pGraph,
-        EnergyFunction *energyFunc,
-        LLVMHandler *handler,
-        llvm::FunctionAnalysisManager *FAM,
-        AnalysisStrategy::Strategy analysisStrategy) {
-        auto* domtree = new llvm::DominatorTree();
-        llvm::Function* function = energyFunc->func;
+    static void constructProgramRepresentation(ProgramGraph *pGraph, EnergyFunction *energyFunc, LLVMHandler *handler,
+                                               llvm::FunctionAnalysisManager *FAM,
+                                               AnalysisStrategy::Strategy analysisStrategy) {
+        auto *domtree = new llvm::DominatorTree();
+        llvm::Function *function = energyFunc->func;
         domtree->recalculate(*function);
 
         // Always create a local LoopInfo from the freshly computed DomTree.
-        // This avoids using stale Loop* pointers across IR changes / analysis invalidation.
+        // This avoids using stale Loop* pointers across IR changes / analysis
+        // invalidation.
         llvm::LoopInfo localLI(*domtree);
 
         // If you still want SCEV, keep it optional; LoopInfo should be local.
@@ -379,7 +382,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             for (auto liiter = loops.begin(); liiter < loops.end(); ++liiter) {
                 llvm::Loop *topLoop = *liiter;
 
-                // Hard guards against bad/dangling loops (prevents EXC_BAD_ACCESS in getExitingBlocks etc.)
+                // Hard guards against bad/dangling loops (prevents EXC_BAD_ACCESS in
+                // getExitingBlocks etc.)
                 if (!topLoop) {
                     continue;
                 }
@@ -394,14 +398,15 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                     continue;
                 }
 
-                // Optional: trigger a safe query to ensure loop is well-formed before deeper usage.
-                // (getBlocksVector is usually safe if loop is valid)
+                // Optional: trigger a safe query to ensure loop is well-formed before
+                // deeper usage. (getBlocksVector is usually safe if loop is valid)
                 auto Blocks = topLoop->getBlocksVector();
                 if (Blocks.empty()) {
                     continue;
                 }
 
-                // Construct the LoopTree from the Information of the current top-level loop
+                // Construct the LoopTree from the Information of the current top-level
+                // loop
                 LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, scevPtr);
 
                 // Construct a LoopNode for the current loop
@@ -409,7 +414,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 // Replace the blocks used by loop in the previous created ProgramGraph
                 pGraph->replaceNodesWithLoopNode(topLoop->getBlocksVector(), loopNode);
             }
-
 
             // energyCalculation(pGraph, handler, function);
             energyFunc->energy = pGraph->getEnergy(handler);
@@ -428,10 +432,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      * @param analysisStrategy Strategy to analyze the module with
      * @param maxiterations Upper bound of loops
      */
-    void analysisRunner(
-        llvm::Module &module,
-        llvm::ModuleAnalysisManager &MAM,
-        AnalysisStrategy::Strategy analysisStrategy) {
+    void analysisRunner(llvm::Module &module, llvm::ModuleAnalysisManager &MAM,
+                        AnalysisStrategy::Strategy analysisStrategy) {
         // Get the FunctionAnalysisManager from the ModuleAnalysisManager
         auto &functionAnalysisManager = MAM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 
@@ -445,12 +447,15 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             /**
              * Execute the mem2reg pass late to allow phasar to infer more variables.
-             * We need to execute the pass however, as scalarevolution depends somewhat on these results.
+             * We need to execute the pass however, as scalarevolution depends
+             * somewhat on these results.
              */
             auto funcList = &module.getFunctionList();
 
-            FunctionTree * functionTree = nullptr;
-            std::unique_ptr<HLAC::hlac> graph = HLAC::HLACWrapper::makeHLAC();
+            FunctionTree *functionTree = nullptr;
+            std::unique_ptr<HLAC::hlac> graph = HLAC::HLACWrapper::makeHLAC(this->resultRegistry);
+
+            auto startConstruction = std::chrono::high_resolution_clock::now();
 
             // Construct the functionTrees to the functions of the module
             for (auto &function : *funcList) {
@@ -465,9 +470,19 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 }
             }
 
-            graph->printDotRepresentation();
+            auto endConstruction = std::chrono::high_resolution_clock::now();
 
-            int i = 0;
+            auto constructionTime = std::chrono::duration_cast<std::chrono::microseconds>(endConstruction - startConstruction);
+            std::cout << "HLAC construction took: " << constructionTime.count() << " µs\n";
+
+            auto dotWritingStart = std::chrono::high_resolution_clock::now();
+            graph->printDotRepresentation();
+            auto dotWritingEnd = std::chrono::high_resolution_clock::now();
+
+            auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
+            std::cout << "Dot writing took: " << dotTime.count() << " µs\n";
+
+            /*int i = 0;
             for (auto &fn : graph->functions) {
                 if (fn->isMainFunction) {
                     llvm::outs() << "Found main at index " << i << "\n";
@@ -477,7 +492,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 }
 
                 i++;
-            }
+            }*/
 
             if (functionTree != nullptr) {
                 std::vector<llvm::StringRef> names;
@@ -488,32 +503,34 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 const auto &preOrder = functionTree->getPreOrderVector();
                 std::vector<EnergyFunction> funcPool(preOrder.size());
 
-                for (int i=0; i < functionTree->getPreOrderVector().size(); i++) {
+                for (int i = 0; i < functionTree->getPreOrderVector().size(); i++) {
                     // Construct a new EnergyFunction to the current function
                     // auto newFuntion = new EnergyFunction(function);
-                    llvm::Function * function = functionTree->getPreOrderVector()[i];
+                    llvm::Function *function = functionTree->getPreOrderVector()[i];
 
                     // Add the EnergyFunction to the queue
                     // handler.funcqueue.push_back(newFuntion);
-                    // auto energyFunction = handler.funcmap.at(function->getName().str());
+                    // auto energyFunction =
+                    // handler.funcmap.at(function->getName().str());
 
                     funcPool[i].func = function;
                     funcPool[i].name = DeMangler::demangle(function->getName().str());
                 }
 
-                // Init the LLVMHandler with the given model and the upper bound for unbounded loops
-                LLVMHandler handler = LLVMHandler(this->energyJson, deepCallsEnabled,
-                    funcPool.data(), functionTree->getPreOrderVector().size());
+                // Init the LLVMHandler with the given model and the upper bound for
+                // unbounded loops
+                LLVMHandler handler = LLVMHandler(this->energyJson, deepCallsEnabled, funcPool.data(),
+                                                  functionTree->getPreOrderVector().size());
 
                 for (int i = 0; i < functionTree->getPreOrderVector().size(); i++) {
-                    llvm::Function * function = functionTree->getPreOrderVector()[i];
+                    llvm::Function *function = functionTree->getPreOrderVector()[i];
 
-                    // Check if the current function is external. Analysis of external functions,
-                    // that only were declared, will result in an infinite loop
+                    // Check if the current function is external. Analysis of external
+                    // functions, that only were declared, will result in an infinite loop
                     if (!function->isDeclarationForLinker()) {
                         // Calculate the energy
-                        constructProgramRepresentation(funcPool[i].programGraph,
-                            &funcPool[i], &handler, &functionAnalysisManager, analysisStrategy);
+                        constructProgramRepresentation(funcPool[i].programGraph, &funcPool[i], &handler,
+                                                       &functionAnalysisManager, analysisStrategy);
                         //  Calculate the maximal amount of energy of the programgraph
                     } else {
                         funcPool[i].programGraph = nullptr;
@@ -523,19 +540,19 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 this->stopwatch_end = std::chrono::steady_clock::now();
                 std::chrono::duration<double, std::milli> ms_double = this->stopwatch_end - this->stopwatch_start;
 
-                double duration = ms_double.count()/1000;
+                double duration = ms_double.count() / 1000;
 
                 // Construct the output
-                json output = constructOutputObject(funcPool.data(),
-                    functionTree->getPreOrderVector().size(),
-                    duration, this->forFunction);
+                json output = constructOutputObject(funcPool.data(), functionTree->getPreOrderVector().size(), duration,
+                                                    this->forFunction);
 
                 if (ConfigParser::getAnalysisConfiguration().format == Format::JSON) {
                     outputMetricsJSON(output);
                 } else if (ConfigParser::getAnalysisConfiguration().format == Format::PLAIN) {
                     outputMetricsPlain(output);
                 } else {
-                    llvm::errs() << "Please provide a valid output format: plain/JSON" << "\n";
+                    llvm::errs() << "Please provide a valid output format: plain/JSON"
+                                 << "\n";
                 }
             } else {
                 llvm::errs() << "Functiontree could not be determined!" << "\n";
@@ -561,7 +578,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         } else if (strategy == Strategy::AVERAGE) {
             analysisRunner(module, moduleAnalysisManager, AnalysisStrategy::AVERAGECASE);
         } else {
-            llvm::errs() << "Please provide a valid analysis strategy: best/worst/average" << "\n";
+            llvm::errs() << "Please provide a valid analysis strategy: best/worst/average"
+                         << "\n";
         }
         return llvm::PreservedAnalyses::all();
     }
@@ -569,28 +587,21 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     static bool isRequired() { return true; }
 };
 
-
-
 /**
  * Method for providing some basic information about the pass
  */
 llvm::PassPluginLibraryInfo getEnergyPluginInfo() {
-    return {LLVM_PLUGIN_API_VERSION, "Energy", LLVM_VERSION_STRING,
-            [](llvm::PassBuilder &PB) {
-                PB.registerPipelineParsingCallback(
-                        [](llvm::StringRef Name, llvm::ModulePassManager &modulePassManager,
-                           llvm::ArrayRef<llvm::PassBuilder::PipelineElement>) {
-                            if (Name == "energy") {
-                                modulePassManager.addPass(Energy());
-                                return true;
-                            }
-                            return false;
-                        });
+    return {LLVM_PLUGIN_API_VERSION, "Energy", LLVM_VERSION_STRING, [](llvm::PassBuilder &PB) {
+                PB.registerPipelineParsingCallback([](llvm::StringRef Name, llvm::ModulePassManager &modulePassManager,
+                                                      llvm::ArrayRef<llvm::PassBuilder::PipelineElement>) {
+                    if (Name == "energy") {
+                        modulePassManager.addPass(Energy());
+                        return true;
+                    }
+                    return false;
+                });
             }};
 }
 
 // Register the pass in llvm, so it is useable with opt
-extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo() {
-    return getEnergyPluginInfo();
-}
+extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo llvmGetPassPluginInfo() { return getEnergyPluginInfo(); }

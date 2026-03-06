@@ -72,6 +72,12 @@ void Edge::printDotRepresentation(std::ostream &os) {
         os << "lhead=\"" << dstLoop->getDotName() << "\"";
     }
 
+    if (feasibility) {
+        os << " color=\"green\"";
+    } else {
+        os << " color=\"red\"";
+    }
+
     if (!firstAttr) os << "]";
     os << ";\n";
 }

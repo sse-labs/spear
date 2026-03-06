@@ -23,6 +23,7 @@
 #include "CLIHandler.h"
 #include "ConfigParser.h"
 #include "Modelchecker.h"
+#include "analyses/ResultRegistry.h"
 #include "analyses/feasibility/util.h"
 #include "profilers/CPUProfiler.h"
 #include "profilers/MetaProfiler.h"
@@ -79,6 +80,7 @@ void runAnalysisRoutine(CLIOptions opts) {
     llvm::ModulePassManager modulePassManager;
     llvm::FunctionPassManager functionPassManager;
     llvm::CGSCCPassManager callgraphPassManager;
+    ResultRegistry resultRegistry;
 
     auto module_up = llvm::parseIRFile(opts.programPath, error, context).release();
     if (!module_up) {
@@ -100,17 +102,23 @@ void runAnalysisRoutine(CLIOptions opts) {
     PreFPM.addPass(llvm::InstructionNamerPass());
 
     PhasarHandlerPass LoopBoundPhasarHandler(true, false);
+    auto startLB = std::chrono::high_resolution_clock::now();
     LoopBoundPhasarHandler.runOnModule(*module_up);
     auto loopboundResults = LoopBoundPhasarHandler.queryLoopBounds();
+    resultRegistry.storeLoopBoundResults(loopboundResults);
+    auto endLB = std::chrono::high_resolution_clock::now();
 
-    for (auto &[funcName, loopInfo] : loopboundResults) {
+    auto durationLB = std::chrono::duration_cast<std::chrono::microseconds>(endLB - startLB);
+    std::cout << "Loopbound took: " << durationLB.count() << " µs\n";
+
+    /*for (auto &[funcName, loopInfo] : loopboundResults) {
         std::cout << "Function: " << funcName << "\n";
         for (auto &loopEntry : loopInfo) {
             std::cout << "\tLoop: " << loopEntry.first << ", Bound: " << loopEntry.second << "\n";
         }
     }
 
-    std::cout << "\n";
+    std::cout << "\n";*/
 
     // Build function pipeline once, then move it exactly once.
     functionPassManager.addPass(llvm::InstructionNamerPass());
@@ -127,11 +135,17 @@ void runAnalysisRoutine(CLIOptions opts) {
     // before any external code queries analyses from a FAM.
     modulePassManager.run(*module_up, moduleAnalysisManager);
 
+    auto startFeas = std::chrono::high_resolution_clock::now();
     PhasarHandlerPass FeasibilityPhasarHandler(false, true);
     FeasibilityPhasarHandler.runOnModule(*module_up);
     auto feasibilityResults = FeasibilityPhasarHandler.queryFeasibilty();
+    resultRegistry.storeFeasibilityResults(feasibilityResults);
+    auto endFeas = std::chrono::high_resolution_clock::now();
 
-    for (const auto &functionEntry : feasibilityResults) {
+    auto durationFeas = std::chrono::duration_cast<std::chrono::microseconds>(endFeas - startFeas);
+    std::cout << "Feasibility took: " << durationFeas.count() << " µs\n";
+
+    /*for (const auto &functionEntry : feasibilityResults) {
         llvm::outs() << "Feasibility information for function: " << functionEntry.first << "\n";
         for (const auto &blockEntry : functionEntry.second) {
             std::string feasStr = blockEntry.second.Feasible? "REACHABLE": "UNREACHABLE";
@@ -139,48 +153,10 @@ void runAnalysisRoutine(CLIOptions opts) {
             llvm::outs() << "\t Block: " << blockEntry.first << " => " << feasStr << "\n";
         }
         llvm::outs() << "\n";
-    }
+    }*/
 
-    /*Modelchecker McheckerInstance;
-    auto mcheckercontext = McheckerInstance.getContext();
-    auto x = mcheckercontext->int_const("x");
-
-    McheckerInstance.addExpression(x < 5 && x > 5);
-    auto checkres = McheckerInstance.check();
-
-    std::cout << "Modelchecker result: " << checkres << "\n";*/
-
-    // Store results for later use
-    /*auto MainFn = module_up->getFunction("main");
-    auto loopboundResults = PH.queryLoopBounds();
-    auto start = std::chrono::high_resolution_clock::now();
-    auto feasibilityResults = PH.queryFeasibilty();
-    auto end = std::chrono::high_resolution_clock::now();
-
-
-    for (auto &[funcName, loopInfo] : loopboundResults) {
-        std::cout << "Function: " << funcName << "\n";
-        for (auto &loopEntry : loopInfo) {
-            std::cout << "\tLoop: " << loopEntry.first << ", Bound: " << loopEntry.second << "\n";
-        }
-    }
-
-    for (const auto &functionEntry : feasibilityResults) {
-        llvm::outs() << "Feasibility information for function: " << functionEntry.first << "\n";
-        for (const auto &blockEntry : functionEntry.second) {
-            std::string feasStr = blockEntry.second.Feasible? "REACHABLE": "UNREACHABLE";
-
-            llvm::outs() << "\t Block: " << blockEntry.first << " => " << feasStr << "\n";
-        }
-        llvm::outs() << "\n";
-    }
-
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Runtime: " << duration.count() << " ms\n";*/
-
-    // modulePassManager already ran above (don't run twice unless you intend to).
-    // modulePassManager.addPass(Energy(opts.profilePath));
-    // modulePassManager.run(*module_up, moduleAnalysisManager);
+    modulePassManager.addPass(Energy(opts.profilePath, resultRegistry));
+    modulePassManager.run(*module_up, moduleAnalysisManager);
 }
 
 
