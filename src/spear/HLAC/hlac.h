@@ -147,6 +147,9 @@ class Node : public GenericNode {
  */
 class LoopNode : public GenericNode {
  public:
+
+    ResultRegistry registry;
+
     /**
      * List of contained Nodes
      */
@@ -165,7 +168,7 @@ class LoopNode : public GenericNode {
     /**
      * Loop bound representing (min, max) iteration count
      */
-    std::pair<int64_t, int64_t> bounds;
+    LoopBound::DeltaInterval bounds;
 
     /**
      * Flag to store if the contained loop has subloops that find representation as further LoopNodes
@@ -177,7 +180,7 @@ class LoopNode : public GenericNode {
      * @param loop loop that should be represented by the LoopNOde
      * @param function_node FunctionNode, the LoopNode is contained in
      */
-    LoopNode(llvm::Loop *loop, FunctionNode *function_node);
+    LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry);
 
     /**
      * Creates a new LoopNode and returns it
@@ -185,7 +188,7 @@ class LoopNode : public GenericNode {
      * @param function_node FunctionNode the LoopNode should be contained in
      * @return Returns unique pointer to the constructed LoopNode
      */
-    static std::unique_ptr<LoopNode> makeNode(llvm::Loop *loop, FunctionNode *function_node);
+    static std::unique_ptr<LoopNode> makeNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry);
 
     /**
      * Takes the given list of edges and rewrites all entities that interact with loops inside this loop node

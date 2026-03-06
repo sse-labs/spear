@@ -10,17 +10,30 @@
 #include <string>
 
 #include "HLAC/hlac.h"
+#include "analyses/loopbound/LoopBoundEdgeFunction.h"
 
 namespace HLAC {
-LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node) {
+LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry) {
     // Store the LLVM loop
+    this->registry = registry;
     this->loop = loop;
     this->hasSubLoops = !loop->getSubLoops().empty();
-    this->bounds = std::make_pair(0, 0);
+    this->bounds = LoopBound::DeltaInterval();
+
+    auto fName = function_node->function->getName().str();
+    auto loopName = loop->getName().str();
+
+    auto loopRegistry = registry.getLoopBoundResults();
+    if (loopRegistry.contains(fName)) {
+        auto functionLoopRegistry = loopRegistry.at(fName);
+        if (functionLoopRegistry.contains(loopName)) {
+            this->bounds = functionLoopRegistry.at(loopName);
+        }
+    }
 
     // Create loop nodes recursively for subloops
     for (llvm::Loop *sub : loop->getSubLoops()) {
-        auto subLN = LoopNode::makeNode(sub, function_node);
+        auto subLN = LoopNode::makeNode(sub, function_node, registry);
         this->Nodes.emplace_back(std::move(subLN));  // store as GenericNode
     }
 
@@ -150,8 +163,8 @@ void LoopNode::constructCallNodes(bool considerDebugFunctions) {
     }
 }
 
-std::unique_ptr<LoopNode> LoopNode::makeNode(llvm::Loop *loop, FunctionNode *function_node) {
-    auto ln = std::make_unique<LoopNode>(loop, function_node);
+std::unique_ptr<LoopNode> LoopNode::makeNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry) {
+    auto ln = std::make_unique<LoopNode>(loop, function_node, registry);
     return ln;
 }
 
@@ -164,7 +177,7 @@ void LoopNode::printDotRepresentation(std::ostream &os) {
     os << "fontname=\"Courier\";";
     os << "tooltip=" << "\"" << "METDADATA" << "\";";
     os << "  labelloc=\"t\";\n";
-    os << "  label=\"" << this->getDotName() << " (min, max)\r\";\n";
+    os << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", " << this->bounds.getUpperBound()  << ")" << "\r\";\n";
     os << "  " << this->getAnchorDotName()
        << " [shape=point, width=0.01, label=\"\", style=invis];\n";
 

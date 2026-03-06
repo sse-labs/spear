@@ -135,7 +135,7 @@ LoopBound::LoopToBoundMap PhasarHandlerPass::queryBoundsOfFunction(llvm::Functio
 
   for (auto &desc : loopmap[Func->getName().str()]) {
     if (desc.bound) {
-      ResultMap[desc.loop->getName().str()] = desc.bound.value();
+      ResultMap[desc.loop->getHeader()->getName().str()] = desc.bound.value();
     }
   }
 

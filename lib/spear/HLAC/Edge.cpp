@@ -38,11 +38,13 @@ void Edge::printDotRepresentation(std::ostream &os) {
     if (dstLoop) {
         // Search for the first real Node.
         // If we can find a real Node in the loop connect to this Node
-        if (GenericNode *rep = pickNonLoopNode(dstLoop, false)) {
+        /*if (GenericNode *rep = pickNonLoopNode(dstLoop, false)) {
             dstName = rep->getDotName();
         } else {
             dstName = dstLoop->getAnchorDotName();
-        }
+        }*/
+
+        dstName = dstLoop->getAnchorDotName();
     } else {
         // If the destination node is no LoopNode we can just use this node
         dstName = this->destination->getDotName();
@@ -73,10 +75,12 @@ void Edge::printDotRepresentation(std::ostream &os) {
     }
 
     if (feasibility) {
-        os << " color=\"green\"";
+        os << " color=\"#A3D78A\"" << ",";
     } else {
-        os << " color=\"red\"";
+        os << " color=\"#FF5555\"" << ",";
     }
+
+    os << "minlen=1";
 
     if (!firstAttr) os << "]";
     os << ";\n";

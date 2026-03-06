@@ -108,7 +108,7 @@ FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManag
 
 void FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
     for (auto &loop : loops) {
-        auto loopNode = LoopNode::makeNode(loop, this);
+        auto loopNode = LoopNode::makeNode(loop, this, registry);
         loopNode->collapseLoop(this->Edges);
 
         this->Nodes.push_back(std::move(loopNode));
@@ -179,7 +179,7 @@ std::unique_ptr<Edge> FunctionNode::makeEdge(GenericNode *src, GenericNode *dst)
 
 void FunctionNode::printDotRepresentation(std::ostream &os) {
     os << "digraph " << "\"" << this->getDotName() << "\"" << " {" << std::endl;
-    os << "graph [pad=\".1\", ranksep=\"1.0\", nodesep=\"1.0\"];" << std::endl;
+    os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\"];" << std::endl;
     os << "compound=true;" << std::endl;
     os << "fontname=\"Courier\";" << std::endl;
     os << "  labelloc=\"t\";\n";

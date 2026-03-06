@@ -445,6 +445,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             // mem2reg
 
+            llvm::errs() << module << "\n";
+
             /**
              * Execute the mem2reg pass late to allow phasar to infer more variables.
              * We need to execute the pass however, as scalarevolution depends

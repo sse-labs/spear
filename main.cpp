@@ -72,91 +72,90 @@ void runProfileRoutine(CLIOptions opts) {
 void runAnalysisRoutine(CLIOptions opts) {
     llvm::LLVMContext context;
     llvm::SMDiagnostic error;
-    llvm::PassBuilder passBuilder;
-    llvm::LoopAnalysisManager loopAnalysisManager;
-    llvm::FunctionAnalysisManager functionAnalysisManager;
-    llvm::CGSCCAnalysisManager cGSCCAnalysisManager;
-    llvm::ModuleAnalysisManager moduleAnalysisManager;
-    llvm::ModulePassManager modulePassManager;
-    llvm::FunctionPassManager functionPassManager;
-    llvm::CGSCCPassManager callgraphPassManager;
     ResultRegistry resultRegistry;
 
-    auto module_up = llvm::parseIRFile(opts.programPath, error, context).release();
-    if (!module_up) {
+    auto moduleOriginal = llvm::parseIRFile(opts.programPath, error, context);
+    if (!moduleOriginal) {
         llvm::errs() << "Failed to parse IR file: " << opts.programPath << "\n";
         return;
     }
 
-    passBuilder.registerModuleAnalyses(moduleAnalysisManager);
-    passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
-    passBuilder.registerFunctionAnalyses(functionAnalysisManager);
-    passBuilder.registerLoopAnalyses(loopAnalysisManager);
-    passBuilder.crossRegisterProxies(
-            loopAnalysisManager, functionAnalysisManager, cGSCCAnalysisManager,
-            moduleAnalysisManager);
+    // Separate copy for the optimized/canonicalized pipeline.
+    auto moduleOptimized = llvm::CloneModule(*moduleOriginal);
 
-
-    llvm::ModulePassManager PreMPM;
-    llvm::FunctionPassManager PreFPM;
-    PreFPM.addPass(llvm::InstructionNamerPass());
-
-    PhasarHandlerPass LoopBoundPhasarHandler(true, false);
+    // Run lobbound on the original module as we need load/store
     auto startLB = std::chrono::high_resolution_clock::now();
-    LoopBoundPhasarHandler.runOnModule(*module_up);
-    auto loopboundResults = LoopBoundPhasarHandler.queryLoopBounds();
+    PhasarHandlerPass loopBoundPhasarHandler(true, false);
+    loopBoundPhasarHandler.runOnModule(*moduleOriginal);
+    auto loopboundResults = loopBoundPhasarHandler.queryLoopBounds();
     resultRegistry.storeLoopBoundResults(loopboundResults);
     auto endLB = std::chrono::high_resolution_clock::now();
 
     auto durationLB = std::chrono::duration_cast<std::chrono::microseconds>(endLB - startLB);
     std::cout << "Loopbound took: " << durationLB.count() << " µs\n";
 
-    /*for (auto &[funcName, loopInfo] : loopboundResults) {
-        std::cout << "Function: " << funcName << "\n";
-        for (auto &loopEntry : loopInfo) {
-            std::cout << "\tLoop: " << loopEntry.first << ", Bound: " << loopEntry.second << "\n";
-        }
+    {
+        llvm::PassBuilder passBuilder;
+        llvm::LoopAnalysisManager loopAnalysisManager;
+        llvm::FunctionAnalysisManager functionAnalysisManager;
+        llvm::CGSCCAnalysisManager cGSCCAnalysisManager;
+        llvm::ModuleAnalysisManager moduleAnalysisManager;
+
+        passBuilder.registerModuleAnalyses(moduleAnalysisManager);
+        passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
+        passBuilder.registerFunctionAnalyses(functionAnalysisManager);
+        passBuilder.registerLoopAnalyses(loopAnalysisManager);
+        passBuilder.crossRegisterProxies(loopAnalysisManager,
+                                         functionAnalysisManager,
+                                         cGSCCAnalysisManager,
+                                         moduleAnalysisManager);
+
+        llvm::FunctionPassManager functionPassManager;
+        functionPassManager.addPass(llvm::InstructionNamerPass());
+        functionPassManager.addPass(llvm::PromotePass());
+        functionPassManager.addPass(llvm::LoopSimplifyPass());
+        functionPassManager.addPass(llvm::LCSSAPass());
+        functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::LoopRotatePass()));
+        functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::IndVarSimplifyPass()));
+
+        llvm::ModulePassManager optimizeMPM;
+        optimizeMPM.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(functionPassManager)));
+
+        optimizeMPM.run(*moduleOptimized, moduleAnalysisManager);
     }
 
-    std::cout << "\n";*/
-
-    // Build function pipeline once, then move it exactly once.
-    functionPassManager.addPass(llvm::InstructionNamerPass());
-    functionPassManager.addPass(llvm::PromotePass());
-    functionPassManager.addPass(llvm::LoopSimplifyPass());
-    functionPassManager.addPass(llvm::LCSSAPass());
-    functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::LoopRotatePass()));
-    functionPassManager.addPass(llvm::createFunctionToLoopPassAdaptor(llvm::IndVarSimplifyPass()));
-
-
-    modulePassManager.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(functionPassManager)));
-
-    // IMPORTANT: actually run the NewPM pipeline to materialize proxies/analysis state
-    // before any external code queries analyses from a FAM.
-    modulePassManager.run(*module_up, moduleAnalysisManager);
-
+    // Run feasibility on the optimized module
     auto startFeas = std::chrono::high_resolution_clock::now();
-    PhasarHandlerPass FeasibilityPhasarHandler(false, true);
-    FeasibilityPhasarHandler.runOnModule(*module_up);
-    auto feasibilityResults = FeasibilityPhasarHandler.queryFeasibilty();
+    PhasarHandlerPass feasibilityPhasarHandler(false, true);
+    feasibilityPhasarHandler.runOnModule(*moduleOptimized);
+    auto feasibilityResults = feasibilityPhasarHandler.queryFeasibilty();
     resultRegistry.storeFeasibilityResults(feasibilityResults);
     auto endFeas = std::chrono::high_resolution_clock::now();
 
     auto durationFeas = std::chrono::duration_cast<std::chrono::microseconds>(endFeas - startFeas);
     std::cout << "Feasibility took: " << durationFeas.count() << " µs\n";
 
-    /*for (const auto &functionEntry : feasibilityResults) {
-        llvm::outs() << "Feasibility information for function: " << functionEntry.first << "\n";
-        for (const auto &blockEntry : functionEntry.second) {
-            std::string feasStr = blockEntry.second.Feasible? "REACHABLE": "UNREACHABLE";
+    // Run energy on the original module
+    {
+        llvm::PassBuilder passBuilder;
+        llvm::LoopAnalysisManager loopAnalysisManager;
+        llvm::FunctionAnalysisManager functionAnalysisManager;
+        llvm::CGSCCAnalysisManager cGSCCAnalysisManager;
+        llvm::ModuleAnalysisManager moduleAnalysisManager;
 
-            llvm::outs() << "\t Block: " << blockEntry.first << " => " << feasStr << "\n";
-        }
-        llvm::outs() << "\n";
-    }*/
+        passBuilder.registerModuleAnalyses(moduleAnalysisManager);
+        passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
+        passBuilder.registerFunctionAnalyses(functionAnalysisManager);
+        passBuilder.registerLoopAnalyses(loopAnalysisManager);
+        passBuilder.crossRegisterProxies(loopAnalysisManager,
+                                         functionAnalysisManager,
+                                         cGSCCAnalysisManager,
+                                         moduleAnalysisManager);
 
-    modulePassManager.addPass(Energy(opts.profilePath, resultRegistry));
-    modulePassManager.run(*module_up, moduleAnalysisManager);
+        llvm::ModulePassManager energyMPM;
+        energyMPM.addPass(Energy(opts.profilePath, resultRegistry));
+        energyMPM.run(*moduleOriginal, moduleAnalysisManager);
+    }
 }
 
 
