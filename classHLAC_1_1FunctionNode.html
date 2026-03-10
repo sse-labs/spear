@@ -95,8 +95,8 @@ Inheritance diagram for HLAC::FunctionNode:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:adaa52edd55f845de1337f0b0ebd19388" id="r_adaa52edd55f845de1337f0b0ebd19388"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#adaa52edd55f845de1337f0b0ebd19388">FunctionNode</a> (llvm::Function *<a class="el" href="classHLAC_1_1FunctionNode.html#a1fd3644b55daa1d0d9b1ed431a830f70">function</a>, llvm::FunctionAnalysisManager *fam)</td></tr>
-<tr class="separator:adaa52edd55f845de1337f0b0ebd19388"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af4b290a873620c270b624a574c3f1262" id="r_af4b290a873620c270b624a574c3f1262"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#af4b290a873620c270b624a574c3f1262">FunctionNode</a> (llvm::Function *<a class="el" href="classHLAC_1_1FunctionNode.html#a1fd3644b55daa1d0d9b1ed431a830f70">function</a>, llvm::FunctionAnalysisManager *fam, const <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;registry)</td></tr>
+<tr class="separator:af4b290a873620c270b624a574c3f1262"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5e638765a3873294520e47d758fa52e1" id="r_a5e638765a3873294520e47d758fa52e1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a5e638765a3873294520e47d758fa52e1">printDotRepresentation</a> (std::ostream &amp;os) override</td></tr>
 <tr class="separator:a5e638765a3873294520e47d758fa52e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab8424c70f8f2fc1ccbdb496f0d56cab8" id="r_ab8424c70f8f2fc1ccbdb496f0d56cab8"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#ab8424c70f8f2fc1ccbdb496f0d56cab8">getDotName</a> () override</td></tr>
@@ -109,13 +109,16 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a3b4e4a38c52925bd2afdc24ef6420a76" id="r_a3b4e4a38c52925bd2afdc24ef6420a76"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; <a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a3b4e4a38c52925bd2afdc24ef6420a76">makeNode</a> (llvm::Function *func, llvm::FunctionAnalysisManager *fam)</td></tr>
-<tr class="separator:a3b4e4a38c52925bd2afdc24ef6420a76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a125432a831a93a92a38206a12633e44f" id="r_a125432a831a93a92a38206a12633e44f"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; <a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a125432a831a93a92a38206a12633e44f">makeNode</a> (llvm::Function *func, llvm::FunctionAnalysisManager *fam, <a class="el" href="classResultRegistry.html">ResultRegistry</a> registry)</td></tr>
+<tr class="separator:a125432a831a93a92a38206a12633e44f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8a6270e0d3cd88253a4a4d156de8544e" id="r_a8a6270e0d3cd88253a4a4d156de8544e"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a8a6270e0d3cd88253a4a4d156de8544e">makeEdge</a> (<a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> *source, <a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> *detination)</td></tr>
 <tr class="separator:a8a6270e0d3cd88253a4a4d156de8544e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
+<tr class="memitem:a0bc6b4f38ab769fce416103b43d9ed04" id="r_a0bc6b4f38ab769fce416103b43d9ed04"><td class="memItemLeft" align="right" valign="top"><a id="a0bc6b4f38ab769fce416103b43d9ed04" name="a0bc6b4f38ab769fce416103b43d9ed04"></a>
+<a class="el" href="classResultRegistry.html">ResultRegistry</a>&#160;</td><td class="memItemRight" valign="bottom"><b>registry</b></td></tr>
+<tr class="separator:a0bc6b4f38ab769fce416103b43d9ed04"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a92fbf303476c11b2df4b1cdce474fe19" id="r_a92fbf303476c11b2df4b1cdce474fe19"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a92fbf303476c11b2df4b1cdce474fe19">Nodes</a></td></tr>
 <tr class="separator:a92fbf303476c11b2df4b1cdce474fe19"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8248c8ed417d3d1cc66870a797ef6a4b" id="r_a8248c8ed417d3d1cc66870a797ef6a4b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a8248c8ed417d3d1cc66870a797ef6a4b">Edges</a></td></tr>
@@ -137,8 +140,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLinkerFunction</b> 
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> that represents functions referenced by the program under analysis </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="adaa52edd55f845de1337f0b0ebd19388" name="adaa52edd55f845de1337f0b0ebd19388"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adaa52edd55f845de1337f0b0ebd19388">&#9670;&#160;</a></span>FunctionNode()</h2>
+<a id="af4b290a873620c270b624a574c3f1262" name="af4b290a873620c270b624a574c3f1262"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af4b290a873620c270b624a574c3f1262">&#9670;&#160;</a></span>FunctionNode()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -153,7 +156,13 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLinkerFunction</b> 
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">llvm::FunctionAnalysisManager *&#160;</td>
-          <td class="paramname"><em>fam</em>&#160;</td>
+          <td class="paramname"><em>fam</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;&#160;</td>
+          <td class="paramname"><em>registry</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -245,8 +254,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLinkerFunction</b> 
 
 </div>
 </div>
-<a id="a3b4e4a38c52925bd2afdc24ef6420a76" name="a3b4e4a38c52925bd2afdc24ef6420a76"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3b4e4a38c52925bd2afdc24ef6420a76">&#9670;&#160;</a></span>makeNode()</h2>
+<a id="a125432a831a93a92a38206a12633e44f" name="a125432a831a93a92a38206a12633e44f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a125432a831a93a92a38206a12633e44f">&#9670;&#160;</a></span>makeNode()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -264,7 +273,13 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLinkerFunction</b> 
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">llvm::FunctionAnalysisManager *&#160;</td>
-          <td class="paramname"><em>fam</em>&#160;</td>
+          <td class="paramname"><em>fam</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classResultRegistry.html">ResultRegistry</a>&#160;</td>
+          <td class="paramname"><em>registry</em>&#160;</td>
         </tr>
         <tr>
           <td></td>

@@ -85,6 +85,8 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:a29cb6740f533fb0ea2055a3fb94a22cb" id="r_a29cb6740f533fb0ea2055a3fb94a22cb"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a29cb6740f533fb0ea2055a3fb94a22cb">hlac</a> (<a class="el" href="classResultRegistry.html">ResultRegistry</a> <a class="el" href="classHLAC_1_1hlac.html#abbbac64429f4346e8eaadba482841d1c">registry</a>)</td></tr>
+<tr class="separator:a29cb6740f533fb0ea2055a3fb94a22cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2c0250ecb3687377b9634ea5aae25da4" id="r_a2c0250ecb3687377b9634ea5aae25da4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a2c0250ecb3687377b9634ea5aae25da4">makeFunction</a> (llvm::Function *function, llvm::FunctionAnalysisManager *fam)</td></tr>
 <tr class="separator:a2c0250ecb3687377b9634ea5aae25da4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a42f5220325a85f46b3984ffb003aeadd" id="r_a42f5220325a85f46b3984ffb003aeadd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a42f5220325a85f46b3984ffb003aeadd">printDotRepresentation</a> ()</td></tr>
@@ -92,12 +94,47 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
+<tr class="memitem:abbbac64429f4346e8eaadba482841d1c" id="r_abbbac64429f4346e8eaadba482841d1c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classResultRegistry.html">ResultRegistry</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#abbbac64429f4346e8eaadba482841d1c">registry</a></td></tr>
+<tr class="separator:abbbac64429f4346e8eaadba482841d1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a014d3198371b32af5e8233b9c40c7cab" id="r_a014d3198371b32af5e8233b9c40c7cab"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a014d3198371b32af5e8233b9c40c7cab">functions</a></td></tr>
 <tr class="separator:a014d3198371b32af5e8233b9c40c7cab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>HLAC graph representation </p>
-</div><h2 class="groupheader">Member Function Documentation</h2>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a29cb6740f533fb0ea2055a3fb94a22cb" name="a29cb6740f533fb0ea2055a3fb94a22cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29cb6740f533fb0ea2055a3fb94a22cb">&#9670;&#160;</a></span>hlac()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">HLAC::hlac::hlac </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classResultRegistry.html">ResultRegistry</a>&#160;</td>
+          <td class="paramname"><em>registry</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">explicit</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Create a new HLAC graph with the given <a class="el" href="classResultRegistry.html">ResultRegistry</a> </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">registry</td><td>Registry containing the results of the analyses we want to consider for the construction of the HLAC </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
 <a id="a2c0250ecb3687377b9634ea5aae25da4" name="a2c0250ecb3687377b9634ea5aae25da4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2c0250ecb3687377b9634ea5aae25da4">&#9670;&#160;</a></span>makeFunction()</h2>
 
@@ -164,6 +201,21 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>List of FunctioNodes contained within the HLAC </p>
+
+</div>
+</div>
+<a id="abbbac64429f4346e8eaadba482841d1c" name="abbbac64429f4346e8eaadba482841d1c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abbbac64429f4346e8eaadba482841d1c">&#9670;&#160;</a></span>registry</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classResultRegistry.html">ResultRegistry</a> HLAC::hlac::registry</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Phasar <a class="el" href="classResultRegistry.html">ResultRegistry</a> that contains all results from the analyses we want to consider for the construction of the HLAC </p>
 
 </div>
 </div>

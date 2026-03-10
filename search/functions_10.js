@@ -8,6 +8,7 @@ var searchData=
   ['removeorphanededges_5',['removeOrphanedEdges',['../classProgramGraph.html#afc10742190eb8fa0610e975032d71491',1,'ProgramGraph']]],
   ['replacenodeswithloopnode_6',['replaceNodesWithLoopNode',['../classProgramGraph.html#a2463f6a911a85ed865ad09c26dc5c3a6',1,'ProgramGraph']]],
   ['resolve_7',['resolve',['../classFeasibility_1_1FeasibilityAnalysisManager.html#a155d5e55952996e852ffa0dcfd117903',1,'Feasibility::FeasibilityAnalysisManager']]],
-  ['run_8',['run',['../classPhasarHandlerPass.html#a195394de4d638f0045fde17c4f7038be',1,'PhasarHandlerPass']]],
-  ['runonmodule_9',['runOnModule',['../classPhasarHandlerPass.html#ae03895a260ad2eea6a74aad422169a7d',1,'PhasarHandlerPass']]]
+  ['resultregistry_8',['ResultRegistry',['../classResultRegistry.html#a1b2bdfbc32962d51a23fda354ab11cf3',1,'ResultRegistry']]],
+  ['run_9',['run',['../classPhasarHandlerPass.html#a195394de4d638f0045fde17c4f7038be',1,'PhasarHandlerPass']]],
+  ['runonmodule_10',['runOnModule',['../classPhasarHandlerPass.html#ae03895a260ad2eea6a74aad422169a7d',1,'PhasarHandlerPass']]]
 ];

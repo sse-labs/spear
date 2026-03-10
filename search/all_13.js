@@ -14,9 +14,11 @@ var searchData=
   ['start_11',['start',['../classEdge.html#acb0a11f7502dad1933c71477d8b97ad4',1,'Edge']]],
   ['starttime_12',['startTime',['../classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669',1,'MetaProfiler']]],
   ['stoptime_13',['stopTime',['../classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e',1,'MetaProfiler']]],
-  ['strategy_14',['strategy',['../classAnalysisStrategy.html#a4f55ee7abd18085d3a94537512fb673b',1,'AnalysisStrategy::Strategy'],['../classNode.html#aab149ed1099b53c3f3954d20718f511e',1,'Node::strategy']]],
-  ['stripparameters_15',['stripParameters',['../classHLAC_1_1Util.html#a79ee9e15c5d8b16851825a381071e908',1,'HLAC::Util']]],
-  ['subgraphs_16',['subgraphs',['../classLoopNode.html#a8bead89b1a891b5dea0fa6c11ba75455',1,'LoopNode']]],
-  ['subtrees_17',['subtrees',['../classLoopTree.html#a032808e139ad8b36c3eaa909dedb930a',1,'LoopTree::subTrees'],['../classFunctionTree.html#a1a252c462191b511e15f6f679529f5f3',1,'FunctionTree::subtrees']]],
-  ['succbb_18',['SuccBB',['../structFeasibility_1_1LazyAtom.html#a32395636d707d0141fd59a5142dbe2b4',1,'Feasibility::LazyAtom']]]
+  ['storefeasibilityresults_14',['storeFeasibilityResults',['../classResultRegistry.html#a46a2c636e6c4933aac039bf35397978f',1,'ResultRegistry']]],
+  ['storeloopboundresults_15',['storeLoopBoundResults',['../classResultRegistry.html#a446ef83be281ca6cd7b3fee6d569e6c7',1,'ResultRegistry']]],
+  ['strategy_16',['strategy',['../classAnalysisStrategy.html#a4f55ee7abd18085d3a94537512fb673b',1,'AnalysisStrategy::Strategy'],['../classNode.html#aab149ed1099b53c3f3954d20718f511e',1,'Node::strategy']]],
+  ['stripparameters_17',['stripParameters',['../classHLAC_1_1Util.html#a79ee9e15c5d8b16851825a381071e908',1,'HLAC::Util']]],
+  ['subgraphs_18',['subgraphs',['../classLoopNode.html#a8bead89b1a891b5dea0fa6c11ba75455',1,'LoopNode']]],
+  ['subtrees_19',['subtrees',['../classFunctionTree.html#a1a252c462191b511e15f6f679529f5f3',1,'FunctionTree::subtrees'],['../classLoopTree.html#a032808e139ad8b36c3eaa909dedb930a',1,'LoopTree::subTrees']]],
+  ['succbb_20',['SuccBB',['../structFeasibility_1_1LazyAtom.html#a32395636d707d0141fd59a5142dbe2b4',1,'Feasibility::LazyAtom']]]
 ];
