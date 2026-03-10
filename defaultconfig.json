@@ -1,6 +1,6 @@
 {
   "profiling": {
-    "iterations": 1000
+    "iterations": 100
   },
   "analysis": {
     "mode": "program",

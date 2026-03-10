@@ -66,6 +66,8 @@ class CPUProfiler : public Profiler {
         this->log(std::string("number of cores ") + std::to_string(this->number_of_cores));
     }
 
+    double _median(std::vector<double> v);
+
     /**
      * Profiles the system and gathers information about the energy usage of the CPU components
      * @return Returns profile as JSON object

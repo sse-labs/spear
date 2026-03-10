@@ -17,70 +17,68 @@
 #include "RegisterReader.h"
 
 
+
+double CPUProfiler::_median(std::vector<double> v) {
+    std::sort(v.begin(), v.end());
+
+    size_t n = v.size();
+
+    if (n % 2 == 0) {
+        return (v[n/2 - 1] + v[n/2]) / 2.0;
+    } else {
+        return v[n/2];
+    }
+}
+
+
 json CPUProfiler::profile() {
     this->log("Starting CPU profiling. This may take a while. Grab a coffee!");
-    std::map<std::string, std::vector<double>> measurements;
-    std::map<std::string, double> results;
 
-    for (const auto& [key, value] : _profileCode) {
-        std::vector<double> measuredEnergy = this->_measureFile(value);
-        measurements[key] = measuredEnergy;
-    }
+    int ks[] = {10, 20, 50, 100, 200, 500, 1000};
 
-    std::cout << "" << std::endl;
+    json allResults = json::object();
 
-    /*double sum = 0;
-    for (const auto& [key, value] : measurements) {
-        // std::vector<double> filtered = _movingAverage(value, this->iterations/100);
-        double mean = std::accumulate(value.begin(), value.end(), 0.0) / (double) value.size();
-        results[key] = mean;
+    for (int i = 0; i < sizeof(ks) / sizeof(ks[0]); i++) {
+        int iterations = ks[i];
 
-        if (key != "_cachewarmer" && key != "_noise") {
-            sum += mean;
+        std::map<std::string, double> results;
+        std::map<std::string, std::vector<double>> measurements;
+
+        for (const auto& [key, value] : _profileCode) {
+            std::vector<double> measuredEnergy = this->_measureFile(value, iterations);
+            measurements[key] = measuredEnergy;
         }
-    }*/
 
-    std::vector<double> flatMeasurements;
-    for (const auto& [key, value] : results) {
-        flatMeasurements.push_back(value);
-    }
+        for (const auto& [key, value] : _profileCode) {
+            double median = _median(measurements[key]);
+            results[key] = median;
+        }
 
-    /*double epsilon = 1e-6;
+        // Save into JSON result too
+        allResults[std::to_string(iterations)] = json::object();
+        for (const auto& [key, median] : results) {
+            allResults[std::to_string(iterations)][key] = median;
+        }
 
-    // Find the minimum value
-    double min_val = *std::min_element(flatMeasurements.begin(), flatMeasurements.end());
+        // Write one CSV file per k
+        std::string filename = "profile_" + std::to_string(iterations) + ".csv";
+        std::ofstream file(filename);
 
-    // Find the median
-    std::nth_element(flatMeasurements.begin(),
-                     flatMeasurements.begin() + flatMeasurements.size() / 2,
-                     flatMeasurements.end());
-    double median_val = flatMeasurements[flatMeasurements.size() / 2];
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open file: " + filename);
+        }
 
-    // Clip the median so it does not exceed min value
-    double common_error = std::min(median_val, min_val - epsilon);
+        file << "program,median\n";
+        for (const auto& [key, median] : results) {
+            file << key << "," << median << "\n";
+        }
 
-    double mean_over_all_entries = sum / results.size();
-    double min = std::numeric_limits<double>::max();
-
-    for (const auto& [key, value] : results)
-        min = std::min(min, value);
-
-    for (const auto& [key, value] : results) {
-        results[key] = value - common_error;
-    }*/
-
-    for (const auto& [key, value] : measurements) {
-        double sd = standard_deviation(value);
-        results[key] = huberMean(value, 1.345 * sd, 100, 6.103515625e-05);
-    }
-
-    double noiseval = results["_noise"];
-    for (const auto& [key, value] : measurements) {
-        results[key] = results[key]/static_cast<double>(this->programiterations);
+        file.close();
+        this->log("Wrote " + filename);
     }
 
     this->log("CPU profiling finished!");
-    return results;
+    return allResults;
 }
 
 
@@ -121,7 +119,7 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
 
     uint64_t iters = (runtime != -1) ? runtime : this->iterations;
 
-    // Pin parent to a dedicated core (optional)
+    // Pin parent to a dedicated core
     cpu_set_t parentMask;
     CPU_ZERO(&parentMask);
     CPU_SET(1, &parentMask);
