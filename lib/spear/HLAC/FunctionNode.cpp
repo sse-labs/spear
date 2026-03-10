@@ -21,7 +21,9 @@
 
 namespace HLAC {
 
-FunctionNode::FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *function_analysis_manager, ResultRegistry registry) {
+FunctionNode::FunctionNode(llvm::Function *function,
+    llvm::FunctionAnalysisManager *function_analysis_manager,
+    const ResultRegistry& registry) {
     // Set the parameter of the FunctionNode
     this->registry = registry;
     this->function = function;
@@ -181,6 +183,7 @@ void FunctionNode::printDotRepresentation(std::ostream &os) {
     os << "digraph " << "\"" << this->getDotName() << "\"" << " {" << std::endl;
     os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\"];" << std::endl;
     os << "compound=true;" << std::endl;
+    os << "style=\"rounded,filled\";" << std::endl;
     os << "fontname=\"Courier\";" << std::endl;
     os << "  labelloc=\"t\";\n";
     os << "label=" << "\"" << this->getDotName() << "\";" << std::endl;

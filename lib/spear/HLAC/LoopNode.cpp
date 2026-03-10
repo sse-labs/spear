@@ -174,10 +174,12 @@ void LoopNode::printDotRepresentation(std::ostream &os) {
     os << "fillcolor=\"#FFFFFF\";",
     os << "color=\"#2B2B2B\";";
     os << "penwidth=2;";
+    os << "style=\"rounded,filled\";";
     os << "fontname=\"Courier\";";
     os << "tooltip=" << "\"" << "METDADATA" << "\";";
     os << "  labelloc=\"t\";\n";
-    os << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", " << this->bounds.getUpperBound()  << ")" << "\r\";\n";
+    os << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", " <<
+        this->bounds.getUpperBound()  << ")" << "\r\";\n";
     os << "  " << this->getAnchorDotName()
        << " [shape=point, width=0.01, label=\"\", style=invis];\n";
 

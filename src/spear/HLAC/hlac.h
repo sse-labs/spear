@@ -147,7 +147,6 @@ class Node : public GenericNode {
  */
 class LoopNode : public GenericNode {
  public:
-
     ResultRegistry registry;
 
     /**
@@ -260,7 +259,10 @@ class FunctionNode : public GenericNode {
      * @param fam FunctionAnalysisManager that is used to construct the analysis
      * @return Returns constructed FunctionNode
      */
-    static std::unique_ptr<FunctionNode> makeNode(llvm::Function *func, llvm::FunctionAnalysisManager *fam, ResultRegistry registry);
+    static std::unique_ptr<FunctionNode> makeNode(
+        llvm::Function *func,
+        llvm::FunctionAnalysisManager *fam,
+        ResultRegistry registry);
 
     /**
      * Create a new Edge in the HLAC
@@ -275,7 +277,7 @@ class FunctionNode : public GenericNode {
      * @param function Function that is represented by the FunctioNode
      * @param fam FunctionAnalysisManager that is used to drive the analysis
      */
-    FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *fam, ResultRegistry registry);
+    FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *fam, const ResultRegistry& registry);
 
     /**
      * Print dot representation of the FunctionNode
@@ -391,7 +393,7 @@ class hlac {
       * @param registry Registry containing the results of the analyses we want to consider for
       * the construction of the HLAC
       */
-    hlac(ResultRegistry registry) : registry(std::move(registry)) {}
+    explicit hlac(ResultRegistry registry) : registry(std::move(registry)) {}
 
     /**
      * List of FunctioNodes contained within the HLAC

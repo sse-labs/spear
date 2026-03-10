@@ -80,7 +80,8 @@ void Edge::printDotRepresentation(std::ostream &os) {
         os << " color=\"#FF5555\"" << ",";
     }
 
-    os << "minlen=1";
+    os << "minlen=1,";
+    os << "penwidth=5";
 
     if (!firstAttr) os << "]";
     os << ";\n";

@@ -110,6 +110,7 @@ void CallNode::printDotRepresentation(std::ostream &os) {
        << "style=filled,"
        << "fillcolor=\"#8D89A6\","
        << "color=\"#2B2B2B\","
+       << "style=\"rounded,filled\","
        << "penwidth=2,"
        << "fontname=\"Courier\","
        << "label=\"{"

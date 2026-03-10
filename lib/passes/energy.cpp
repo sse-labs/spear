@@ -17,6 +17,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "ConfigParser.h"
 #include "DeMangler.h"
@@ -39,7 +40,7 @@ llvm::cl::opt<std::string> energyModelPath("profile", llvm::cl::desc("Energymode
                                            llvm::cl::value_desc("filepath to .json file"));
 
 llvm::cl::opt<std::string> modeParameter("mode", llvm::cl::desc("Mode the analysis runs on"),
-                                         llvm::cl::value_desc("Please choose out of the options program/function"));
+                                    llvm::cl::value_desc("Please choose out of the options program/function"));
 
 llvm::cl::opt<std::string> formatParameter("format", llvm::cl::desc("Format to print as result"),
                                            llvm::cl::value_desc("Please choose out of the options json/plain"));
@@ -257,8 +258,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                             llvm::outs() << "margin=40\n";
                             llvm::outs() << "bgcolor=white\n";
                             llvm::outs() << "cluster=true\n";
-                            llvm::outs() << "\tlabel=<<b>Function " + energyFunction->func->getName() + "</b><br/>" +
-                                                    std::to_string(maxEng) + " J>\n";
+                            llvm::outs() << "\tlabel=<<b>Function " + energyFunction->func->getName()
+                            + "</b><br/>" + std::to_string(maxEng) + " J>\n";
                             llvm::outs() << energyFunction->programGraph->printDotRepresentation();
                             llvm::outs() << "}" << "\n";
                         }
@@ -474,7 +475,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             auto endConstruction = std::chrono::high_resolution_clock::now();
 
-            auto constructionTime = std::chrono::duration_cast<std::chrono::microseconds>(endConstruction - startConstruction);
+            auto constructionTime = std::chrono::duration_cast<std::chrono::microseconds>(
+                endConstruction - startConstruction);
             std::cout << "HLAC construction took: " << constructionTime.count() << " µs\n";
 
             auto dotWritingStart = std::chrono::high_resolution_clock::now();
@@ -545,8 +547,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 double duration = ms_double.count() / 1000;
 
                 // Construct the output
-                json output = constructOutputObject(funcPool.data(), functionTree->getPreOrderVector().size(), duration,
-                                                    this->forFunction);
+                json output = constructOutputObject(funcPool.data(),
+                functionTree->getPreOrderVector().size(), duration, this->forFunction);
 
                 if (ConfigParser::getAnalysisConfiguration().format == Format::JSON) {
                     outputMetricsJSON(output);

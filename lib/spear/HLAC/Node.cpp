@@ -35,7 +35,7 @@ void Node::printDotRepresentation(std::ostream &os) {
 
         // Only strip for calls/invokes/callbr
         if (llvm::isa<llvm::CallBase>(I)) {
-            line = Util::stripParameters(std::move(line));
+            line = Util::stripParameters(line);
         }
 
         rawBody += line;
@@ -46,18 +46,17 @@ void Node::printDotRepresentation(std::ostream &os) {
     if (rawBody.empty() || rawBody.back() != '\n')
         rawBody += "\n";
 
-    const std::string escName =
-        Util::dotRecordEscape(Util::stripParameters(this->name)) + "\\l";
-    const std::string escBody =
-        Util::dotRecordEscape(rawBody);
+    const std::string escName = Util::dotRecordEscape(Util::stripParameters(this->name)) + "\\l";
+    const std::string escBody = Util::dotRecordEscape(rawBody);
 
     llvmOS << getDotName() << "["
-           << "shape=record,"
-           << "style=filled,"
-           << "fillcolor=\"#b70d2870\","
-           << "color=\"#2B2B2B\","
-           << "penwidth=2,"
-           << "fontname=\"Courier\","
+           << "shape=record," << "\n"
+           << "style=filled," << "\n"
+           << "fillcolor=\"#b70d2870\"," << "\n"
+           << "color=\"#2B2B2B\"," << "\n"
+           << "penwidth=2," << "\n"
+           << "style=\"rounded,filled\"," << "\n"
+           << "fontname=\"Courier\"," << "\n"
            << "label=\"{" << escName << "|" << escBody << "}\""
            << ",tooltip=\"" << Util::dotRecordEscape(Util::stripParameters(this->name)) << "\""
            << "];\n";
