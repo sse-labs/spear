@@ -10,8 +10,8 @@
 
 namespace HLAC {
 
-std::unique_ptr<hlac> HLACWrapper::makeHLAC() {
-    auto hlac = std::make_unique<HLAC::hlac>();
+std::unique_ptr<hlac> HLACWrapper::makeHLAC(ResultRegistry registry) {
+    auto hlac = std::make_unique<HLAC::hlac>(registry);
     return hlac;
 }
 

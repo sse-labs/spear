@@ -16,6 +16,8 @@
 #include <utility>
 #include <ostream>
 
+#include "analyses/ResultRegistry.h"
+
 namespace HLAC {
 
 
@@ -25,15 +27,6 @@ namespace HLAC {
 class FunctionNode;
 class GenericNode;
 class LoopNode;
-
-/**
- * Enum to distinguish different types of feasibility that we store inside edges
- */
-enum FEASIBILITY {
-    TOP,  // The path is feasible
-    BOT,  // The path is NOT feasible
-    UNKNOWN  // We can not tell if the path is feasible or not. ASSUME THE WORST CASE
-};
 
 /**
  * Edge class that represents connections inside the HLAC
@@ -52,7 +45,7 @@ class Edge {
     /**
      * Feasibility state of the edge
      */
-    FEASIBILITY feasibility = UNKNOWN;
+    bool feasibility = true;
 
     /**
      * Constructs a new edge between the two given nodes
@@ -154,6 +147,8 @@ class Node : public GenericNode {
  */
 class LoopNode : public GenericNode {
  public:
+    ResultRegistry registry;
+
     /**
      * List of contained Nodes
      */
@@ -172,7 +167,7 @@ class LoopNode : public GenericNode {
     /**
      * Loop bound representing (min, max) iteration count
      */
-    std::pair<int64_t, int64_t> bounds;
+    LoopBound::DeltaInterval bounds;
 
     /**
      * Flag to store if the contained loop has subloops that find representation as further LoopNodes
@@ -184,7 +179,7 @@ class LoopNode : public GenericNode {
      * @param loop loop that should be represented by the LoopNOde
      * @param function_node FunctionNode, the LoopNode is contained in
      */
-    LoopNode(llvm::Loop *loop, FunctionNode *function_node);
+    LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry);
 
     /**
      * Creates a new LoopNode and returns it
@@ -192,7 +187,7 @@ class LoopNode : public GenericNode {
      * @param function_node FunctionNode the LoopNode should be contained in
      * @return Returns unique pointer to the constructed LoopNode
      */
-    static std::unique_ptr<LoopNode> makeNode(llvm::Loop *loop, FunctionNode *function_node);
+    static std::unique_ptr<LoopNode> makeNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry);
 
     /**
      * Takes the given list of edges and rewrites all entities that interact with loops inside this loop node
@@ -234,6 +229,8 @@ class LoopNode : public GenericNode {
  */
 class FunctionNode : public GenericNode {
  public:
+    ResultRegistry registry;
+
     /**
      * List of contained Nodes
      */
@@ -262,7 +259,10 @@ class FunctionNode : public GenericNode {
      * @param fam FunctionAnalysisManager that is used to construct the analysis
      * @return Returns constructed FunctionNode
      */
-    static std::unique_ptr<FunctionNode> makeNode(llvm::Function *func, llvm::FunctionAnalysisManager *fam);
+    static std::unique_ptr<FunctionNode> makeNode(
+        llvm::Function *func,
+        llvm::FunctionAnalysisManager *fam,
+        ResultRegistry registry);
 
     /**
      * Create a new Edge in the HLAC
@@ -277,7 +277,7 @@ class FunctionNode : public GenericNode {
      * @param function Function that is represented by the FunctioNode
      * @param fam FunctionAnalysisManager that is used to drive the analysis
      */
-    FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *fam);
+    FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *fam, const ResultRegistry& registry);
 
     /**
      * Print dot representation of the FunctionNode
@@ -382,6 +382,19 @@ class CallNode : public GenericNode {
  */
 class hlac {
  public:
+    /**
+     * Phasar ResultRegistry that contains all results from the analyses we want to consider for the
+     * construction of the HLAC
+     */
+    ResultRegistry registry;
+
+     /**
+      * Create a new HLAC graph with the given ResultRegistry
+      * @param registry Registry containing the results of the analyses we want to consider for
+      * the construction of the HLAC
+      */
+    explicit hlac(ResultRegistry registry) : registry(std::move(registry)) {}
+
     /**
      * List of FunctioNodes contained within the HLAC
      */

@@ -195,21 +195,12 @@ std::string Util::instToString(const llvm::Instruction &I) {
     return s;
 }
 
-std::string Util::feasibilityToString(FEASIBILITY feas) {
-    switch (feas) {
-        case 0: {
-            return "⊤";
-        }
-        case 1: {
-            return "⊥";
-        }
-        case 2: {
-            return "?";
-        }
-        default: {
-            return "";
-        }
+std::string Util::feasibilityToString(bool feas) {
+    if (feas) {
+        return "⊤";
     }
+
+    return "⊥";
 }
 
 bool Util::starts_with(const std::string& s, const std::string& prefix) {

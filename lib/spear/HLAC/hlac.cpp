@@ -11,13 +11,15 @@
 namespace HLAC {
 
 void hlac::makeFunction(llvm::Function* function, llvm::FunctionAnalysisManager *fam) {
-    auto fnptr = FunctionNode::makeNode(function, fam);
+    auto fnptr = FunctionNode::makeNode(function, fam, registry);
     functions.emplace_back(std::move(fnptr));
 }
 
 void hlac::printDotRepresentation() {
+    std::filesystem::create_directories("./dot");
+
     for (auto &fn : functions) {
-        std::string filename = fn->name + ".dot";
+        std::string filename = "./dot/" + fn->name + ".dot";
         std::ofstream out(filename);
 
         fn->printDotRepresentation(out);
