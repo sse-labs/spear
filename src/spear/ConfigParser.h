@@ -67,11 +67,17 @@ struct AnalysisConfiguration {
     std::map<std::string, int64_t> fallback;
 };
 
+struct CPURegressionConfig {
+    int limit, step, offset;
+};
+
 /**
  * Holds profiling-related configuration options parsed from the config file.
  */
 struct ProfilingConfiguration {
-    int iterations;
+    double min_program_energy;
+    double min_instruction_energy;
+    CPURegressionConfig cpuregression;
 };
 
 class ConfigParser {
@@ -174,13 +180,9 @@ class ConfigParser {
      */
     bool strategyValid(json object);
 
-    /**
-     * Validate the profiling iterations configuration section.
-     *
-     * @param object JSON object containing iteration data
-     * @return True if valid, otherwise false
-     */
-    bool iterationsValid(json object);
+    bool minProgramEnergy(json object);
+    bool minInstructionEnergy(json object);
+    bool CPURegressionValid(json object);
 
     /**
      * Convert a string to mode enum type

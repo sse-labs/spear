@@ -27,7 +27,6 @@ json MetaProfiler::profile() {
     this->log("CPU Architecture " + architecture);
     this->log("Number of Cores " + numberOfCores);
     this->log("Rapl Unit " + std::to_string(raplUnit));
-    this->log("Measurement iterations " + std::to_string(iterations));
 
 
     metainformation["version"] = "2.0.0";
@@ -35,7 +34,6 @@ json MetaProfiler::profile() {
     metainformation["architecture"] = architecture;
     metainformation["cores"] = numberOfCores;
     metainformation["raplunit"] = raplUnit;
-    metainformation["iterations"] = iterations;
 
     return metainformation;
 }

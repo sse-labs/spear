@@ -29,17 +29,18 @@
 #include "profilers/MetaProfiler.h"
 
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
+#include "profilers/SyscallProfiler.h"
 
 
 void runProfileRoutine(CLIOptions opts) {
     auto proflingConfig = ConfigParser::getProfilingConfiguration();
 
     // Get the parameters from the arguments
-    int rep = proflingConfig.iterations;
     std::string compiledPath = opts.codePath;
 
-    CPUProfiler cpuprofiler = CPUProfiler(rep, compiledPath);
-    MetaProfiler metaprofiler = MetaProfiler(rep);
+    CPUProfiler cpuprofiler = CPUProfiler(compiledPath);
+    MetaProfiler metaprofiler = MetaProfiler();
+    SyscallProfiler syscallProfiler = SyscallProfiler();
 
     json metaResult = metaprofiler.profile();
 
@@ -47,7 +48,10 @@ void runProfileRoutine(CLIOptions opts) {
     // Launch the benchmarking
     try {
         json cpuResult = cpuprofiler.profile();
+        json syscallResults = syscallProfiler.profile();
+
         metaResult["end"] = metaprofiler.stopTime();
+
 
         char *outputpath = new char[255];
         snprintf(
@@ -60,6 +64,7 @@ void runProfileRoutine(CLIOptions opts) {
         ProfileHandler phandler;
         phandler.setOrCreate("meta", metaResult);
         phandler.setOrCreate("cpu", cpuResult);
+        phandler.setOrCreate("syscalls", syscallResults);
         phandler.write(outputpath);
 
         std::cout << "Profiling finished!" << std::endl;
