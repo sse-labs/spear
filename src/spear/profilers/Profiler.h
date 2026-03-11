@@ -19,19 +19,18 @@ using json = nlohmann::json;
  */
 class Profiler {
  public:
-    const int iterations;
     const std::string tag;
 
     /**
      * Constructor
      * @param iterations
      */
-    explicit Profiler(int iterations, std::string tag) : iterations(iterations), tag(std::move(tag)) {}
+    explicit Profiler(std::string tag) : tag(std::move(tag)) {}
 
     /**
      * Constructor
      */
-    explicit Profiler() : iterations(0) {}
+    explicit Profiler() {}
 
     /**
      * Profiles the respective component.

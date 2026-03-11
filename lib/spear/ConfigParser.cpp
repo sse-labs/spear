@@ -127,16 +127,46 @@ bool ConfigParser::formatValid(json object) {
     return false;
 }
 
-bool ConfigParser::iterationsValid(json object) {
-    if (object.contains("iterations") && object["iterations"].is_number()) {
-        if (object["iterations"] > 0) {
+bool ConfigParser::minProgramEnergy(json object) {
+    if (object.contains("min_program_energy") && object["min_program_energy"].is_number()) {
+        if (object["min_program_energy"] >= 0.0) {
             return true;
         }
-        std::cout << "Invalid profiling.iterations: must be > 0." << std::endl;
+        std::cout << "Invalid profiling.min_energy: must be >= 0." << std::endl;
         return false;
     }
 
-    std::cout << "Invalid profiling.iterations: missing or not numeric." << std::endl;
+    std::cout << "Invalid profiling.min_energy: missing or not numeric." << std::endl;
+    return false;
+}
+
+bool ConfigParser::minInstructionEnergy(json object) {
+    if (object.contains("min_instruction_energy") && object["min_instruction_energy"].is_number()) {
+        if (object["min_instruction_energy"] >= 0) {
+            return true;
+        }
+        std::cout << "Invalid profiling.min_instruction_energy: must be >= 0.0" << std::endl;
+        return false;
+    }
+
+    std::cout << "Invalid profiling.slope_filter: missing or not numeric." << std::endl;
+    return false;
+}
+
+bool ConfigParser::CPURegressionValid(json object) {
+    if (object.contains("cpu_regression") && object["cpu_regression"].is_object()) {
+        auto cpuregression = object["cpu_regression"];
+
+        if (cpuregression.contains("limit") && cpuregression["limit"].is_number_unsigned() &&
+            cpuregression.contains("step") && cpuregression["step"].is_number_unsigned() &&
+            cpuregression.contains("offset") && cpuregression["offset"].is_number_unsigned()) {
+            return true;
+        }
+        std::cout << "Invalid profiling.cpu_regression: missing or invalid properties." << std::endl;
+        return false;
+    }
+
+    std::cout << "Invalid profiling.cpu_regression: missing or not an object." << std::endl;
     return false;
 }
 
@@ -145,7 +175,9 @@ bool ConfigParser::profilingValid() {
         auto profiling = config["profiling"];
 
         if (profiling.is_object()) {
-            return iterationsValid(profiling);
+            return minProgramEnergy(profiling) &&
+                minInstructionEnergy(profiling) &&
+                CPURegressionValid(profiling);
         }
         std::cout << "Invalid profiling: not an object." << std::endl;
         return false;
@@ -247,6 +279,11 @@ void ConfigParser::parse() {
 
     if (profilingValid()) {
         auto profiling = config["profiling"];
-        profilingConfiguration.iterations = profiling["iterations"].get<int>();
+        profilingConfiguration.min_program_energy   = profiling["min_program_energy"].get<double>();
+        profilingConfiguration.min_instruction_energy = profiling["min_instruction_energy"].get<double>();
+
+        profilingConfiguration.cpuregression.limit = profiling["cpu_regression"]["limit"].get<int>();
+        profilingConfiguration.cpuregression.step = profiling["cpu_regression"]["step"].get<int>();
+        profilingConfiguration.cpuregression.offset = profiling["cpu_regression"]["offset"].get<int>();
     }
 }
