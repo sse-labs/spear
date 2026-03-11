@@ -188,7 +188,7 @@ target_include_directories(SpearLib
 
 # Executable
 add_executable(spear main.cpp)
-target_link_libraries(spear PRIVATE SpearLib LLVM nlohmann_json phasar)
+target_link_libraries(spear PRIVATE SpearLib LLVM nlohmann_json phasar bpf elf z)
 
 enable_testing()
 
