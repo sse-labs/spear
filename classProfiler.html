@@ -84,16 +84,17 @@ Inheritance diagram for Profiler:</div>
  <div class="center">
   <img src="classProfiler.png" usemap="#Profiler_map" alt=""/>
   <map id="Profiler_map" name="Profiler_map">
-<area href="classCPUProfiler.html" alt="CPUProfiler" shape="rect" coords="0,56,91,80"/>
-<area href="classDRAMProfiler.html" alt="DRAMProfiler" shape="rect" coords="101,56,192,80"/>
-<area href="classMetaProfiler.html" alt="MetaProfiler" shape="rect" coords="202,56,293,80"/>
+<area href="classCPUProfiler.html" alt="CPUProfiler" shape="rect" coords="0,56,95,80"/>
+<area href="classDRAMProfiler.html" alt="DRAMProfiler" shape="rect" coords="105,56,200,80"/>
+<area href="classMetaProfiler.html" alt="MetaProfiler" shape="rect" coords="210,56,305,80"/>
+<area href="classSyscallProfiler.html" alt="SyscallProfiler" shape="rect" coords="315,56,410,80"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a166d6773a7c9f8033fc4ef200b65251b" id="r_a166d6773a7c9f8033fc4ef200b65251b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#a166d6773a7c9f8033fc4ef200b65251b">Profiler</a> (int iterations, std::string tag)</td></tr>
-<tr class="separator:a166d6773a7c9f8033fc4ef200b65251b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af5e443143487a12cf1e5f445f2d9bcd9" id="r_af5e443143487a12cf1e5f445f2d9bcd9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#af5e443143487a12cf1e5f445f2d9bcd9">Profiler</a> (std::string tag)</td></tr>
+<tr class="separator:af5e443143487a12cf1e5f445f2d9bcd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a675ebc9207b9aeace1d967c085abeacf" id="r_a675ebc9207b9aeace1d967c085abeacf"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#a675ebc9207b9aeace1d967c085abeacf">Profiler</a> ()</td></tr>
 <tr class="separator:a675ebc9207b9aeace1d967c085abeacf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af50d7dfce1868917936dec58632a0284" id="r_af50d7dfce1868917936dec58632a0284"><td class="memItemLeft" align="right" valign="top">virtual json&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#af50d7dfce1868917936dec58632a0284">profile</a> ()=0</td></tr>
@@ -106,9 +107,6 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>log</b> (std::string 
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a384c4de98679733e2de79721e3f72b39" id="r_a384c4de98679733e2de79721e3f72b39"><td class="memItemLeft" align="right" valign="top"><a id="a384c4de98679733e2de79721e3f72b39" name="a384c4de98679733e2de79721e3f72b39"></a>
-const int&#160;</td><td class="memItemRight" valign="bottom"><b>iterations</b></td></tr>
-<tr class="separator:a384c4de98679733e2de79721e3f72b39"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a64e33454f7b44deddf4cb66b272a37a1" id="r_a64e33454f7b44deddf4cb66b272a37a1"><td class="memItemLeft" align="right" valign="top"><a id="a64e33454f7b44deddf4cb66b272a37a1" name="a64e33454f7b44deddf4cb66b272a37a1"></a>
 const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b></td></tr>
 <tr class="separator:a64e33454f7b44deddf4cb66b272a37a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -116,8 +114,8 @@ const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b><
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Simple class to profile the llvm-code and output the data in an appropriate format </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a166d6773a7c9f8033fc4ef200b65251b" name="a166d6773a7c9f8033fc4ef200b65251b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a166d6773a7c9f8033fc4ef200b65251b">&#9670;&#160;</a></span>Profiler() <span class="overload">[1/2]</span></h2>
+<a id="af5e443143487a12cf1e5f445f2d9bcd9" name="af5e443143487a12cf1e5f445f2d9bcd9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af5e443143487a12cf1e5f445f2d9bcd9">&#9670;&#160;</a></span>Profiler() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -128,19 +126,9 @@ const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b><
         <tr>
           <td class="memname">Profiler::Profiler </td>
           <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>iterations</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
           <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>tag</em>&#160;</td>
-        </tr>
-        <tr>
+          <td class="paramname"><em>tag</em></td><td>)</td>
           <td></td>
-          <td>)</td>
-          <td></td><td></td>
         </tr>
       </table>
   </td>
@@ -235,7 +223,7 @@ const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b><
 </div><div class="memdoc">
 <p>Profiles the respective component. </p><dl class="section return"><dt>Returns</dt><dd>Returns a mapping between value =&gt; energy </dd></dl>
 
-<p>Implemented in <a class="el" href="classDRAMProfiler.html#a6f5497ffd9b6dee2417f57000072f272">DRAMProfiler</a>, <a class="el" href="classCPUProfiler.html#ac6db47ff8d35ee789ed3703c96b14097">CPUProfiler</a>, and <a class="el" href="classMetaProfiler.html#a9bf3701e464313e7d4fa9c5f99ba4a69">MetaProfiler</a>.</p>
+<p>Implemented in <a class="el" href="classDRAMProfiler.html#a6f5497ffd9b6dee2417f57000072f272">DRAMProfiler</a>, <a class="el" href="classCPUProfiler.html#ac6db47ff8d35ee789ed3703c96b14097">CPUProfiler</a>, <a class="el" href="classMetaProfiler.html#a9bf3701e464313e7d4fa9c5f99ba4a69">MetaProfiler</a>, and <a class="el" href="classSyscallProfiler.html#a217641d87707e6da39e6a7c151591576">SyscallProfiler</a>.</p>
 
 </div>
 </div>

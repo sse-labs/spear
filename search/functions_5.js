@@ -1,15 +1,10 @@
 var searchData=
 [
-  ['feasibilityaddatomsef_0',['feasibilityaddatomsef',['../structFeasibility_1_1FeasibilityAddAtomsEF.html#a360e5fe392430268b8a4bfa2e081cd80',1,'Feasibility::FeasibilityAddAtomsEF::FeasibilityAddAtomsEF(FeasibilityAnalysisManager *manager, llvm::SmallVector&lt; LazyAtom, 4 &gt; atoms)'],['../structFeasibility_1_1FeasibilityAddAtomsEF.html#adc68dbf46d93622447b32afc83250162',1,'Feasibility::FeasibilityAddAtomsEF::FeasibilityAddAtomsEF(FeasibilityAnalysisManager *manager, const llvm::BasicBlock *predecessor, const llvm::BasicBlock *sucessor, const llvm::ICmpInst *icmp, bool areWeOnTheTrueEdge)']]],
-  ['feasibilityanalysis_1',['FeasibilityAnalysis',['../classFeasibility_1_1FeasibilityAnalysis.html#ae627b0724cdfe58ca43fe5efcea2e1f6',1,'Feasibility::FeasibilityAnalysis']]],
-  ['feasibilityanalysismanager_2',['FeasibilityAnalysisManager',['../classFeasibility_1_1FeasibilityAnalysisManager.html#a0ba7f6f8d1f3fd702d4dba9058d9c987',1,'Feasibility::FeasibilityAnalysisManager']]],
-  ['feasibilityelement_3',['FeasibilityElement',['../classFeasibility_1_1FeasibilityElement.html#a0fae617bcabca274908d2982f0943333',1,'Feasibility::FeasibilityElement']]],
-  ['feasibilitytostring_4',['feasibilityToString',['../classHLAC_1_1Util.html#a83a243a770eac070a14d24af4392f16e',1,'HLAC::Util']]],
-  ['feasibilitywrapper_5',['FeasibilityWrapper',['../classFeasibility_1_1FeasibilityWrapper.html#a146e332caa9cbe731bf35b86de8c73a4',1,'Feasibility::FeasibilityWrapper']]],
-  ['findblock_6',['findBlock',['../classProgramGraph.html#a9450ec4e99c330c26535491056e8a639',1,'ProgramGraph']]],
-  ['findcounterfromicmp_7',['findCounterFromICMP',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a9d1f8d26a90d0ab769aabe56bfea055d',1,'LoopBound::LoopBoundIDEAnalysis']]],
-  ['findedgesstartingatnode_8',['findEdgesStartingAtNode',['../classProgramGraph.html#acef8229424136eb7f7cf35038d831e59',1,'ProgramGraph']]],
-  ['findloopcheckexpr_9',['findLoopCheckExpr',['../classLoopBound_1_1LoopBoundWrapper.html#a8d79267601928d46ce295549a58402c9',1,'LoopBound::LoopBoundWrapper']]],
-  ['functionnode_10',['FunctionNode',['../classHLAC_1_1FunctionNode.html#af4b290a873620c270b624a574c3f1262',1,'HLAC::FunctionNode']]],
-  ['functiontree_11',['FunctionTree',['../classFunctionTree.html#a53962ae644f6cbfa614728aa09f32c5a',1,'FunctionTree']]]
+  ['edge_0',['edge',['../classHLAC_1_1Edge.html#a870066d71d1dde9ab1e14a1e230b89d1',1,'HLAC::Edge::Edge()'],['../classEdge.html#ad22b6fa890c4cd35bcf530f577d52ac0',1,'Edge::Edge()']]],
+  ['edgeexists_1',['edgeExists',['../classHLAC_1_1CallNode.html#ac57d45a48426a84d7b1420e25bdc414b',1,'HLAC::CallNode']]],
+  ['edgetop_2',['edgeTop',['../namespaceLoopBound.html#af38065a6b802c3132ebf93515c85d327',1,'LoopBound']]],
+  ['empty_3',['empty',['../classLoopBound_1_1DeltaInterval.html#a75aa6d5531217272df440678aa0163af',1,'LoopBound::DeltaInterval']]],
+  ['escapedotlabel_4',['escapeDotLabel',['../classHLAC_1_1Util.html#a757cdfafb9d12c0861f820bb7c964211',1,'HLAC::Util']]],
+  ['extendenv_5',['extendEnv',['../classFeasibility_1_1FeasibilityAnalysisManager.html#acd1200a3cbc899b2160eaec6ff221c75',1,'Feasibility::FeasibilityAnalysisManager']]],
+  ['extractconstincfromstore_6',['extractConstIncFromStore',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#ac4153e6a8fe163a7cced06dd35935d8a',1,'LoopBound::LoopBoundIDEAnalysis']]]
 ];

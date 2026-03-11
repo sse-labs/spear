@@ -6,5 +6,6 @@ var searchData=
   ['clioptions_3',['CLIOptions',['../classCLIOptions.html',1,'']]],
   ['color_4',['Color',['../classColor.html',1,'']]],
   ['configparser_5',['ConfigParser',['../classConfigParser.html',1,'']]],
-  ['cpuprofiler_6',['CPUProfiler',['../classCPUProfiler.html',1,'']]]
+  ['cpuprofiler_6',['CPUProfiler',['../classCPUProfiler.html',1,'']]],
+  ['cpuregressionconfig_7',['CPURegressionConfig',['../structCPURegressionConfig.html',1,'']]]
 ];

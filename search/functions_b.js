@@ -1,10 +1,11 @@
 var searchData=
 [
-  ['makeedge_0',['makeEdge',['../classHLAC_1_1FunctionNode.html#a8a6270e0d3cd88253a4a4d156de8544e',1,'HLAC::FunctionNode']]],
-  ['makefunction_1',['makeFunction',['../classHLAC_1_1hlac.html#a2c0250ecb3687377b9634ea5aae25da4',1,'HLAC::hlac']]],
-  ['makehlac_2',['makeHLAC',['../classHLAC_1_1HLACWrapper.html#a62b1c8cd028d929fd6838cb6e400ccab',1,'HLAC::HLACWrapper']]],
-  ['makenode_3',['makenode',['../classHLAC_1_1Node.html#a6303371bfa6eaa5c08a40d0088c4c202',1,'HLAC::Node::makeNode()'],['../classHLAC_1_1LoopNode.html#aa7a9fd94692682633c9f88fb153164c0',1,'HLAC::LoopNode::makeNode()'],['../classHLAC_1_1FunctionNode.html#a125432a831a93a92a38206a12633e44f',1,'HLAC::FunctionNode::makeNode()'],['../classHLAC_1_1CallNode.html#af91f342febbce6bed517757cdd7a1885',1,'HLAC::CallNode::makeNode()']]],
-  ['makesetsattnesscacheentry_4',['makeSetSattnessCacheEntry',['../classFeasibility_1_1Util.html#a554044851ed06b86d77a9b08f560c275',1,'Feasibility::Util']]],
-  ['metaprofiler_5',['MetaProfiler',['../classMetaProfiler.html#a74e3e1e2dd423b066b17eb9c753642d7',1,'MetaProfiler']]],
-  ['mksymbv_6',['mkSymBV',['../classFeasibility_1_1Util.html#ab28babbccadd52469b15cc3645f74086',1,'Feasibility::Util']]]
+  ['lazyatom_0',['lazyatom',['../structFeasibility_1_1LazyAtom.html#a102044fb0dc866aae5839b1385f437e0',1,'Feasibility::LazyAtom::LazyAtom()=default'],['../structFeasibility_1_1LazyAtom.html#a854c0ff2f0fb311959730729e692c4f3',1,'Feasibility::LazyAtom::LazyAtom(const llvm::BasicBlock *predecessorBlock, const llvm::BasicBlock *successorBlock, const llvm::ICmpInst *icmpInstruction, bool areWeOnTheTrueEdge)']]],
+  ['leastupperbound_1',['leastUpperBound',['../classLoopBound_1_1DeltaInterval.html#a45090920c39f85817766cf0523e64ba3',1,'LoopBound::DeltaInterval']]],
+  ['llvmhandler_2',['LLVMHandler',['../classLLVMHandler.html#a5fa12d2aac33eb0249abc09bf0ee0a19',1,'LLVMHandler']]],
+  ['loopboundideanalysis_3',['LoopBoundIDEAnalysis',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#aed923a837a3dfda02ecdcbc2d8efed2e',1,'LoopBound::LoopBoundIDEAnalysis']]],
+  ['loopboundwrapper_4',['LoopBoundWrapper',['../classLoopBound_1_1LoopBoundWrapper.html#ae01be73945b898ee1ff855aa1cde4c52',1,'LoopBound::LoopBoundWrapper']]],
+  ['loopclassifier_5',['LoopClassifier',['../classLoopBound_1_1LoopClassifier.html#aebb04d9b81c2fc5a0544b85dcc2b5455',1,'LoopBound::LoopClassifier']]],
+  ['loopnode_6',['loopnode',['../classHLAC_1_1LoopNode.html#a6c4504a7621e9dfe4b70d5744e8db4ff',1,'HLAC::LoopNode::LoopNode()'],['../classLoopNode.html#a9ed8fbdf9af17f6c52f7ccd4bc0de458',1,'LoopNode::LoopNode()']]],
+  ['looptree_7',['LoopTree',['../classLoopTree.html#a45a0862b4849d3302b8a5d5b99e7a0f8',1,'LoopTree']]]
 ];
