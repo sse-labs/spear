@@ -13,7 +13,10 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include <utility>
+#include <algorithm>
 
+#include "ConfigParser.h"
 #include "RegisterReader.h"
 
 
@@ -30,19 +33,181 @@ double CPUProfiler::_median(std::vector<double> v) {
     }
 }
 
+double CPUProfiler::_mean(std::vector<double> v) {
+    double sum = 0.0;
+    for (double value : v) {
+        sum += value;
+    }
+    return sum / static_cast<double>(v.size());
+}
+
+
+std::map<std::string, std::pair<double, double>>
+CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
+    std::map<std::string, std::vector<std::pair<double, double>>> series;
+
+    double MIN_PROG_ENERGY = ConfigParser::getProfilingConfiguration().min_program_energy;
+    double MIN_INST_ENERGY = ConfigParser::getProfilingConfiguration().min_instruction_energy;
+
+    /**
+     * Calculates a regression for each instruction based on the results of the measurements.
+     * Each point in the regression corresponds to a measured execution of the underlying instruction test program
+     *
+     * y = m * x + b
+     * - y is the measured energy consumption of the program
+     * - x is the number of iterations of the instruction in the program (our k value)
+     * - m is the slope, which represents the per-instruction energy estimate (we need to divide this later on through the number of iterations to get the per-instruction energy estimate)
+     * - b is the intercept, which represents the base energy consumption of the program without any iterations of the instruction
+     *
+     *
+     * See "An Introduction to Statistical Learning" by Gareth James, Daniela Witten, Trevor Hastie and Robert
+     * Tibshirani for more information about linear
+     * regression and the formulas used in this function.
+     */
+
+    // Create the mapping k => energy for each instruction
+    for (size_t runIdx = 0; runIdx < results.size(); ++runIdx) {
+        const double x = static_cast<double>(runIdx + 1);
+
+        for (const auto& [instr, value] : results[runIdx]) {
+            series[instr].push_back({x, value});
+        }
+    }
+
+    std::map<std::string, std::pair<double, double>> regressions;
+
+    for (const auto& [instr, points] : series) {
+        if (points.empty()) {
+            // Default the regression to the minimum values defined by the user
+            regressions[instr] = {MIN_INST_ENERGY, MIN_PROG_ENERGY};
+            continue;
+        }
+
+        std::vector<double> xs;
+        std::vector<double> ys;
+        ys.reserve(points.size());
+        for (const auto& [x, y] : points) {
+            xs.push_back(x);
+            ys.push_back(y);
+        }
+
+        // find a median of the y values to mitigate potential outliers
+        const double robustLevel = std::max(_median(ys), MIN_PROG_ENERGY);
+
+        if (points.size() == 1) {
+            // Default the intercept to the robust level and the slope to 0, since we cannot calculate a slope
+            // with only one point. This means that we assume that all energy consumption is due to the base
+            // energy of the program, and the instruction itself does not contribute to the energy consumption.
+            regressions[instr] = {0.0, robustLevel};
+            continue;
+        }
+
+        const double n = static_cast<double>(points.size());
+
+        double x_bar = _mean(xs);
+        double y_bar = _mean(ys);
+
+        /**
+         * We calculate the slope using the formula:
+         *
+         * \beta_1 = covariance/variance  -> slope
+         * \beta_0 = y_bar - \beta_1 * x_bar  -> intercept
+         *
+         */
+
+        double covariance = 0.0;
+        double variance = 0.0;
+
+        for (const auto& [x, y] : points) {
+            covariance += (x - x_bar) * (y - y_bar);
+            variance += (x - x_bar) * (x - x_bar);
+        }
+
+        double slope = 0.0;
+        double intercept = robustLevel;
+
+        if (std::abs(variance) > 0.0) {
+            slope = covariance / variance;
+            intercept = y_bar - slope * x_bar;
+        }
+
+        // Do not allow negative or zero intercepts, as they are not physically meaningful in this context
+        intercept = std::max(intercept, MIN_PROG_ENERGY);
+        slope = std::max(slope, MIN_INST_ENERGY);
+
+        if (slope <= MIN_INST_ENERGY) {
+            slope = MIN_INST_ENERGY;
+        } else {
+            // We need to divide the slope by the number of iterations to get the per-instruction energy estimate,
+            // since each point corresponds to a program with a different number of iterations of the same instruction.
+            slope = slope / this->programiterations;
+        }
+
+        regressions[instr] = {slope, intercept};
+    }
+
+    return regressions;
+}
 
 json CPUProfiler::profile() {
     this->log("Starting CPU profiling. This may take a while. Grab a coffee!");
 
-    int ks[] = {10, 20, 50, 100, 200, 500, 1000};
+    std::vector<int> ks;
 
-    json allResults = json::object();
+    auto cpuregression = ConfigParser::getProfilingConfiguration().cpuregression;
 
-    for (int i = 0; i < sizeof(ks) / sizeof(ks[0]); i++) {
+    // Create k values for regression-based analysis.
+    int limit = cpuregression.limit;  // maximum k value to test
+    int step = cpuregression.step;  // step size for k values
+    int offset = cpuregression.offset;  // start with k=1 to have a baseline point for regression
+
+    this->log("Profile programs contain " + std::to_string(this->programiterations) +
+        " iterations of the underlying instruction.");
+
+    this->log("Generating k values for regression: limit=" + std::to_string(limit) +
+              ", step=" + std::to_string(step) +
+              ", offset=" + std::to_string(offset));
+
+    for (int k = offset; k <= limit; k += step) {
+        ks.push_back(k);
+    }
+
+    json profmapping = json::object();
+    std::vector<std::map<std::string, double>> allResults;
+
+    // Perform a single measurement for each instruction to estimate runtime.
+    auto estimateStart = std::chrono::steady_clock::now();
+
+    for (const auto& [key, value] : _profileCode) {
+        [[maybe_unused]] std::vector<double> measuredEnergy = this->_measureFile(value, 5);
+    }
+
+    auto estimateEnd = std::chrono::steady_clock::now();
+    auto measuredMs = std::chrono::duration_cast<std::chrono::milliseconds>(estimateEnd - estimateStart).count();
+
+    // The estimate run used k = 5 for each profiled file.
+    constexpr double baselineK = 5.0;
+    const double perKMs = static_cast<double>(measuredMs) / baselineK;
+
+    int64_t estimatedTotalMs = 0;
+    for (int k : ks) {
+        estimatedTotalMs += static_cast<int64_t>(perKMs * k);
+    }
+
+    const auto estimatedSeconds = estimatedTotalMs / 1000.0;
+    this->log("Profiling will take approximately " + std::to_string(estimatedSeconds) + " seconds.");
+
+    auto finishTime = std::chrono::system_clock::now() +
+                      std::chrono::milliseconds(estimatedTotalMs);
+    std::time_t finishTimeT = std::chrono::system_clock::to_time_t(finishTime);
+
+    this->log("Estimated finish time: " + std::string(std::ctime(&finishTimeT)));
+
+    for (int i = 0; i < ks.size(); i++) {
         int iterations = ks[i];
 
         std::map<std::string, double> results;
-        std::map<std::string, std::vector<double>> measurements;
+        std::map<std::string, std::vector<double>> measurements = std::map<std::string, std::vector<double>>();
 
         for (const auto& [key, value] : _profileCode) {
             std::vector<double> measuredEnergy = this->_measureFile(value, iterations);
@@ -54,31 +219,30 @@ json CPUProfiler::profile() {
             results[key] = median;
         }
 
-        // Save into JSON result too
-        allResults[std::to_string(iterations)] = json::object();
-        for (const auto& [key, median] : results) {
-            allResults[std::to_string(iterations)][key] = median;
-        }
-
-        // Write one CSV file per k
-        std::string filename = "profile_" + std::to_string(iterations) + ".csv";
-        std::ofstream file(filename);
-
-        if (!file.is_open()) {
-            throw std::runtime_error("Failed to open file: " + filename);
-        }
-
-        file << "program,median\n";
-        for (const auto& [key, median] : results) {
-            file << key << "," << median << "\n";
-        }
-
-        file.close();
-        this->log("Wrote " + filename);
+        allResults.push_back(results);
     }
 
+    // Calculate regression parameters for each instruction based on the measurements
+    auto regressions = _regression(allResults);
+
+
+    // Collect the slope and intercept for each instruction and store them in the final profile mapping.
+    // We also calculate a constant offset for the program energy based on the intercepts of all instructions,
+    // as they all include the base energy of the program. We use the median of the intercepts to mitigate
+    // potential outliers.
+    std::vector<double> intercepts;
+    for (const auto& [instr, coeff] : regressions) {
+        profmapping[instr] = coeff.first;
+        intercepts.push_back(coeff.second);
+    }
+
+    // Store the constant offset in the profile mapping under a special key.
+    // This offset represents the base energy consumption of the program
+    double constanteOffset = _median(intercepts);
+    profmapping["_programoffset"] = constanteOffset;
+
     this->log("CPU profiling finished!");
-    return allResults;
+    return profmapping;
 }
 
 
@@ -103,7 +267,7 @@ std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data,
 
 std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t runtime) const {
     std::vector<double> results;
-    results.reserve(this->iterations * number_of_cores);
+    results.reserve(runtime * number_of_cores);
 
     #ifdef __linux__
     RegisterReader powReader(0);
@@ -117,7 +281,7 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
 
     char* args[] = { const_cast<char*>(file.c_str()), nullptr };
 
-    uint64_t iters = (runtime != -1) ? runtime : this->iterations;
+    uint64_t iters = runtime;
 
     // Pin parent to a dedicated core
     cpu_set_t parentMask;

@@ -1,19 +1,22 @@
+/*
+ * Copyright (c) 2026 Maximilian Krebs
+ * All rights reserved.
+*/
 
+#ifndef SRC_SPEAR_PROFILERS_SYSCALLPROFILER_H_
+#define SRC_SPEAR_PROFILERS_SYSCALLPROFILER_H_
 
-#ifndef SPEAR_SYSCALLPROFILER_H
-#define SPEAR_SYSCALLPROFILER_H
 #include "Profiler.h"
 
 /**
  * Component to gather system specific information based on the profiler architecture
  */
 class SyscallProfiler : public Profiler {
-public:
+ public:
     /**
      * Generic constructor without purpose
-     * @param iterations Repeated measurement iterations
      */
-    explicit SyscallProfiler(const int iterations) : Profiler(iterations, "SYSCALL") {}
+    explicit SyscallProfiler() : Profiler("SYSCALL") {}
 
     /**
      * Gather information about syscalls and return them as JSON object
@@ -22,4 +25,4 @@ public:
     json profile() override;
 };
 
-#endif //SPEAR_SYSCALLPROFILER_H
+#endif  // SRC_SPEAR_PROFILERS_SYSCALLPROFILER_H_

@@ -11,6 +11,7 @@
 #include <vector>
 #include <fstream>
 #include <thread>
+#include <utility>
 
 #include "Profiler.h"
 using json = nlohmann::json;
@@ -21,12 +22,11 @@ using json = nlohmann::json;
 class CPUProfiler : public Profiler {
  public:
     /**
-     * Creates a new Profiler object using the given iterations.
-     * Additionally, parses the given profile code directory to creat the mapping
-     * @param iterations Number of times the measurement should be repeated
-     * @param codePath Path the profile programs are stored
-     */
-    CPUProfiler(const int iterations, const std::string &codePath) : Profiler(iterations, "CPU") {
+      * Creates a new Profiler object using the given iterations.
+      * Additionally, parses the given profile code directory to creat the mapping
+      * @param codePath Path the profile programs are stored
+      */
+     explicit CPUProfiler(const std::string &codePath) : Profiler("CPU") {
         this->log("Executing CPU profiler ");
         this->log("Programs for profiling stored at " + codePath);
 
@@ -66,7 +66,43 @@ class CPUProfiler : public Profiler {
         this->log(std::string("number of cores ") + std::to_string(this->number_of_cores));
     }
 
+     /**
+      * Calculates the median of the given vector
+      * @param v vector of values to calculate the median on
+      * @return median of the given vector
+      */
     double _median(std::vector<double> v);
+
+    /**
+     * Calculates the mean of the given vector
+     * @param v vector of values to calculate the mean on
+     * @return mean of the given vector
+     */
+    double _mean(std::vector<double> v);
+
+    /**
+     * Calculates a regression for each instruction based on the results of the measurements.
+     * Each point in the regression corresponds to a measured execution of the underlying instruction test program
+     *
+     * y = m * x + b
+     * - y is the measured energy consumption of the program
+     * - x is the number of iterations of the instruction in the program (our k value)
+     * - m is the slope, which represents the per-instruction energy estimate (we need to divide this later on through
+     * the number of iterations to get the per-instruction energy estimate)
+     * - b is the intercept, which represents the base energy consumption of the program without any iterations
+     * of the instruction
+     *
+     *
+     * See "An Introduction to Statistical Learning" by Gareth James, Daniela Witten, Trevor Hastie and Robert
+     * Tibshirani for more information about linear
+     * regression and the formulas used in this function.
+     *
+     * @param results Vector containing mappings between instruction name and measured energy for each execution of
+     * each profile program
+     * @return Mapping between instruction name and pair(slope, intercept) representing the regression coefficients
+     * for each instruction
+     */
+    std::map<std::string, std::pair<double, double>> _regression(std::vector<std::map<std::string, double>> results);
 
     /**
      * Profiles the system and gathers information about the energy usage of the CPU components
@@ -112,8 +148,6 @@ class CPUProfiler : public Profiler {
         double tolerance = 1e-6);
 
     double standard_deviation(const std::vector<double>& v);
-
-    double _measureIdle(double durationSeconds) const;
 };
 
 #endif  // SRC_SPEAR_PROFILERS_CPUPROFILER_H_

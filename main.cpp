@@ -36,12 +36,11 @@ void runProfileRoutine(CLIOptions opts) {
     auto proflingConfig = ConfigParser::getProfilingConfiguration();
 
     // Get the parameters from the arguments
-    int rep = proflingConfig.iterations;
     std::string compiledPath = opts.codePath;
 
-    CPUProfiler cpuprofiler = CPUProfiler(rep, compiledPath);
-    MetaProfiler metaprofiler = MetaProfiler(rep);
-    SyscallProfiler syscallProfiler = SyscallProfiler(rep);
+    CPUProfiler cpuprofiler = CPUProfiler(compiledPath);
+    MetaProfiler metaprofiler = MetaProfiler();
+    SyscallProfiler syscallProfiler = SyscallProfiler();
 
     json metaResult = metaprofiler.profile();
 
