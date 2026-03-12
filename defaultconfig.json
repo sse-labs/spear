@@ -6,6 +6,11 @@
       "limit": 1000,
       "step": 100,
       "offset": 300
+    },
+    "syscalls": {
+      "runtime": 300,
+      "default_energy": 1e-6,
+      "max_syscall_id": 462
     }
   },
   "analysis": {

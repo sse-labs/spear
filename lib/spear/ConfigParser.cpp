@@ -170,6 +170,23 @@ bool ConfigParser::CPURegressionValid(json object) {
     return false;
 }
 
+bool ConfigParser::SyscallProfilingConfigValid(json object) {
+    if (object.contains("syscalls") && object["syscalls"].is_object()) {
+        auto syscallconfig = object["syscalls"];
+
+        if (syscallconfig.contains("runtime") && syscallconfig["runtime"].is_number_unsigned() &&
+            syscallconfig.contains("default_energy") && syscallconfig["default_energy"].is_number() &&
+            syscallconfig.contains("max_syscall_id") && syscallconfig["max_syscall_id"].is_number_unsigned()) {
+            return true;
+        }
+        std::cout << "Invalid profiling.syscalls: missing or invalid properties." << std::endl;
+        return false;
+    }
+
+    std::cout << "Invalid profiling.syscalls: missing or not an object." << std::endl;
+    return false;
+}
+
 bool ConfigParser::profilingValid() {
     if (config.contains("profiling")) {
         auto profiling = config["profiling"];
@@ -177,7 +194,8 @@ bool ConfigParser::profilingValid() {
         if (profiling.is_object()) {
             return minProgramEnergy(profiling) &&
                 minInstructionEnergy(profiling) &&
-                CPURegressionValid(profiling);
+                CPURegressionValid(profiling) &&
+                SyscallProfilingConfigValid(profiling);
         }
         std::cout << "Invalid profiling: not an object." << std::endl;
         return false;
@@ -285,5 +303,9 @@ void ConfigParser::parse() {
         profilingConfiguration.cpuregression.limit = profiling["cpu_regression"]["limit"].get<int>();
         profilingConfiguration.cpuregression.step = profiling["cpu_regression"]["step"].get<int>();
         profilingConfiguration.cpuregression.offset = profiling["cpu_regression"]["offset"].get<int>();
+
+        profilingConfiguration.syscallconfig.runtime = profiling["syscalls"]["runtime"].get<int>();
+        profilingConfiguration.syscallconfig.defaultEnergy = profiling["syscalls"]["default_energy"].get<double>();
+        profilingConfiguration.syscallconfig.maxSyscallId = profiling["syscalls"]["max_syscall_id"].get<int>();
     }
 }

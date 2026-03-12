@@ -17,6 +17,8 @@
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
 
+#include "ConfigParser.h"
+
 std::unordered_map<uint32_t, Inflight> SyscallProfiler::inflight{};
 std::vector<double> SyscallProfiler::energy_per_syscall(SyscallProfiler::MAX_SYSCALL, 0.0);
 std::vector<uint64_t> SyscallProfiler::count_per_syscall(SyscallProfiler::MAX_SYSCALL, 0);
@@ -192,8 +194,13 @@ json SyscallProfiler::profile() {
     this->log("Successfully attached syscall trace bpf");
     this->log("Starting SyscallProfiler");
 
+    auto syscallconfig = ConfigParser::getProfilingConfiguration().syscallconfig;
+
     // Run for x seconds
-    int seconds = 300;  // TODO: make this configurable
+    int seconds = syscallconfig.runtime;
+
+    this->log("Running for " + std::to_string(seconds) + " seconds...");
+    this->log("Expecting to find up to " + std::to_string(syscallconfig.maxSyscallId) + " syscall IDs...");
 
     using clock = std::chrono::steady_clock;
 
@@ -206,8 +213,7 @@ json SyscallProfiler::profile() {
             break;
         }
 
-        const auto remaining =
-            std::chrono::duration_cast<std::chrono::milliseconds>(end - now).count();
+        const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(end - now).count();
         const int timeout_ms = static_cast<int>(std::max<int64_t>(0, remaining));
 
         int err = ring_buffer__poll(eventRingBuffer.get(), timeout_ms);
@@ -224,13 +230,18 @@ json SyscallProfiler::profile() {
 
     for (size_t i = 0; i < energy_per_syscall.size(); ++i) {
         if (count_per_syscall[i] > 0) {
-            syscalls[std::to_string(i)] = {
-                {"energy", energy_per_syscall[i]},
-                {"count", count_per_syscall[i]},
-                { "average_energy", energy_per_syscall[i] / count_per_syscall[i]}
-            };
+            if (energy_per_syscall.at(i) > 0.0) {
+                syscalls[std::to_string(i)] = energy_per_syscall.at(i) / count_per_syscall.at(i);
+            } else {
+                // If we have count > 0 but no energy, we are likely measuring very short syscalls that are below the
+                // resolution of our measurement. In this case, we can still report the default energy as a lower bound,
+                // which is better than reporting 0.
+                syscalls[std::to_string(i)] = syscallconfig.defaultEnergy;
+            }
         }
     }
+
+    this->log("Finishing SyscallProfiler");
 
     return syscalls;
 }
