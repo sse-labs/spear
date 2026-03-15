@@ -103,6 +103,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a85368ee9a1346feb501b8616d858f8c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0689d9d55933089f14aa35d532a0dd0d" id="r_a0689d9d55933089f14aa35d532a0dd0d"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1CallNode.html#a0689d9d55933089f14aa35d532a0dd0d">getDotName</a> () override</td></tr>
 <tr class="separator:a0689d9d55933089f14aa35d532a0dd0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0e175dcfc63214a4934deccd8eade53d" id="r_a0e175dcfc63214a4934deccd8eade53d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1CallNode.html#a0e175dcfc63214a4934deccd8eade53d">checkIfIsSyscall</a> ()</td></tr>
+<tr class="separator:a0e175dcfc63214a4934deccd8eade53d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classHLAC_1_1GenericNode"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classHLAC_1_1GenericNode')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a></td></tr>
 <tr class="memitem:ac928ce42dd0feff4b1a450ab69a4bc7e inherit pub_methods_classHLAC_1_1GenericNode" id="r_ac928ce42dd0feff4b1a450ab69a4bc7e"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1GenericNode.html#ac928ce42dd0feff4b1a450ab69a4bc7e">getAddress</a> ()</td></tr>
 <tr class="separator:ac928ce42dd0feff4b1a450ab69a4bc7e inherit pub_methods_classHLAC_1_1GenericNode"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -128,6 +130,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isDebugFunction</b> =
 <tr class="memitem:a57d7b01883d2ebbc094115969e6b3d32" id="r_a57d7b01883d2ebbc094115969e6b3d32"><td class="memItemLeft" align="right" valign="top"><a id="a57d7b01883d2ebbc094115969e6b3d32" name="a57d7b01883d2ebbc094115969e6b3d32"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>isSyscall</b> = false</td></tr>
 <tr class="separator:a57d7b01883d2ebbc094115969e6b3d32"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3852cf41f24e2bdc17440267a71e9314" id="r_a3852cf41f24e2bdc17440267a71e9314"><td class="memItemLeft" align="right" valign="top">std::optional&lt; size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1CallNode.html#a3852cf41f24e2bdc17440267a71e9314">syscallId</a> = std::nullopt</td></tr>
+<tr class="separator:a3852cf41f24e2bdc17440267a71e9314"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a61c4a0def2e9bdfd5d01f0f5053f71f8" id="r_a61c4a0def2e9bdfd5d01f0f5053f71f8"><td class="memItemLeft" align="right" valign="top">llvm::CallBase *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1CallNode.html#a61c4a0def2e9bdfd5d01f0f5053f71f8">call</a> = nullptr</td></tr>
 <tr class="separator:a61c4a0def2e9bdfd5d01f0f5053f71f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_attribs_classHLAC_1_1GenericNode"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classHLAC_1_1GenericNode')"><img src="closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a></td></tr>
@@ -173,6 +177,26 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isSyscall</b> = false
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a0e175dcfc63214a4934deccd8eade53d" name="a0e175dcfc63214a4934deccd8eade53d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0e175dcfc63214a4934deccd8eade53d">&#9670;&#160;</a></span>checkIfIsSyscall()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool HLAC::CallNode::checkIfIsSyscall </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Check whether this <a class="el" href="classHLAC_1_1CallNode.html">CallNode</a> represents a syscall by checking the called function for the function "syscall" and for linker functions that are known to be syscall wrappers</p>
+<p>If the <a class="el" href="classHLAC_1_1CallNode.html">CallNode</a> represents a syscall, the corresponding syscall id will be stored in the field syscallId</p>
+<dl class="section return"><dt>Returns</dt><dd>true if this <a class="el" href="classHLAC_1_1CallNode.html">CallNode</a> represents a syscall, false otherwise </dd></dl>
+
+</div>
+</div>
 <a id="a63b8c60fc56eafbd6bf55f49505f94e6" name="a63b8c60fc56eafbd6bf55f49505f94e6"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a63b8c60fc56eafbd6bf55f49505f94e6">&#9670;&#160;</a></span>collapseCalls()</h2>
 
@@ -415,6 +439,21 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isSyscall</b> = false
       </table>
 </div><div class="memdoc">
 <p>Meta flags that are used to distinguish different kinds of functions </p>
+
+</div>
+</div>
+<a id="a3852cf41f24e2bdc17440267a71e9314" name="a3852cf41f24e2bdc17440267a71e9314"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3852cf41f24e2bdc17440267a71e9314">&#9670;&#160;</a></span>syscallId</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt;size_t&gt; HLAC::CallNode::syscallId = std::nullopt</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>If this call is a syscall, this field contains the corresponding syscall name, otherwise it is std::nullopt </p>
 
 </div>
 </div>

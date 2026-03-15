@@ -71,6 +71,8 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
+<a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="classSyscallProfiler-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">SyscallProfiler Class Reference</div></div>
 </div><!--header-->
@@ -104,6 +106,30 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>log</b> (std::string 
 <tr class="memitem:a6ee27bbefdab9be91f0ab004a456c7c5 inherit pub_methods_classProfiler" id="r_a6ee27bbefdab9be91f0ab004a456c7c5"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classProfiler.html#a6ee27bbefdab9be91f0ab004a456c7c5">~Profiler</a> ()=default</td></tr>
 <tr class="separator:a6ee27bbefdab9be91f0ab004a456c7c5 inherit pub_methods_classProfiler"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:a7e471b6fffc12391f6a7d69c21219f82" id="r_a7e471b6fffc12391f6a7d69c21219f82"><td class="memItemLeft" align="right" valign="top"><a id="a7e471b6fffc12391f6a7d69c21219f82" name="a7e471b6fffc12391f6a7d69c21219f82"></a>
+static int&#160;</td><td class="memItemRight" valign="bottom"><b>set_ignore_tgid_map</b> (syscall_trace_bpf *skel, uint32_t tgid_to_ignore)</td></tr>
+<tr class="separator:a7e471b6fffc12391f6a7d69c21219f82"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad41b60c435bad93471278b7b548ed91e" id="r_ad41b60c435bad93471278b7b548ed91e"><td class="memItemLeft" align="right" valign="top"><a id="ad41b60c435bad93471278b7b548ed91e" name="ad41b60c435bad93471278b7b548ed91e"></a>
+static int&#160;</td><td class="memItemRight" valign="bottom"><b>handle_event</b> (void *ctx, void *data, size_t data_sz)</td></tr>
+<tr class="separator:ad41b60c435bad93471278b7b548ed91e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
+Static Public Attributes</h2></td></tr>
+<tr class="memitem:aaeb1707a942ee5b73255b41384b55a66" id="r_aaeb1707a942ee5b73255b41384b55a66"><td class="memItemLeft" align="right" valign="top"><a id="aaeb1707a942ee5b73255b41384b55a66" name="aaeb1707a942ee5b73255b41384b55a66"></a>
+static constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>MAX_SYSCALL</b> = 462</td></tr>
+<tr class="separator:aaeb1707a942ee5b73255b41384b55a66"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af85260a5c00c832d65c1d51094c1e82d" id="r_af85260a5c00c832d65c1d51094c1e82d"><td class="memItemLeft" align="right" valign="top"><a id="af85260a5c00c832d65c1d51094c1e82d" name="af85260a5c00c832d65c1d51094c1e82d"></a>
+static std::unordered_map&lt; uint32_t, <a class="el" href="structInflight.html">Inflight</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>inflight</b></td></tr>
+<tr class="separator:af85260a5c00c832d65c1d51094c1e82d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aff039841d5cea47f1d29608f47851f10" id="r_aff039841d5cea47f1d29608f47851f10"><td class="memItemLeft" align="right" valign="top"><a id="aff039841d5cea47f1d29608f47851f10" name="aff039841d5cea47f1d29608f47851f10"></a>
+static std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>energy_per_syscall</b></td></tr>
+<tr class="separator:aff039841d5cea47f1d29608f47851f10"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a315b7240d5d1d1bf047539b070a7a9b3" id="r_a315b7240d5d1d1bf047539b070a7a9b3"><td class="memItemLeft" align="right" valign="top"><a id="a315b7240d5d1d1bf047539b070a7a9b3" name="a315b7240d5d1d1bf047539b070a7a9b3"></a>
+static std::vector&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>count_per_syscall</b></td></tr>
+<tr class="separator:a315b7240d5d1d1bf047539b070a7a9b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pub_attribs_classProfiler"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classProfiler')"><img src="closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="classProfiler.html">Profiler</a></td></tr>
@@ -119,9 +145,6 @@ const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b><
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">SyscallProfiler::SyscallProfiler </td>
@@ -130,13 +153,8 @@ const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b><
           <td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">explicit</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
-<p>Generic constructor without purpose </p>
+<p>Generic constructor </p>
 
 </div>
 </div>
@@ -163,7 +181,7 @@ const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b><
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Gather information about syscalls and return them as JSON object </p><dl class="section return"><dt>Returns</dt><dd></dd></dl>
+<p>Gather information about syscalls and return them as JSON object </p><dl class="section return"><dt>Returns</dt><dd>JSON object containing per-syscall energy statistics </dd></dl>
 
 <p>Implements <a class="el" href="classProfiler.html#af50d7dfce1868917936dec58632a0284">Profiler</a>.</p>
 

@@ -12,6 +12,7 @@ var searchData=
   ['resolve_9',['resolve',['../classFeasibility_1_1FeasibilityAnalysisManager.html#a155d5e55952996e852ffa0dcfd117903',1,'Feasibility::FeasibilityAnalysisManager']]],
   ['resultregistry_10',['resultregistry',['../classResultRegistry.html',1,'ResultRegistry'],['../classResultRegistry.html#a1b2bdfbc32962d51a23fda354ab11cf3',1,'ResultRegistry::ResultRegistry()']]],
   ['resultsty_11',['resultsty',['../namespaceFeasibility.html#a9242cb92ccea6fafa1f8f40d7228c188',1,'Feasibility::ResultsTy'],['../namespaceLoopBound.html#a0be9b3685c21940b21bb2661236f30b5',1,'LoopBound::ResultsTy']]],
-  ['run_12',['run',['../classPhasarHandlerPass.html#a195394de4d638f0045fde17c4f7038be',1,'PhasarHandlerPass']]],
-  ['runonmodule_13',['runOnModule',['../classPhasarHandlerPass.html#ae03895a260ad2eea6a74aad422169a7d',1,'PhasarHandlerPass']]]
+  ['ringbufdeleter_12',['RingBufDeleter',['../structRingBufDeleter.html',1,'']]],
+  ['run_13',['run',['../classPhasarHandlerPass.html#a195394de4d638f0045fde17c4f7038be',1,'PhasarHandlerPass']]],
+  ['runonmodule_14',['runOnModule',['../classPhasarHandlerPass.html#ae03895a260ad2eea6a74aad422169a7d',1,'PhasarHandlerPass']]]
 ];
