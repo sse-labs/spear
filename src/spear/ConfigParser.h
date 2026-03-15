@@ -71,6 +71,12 @@ struct CPURegressionConfig {
     int limit, step, offset;
 };
 
+struct SyscallProfilingConfig {
+    int runtime;
+    double defaultEnergy;
+    int maxSyscallId;
+};
+
 /**
  * Holds profiling-related configuration options parsed from the config file.
  */
@@ -78,6 +84,7 @@ struct ProfilingConfiguration {
     double min_program_energy;
     double min_instruction_energy;
     CPURegressionConfig cpuregression;
+    SyscallProfilingConfig syscallconfig;
 };
 
 class ConfigParser {
@@ -183,6 +190,7 @@ class ConfigParser {
     bool minProgramEnergy(json object);
     bool minInstructionEnergy(json object);
     bool CPURegressionValid(json object);
+    bool SyscallProfilingConfigValid(json object);
 
     /**
      * Convert a string to mode enum type

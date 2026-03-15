@@ -22,14 +22,14 @@
 
 #include "CLIHandler.h"
 #include "ConfigParser.h"
-#include "Modelchecker.h"
 #include "analyses/ResultRegistry.h"
-#include "analyses/feasibility/util.h"
 #include "profilers/CPUProfiler.h"
 #include "profilers/MetaProfiler.h"
 
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "profilers/SyscallProfiler.h"
+
+#define SKIP_CPU_PROFILING false
 
 
 void runProfileRoutine(CLIOptions opts) {
@@ -47,11 +47,14 @@ void runProfileRoutine(CLIOptions opts) {
     metaResult["start"] = metaprofiler.startTime();
     // Launch the benchmarking
     try {
-        json cpuResult = cpuprofiler.profile();
+        json cpuResult;
+        if constexpr (!SKIP_CPU_PROFILING) {
+            cpuResult = cpuprofiler.profile();
+        }
+
         json syscallResults = syscallProfiler.profile();
 
         metaResult["end"] = metaprofiler.stopTime();
-
 
         char *outputpath = new char[255];
         snprintf(
@@ -63,7 +66,11 @@ void runProfileRoutine(CLIOptions opts) {
 
         ProfileHandler phandler;
         phandler.setOrCreate("meta", metaResult);
-        phandler.setOrCreate("cpu", cpuResult);
+
+        if constexpr (!SKIP_CPU_PROFILING) {
+            phandler.setOrCreate("cpu", cpuResult);
+        }
+
         phandler.setOrCreate("syscalls", syscallResults);
         phandler.write(outputpath);
 

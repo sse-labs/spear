@@ -12,6 +12,7 @@
 
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
+#include "syscalls/generated_syscall_names.h"
 
 namespace HLAC {
 
@@ -20,7 +21,7 @@ CallNode::CallNode(llvm::Function *calls, llvm::CallBase *call) {
     this->calledFunction = calls;
     this->name = "Call to " + calledFunction->getName().str();
     this->isLinkerFunction = calledFunction->isDeclarationForLinker();
-    this->isSyscall = false;
+    this->isSyscall = checkIfIsSyscall();
     this->isDebugFunction = calledFunction->getName().startswith("llvm.");
 }
 
@@ -106,26 +107,70 @@ void CallNode::printDotRepresentation(std::ostream &os) {
 
     // Print dot representation to the given OS
     os << getDotName() << "["
-       << "shape=record,"
-       << "style=filled,"
-       << "fillcolor=\"#8D89A6\","
-       << "color=\"#2B2B2B\","
-       << "style=\"rounded,filled\","
-       << "penwidth=2,"
-       << "fontname=\"Courier\","
-       << "label=\"{"
-       << "call:\\l"
-       << "| " << Util::dotRecordEscape(shortLabel)
-       << "| { LINKERFUNC=" << isLinkerFunction
-       <<" | DEBUGFUNC=" << isDebugFunction
-       << " | SYSCALL=" << isSyscall << " }"
-       << "}\""
-       << "];\n";
+        << "shape=record,"
+        << "style=filled,"
+        << "fillcolor=\"#8D89A6\","
+        << "color=\"#2B2B2B\","
+        << "style=\"rounded,filled\","
+        << "penwidth=2,"
+        << "fontname=\"Courier\","
+        << "label=\"{"
+        << "call:\\l"
+        << "| " << Util::dotRecordEscape(shortLabel)
+        << "| { LINKERFUNC=" << isLinkerFunction
+        <<" | DEBUGFUNC=" << isDebugFunction
+        << " | SYSCALL=" << isSyscall;
+
+        if (syscallId.has_value()) {
+            os << " | SID=" << syscallId.value() << " }";
+        } else {
+            os << " }";
+        }
+
+        os << "}\""
+        << "];\n";
 }
 
 
 std::string CallNode::getDotName() {
     return "CallNode" + this->getAddress();
+}
+
+bool CallNode::checkIfIsSyscall() {
+    /**
+     * We need to check two cases to determine if this is a syscall:
+     * 1) The called function is the function "syscall" which does a direct call to the system call
+     * 2) The called function is a wrapper function to the syscall.
+     *
+     */
+
+    if (this->calledFunction->getName() == "syscall") {
+        if (this->calledFunction->arg_size() < 1) {
+            // syscall without arguments is not a valid syscall, so we do not consider this a syscall
+            return false;
+        }
+
+        llvm::Value *arg = this->calledFunction->getArg(0);
+
+        if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(arg)) {
+            uint64_t localSyscallId = CI->getSExtValue();
+            this->syscallId = localSyscallId;
+        }
+
+        return true;
+    }
+
+
+    if (this->calledFunction->isDeclarationForLinker()) {
+        std::string name = this->calledFunction->getName().str();
+        int localSyscallId = getSyscallId(name);
+        if (localSyscallId != -1) {
+            this->syscallId = localSyscallId;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 }  // namespace HLAC
