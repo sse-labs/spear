@@ -137,6 +137,47 @@ add_custom_target(generate_bpf_artifacts
         DEPENDS "${VMLINUX_H}" "${BPF_OBJ}" "${BPF_SKEL_H}"
 )
 
+# Generate syscall table
+# Uses python script to parse syscall numbers and names from unistd_64.h and generate a header with a lookup table
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+set(SYSCALL_HEADER_CANDIDATES
+        /usr/include/x86_64-linux-gnu/asm/unistd_64.h
+        /usr/include/asm/unistd_64.h
+)
+
+set(SYSCALL_HEADER "")
+foreach(candidate IN LISTS SYSCALL_HEADER_CANDIDATES)
+    if(EXISTS "${candidate}")
+        set(SYSCALL_HEADER "${candidate}")
+        break()
+    endif()
+endforeach()
+
+if(NOT SYSCALL_HEADER)
+    message(FATAL_ERROR "Could not find unistd_64.h for x86_64")
+endif()
+
+set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+set(GENERATED_SYSCALL_HEADER "${GENERATED_DIR}/syscalls/generated_syscall_names.h")
+
+add_custom_command(
+        OUTPUT "${GENERATED_SYSCALL_HEADER}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${GENERATED_DIR}"
+        COMMAND ${Python3_EXECUTABLE}
+        "${CMAKE_SOURCE_DIR}/util/syscalls/syscalltablegenerator.py"
+        "${SYSCALL_HEADER}"
+        "${GENERATED_SYSCALL_HEADER}"
+        DEPENDS
+        "${CMAKE_SOURCE_DIR}/util/syscalls/syscalltablegenerator.py"
+        "${SYSCALL_HEADER}"
+        COMMENT "Generating syscall name lookup table"
+        VERBATIM
+)
+
+add_custom_target(generate_syscall_table DEPENDS "${GENERATED_SYSCALL_HEADER}")
+
 # -----------------------
 # Sources
 # -----------------------
@@ -160,7 +201,7 @@ add_library(SpearLib
         ${SPEAR_SOURCES}
 )
 
-add_dependencies(SpearLib generate_bpf_artifacts)
+add_dependencies(SpearLib generate_bpf_artifacts generate_syscall_table)
 
 # Link deps
 target_link_libraries(SpearLib
@@ -183,7 +224,7 @@ target_include_directories(SpearLib
         ${CMAKE_CURRENT_SOURCE_DIR}/src/spear
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/passes
         ${CMAKE_CURRENT_SOURCE_DIR}/src/spear/bpf
-        ${BPF_GEN_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
 
 # Executable
@@ -209,7 +250,7 @@ if(SPEAR_TEST_SOURCES)
             ${CMAKE_CURRENT_SOURCE_DIR}/src/spear
             ${CMAKE_CURRENT_SOURCE_DIR}/lib/passes
             ${CMAKE_CURRENT_SOURCE_DIR}/lib/test
-            ${BPF_GEN_DIR}
+            ${CMAKE_CURRENT_BINARY_DIR}/generated
     )
 
     target_compile_definitions(spear_tests PRIVATE TEST_INPUT_DIR="${CMAKE_SOURCE_DIR}")

@@ -11,6 +11,8 @@
  *
 **/
 
+// NOLINTBEGIN
+
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
@@ -47,8 +49,7 @@ struct {
 /**
  * Task ID ingoring handler
  */
-static __always_inline bool should_ignore(void)
-{
+static __always_inline bool should_ignore(void) {
     __u32 key = 0;
     __u32 *ignore = bpf_map_lookup_elem(&ignore_tgid_map, &key);
     if (!ignore || *ignore == 0)
@@ -63,16 +64,18 @@ static __always_inline bool should_ignore(void)
  * Enter tracepoint function
  */
 SEC("tracepoint/raw_syscalls/sys_enter")
-int tp_sys_enter(struct trace_event_raw_sys_enter *ctx)
-{
-    if (should_ignore())
+int tp_sys_enter(struct trace_event_raw_sys_enter *ctx) {
+    if (should_ignore()) {
         return 0;
+    }
 
     struct evt *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
-    if (!e) return 0;
+    if (!e) {
+        return 0;
+    }
 
-    e->tid  = (__u32)bpf_get_current_pid_tgid();
-    e->id   = (__u32)ctx->id;
+    e->tid  = (__u32) bpf_get_current_pid_tgid();
+    e->id   = (__u32) ctx->id;
     e->type = 0;
 
     bpf_ringbuf_submit(e, 0);
@@ -80,26 +83,25 @@ int tp_sys_enter(struct trace_event_raw_sys_enter *ctx)
 }
 
 SEC("tracepoint/sched/sched_switch")
-int tp_sched_switch(struct trace_event_raw_sched_switch *ctx)
-{
+int tp_sched_switch(struct trace_event_raw_sched_switch *ctx) {
     // ctx->prev_pid  : TID being switched out
     // ctx->next_pid  : TID being switched in
 
     // Emit SWITCH_OUT for prev
     struct evt *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (e) {
-        e->tid  = (__u32)ctx->prev_pid;
+        e->tid  = (__u32) ctx->prev_pid;
         e->id   = 0;
-        e->type = 2; // switch_out
+        e->type = 2;  // switch_out
         bpf_ringbuf_submit(e, 0);
     }
 
     // Emit SWITCH_IN for next
     e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (e) {
-        e->tid  = (__u32)ctx->next_pid;
+        e->tid  = (__u32) ctx->next_pid;
         e->id   = 0;
-        e->type = 3; // switch_in
+        e->type = 3;  // switch_in
         bpf_ringbuf_submit(e, 0);
     }
 
@@ -110,18 +112,22 @@ int tp_sched_switch(struct trace_event_raw_sched_switch *ctx)
  * Leave tracepoint function
  */
 SEC("tracepoint/raw_syscalls/sys_exit")
-int tp_sys_exit(struct trace_event_raw_sys_exit *ctx)
-{
-    if (should_ignore())
+int tp_sys_exit(struct trace_event_raw_sys_exit *ctx) {
+    if (should_ignore()) {
         return 0;
+    }
 
     struct evt *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
-    if (!e) return 0;
+    if (!e) {
+        return 0;
+    }
 
-    e->tid  = (__u32)bpf_get_current_pid_tgid();
-    e->id   = (__u32)ctx->id;
+    e->tid  = (__u32) bpf_get_current_pid_tgid();
+    e->id   = (__u32) ctx->id;
     e->type = 1;
 
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
+
+// NOLINTEND

@@ -5,6 +5,10 @@
 
 #include "profilers/SyscallProfiler.h"
 
+#include <bpf/bpf.h>
+#include <bpf/libbpf.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <cerrno>
 #include <chrono>
@@ -12,12 +16,13 @@
 #include <cstring>
 #include <stdexcept>
 #include <string>
-#include <unistd.h>
-
-#include <bpf/bpf.h>
-#include <bpf/libbpf.h>
+#include <unordered_map>
+#include <vector>
+#include <memory>
 
 #include "ConfigParser.h"
+#include "syscalls/generated_syscall_names.h"
+
 
 std::unordered_map<uint32_t, Inflight> SyscallProfiler::inflight{};
 std::vector<double> SyscallProfiler::energy_per_syscall(SyscallProfiler::MAX_SYSCALL, 0.0);
@@ -231,12 +236,12 @@ json SyscallProfiler::profile() {
     for (size_t i = 0; i < energy_per_syscall.size(); ++i) {
         if (count_per_syscall[i] > 0) {
             if (energy_per_syscall.at(i) > 0.0) {
-                syscalls[std::to_string(i)] = energy_per_syscall.at(i) / count_per_syscall.at(i);
+                syscalls[getSyscallName(i)] = energy_per_syscall.at(i) / count_per_syscall.at(i);
             } else {
                 // If we have count > 0 but no energy, we are likely measuring very short syscalls that are below the
                 // resolution of our measurement. In this case, we can still report the default energy as a lower bound,
                 // which is better than reporting 0.
-                syscalls[std::to_string(i)] = syscallconfig.defaultEnergy;
+                syscalls[getSyscallName(i)] = syscallconfig.defaultEnergy;
             }
         }
     }

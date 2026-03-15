@@ -6,17 +6,14 @@
 #ifndef SRC_SPEAR_PROFILERS_SYSCALLPROFILER_H_
 #define SRC_SPEAR_PROFILERS_SYSCALLPROFILER_H_
 
-#include <cstdint>
-#include <memory>
+#include <bpf/libbpf.h>
+
 #include <unordered_map>
 #include <vector>
-#include <asm/unistd.h>
-
-#include <bpf/libbpf.h>
 
 #include "Profiler.h"
 #include "RegisterReader.h"
-#include "syscall_trace.skel.h"
+#include "bpf/syscall_trace.skel.h"
 
 // Custom deleters so we don't forget cleanup
 struct RingBufDeleter {
@@ -37,7 +34,7 @@ struct SkelDeleter {
 struct evt {
     uint32_t tid;
     uint32_t id;   // syscall id for enter/exit, unused for switch
-    uint8_t  type; // 0 enter, 1 exit, 2 switch_out, 3 switch_in
+    uint8_t  type;  // 0 enter, 1 exit, 2 switch_out, 3 switch_in
 };
 
 /**

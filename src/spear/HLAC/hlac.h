@@ -324,6 +324,11 @@ class CallNode : public GenericNode {
     bool isSyscall = false;
 
     /**
+     * If this call is a syscall, this field contains the corresponding syscall name, otherwise it is std::nullopt
+     */
+    std::optional<size_t> syscallId = std::nullopt;
+
+    /**
      * Underlying call instruction of the CallNode
      */
     llvm::CallBase *call = nullptr;
@@ -375,6 +380,16 @@ class CallNode : public GenericNode {
      * @return String representation of the FunctionNode
      */
     std::string getDotName() override;
+
+    /**
+     * Check whether this CallNode represents a syscall by checking the called function
+     * for the function "syscall" and for linker functions that are known to be syscall wrappers
+     *
+     * If the CallNode represents a syscall, the corresponding syscall id will be stored in the field syscallId
+     *
+     * @return true if this CallNode represents a syscall, false otherwise
+     */
+    bool checkIfIsSyscall();
 };
 
 /**

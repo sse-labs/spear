@@ -85,7 +85,6 @@ struct ProfilingConfiguration {
     double min_instruction_energy;
     CPURegressionConfig cpuregression;
     SyscallProfilingConfig syscallconfig;
-
 };
 
 class ConfigParser {

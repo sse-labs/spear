@@ -29,7 +29,7 @@
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "profilers/SyscallProfiler.h"
 
-#define SKIP_CPU_PROFILING true
+#define SKIP_CPU_PROFILING false
 
 
 void runProfileRoutine(CLIOptions opts) {
@@ -48,9 +48,8 @@ void runProfileRoutine(CLIOptions opts) {
     // Launch the benchmarking
     try {
         json cpuResult;
-        if (!SKIP_CPU_PROFILING) {
+        if constexpr (!SKIP_CPU_PROFILING) {
             cpuResult = cpuprofiler.profile();
-            metaResult["cpu"] = cpuResult;
         }
 
         json syscallResults = syscallProfiler.profile();
@@ -67,9 +66,11 @@ void runProfileRoutine(CLIOptions opts) {
 
         ProfileHandler phandler;
         phandler.setOrCreate("meta", metaResult);
-        if (!SKIP_CPU_PROFILING) {
+
+        if constexpr (!SKIP_CPU_PROFILING) {
             phandler.setOrCreate("cpu", cpuResult);
         }
+
         phandler.setOrCreate("syscalls", syscallResults);
         phandler.write(outputpath);
 

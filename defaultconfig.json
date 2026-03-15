@@ -4,11 +4,11 @@
     "min_instruction_energy": 1e-12,
     "cpu_regression": {
       "limit": 1000,
-      "step": 100,
+      "step": 200,
       "offset": 300
     },
     "syscalls": {
-      "runtime": 300,
+      "runtime": 60,
       "default_energy": 1e-6,
       "max_syscall_id": 462
     }
