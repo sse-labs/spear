@@ -16,6 +16,13 @@
 #include "Profiler.h"
 using json = nlohmann::json;
 
+struct Worker {
+    int core;
+    pid_t pid;
+    int cmd_write_fd;   // parent writes start/stop commands
+    int done_read_fd;   // parent reads completion status
+};
+
 /**
  * Component to profile the systems CPU using the profiler architecture
  */
@@ -104,13 +111,17 @@ class CPUProfiler : public Profiler {
      */
     std::map<std::string, std::pair<double, double>> _regression(std::vector<std::map<std::string, double>> results);
 
+    void _writeCSV(int k, const std::map<std::string, double>& results) const;
+
     /**
      * Profiles the system and gathers information about the energy usage of the CPU components
      * @return Returns profile as JSON object
      */
     json profile() override;
 
- private:
+    static void pinToCore(int core);
+
+private:
     /**
      * How many times each instruction is repeated inside each profile program.
      */
@@ -133,6 +144,8 @@ class CPUProfiler : public Profiler {
      */
     [[nodiscard]] std::vector<double> _measureFile(const std::string& file, uint64_t runtime = -1) const;
 
+    static void workerLoop(int core, int cmd_read_fd, int done_write_fd, const std::string &file);
+
     /**
      * Calculates a moving average on the given data with the specified window
      * @param data Raw data the average will be calculated on
@@ -140,6 +153,8 @@ class CPUProfiler : public Profiler {
      * @return Vector containing the moving averages of the raw data
      */
     std::vector<double> _movingAverage(const std::vector<double>& data, int windowSize);
+
+    std::vector<Worker> createWorkers(const std::string &file, int measurementCore, int numberOfCores) const;
 
     double huberMean(
         const std::vector<double>& data,

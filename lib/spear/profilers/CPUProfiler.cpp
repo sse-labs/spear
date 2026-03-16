@@ -149,6 +149,27 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
     return regressions;
 }
 
+#include <fstream>
+
+void CPUProfiler::_writeCSV(
+    int k,
+    const std::map<std::string, double>& results) const {
+
+    std::string filename = "profiling_k_" + std::to_string(k) + ".csv";
+    std::ofstream file(filename);
+
+    if (!file) {
+        throw std::runtime_error("Failed to open " + filename);
+    }
+
+    file << "instruction,median\n";
+    file << std::setprecision(17);
+
+    for (const auto& [instr, median] : results) {
+        file << instr << "," << median << "\n";
+    }
+}
+
 json CPUProfiler::profile() {
     this->log("Starting CPU profiling. This may take a while. Grab a coffee!");
 
@@ -197,11 +218,16 @@ json CPUProfiler::profile() {
     const auto estimatedSeconds = estimatedTotalMs / 1000.0;
     this->log("Profiling will take approximately " + std::to_string(estimatedSeconds) + " seconds.");
 
-    auto finishTime = std::chrono::system_clock::now() +
-                      std::chrono::milliseconds(estimatedTotalMs);
+    auto finishTime = std::chrono::system_clock::now() + std::chrono::milliseconds(estimatedTotalMs);
     std::time_t finishTimeT = std::chrono::system_clock::to_time_t(finishTime);
 
     this->log("Estimated finish time: " + std::string(std::ctime(&finishTimeT)));
+
+    // Warmup
+    const int warmupIterations = 300;
+    for (const auto& [key, value] : _profileCode) {
+        std::vector<double> measuredEnergy = this->_measureFile(value, warmupIterations);
+    }
 
     for (int i = 0; i < ks.size(); i++) {
         int iterations = ks[i];
@@ -215,9 +241,12 @@ json CPUProfiler::profile() {
         }
 
         for (const auto& [key, value] : _profileCode) {
-            double median = _median(measurements[key]);
+            double median = huberMean(measurements[key]);
             results[key] = median;
         }
+
+        _writeCSV(iterations, results);
+
 
         allResults.push_back(results);
     }
@@ -236,6 +265,8 @@ json CPUProfiler::profile() {
         intercepts.push_back(coeff.second);
     }
 
+
+
     // Store the constant offset in the profile mapping under a special key.
     // This offset represents the base energy consumption of the program
     double constanteOffset = _median(intercepts);
@@ -245,6 +276,51 @@ json CPUProfiler::profile() {
     return profmapping;
 }
 
+void CPUProfiler::pinToCore(int core) {
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    CPU_SET(core, &mask);
+
+    if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
+        perror("sched_setaffinity");
+        _exit(1);
+    }
+}
+
+void CPUProfiler::workerLoop(int core, int cmd_read_fd, int done_write_fd, const std::string& file) {
+    pinToCore(core);
+
+    for (;;) {
+        uint8_t cmd;
+        ssize_t n = read(cmd_read_fd, &cmd, sizeof(cmd));
+        if (n != sizeof(cmd)) {
+            _exit(0);
+        }
+
+        if (cmd == 0) {   // stop
+            _exit(0);
+        }
+
+        if (cmd == 1) {   // run
+            pid_t child = fork();
+            if (child == 0) {
+                char* const args[] = { const_cast<char*>(file.c_str()), nullptr };
+                execv(file.c_str(), args);
+                perror("execv");
+                _exit(127);
+            }
+
+            int status = 0;
+            if (child < 0 || waitpid(child, &status, 0) == -1) {
+                status = -1;
+            }
+
+            if (write(done_write_fd, &status, sizeof(status)) != sizeof(status)) {
+                _exit(1);
+            }
+        }
+    }
+}
 
 std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data, int windowSize) {
     std::vector<double> result;
@@ -265,93 +341,123 @@ std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data,
     return result;
 }
 
-std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t runtime) const {
-    std::vector<double> results;
-    results.reserve(runtime * number_of_cores);
+std::vector<Worker> CPUProfiler::createWorkers(const std::string& file, int measurementCore, int numberOfCores) const {
+    std::vector<Worker> workers;
 
-    #ifdef __linux__
-    RegisterReader powReader(0);
+    for (int core = 0; core < numberOfCores; ++core) {
+        if (core == measurementCore) {
+            continue;
+        }
 
-    // Shared memory for initial energy values of each child
-    double* sharedEnergyBefore = reinterpret_cast<double*>(mmap(nullptr,
-                                                number_of_cores * sizeof(double),
-                                                PROT_READ | PROT_WRITE,
-                                                MAP_SHARED | MAP_ANONYMOUS,
-                                                -1, 0));
+        int cmd_pipe[2];
+        int done_pipe[2];
 
-    char* args[] = { const_cast<char*>(file.c_str()), nullptr };
+        if (pipe(cmd_pipe) == -1 || pipe(done_pipe) == -1) {
+            perror("pipe");
+            exit(1);
+        }
 
-    uint64_t iters = runtime;
+        pid_t pid = fork();
+        if (pid == 0) {
+            close(cmd_pipe[1]);
+            close(done_pipe[0]);
+            workerLoop(core, cmd_pipe[0], done_pipe[1], file);
+            _exit(0);
+        }
 
-    // Pin parent to a dedicated core
-    cpu_set_t parentMask;
-    CPU_ZERO(&parentMask);
-    CPU_SET(1, &parentMask);
-    if (sched_setaffinity(0, sizeof(parentMask), &parentMask) == -1) {
-        perror("sched_setaffinity (parent)");
-        exit(1);
+        if (pid < 0) {
+            perror("fork");
+            exit(1);
+        }
+
+        close(cmd_pipe[0]);
+        close(done_pipe[1]);
+
+        workers.push_back(Worker{
+            .core = core,
+            .pid = pid,
+            .cmd_write_fd = cmd_pipe[1],
+            .done_read_fd = done_pipe[0]
+        });
     }
 
-    for (uint64_t it = 0; it < iters; /* manual increment inside */) {
-        std::vector<pid_t> pids(number_of_cores);
-        bool validIteration = true;  // assume good; flip to false on invalid diff
+    return workers;
+}
 
-        // Launch processes: one on each core
-        for (int core = 0; core < number_of_cores; core++) {
-            pid_t pid = fork();
+std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t runtime) const {
+    std::vector<double> results;
 
-            if (pid == 0) {
-                cpu_set_t mask;
-                CPU_ZERO(&mask);
-                CPU_SET(core, &mask);
+#ifdef __linux__
+    constexpr int measurementCore = 0;
+    const int workerCount = number_of_cores - 1;
 
-                if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
-                    perror("sched_setaffinity (child)");
-                    exit(1);
-                }
+    if (workerCount <= 0) {
+        return results;
+    }
 
-                sharedEnergyBefore[core] = powReader.getEnergy();
+    results.reserve(runtime * workerCount);
 
-                if (execv(file.c_str(), args) == -1) {
-                    perror("execv");
-                    exit(1);
-                }
-            } else if (pid > 0) {
-                pids[core] = pid;
-            } else {
-                perror("fork");
+    pinToCore(measurementCore);
+
+    RegisterReader powReader(0);
+    auto workers = createWorkers(file, measurementCore, number_of_cores);
+
+    for (uint64_t it = 0; it < runtime; ++it) {
+        uint8_t startCmd = 1;
+
+        // Tell all workers to run
+        for (auto& w : workers) {
+            if (write(w.cmd_write_fd, &startCmd, sizeof(startCmd)) != sizeof(startCmd)) {
+                perror("write startCmd");
                 exit(1);
             }
         }
 
-        std::vector<double> iterationResults(number_of_cores);
+        // One global energy measurement window
+        double before = powReader.getEnergy();
 
-        for (int core = 0; core < number_of_cores; core++) {
-            waitpid(pids[core], nullptr, 0);
+        bool validIteration = true;
 
-            double after = powReader.getEnergy();
-            double before = sharedEnergyBefore[core];
-            double diff = after - before;
-
-            if (diff <= 0) {
-                validIteration = false;
+        // Wait until all workers finished
+        for (auto& w : workers) {
+            int status = 0;
+            if (read(w.done_read_fd, &status, sizeof(status)) != sizeof(status)) {
+                perror("read done");
+                exit(1);
             }
 
-            iterationResults[core] = diff / number_of_cores;
+            if (status == -1 || !WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+                validIteration = false;
+            }
+        }
+
+        double after = powReader.getEnergy();
+        double diff = after - before;
+
+        if (diff <= 0) {
+            validIteration = false;
         }
 
         if (!validIteration) {
+            --it;
             continue;
         }
 
-        for (int core = 0; core < number_of_cores; core++) {
-            results.push_back(iterationResults[core]);
+        double perCore = diff / workerCount;
+        for (int i = 0; i < workerCount; ++i) {
+            results.push_back(perCore);
         }
-
-        it++;
     }
 
-    #endif
+    // Stop workers
+    uint8_t stopCmd = 0;
+    for (auto& w : workers) {
+        (void)write(w.cmd_write_fd, &stopCmd, sizeof(stopCmd));
+        close(w.cmd_write_fd);
+        close(w.done_read_fd);
+        waitpid(w.pid, nullptr, 0);
+    }
+#endif
 
     return results;
 }

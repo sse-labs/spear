@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    csv_files = glob.glob("../../cmake-build-debug/profile_*.csv")
+    csv_files = glob.glob("../../cmake-build-debug/profiling_k_*.csv")
 
     if not csv_files:
         print("No profile_*.csv files found.")
@@ -16,14 +16,14 @@ def main():
     data = []
 
     for file in csv_files:
-        match = re.search(r"profile_(\d+)\.csv$", os.path.basename(file))
+        match = re.search(r"profiling_k_(\d+)\.csv$", os.path.basename(file))
         if not match:
             continue
 
         k = int(match.group(1))
         df = pd.read_csv(file)
 
-        add_row = df[df["program"].str.lower() == "add"]
+        add_row = df[df["instruction"].str.lower() == "add"]
 
         if add_row.empty:
             print(f"'add' not found in {file}")
