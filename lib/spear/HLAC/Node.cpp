@@ -10,6 +10,7 @@
 #include <utility>
 #include <string>
 
+#include "ProfileHandler.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
 
@@ -66,6 +67,23 @@ void Node::printDotRepresentation(std::ostream &os) {
 
 std::string Node::getDotName() {
     return "Node" + this->getAddress();
+}
+
+double Node::getEnergy() {
+    double energy = 0.0;
+    auto &pHandler = ProfileHandler::get_instance();
+
+    for (const llvm::Instruction &I : *this->block) {
+        auto candiate = pHandler.getEnergyForInstruction(I.getOpcodeName());
+        if (candiate.has_value()) {
+            energy += candiate.value();
+        } else {
+            // If we do not have an energy value for the instruction, we log this and continue with the next instruction
+            llvm::errs() << "No energy value found for instruction: " << I.getOpcodeName() << "\n";
+        }
+    }
+
+    return energy;
 }
 
 }  // namespace HLAC

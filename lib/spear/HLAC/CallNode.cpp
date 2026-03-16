@@ -3,6 +3,7 @@
  * All rights reserved.
 */
 
+#include <iostream>
 #include <llvm/Demangle/Demangle.h>
 
 #include <memory>
@@ -10,19 +11,21 @@
 #include <utility>
 #include <string>
 
+#include "ProfileHandler.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
 #include "syscalls/generated_syscall_names.h"
 
 namespace HLAC {
 
-CallNode::CallNode(llvm::Function *calls, llvm::CallBase *call) {
+CallNode::CallNode(llvm::Function *calls, llvm::CallBase *call, FunctionNode *parent) {
     this->call = call;
     this->calledFunction = calls;
     this->name = "Call to " + calledFunction->getName().str();
     this->isLinkerFunction = calledFunction->isDeclarationForLinker();
     this->isSyscall = checkIfIsSyscall();
     this->isDebugFunction = calledFunction->getName().startswith("llvm.");
+    this->parentFunctionNode = parent;
 }
 
 void CallNode::collapseCalls(Node *belongingNode,
@@ -82,8 +85,8 @@ void CallNode::collapseCalls(Node *belongingNode,
     }
 }
 
-std::unique_ptr<CallNode> CallNode::makeNode(llvm::Function *function, llvm::CallBase *instruction) {
-    auto callnode = std::make_unique<CallNode>(function, instruction);
+std::unique_ptr<CallNode> CallNode::makeNode(llvm::Function *function, llvm::CallBase *instruction, FunctionNode *parent) {
+    auto callnode = std::make_unique<CallNode>(function, instruction, parent);
     return callnode;
 }
 
@@ -171,6 +174,31 @@ bool CallNode::checkIfIsSyscall() {
     }
 
     return false;
+}
+
+double CallNode::getEnergy() {
+    // If we encounter a syscall, we can just return the energy
+    if (this->isSyscall) {
+        if (syscallId.has_value()) {
+            auto candidate = ProfileHandler::get_instance().getEnergyForSyscall(std::string(getSyscallName(syscallId.value())));
+            if (candidate.has_value()) {
+                return candidate.value();
+            }
+        }
+    }
+
+    // If we have a normal call we need to calculate the energy of the called function and return this as the energy of the call
+    if (isLinkerFunction) {
+        std::cout << "Warning: CallNode " << this->calledFunction->getName().str() << " is a linker function. We do not have the body of "
+                                                                   "the function and thus cannot analyze it. Returning "
+                                                                   "energy 0.0." << std::endl;
+        return 0.0;
+    }
+
+    // Assume the function has been analyzed beforehand, so we can just look up the energy in the cache of the parent graph
+    auto energyOfCallee = parentFunctionNode->parentGraph->getEnergyPerFunction(this->calledFunction->getName().str());
+
+    return energyOfCallee;
 }
 
 }  // namespace HLAC

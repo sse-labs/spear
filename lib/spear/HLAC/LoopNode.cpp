@@ -13,12 +13,13 @@
 #include "analyses/loopbound/LoopBoundEdgeFunction.h"
 
 namespace HLAC {
-LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry) {
+LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry, FunctionNode *parentFunctionNode) {
     // Store the LLVM loop
     this->registry = registry;
     this->loop = loop;
     this->hasSubLoops = !loop->getSubLoops().empty();
     this->bounds = LoopBound::DeltaInterval();
+    this->parentFunction = parentFunctionNode;
 
     auto fName = function_node->function->getName().str();
     auto loopName = loop->getName().str();
@@ -33,7 +34,7 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
 
     // Create loop nodes recursively for subloops
     for (llvm::Loop *sub : loop->getSubLoops()) {
-        auto subLN = LoopNode::makeNode(sub, function_node, registry);
+        auto subLN = LoopNode::makeNode(sub, function_node, registry, function_node);
         this->Nodes.emplace_back(std::move(subLN));  // store as GenericNode
     }
 
@@ -148,7 +149,7 @@ void LoopNode::constructCallNodes(bool considerDebugFunctions) {
                 if (!callbase || !callbase->getParent()) continue;
 
                 llvm::Function *calledFunction = callbase->getCalledFunction();
-                auto callNodeUP = CallNode::makeNode(calledFunction, callbase);
+                auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this->parentFunction);
 
                 CallNode *callNode = callNodeUP.get();
                 if (!callNode->isDebugFunction && !considerDebugFunctions) {
@@ -163,8 +164,8 @@ void LoopNode::constructCallNodes(bool considerDebugFunctions) {
     }
 }
 
-std::unique_ptr<LoopNode> LoopNode::makeNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry) {
-    auto ln = std::make_unique<LoopNode>(loop, function_node, registry);
+std::unique_ptr<LoopNode> LoopNode::makeNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry, FunctionNode *parentFunctionNode) {
+    auto ln = std::make_unique<LoopNode>(loop, function_node, registry, parentFunctionNode);
     return ln;
 }
 
@@ -200,6 +201,14 @@ std::string LoopNode::getDotName() {
 
 std::string LoopNode::getAnchorDotName() {
     return this->getDotName() + "_anchor";
+}
+
+double LoopNode::getEnergy() {
+    double energy = 0.0;
+
+    // Here we need to perform the local ILP solving later on for the DAG analysis
+
+    return energy;
 }
 
 }  // namespace HLAC

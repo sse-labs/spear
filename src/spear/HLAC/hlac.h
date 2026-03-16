@@ -24,6 +24,7 @@ namespace HLAC {
 /**
  * Forward declarations of Function and Generic nodes
  */
+class hlac;
 class FunctionNode;
 class GenericNode;
 class LoopNode;
@@ -97,6 +98,14 @@ class GenericNode {
     }
 
     /**
+     * Calculate the energy of the node.
+     * @return Energy of the node, 0.0 if function is not overridden
+     */
+    virtual double getEnergy() {
+        return 0.0;
+    }
+
+    /**
      * Calculate the address of this node and return it as string
      * @return String representation of the nodes address
      */
@@ -139,6 +148,12 @@ class Node : public GenericNode {
      * @return Name of the node as escaped dot string
      */
     std::string getDotName() override;
+
+    /**
+     * Return the sum of the energy of all instructions contained in the basic block represented by this Node
+     * @return Energy of the Node
+     */
+    double getEnergy() override;
 };
 
 /**
@@ -169,6 +184,8 @@ class LoopNode : public GenericNode {
      */
     LoopBound::DeltaInterval bounds;
 
+    FunctionNode *parentFunction = nullptr;
+
     /**
      * Flag to store if the contained loop has subloops that find representation as further LoopNodes
      */
@@ -179,7 +196,7 @@ class LoopNode : public GenericNode {
      * @param loop loop that should be represented by the LoopNOde
      * @param function_node FunctionNode, the LoopNode is contained in
      */
-    LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry);
+    LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry, FunctionNode *parentFunctionNode);
 
     /**
      * Creates a new LoopNode and returns it
@@ -187,7 +204,7 @@ class LoopNode : public GenericNode {
      * @param function_node FunctionNode the LoopNode should be contained in
      * @return Returns unique pointer to the constructed LoopNode
      */
-    static std::unique_ptr<LoopNode> makeNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry);
+    static std::unique_ptr<LoopNode> makeNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry, FunctionNode *parentFunctionNode);
 
     /**
      * Takes the given list of edges and rewrites all entities that interact with loops inside this loop node
@@ -222,6 +239,8 @@ class LoopNode : public GenericNode {
      * @return Name of the anchor of the LoopNode
      */
     std::string getAnchorDotName();
+
+    double getEnergy() override;
 };
 
 /**
@@ -230,6 +249,12 @@ class LoopNode : public GenericNode {
 class FunctionNode : public GenericNode {
  public:
     ResultRegistry registry;
+
+    /**
+     * Mapping of function energy
+     * worst and best case
+     */
+    std::map<std::string, double> functionEnergy;
 
     /**
      * List of contained Nodes
@@ -245,6 +270,8 @@ class FunctionNode : public GenericNode {
      * Function represented by the FunctionNode
      */
     llvm::Function *function = nullptr;
+
+     HLAC::hlac *parentGraph = nullptr;
 
     /**
      * Meta flags to distinguish different kinds of function
@@ -262,7 +289,8 @@ class FunctionNode : public GenericNode {
     static std::unique_ptr<FunctionNode> makeNode(
         llvm::Function *func,
         llvm::FunctionAnalysisManager *fam,
-        ResultRegistry registry);
+        ResultRegistry registry,
+        hlac *parentGraph);
 
     /**
      * Create a new Edge in the HLAC
@@ -277,7 +305,7 @@ class FunctionNode : public GenericNode {
      * @param function Function that is represented by the FunctioNode
      * @param fam FunctionAnalysisManager that is used to drive the analysis
      */
-    FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *fam, const ResultRegistry& registry);
+    FunctionNode(llvm::Function *function, llvm::FunctionAnalysisManager *fam, const ResultRegistry& registry, hlac *parentGraph);
 
     /**
      * Print dot representation of the FunctionNode
@@ -291,6 +319,7 @@ class FunctionNode : public GenericNode {
      */
     std::string getDotName() override;
 
+    double getEnergy() override;
  private:
     /**
      * Iterates over the contained nodes and constructs LoopNodes recursively for all contained loops
@@ -323,6 +352,8 @@ class CallNode : public GenericNode {
     bool isDebugFunction = false;
     bool isSyscall = false;
 
+    FunctionNode *parentFunctionNode = nullptr;
+
     /**
      * If this call is a syscall, this field contains the corresponding syscall name, otherwise it is std::nullopt
      */
@@ -338,7 +369,7 @@ class CallNode : public GenericNode {
      * @param calls Function that will be called
      * @param call Call instruction that will be converted to a CallNode
      */
-    CallNode(llvm::Function *calls, llvm::CallBase *call);
+    CallNode(llvm::Function *calls, llvm::CallBase *call, FunctionNode *parentFunctionNode);
 
     /**
      * Insert this CallNode to the given Node and rewrites the corresponding edges
@@ -356,7 +387,7 @@ class CallNode : public GenericNode {
      * @param instruction Call instruction the CallNode is based on
      * @return Returns new constructed FunctionNode
      */
-    static std::unique_ptr<CallNode> makeNode(llvm::Function *function, llvm::CallBase *instruction);
+    static std::unique_ptr<CallNode> makeNode(llvm::Function *function, llvm::CallBase *instruction, FunctionNode *parent);
 
     /**
      * Check whether an edge with the given source and destination exists
@@ -390,6 +421,8 @@ class CallNode : public GenericNode {
      * @return true if this CallNode represents a syscall, false otherwise
      */
     bool checkIfIsSyscall();
+
+    double getEnergy() override;
 };
 
 /**
@@ -402,6 +435,11 @@ class hlac {
      * construction of the HLAC
      */
     ResultRegistry registry;
+
+    /**
+     * Simple cache to store the energy of functions that we have already calculated to avoid redundant calculations
+     */
+    std::map<std::string, double> FunctionEnergyCache;
 
      /**
       * Create a new HLAC graph with the given ResultRegistry
@@ -426,6 +464,10 @@ class hlac {
      * Print dot representation of the HLAC
      */
     void printDotRepresentation();
+
+    double getEnergyPerFunction(std::string functionName);
+
+    std::map<std::string, double> getEnergy();
 };
 }  // namespace HLAC
 

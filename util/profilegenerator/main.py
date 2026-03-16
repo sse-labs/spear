@@ -33,6 +33,14 @@ worklist = [
     Instruction("icmp ule", "i32", ["252", "42"], "i1"),
     Instruction("icmp ult", "i32", ["252", "42"], "i1"),
     Instruction("shl", "i32", ["42", "1"]),
+    Instruction.complex_instruction(
+        'alloca',
+        'alloca i32, align 4\n  call void asm sideeffect "", "r"(ptr COUNTER)',
+        '',
+        '',
+        '',
+        True
+    ),
     Instruction("lshr", "i32", ["42", "1"]),
     Instruction("srem", "i32", ["42", "3"]),
     Instruction.complex_instruction('store', 'store volatile i8 17, i8* @global_dst', '@global_dst = global i8 0', '',"", False),

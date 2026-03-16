@@ -8,6 +8,8 @@
 #include <regex>
 #include <utility>
 #include <string>
+#include <unordered_set>
+#include <llvm/Analysis/LazyCallGraph.h>
 
 #include "HLAC/util.h"
 
@@ -206,4 +208,37 @@ std::string Util::feasibilityToString(bool feas) {
 bool Util::starts_with(const std::string& s, const std::string& prefix) {
     return s.rfind(prefix, 0) == 0;
 }
+
+
+std::vector<llvm::Function*> Util::getLazyCallGraphPostOrder(
+    llvm::Module &M,
+    llvm::FunctionAnalysisManager &FAM) {
+
+    auto GetTLI = [&FAM](llvm::Function &F) -> llvm::TargetLibraryInfo & {
+        return FAM.getResult<llvm::TargetLibraryAnalysis>(F);
+    };
+
+    llvm::LazyCallGraph LCG(M, GetTLI);
+    LCG.buildRefSCCs();
+
+    std::vector<llvm::Function*> result;
+    std::unordered_set<llvm::Function*> seen;
+
+    for (llvm::LazyCallGraph::RefSCC &RC : LCG.postorder_ref_sccs()) {
+        for (llvm::LazyCallGraph::SCC &C : RC) {
+            for (llvm::LazyCallGraph::Node &N : C) {
+                llvm::Function &F = N.getFunction();
+                if (F.isDeclaration()) {
+                    continue;
+                }
+                if (seen.insert(&F).second) {
+                    result.push_back(&F);
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
 }  // namespace HLAC

@@ -7,6 +7,7 @@
 #define SRC_SPEAR_HLAC_UTIL_H_
 
 #include <string>
+#include <unordered_set>
 
 #include "HLAC/hlac.h"
 
@@ -82,6 +83,8 @@ class Util {
     static std::string feasibilityToString(bool feas);
 
     static bool starts_with(const std::string& s, const std::string& prefix);
+
+    static std::vector<llvm::Function *> getLazyCallGraphPostOrder(llvm::Module &M, llvm::FunctionAnalysisManager &FAM);
 };
 
 }  // namespace HLAC
