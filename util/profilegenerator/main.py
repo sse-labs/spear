@@ -18,6 +18,7 @@ worklist = [
     Instruction("and", "i32", ["42", "311"]),
     Instruction("xor", "i32", ["42", "311"]),
     Instruction("br", "i32", []),
+    Instruction("switch", "i32", []),
     Instruction("frem", "float", ["42.0", "3.0"]),
     Instruction("urem", "i32", ["42", "3"]),
     Instruction("sdiv", "i32", ["42", "3"]),

@@ -57,6 +57,43 @@ class Generator:
 
                 continue  # IMPORTANT: skip normal codegen path
 
+            if opcode == "switch":
+                with open(filename, "w") as f:
+                    f.write('@global = global i32 0\n\n')
+                    f.write('define i32 @main() #0 {\n')
+                    f.write('entry:\n')
+                    f.write('  br label %block0\n\n')
+
+                    for i in range(0, self.repetitions + 1):
+                        f.write(f'block{i}:\n')
+                        f.write(f'  %v{i} = and i32 42, 3\n')
+                        f.write(f'  switch i32 %v{i}, label %default{i} [\n')
+                        f.write(f'    i32 0, label %case0_{i}\n')
+                        f.write(f'    i32 1, label %case1_{i}\n')
+                        f.write(f'    i32 2, label %case2_{i}\n')
+                        f.write('  ]\n\n')
+
+                        for case in range(3):
+                            f.write(f'case{case}_{i}:\n')
+                            f.write(f'  store volatile i32 %v{i}, i32* @global\n')
+                            if i < self.repetitions:
+                                f.write(f'  br label %block{i+1}\n\n')
+                            else:
+                                f.write('  br label %end\n\n')
+
+                        f.write(f'default{i}:\n')
+                        f.write(f'  store volatile i32 %v{i}, i32* @global\n')
+                        if i < self.repetitions:
+                            f.write(f'  br label %block{i+1}\n\n')
+                        else:
+                            f.write('  br label %end\n\n')
+
+                    f.write('end:\n')
+                    f.write('  ret i32 0\n')
+                    f.write('}\n')
+
+                continue
+
             if opcode == "frem":
                 with open(filename, "w") as f:
                     # Two globals used for volatile loads
