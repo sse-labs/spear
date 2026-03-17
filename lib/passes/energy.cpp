@@ -497,17 +497,9 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             auto res = graph->getEnergy();
 
-            /*int i = 0;
-            for (auto &fn : graph->functions) {
-                if (fn->isMainFunction) {
-                    llvm::outs() << "Found main at index " << i << "\n";
-                    for (auto &bb : *fn->function) {
-                        llvm::outs() << bb.getName() << "\n";
-                    }
-                }
-
-                i++;
-            }*/
+            for (const auto &[funcName, energy] : res) {
+                llvm::outs() << "HLAC Energy of " << funcName << ": " << energy << " J\n";
+            }
 
             if (functionTree != nullptr) {
                 std::vector<llvm::StringRef> names;

@@ -240,6 +240,7 @@ json CPUProfiler::profile() {
     // This offset represents the base energy consumption of the program
     double constanteOffset = _median(intercepts);
     profmapping["_programoffset"] = constanteOffset;
+    profmapping["_unknown_cost"] = ConfigParser::getProfilingConfiguration().min_instruction_energy;
 
     this->log("CPU profiling finished!");
     return profmapping;
