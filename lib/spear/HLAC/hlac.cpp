@@ -7,6 +7,7 @@
 #include <utility>
 #include <fstream>
 #include <string>
+#include <map>
 
 namespace HLAC {
 

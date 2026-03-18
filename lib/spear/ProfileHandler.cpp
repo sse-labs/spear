@@ -67,6 +67,14 @@ std::optional<double> ProfileHandler::getProgramOffset() {
     }
 }
 
+std::optional<double> ProfileHandler::getUnknownCost() {
+    if (_profile["cpu"].contains("_unknown_cost")) {
+        return _profile["cpu"]["_unknown_cost"].get<double>();
+    } else {
+        return std::nullopt;
+    }
+}
+
 std::optional<double> ProfileHandler::getEnergyForSyscall(const std::string& syscall) {
     if (_profile["syscalls"].contains(syscall)) {
         return _profile["syscalls"][syscall].get<double>();

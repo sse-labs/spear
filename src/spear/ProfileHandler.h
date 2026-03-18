@@ -23,7 +23,7 @@ using profileMap = std::variant<
  * Class for handling the reading and writing of profiles
  */
 class ProfileHandler {
-public:
+ public:
     /**
      * Retrieve the global singleton instance
      */
@@ -46,10 +46,30 @@ public:
      */
     void write(const std::string& filename);
 
+    /**
+     * Return the energy of the instruction specified by the given string
+     * @param instruction Instruction string to receive energy for
+     * @return Energy if the instruction exists in the profile, nullopt otherwise
+     */
     std::optional<double> getEnergyForInstruction(const std::string &instruction);
 
+    /**
+     * Return the program offset value from the profile, if it exists
+     * @return Program offset energy if entry exits in the profile, nullopt otherwise
+     */
     std::optional<double> getProgramOffset();
 
+    /**
+     * Return the fallback cost value from the profile, if it exists
+     * @return Fallback energy cost if entry exits in the profile, nullopt otherwise
+     */
+    std::optional<double> getUnknownCost();
+
+    /**
+     * Return the energy of the syscall found under the given name
+     * @param syscall Name of the syscall to retrieve energy for
+     * @return Energy if the syscall can be found in the profile, nullopt otherwise
+     */
     std::optional<double> getEnergyForSyscall(const std::string &syscall);
 
     /**
@@ -67,7 +87,7 @@ public:
      */
     void setOrCreate(std::string key, json &mapping);
 
-private:
+ private:
     /**
      * Private constructor (singleton)
      */

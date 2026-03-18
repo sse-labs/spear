@@ -4,12 +4,13 @@
 */
 
 #include <llvm/Demangle/Demangle.h>
+#include <llvm/Analysis/LazyCallGraph.h>
 
 #include <regex>
 #include <utility>
 #include <string>
 #include <unordered_set>
-#include <llvm/Analysis/LazyCallGraph.h>
+#include <vector>
 
 #include "HLAC/util.h"
 
