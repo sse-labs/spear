@@ -209,6 +209,13 @@ target_link_libraries(SpearLib
         LLVM
         nlohmann_json
         phasar
+        Cgl
+        Cbc
+        CbcSolver
+        OsiClp
+        Osi
+        Clp
+        CoinUtils
 )
 
 if(Z3_TARGET STREQUAL "")
@@ -225,6 +232,7 @@ target_include_directories(SpearLib
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/passes
         ${CMAKE_CURRENT_SOURCE_DIR}/src/spear/bpf
         ${CMAKE_CURRENT_BINARY_DIR}/generated
+        /usr/include/coin
 )
 
 # Executable

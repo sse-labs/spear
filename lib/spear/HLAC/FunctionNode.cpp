@@ -48,12 +48,32 @@ FunctionNode::FunctionNode(llvm::Function *function,
         std::unordered_map<const llvm::BasicBlock *, GenericNode *> bb2node;
         bb2node.reserve(function->size());
 
+        int entryIndex = -1;
+        int exitIndex = -1;
+
         // Create all NormalNodes by iteration over the list of basic blocks
         for (auto &basic_block : *function) {
+            llvm::Instruction *term = basic_block.getTerminator();
+
+            if (basic_block.isEntryBlock() ) {
+                // Virtual entry node
+                auto vpoint = VirtualNode::makeVirtualPoint(true, false);
+                this->Nodes.push_back(std::move(vpoint));
+                entryIndex = this->Nodes.size() - 1;
+            }
+
+            // Normal node
             auto normal_node = Node::makeNode(&basic_block);
             GenericNode *raw = normal_node.get();
             this->Nodes.push_back(std::move(normal_node));
             bb2node.emplace(&basic_block, raw);
+
+            if (term->getNumSuccessors() == 0) {
+                // Virtual exit node
+                auto vpoint = VirtualNode::makeVirtualPoint(false, true);
+                this->Nodes.push_back(std::move(vpoint));
+                exitIndex = this->Nodes.size() - 1;
+            }
         }
 
 
@@ -67,6 +87,25 @@ FunctionNode::FunctionNode(llvm::Function *function,
             if (!term) continue;
 
             const unsigned nSucc = term->getNumSuccessors();
+
+            // Handle virtual points
+            if (entryIndex != -1) {
+                if (basic_block.isEntryBlock()) {
+                    auto e = FunctionNode::makeEdge(this->Nodes[entryIndex].get(), src);
+                    e->feasibility = true;
+                    this->Edges.push_back(std::move(e));
+                }
+            }
+
+            if (exitIndex != -1) {
+                if (term->getNumSuccessors() == 0) {
+                    auto e = FunctionNode::makeEdge(src, this->Nodes[exitIndex].get());
+                    e->feasibility = true;
+                    this->Edges.push_back(std::move(e));
+                }
+            }
+
+
             for (unsigned i = 0; i < nSucc; ++i) {
                 const llvm::BasicBlock *succBB = term->getSuccessor(i);
 

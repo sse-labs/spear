@@ -32,8 +32,9 @@
 
 #include <nlohmann/json.hpp>
 
-#include "analyses/ResultRegistry.h"
 #include "HLAC/util.h"
+#include "ILP/ILPBuilder.h"
+#include "analyses/ResultRegistry.h"
 
 using json = nlohmann::json;
 
@@ -496,6 +497,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             std::cout << "Dot writing took: " << dotTime.count() << " µs\n";
 
             auto res = graph->getEnergy();
+
+            auto ilps = graph->buildILPS();
 
             for (const auto &[funcName, energy] : res) {
                 llvm::outs() << "HLAC Energy of " << funcName << ": " << energy << " J\n";

@@ -6,6 +6,9 @@
 #ifndef SRC_SPEAR_HLAC_HLAC_H_
 #define SRC_SPEAR_HLAC_HLAC_H_
 
+#include <CoinPackedMatrix.hpp>
+#include "OsiClpSolverInterface.hpp"
+#include "CbcModel.hpp"
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/BasicBlock.h>
 
@@ -28,48 +31,6 @@ class hlac;
 class FunctionNode;
 class GenericNode;
 class LoopNode;
-
-/**
- * Edge class that represents connections inside the HLAC
- */
-class Edge {
- public:
-    /**
-     * Source node of the edge
-     */
-    GenericNode *soure = nullptr;
-    /**
-     * Destination node of the edge
-     */
-    GenericNode *destination = nullptr;
-
-    /**
-     * Feasibility state of the edge
-     */
-    bool feasibility = true;
-
-    /**
-     * Constructs a new edge between the two given nodes
-     * @param soure Source node of the edge
-     * @param destination Destination node of the edge
-     */
-    Edge(GenericNode *soure, GenericNode *destination) : soure(soure), destination(destination) {}
-
-    /**
-     * Print the HLAC graph as dot representation
-     * @param os Outputstream to write to
-     */
-    void printDotRepresentation(std::ostream &os);
-
- private:
-    /**
-     * Searches for the first occasion of a non-LoopNode in the given LoopNode so we can draw an edge to this Node
-     * @param loopNode LoopNode to search in
-     * @param pickBack If true searches for the last node in the LoopNode, if false for the first Node
-     * @return Found Node, nullptr if no Node can be found
-     */
-    static GenericNode *pickNonLoopNode(HLAC::LoopNode *loopNode, bool pickBack);
-};
 
 /**
  * Polymorphic generic node type
@@ -112,6 +73,75 @@ class GenericNode {
      * Generic destructor
      */
     virtual ~GenericNode() = default;
+};
+
+class VirtualNode : public GenericNode {
+ public:
+
+    bool isEntry = false;
+    bool isExit = false;
+
+    static std::unique_ptr<VirtualNode> makeVirtualPoint(bool isEntry, bool isExit);
+
+    /**
+     * Print this NormalNode as dot representation
+     * Prints the nodes name and the contained llvm IR statements
+     * @param os Outputstream to print to
+     */
+    void printDotRepresentation(std::ostream &os) override;
+
+    /**
+     * Get the name of the NormalNode escaped for dot
+     * @return Name of the node as escaped dot string
+     */
+    std::string getDotName() override;
+};
+
+/**
+ * Edge class that represents connections inside the HLAC
+ */
+class Edge {
+public:
+
+    std::string id;
+
+    /**
+     * Source node of the edge
+     */
+    GenericNode *soure = nullptr;
+    /**
+     * Destination node of the edge
+     */
+    GenericNode *destination = nullptr;
+
+    /**
+     * Feasibility state of the edge
+     */
+    bool feasibility = true;
+
+    /**
+     * Constructs a new edge between the two given nodes
+     * @param soure Source node of the edge
+     * @param destination Destination node of the edge
+     */
+    Edge(GenericNode *soure, GenericNode *destination) : soure(soure), destination(destination) {
+        id = soure->getDotName() + "->" + destination->getDotName();
+    }
+
+    /**
+     * Print the HLAC graph as dot representation
+     * @param os Outputstream to write to
+     */
+    void printDotRepresentation(std::ostream &os);
+
+private:
+    /**
+     * Searches for the first occasion of a non-LoopNode in the given LoopNode so we can draw an edge to this Node
+     * @param loopNode LoopNode to search in
+     * @param pickBack If true searches for the last node in the LoopNode, if false for the first Node
+     * @return Found Node, nullptr if no Node can be found
+     */
+    static GenericNode *pickNonLoopNode(HLAC::LoopNode *loopNode, bool pickBack);
 };
 
 /**
@@ -482,6 +512,13 @@ class hlac {
      * @return Mapping between function name and energy as double value
      */
     std::map<std::string, double> getEnergy();
+
+    /**
+     * Build an ILP representation for the contained functions
+     * @return Returns mapping between function name and the constructed CoinPackedMatrix representing the ILP for the
+     * function
+     */
+    std::map<std::string, CoinPackedMatrix> buildILPS();
 };
 }  // namespace HLAC
 
