@@ -7,6 +7,7 @@
 #define SRC_SPEAR_HLAC_UTIL_H_
 
 #include <string>
+#include <vector>
 
 #include "HLAC/hlac.h"
 
@@ -81,7 +82,21 @@ class Util {
      */
     static std::string feasibilityToString(bool feas);
 
+    /**
+     * Helper function to check if a string starts with a certain prefix
+     * @param s String to analyze
+     * @param prefix Prefix
+     * @return True if the string starts with the prefix, false otherwise
+     */
     static bool starts_with(const std::string& s, const std::string& prefix);
+
+    /**
+     * Return the callgraph of the given module as post order vector
+     * @param M Module to analyze
+     * @param FAM FunctionAnalysisManager to extract callgraph information from
+     * @return Vector containing the callgraph in postorder fashion
+     */
+    static std::vector<llvm::Function *> getLazyCallGraphPostOrder(llvm::Module &M, llvm::FunctionAnalysisManager &FAM);
 };
 
 }  // namespace HLAC

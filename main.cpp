@@ -64,7 +64,7 @@ void runProfileRoutine(CLIOptions opts) {
             opts.saveLocation.c_str());
         std::cout << "Writing " << outputpath << "\n";
 
-        ProfileHandler phandler;
+        ProfileHandler &phandler = ProfileHandler::get_instance();
         phandler.setOrCreate("meta", metaResult);
 
         if constexpr (!SKIP_CPU_PROFILING) {

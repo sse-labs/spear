@@ -33,6 +33,7 @@
 #include <nlohmann/json.hpp>
 
 #include "analyses/ResultRegistry.h"
+#include "HLAC/util.h"
 
 using json = nlohmann::json;
 
@@ -80,7 +81,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     explicit Energy(const std::string &filename, ResultRegistry &registry) {
         if (llvm::sys::fs::exists(filename) && !llvm::sys::fs::is_directory(filename)) {
             // Create a JSONHandler object and read in the energypath
-            ProfileHandler phandler;
+            ProfileHandler &phandler = ProfileHandler::get_instance();
             phandler.read(filename);
             this->energyJson = phandler.getProfile()["cpu"];
 
@@ -98,7 +99,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     Energy() {
         if (llvm::sys::fs::exists(energyModelPath) && !llvm::sys::fs::is_directory(energyModelPath)) {
             // Create a JSONHandler object and read in the energypath
-            ProfileHandler phandler;
+            ProfileHandler &phandler = ProfileHandler::get_instance();
             phandler.read(energyModelPath.c_str());
             this->energyJson = phandler.getProfile()["profile"];
             this->deepCallsEnabled = !deepCallsParameter.empty();
@@ -454,23 +455,31 @@ struct Energy : llvm::PassInfoMixin<Energy> {
              * somewhat on these results.
              */
             auto funcList = &module.getFunctionList();
+            auto postOrderFuncList = HLAC::Util::getLazyCallGraphPostOrder(module, functionAnalysisManager);
+
+            std::vector<std::string > funcNamesPostOrder;
+            for (auto &function : postOrderFuncList) {
+                funcNamesPostOrder.push_back(function->getName().str());
+            }
 
             FunctionTree *functionTree = nullptr;
             std::unique_ptr<HLAC::hlac> graph = HLAC::HLACWrapper::makeHLAC(this->resultRegistry);
 
-            auto startConstruction = std::chrono::high_resolution_clock::now();
-
             // Construct the functionTrees to the functions of the module
             for (auto &function : *funcList) {
                 // function.print(llvm::outs());
-
-                graph->makeFunction(&function, &functionAnalysisManager);
 
                 auto name = function.getName();
                 if (name == "main") {
                     auto mainFunctionTree = FunctionTree::construct(&function);
                     functionTree = (mainFunctionTree);
                 }
+            }
+
+            auto startConstruction = std::chrono::high_resolution_clock::now();
+
+            for (auto function : postOrderFuncList) {
+                graph->makeFunction(function, &functionAnalysisManager);
             }
 
             auto endConstruction = std::chrono::high_resolution_clock::now();
@@ -486,17 +495,11 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
             std::cout << "Dot writing took: " << dotTime.count() << " µs\n";
 
-            /*int i = 0;
-            for (auto &fn : graph->functions) {
-                if (fn->isMainFunction) {
-                    llvm::outs() << "Found main at index " << i << "\n";
-                    for (auto &bb : *fn->function) {
-                        llvm::outs() << bb.getName() << "\n";
-                    }
-                }
+            auto res = graph->getEnergy();
 
-                i++;
-            }*/
+            for (const auto &[funcName, energy] : res) {
+                llvm::outs() << "HLAC Energy of " << funcName << ": " << energy << " J\n";
+            }
 
             if (functionTree != nullptr) {
                 std::vector<llvm::StringRef> names;

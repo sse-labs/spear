@@ -1,51 +1,59 @@
 /*
  * Copyright (c) 2026 Maximilian Krebs
  * All rights reserved.
-*/
+ */
 
 #include <llvm/Demangle/Demangle.h>
+#include <iostream>
 
 #include <memory>
-#include <vector>
-#include <utility>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
+#include "ProfileHandler.h"
 #include "syscalls/generated_syscall_names.h"
 
 namespace HLAC {
 
-CallNode::CallNode(llvm::Function *calls, llvm::CallBase *call) {
+CallNode::CallNode(llvm::Function *calls, llvm::CallBase *call, FunctionNode *parent) {
     this->call = call;
     this->calledFunction = calls;
     this->name = "Call to " + calledFunction->getName().str();
     this->isLinkerFunction = calledFunction->isDeclarationForLinker();
     this->isSyscall = checkIfIsSyscall();
     this->isDebugFunction = calledFunction->getName().startswith("llvm.");
+    this->parentFunctionNode = parent;
 }
 
-void CallNode::collapseCalls(Node *belongingNode,
-                                  std::vector<std::unique_ptr<GenericNode>> &nodeList,
-                                  std::vector<std::unique_ptr<Edge>> &edgeList) {
+void CallNode::collapseCalls(Node *belongingNode, std::vector<std::unique_ptr<GenericNode>> &nodeList,
+                             std::vector<std::unique_ptr<Edge>> &edgeList) {
     // Check if the belonging node and the call are valid
-    if (!belongingNode || !this->call) return;
+    if (!belongingNode || !this->call) {
+        return;
+    }
 
     // Check that the belonging node's block is valid
     llvm::BasicBlock *bb = belongingNode->block;
-    if (!bb) return;
+    if (!bb) {
+        return;
+    }
 
     // Validate that our call originates from the referenced basic block
-    if (this->call->getParent() != bb) return;
+    if (this->call->getParent() != bb) {
+        return;
+    }
 
     /**
      * Collect all edges taht start in the belonging node.
      * Afterwards we delete these edges
      */
-    std::vector<GenericNode*> targets;
+    std::vector<GenericNode *> targets;
     targets.reserve(8);
 
-    for (auto it = edgeList.begin(); it != edgeList.end(); ) {
+    for (auto it = edgeList.begin(); it != edgeList.end();) {
         Edge *e = it->get();
         if (!e) {
             ++it;
@@ -75,22 +83,27 @@ void CallNode::collapseCalls(Node *belongingNode,
 
     // Add CallNode -> targets
     for (GenericNode *t : targets) {
-        if (!t || t == this) continue;
+        if (!t || t == this) {
+            continue;
+        }
         if (!edgeExists(edgeList, this, t)) {
             edgeList.emplace_back(std::make_unique<Edge>(this, t));
         }
     }
 }
 
-std::unique_ptr<CallNode> CallNode::makeNode(llvm::Function *function, llvm::CallBase *instruction) {
-    auto callnode = std::make_unique<CallNode>(function, instruction);
+std::unique_ptr<CallNode> CallNode::makeNode(llvm::Function *function, llvm::CallBase *instruction,
+                                             FunctionNode *parent) {
+    auto callnode = std::make_unique<CallNode>(function, instruction, parent);
     return callnode;
 }
 
 bool CallNode::edgeExists(const std::vector<std::unique_ptr<Edge>> &edgeList, GenericNode *s, GenericNode *d) {
     for (auto &eup : edgeList) {
         const Edge *e = eup.get();
-        if (e && e->soure == s && e->destination == d) return true;
+        if (e && e->soure == s && e->destination == d) {
+            return true;
+        }
     }
     return false;
 }
@@ -107,34 +120,30 @@ void CallNode::printDotRepresentation(std::ostream &os) {
 
     // Print dot representation to the given OS
     os << getDotName() << "["
-        << "shape=record,"
-        << "style=filled,"
-        << "fillcolor=\"#8D89A6\","
-        << "color=\"#2B2B2B\","
-        << "style=\"rounded,filled\","
-        << "penwidth=2,"
-        << "fontname=\"Courier\","
-        << "label=\"{"
-        << "call:\\l"
-        << "| " << Util::dotRecordEscape(shortLabel)
-        << "| { LINKERFUNC=" << isLinkerFunction
-        <<" | DEBUGFUNC=" << isDebugFunction
-        << " | SYSCALL=" << isSyscall;
+       << "shape=record,"
+       << "style=filled,"
+       << "fillcolor=\"#8D89A6\","
+       << "color=\"#2B2B2B\","
+       << "style=\"rounded,filled\","
+       << "penwidth=2,"
+       << "fontname=\"Courier\","
+       << "label=\"{"
+       << "call:\\l"
+       << "| " << Util::dotRecordEscape(shortLabel) << "| { LINKERFUNC=" << isLinkerFunction
+       << " | DEBUGFUNC=" << isDebugFunction << " | SYSCALL=" << isSyscall;
 
-        if (syscallId.has_value()) {
-            os << " | SID=" << syscallId.value() << " }";
-        } else {
-            os << " }";
-        }
+    if (syscallId.has_value()) {
+        os << " | SID=" << syscallId.value() << " }";
+    } else {
+        os << " }";
+    }
 
-        os << "}\""
-        << "];\n";
+    os << "}\""
+       << "];\n";
 }
 
 
-std::string CallNode::getDotName() {
-    return "CallNode" + this->getAddress();
-}
+std::string CallNode::getDotName() { return "CallNode" + this->getAddress(); }
 
 bool CallNode::checkIfIsSyscall() {
     /**
@@ -173,5 +182,34 @@ bool CallNode::checkIfIsSyscall() {
     return false;
 }
 
-}  // namespace HLAC
+double CallNode::getEnergy() {
+    // If we encounter a syscall, we can just return the energy
+    if (this->isSyscall) {
+        if (syscallId.has_value()) {
+            auto candidate =
+                    ProfileHandler::get_instance().getEnergyForSyscall(std::string(getSyscallName(syscallId.value())));
+            if (candidate.has_value()) {
+                return candidate.value();
+            }
+        }
+    }
 
+    // If we have a normal call we need to calculate the energy of the called function and return this as the energy of
+    // the call
+    if (isLinkerFunction) {
+        std::cout << "Warning: CallNode " << this->calledFunction->getName().str()
+                  << " is a linker function. We do not have the body of "
+                     "the function and thus cannot analyze it. Returning "
+                     "energy 0.0."
+                  << std::endl;
+        return 0.0;
+    }
+
+    // Assume the function has been analyzed beforehand, so we can just look up the energy in the cache of the parent
+    // graph
+    auto energyOfCallee = parentFunctionNode->parentGraph->getEnergyPerFunction(this->calledFunction->getName().str());
+
+    return energyOfCallee;
+}
+
+}  // namespace HLAC

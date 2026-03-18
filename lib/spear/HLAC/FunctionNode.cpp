@@ -23,12 +23,14 @@ namespace HLAC {
 
 FunctionNode::FunctionNode(llvm::Function *function,
     llvm::FunctionAnalysisManager *function_analysis_manager,
-    const ResultRegistry& registry) {
+    const ResultRegistry& registry,
+    hlac *parentGraph) {
     // Set the parameter of the FunctionNode
     this->registry = registry;
     this->function = function;
     this->name = function->getName();
     this->isLinkerFunction = function->isDeclarationForLinker();
+    this->parentGraph = parentGraph;
 
     // Determine if the function is a LLVM debug function
     if (HLAC::Util::starts_with(this->name, "llvm.")) {
@@ -110,7 +112,7 @@ FunctionNode::FunctionNode(llvm::Function *function,
 
 void FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
     for (auto &loop : loops) {
-        auto loopNode = LoopNode::makeNode(loop, this, registry);
+        auto loopNode = LoopNode::makeNode(loop, this, registry, this);
         loopNode->collapseLoop(this->Edges);
 
         this->Nodes.push_back(std::move(loopNode));
@@ -148,7 +150,7 @@ void FunctionNode::constructCallNodes(bool considerDebugFunctions) {
                 llvm::Function *calledFunction = callbase->getCalledFunction();
 
                 // Construct the CallNode
-                auto callNodeUP = CallNode::makeNode(calledFunction, callbase);
+                auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this);
                 CallNode *callNode = callNodeUP.get();
 
                 if (!callNode->isDebugFunction || !considerDebugFunctions) {
@@ -169,8 +171,9 @@ void FunctionNode::constructCallNodes(bool considerDebugFunctions) {
 std::unique_ptr<FunctionNode> FunctionNode::makeNode(
     llvm::Function* function,
     llvm::FunctionAnalysisManager *fam,
-    ResultRegistry registry) {
-    auto fn = std::make_unique<FunctionNode>(function, fam, registry);
+    ResultRegistry registry,
+    hlac *parentGraph) {
+    auto fn = std::make_unique<FunctionNode>(function, fam, registry, parentGraph);
     return fn;
 }
 
@@ -201,6 +204,23 @@ void FunctionNode::printDotRepresentation(std::ostream &os) {
 
 std::string FunctionNode::getDotName() {
     return "FunctionNode " + this->name;
+}
+
+double FunctionNode::getEnergy() {
+    // Here we need to implement the global ILP formulation for the function energy estimation or the
+    // DAG search based approach
+    double energy = 0.0;
+
+    // DUMMY CALCULATION
+    // Just sum up the energy of all contained nodes for now, this is not the actual energy calculation we want to do
+    // in the end, but it is sufficient for testing purposes
+    for (auto &node : this->Nodes) {
+        energy += node->getEnergy();
+    }
+
+    // After the energy is calculated store it in the energy cache of the parent graph to avoid redundant calculations
+    this->parentGraph->FunctionEnergyCache[this->function->getName().str()] = energy;
+    return energy;
 }
 
 }  // namespace HLAC
