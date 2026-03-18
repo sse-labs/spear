@@ -6,6 +6,6 @@ var searchData=
   ['loopboundideanalysis_3',['LoopBoundIDEAnalysis',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#aed923a837a3dfda02ecdcbc2d8efed2e',1,'LoopBound::LoopBoundIDEAnalysis']]],
   ['loopboundwrapper_4',['LoopBoundWrapper',['../classLoopBound_1_1LoopBoundWrapper.html#ae01be73945b898ee1ff855aa1cde4c52',1,'LoopBound::LoopBoundWrapper']]],
   ['loopclassifier_5',['LoopClassifier',['../classLoopBound_1_1LoopClassifier.html#aebb04d9b81c2fc5a0544b85dcc2b5455',1,'LoopBound::LoopClassifier']]],
-  ['loopnode_6',['loopnode',['../classHLAC_1_1LoopNode.html#a6c4504a7621e9dfe4b70d5744e8db4ff',1,'HLAC::LoopNode::LoopNode()'],['../classLoopNode.html#a9ed8fbdf9af17f6c52f7ccd4bc0de458',1,'LoopNode::LoopNode()']]],
+  ['loopnode_6',['loopnode',['../classHLAC_1_1LoopNode.html#aefd4946443ad84de28252f5be9bdc518',1,'HLAC::LoopNode::LoopNode()'],['../classLoopNode.html#a9ed8fbdf9af17f6c52f7ccd4bc0de458',1,'LoopNode::LoopNode()']]],
   ['looptree_7',['LoopTree',['../classLoopTree.html#a45a0862b4849d3302b8a5d5b99e7a0f8',1,'LoopTree']]]
 ];

@@ -95,12 +95,14 @@ Inheritance diagram for HLAC::FunctionNode:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:af4b290a873620c270b624a574c3f1262" id="r_af4b290a873620c270b624a574c3f1262"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#af4b290a873620c270b624a574c3f1262">FunctionNode</a> (llvm::Function *<a class="el" href="classHLAC_1_1FunctionNode.html#a1fd3644b55daa1d0d9b1ed431a830f70">function</a>, llvm::FunctionAnalysisManager *fam, const <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;registry)</td></tr>
-<tr class="separator:af4b290a873620c270b624a574c3f1262"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab2723cb9a98843aa0c387cd0deaef8f4" id="r_ab2723cb9a98843aa0c387cd0deaef8f4"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#ab2723cb9a98843aa0c387cd0deaef8f4">FunctionNode</a> (llvm::Function *<a class="el" href="classHLAC_1_1FunctionNode.html#a1fd3644b55daa1d0d9b1ed431a830f70">function</a>, llvm::FunctionAnalysisManager *fam, const <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;registry, <a class="el" href="classHLAC_1_1hlac.html">hlac</a> *parentGraph)</td></tr>
+<tr class="separator:ab2723cb9a98843aa0c387cd0deaef8f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5e638765a3873294520e47d758fa52e1" id="r_a5e638765a3873294520e47d758fa52e1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a5e638765a3873294520e47d758fa52e1">printDotRepresentation</a> (std::ostream &amp;os) override</td></tr>
 <tr class="separator:a5e638765a3873294520e47d758fa52e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab8424c70f8f2fc1ccbdb496f0d56cab8" id="r_ab8424c70f8f2fc1ccbdb496f0d56cab8"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#ab8424c70f8f2fc1ccbdb496f0d56cab8">getDotName</a> () override</td></tr>
 <tr class="separator:ab8424c70f8f2fc1ccbdb496f0d56cab8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af917ed2814b7bd8cb1c5048ee22bc607" id="r_af917ed2814b7bd8cb1c5048ee22bc607"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#af917ed2814b7bd8cb1c5048ee22bc607">getEnergy</a> () override</td></tr>
+<tr class="separator:af917ed2814b7bd8cb1c5048ee22bc607"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classHLAC_1_1GenericNode"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classHLAC_1_1GenericNode')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a></td></tr>
 <tr class="memitem:ac928ce42dd0feff4b1a450ab69a4bc7e inherit pub_methods_classHLAC_1_1GenericNode" id="r_ac928ce42dd0feff4b1a450ab69a4bc7e"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1GenericNode.html#ac928ce42dd0feff4b1a450ab69a4bc7e">getAddress</a> ()</td></tr>
 <tr class="separator:ac928ce42dd0feff4b1a450ab69a4bc7e inherit pub_methods_classHLAC_1_1GenericNode"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -109,8 +111,8 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a125432a831a93a92a38206a12633e44f" id="r_a125432a831a93a92a38206a12633e44f"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; <a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a125432a831a93a92a38206a12633e44f">makeNode</a> (llvm::Function *func, llvm::FunctionAnalysisManager *fam, <a class="el" href="classResultRegistry.html">ResultRegistry</a> registry)</td></tr>
-<tr class="separator:a125432a831a93a92a38206a12633e44f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a03a52fb049136c21956036a8536d2505" id="r_a03a52fb049136c21956036a8536d2505"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; <a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a03a52fb049136c21956036a8536d2505">makeNode</a> (llvm::Function *func, llvm::FunctionAnalysisManager *fam, <a class="el" href="classResultRegistry.html">ResultRegistry</a> registry, <a class="el" href="classHLAC_1_1hlac.html">hlac</a> *parentGraph)</td></tr>
+<tr class="separator:a03a52fb049136c21956036a8536d2505"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8a6270e0d3cd88253a4a4d156de8544e" id="r_a8a6270e0d3cd88253a4a4d156de8544e"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a8a6270e0d3cd88253a4a4d156de8544e">makeEdge</a> (<a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> *source, <a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> *detination)</td></tr>
 <tr class="separator:a8a6270e0d3cd88253a4a4d156de8544e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -119,12 +121,17 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a0bc6b4f38ab769fce416103b43d9ed04" id="r_a0bc6b4f38ab769fce416103b43d9ed04"><td class="memItemLeft" align="right" valign="top"><a id="a0bc6b4f38ab769fce416103b43d9ed04" name="a0bc6b4f38ab769fce416103b43d9ed04"></a>
 <a class="el" href="classResultRegistry.html">ResultRegistry</a>&#160;</td><td class="memItemRight" valign="bottom"><b>registry</b></td></tr>
 <tr class="separator:a0bc6b4f38ab769fce416103b43d9ed04"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adb0e8ff238214c2b52b9450088838b33" id="r_adb0e8ff238214c2b52b9450088838b33"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#adb0e8ff238214c2b52b9450088838b33">functionEnergy</a></td></tr>
+<tr class="separator:adb0e8ff238214c2b52b9450088838b33"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a92fbf303476c11b2df4b1cdce474fe19" id="r_a92fbf303476c11b2df4b1cdce474fe19"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a92fbf303476c11b2df4b1cdce474fe19">Nodes</a></td></tr>
 <tr class="separator:a92fbf303476c11b2df4b1cdce474fe19"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8248c8ed417d3d1cc66870a797ef6a4b" id="r_a8248c8ed417d3d1cc66870a797ef6a4b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a8248c8ed417d3d1cc66870a797ef6a4b">Edges</a></td></tr>
 <tr class="separator:a8248c8ed417d3d1cc66870a797ef6a4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1fd3644b55daa1d0d9b1ed431a830f70" id="r_a1fd3644b55daa1d0d9b1ed431a830f70"><td class="memItemLeft" align="right" valign="top">llvm::Function *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a1fd3644b55daa1d0d9b1ed431a830f70">function</a> = nullptr</td></tr>
 <tr class="separator:a1fd3644b55daa1d0d9b1ed431a830f70"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae1f9c1714b83696201711b9cc478e67d" id="r_ae1f9c1714b83696201711b9cc478e67d"><td class="memItemLeft" align="right" valign="top"><a id="ae1f9c1714b83696201711b9cc478e67d" name="ae1f9c1714b83696201711b9cc478e67d"></a>
+<a class="el" href="classHLAC_1_1hlac.html">HLAC::hlac</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>parentGraph</b> = nullptr</td></tr>
+<tr class="separator:ae1f9c1714b83696201711b9cc478e67d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a673464e3e0b865afd0e1af0e7e47482e" id="r_a673464e3e0b865afd0e1af0e7e47482e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1FunctionNode.html#a673464e3e0b865afd0e1af0e7e47482e">isMainFunction</a> = false</td></tr>
 <tr class="separator:a673464e3e0b865afd0e1af0e7e47482e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7d2cb777c81ad58b4e6299c2d13d40d7" id="r_a7d2cb777c81ad58b4e6299c2d13d40d7"><td class="memItemLeft" align="right" valign="top"><a id="a7d2cb777c81ad58b4e6299c2d13d40d7" name="a7d2cb777c81ad58b4e6299c2d13d40d7"></a>
@@ -140,8 +147,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLinkerFunction</b> 
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> that represents functions referenced by the program under analysis </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="af4b290a873620c270b624a574c3f1262" name="af4b290a873620c270b624a574c3f1262"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af4b290a873620c270b624a574c3f1262">&#9670;&#160;</a></span>FunctionNode()</h2>
+<a id="ab2723cb9a98843aa0c387cd0deaef8f4" name="ab2723cb9a98843aa0c387cd0deaef8f4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab2723cb9a98843aa0c387cd0deaef8f4">&#9670;&#160;</a></span>FunctionNode()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -162,7 +169,13 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLinkerFunction</b> 
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;&#160;</td>
-          <td class="paramname"><em>registry</em>&#160;</td>
+          <td class="paramname"><em>registry</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1hlac.html">hlac</a> *&#160;</td>
+          <td class="paramname"><em>parentGraph</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -210,6 +223,34 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLinkerFunction</b> 
 
 </div>
 </div>
+<a id="af917ed2814b7bd8cb1c5048ee22bc607" name="af917ed2814b7bd8cb1c5048ee22bc607"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af917ed2814b7bd8cb1c5048ee22bc607">&#9670;&#160;</a></span>getEnergy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double HLAC::FunctionNode::getEnergy </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Return the energy of the node </p><dl class="section return"><dt>Returns</dt><dd>Energy as double value </dd></dl>
+
+<p>Reimplemented from <a class="el" href="classHLAC_1_1GenericNode.html#ae10a1b36af07cb0a3b35505df0bd9f9a">HLAC::GenericNode</a>.</p>
+
+</div>
+</div>
 <a id="a8a6270e0d3cd88253a4a4d156de8544e" name="a8a6270e0d3cd88253a4a4d156de8544e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8a6270e0d3cd88253a4a4d156de8544e">&#9670;&#160;</a></span>makeEdge()</h2>
 
@@ -254,8 +295,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLinkerFunction</b> 
 
 </div>
 </div>
-<a id="a125432a831a93a92a38206a12633e44f" name="a125432a831a93a92a38206a12633e44f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a125432a831a93a92a38206a12633e44f">&#9670;&#160;</a></span>makeNode()</h2>
+<a id="a03a52fb049136c21956036a8536d2505" name="a03a52fb049136c21956036a8536d2505"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a03a52fb049136c21956036a8536d2505">&#9670;&#160;</a></span>makeNode()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -279,7 +320,13 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLinkerFunction</b> 
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype"><a class="el" href="classResultRegistry.html">ResultRegistry</a>&#160;</td>
-          <td class="paramname"><em>registry</em>&#160;</td>
+          <td class="paramname"><em>registry</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1hlac.html">hlac</a> *&#160;</td>
+          <td class="paramname"><em>parentGraph</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -366,6 +413,21 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLinkerFunction</b> 
       </table>
 </div><div class="memdoc">
 <p>Function represented by the <a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> </p>
+
+</div>
+</div>
+<a id="adb0e8ff238214c2b52b9450088838b33" name="adb0e8ff238214c2b52b9450088838b33"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adb0e8ff238214c2b52b9450088838b33">&#9670;&#160;</a></span>functionEnergy</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::map&lt;std::string, double&gt; HLAC::FunctionNode::functionEnergy</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Mapping of function energy worst and best case </p>
 
 </div>
 </div>

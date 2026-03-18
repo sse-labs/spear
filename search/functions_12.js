@@ -6,10 +6,11 @@ var searchData=
   ['setorcreate_3',['setOrCreate',['../classProfileHandler.html#af0703d6672d08a13182ee97c48b69c40',1,'ProfileHandler']]],
   ['setsat_4',['setSat',['../classFeasibility_1_1Util.html#ab6bf8fe47735bb7362f966c39eae1250',1,'Feasibility::Util']]],
   ['shortenstdstreamops_5',['shortenStdStreamOps',['../classHLAC_1_1Util.html#a7a93af7bb1535c75341cda5054ae7966',1,'HLAC::Util']]],
-  ['starttime_6',['startTime',['../classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669',1,'MetaProfiler']]],
-  ['stoptime_7',['stopTime',['../classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e',1,'MetaProfiler']]],
-  ['storefeasibilityresults_8',['storeFeasibilityResults',['../classResultRegistry.html#a46a2c636e6c4933aac039bf35397978f',1,'ResultRegistry']]],
-  ['storeloopboundresults_9',['storeLoopBoundResults',['../classResultRegistry.html#a446ef83be281ca6cd7b3fee6d569e6c7',1,'ResultRegistry']]],
-  ['stripparameters_10',['stripParameters',['../classHLAC_1_1Util.html#a79ee9e15c5d8b16851825a381071e908',1,'HLAC::Util']]],
-  ['syscallprofiler_11',['SyscallProfiler',['../classSyscallProfiler.html#a748a933c75b89ee43b4db91aea0c2cab',1,'SyscallProfiler']]]
+  ['starts_5fwith_6',['starts_with',['../classHLAC_1_1Util.html#ae55e5a7ff20053d16b1f6b8b71c19538',1,'HLAC::Util']]],
+  ['starttime_7',['startTime',['../classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669',1,'MetaProfiler']]],
+  ['stoptime_8',['stopTime',['../classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e',1,'MetaProfiler']]],
+  ['storefeasibilityresults_9',['storeFeasibilityResults',['../classResultRegistry.html#a46a2c636e6c4933aac039bf35397978f',1,'ResultRegistry']]],
+  ['storeloopboundresults_10',['storeLoopBoundResults',['../classResultRegistry.html#a446ef83be281ca6cd7b3fee6d569e6c7',1,'ResultRegistry']]],
+  ['stripparameters_11',['stripParameters',['../classHLAC_1_1Util.html#a79ee9e15c5d8b16851825a381071e908',1,'HLAC::Util']]],
+  ['syscallprofiler_12',['SyscallProfiler',['../classSyscallProfiler.html#a748a933c75b89ee43b4db91aea0c2cab',1,'SyscallProfiler']]]
 ];

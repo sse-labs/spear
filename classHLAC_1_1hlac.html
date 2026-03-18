@@ -91,11 +91,17 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a2c0250ecb3687377b9634ea5aae25da4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a42f5220325a85f46b3984ffb003aeadd" id="r_a42f5220325a85f46b3984ffb003aeadd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a42f5220325a85f46b3984ffb003aeadd">printDotRepresentation</a> ()</td></tr>
 <tr class="separator:a42f5220325a85f46b3984ffb003aeadd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc9affc90a97753cb2a9d5ff27e64bc7" id="r_afc9affc90a97753cb2a9d5ff27e64bc7"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#afc9affc90a97753cb2a9d5ff27e64bc7">getEnergyPerFunction</a> (std::string functionName)</td></tr>
+<tr class="separator:afc9affc90a97753cb2a9d5ff27e64bc7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab10f2cfa5b0d58d9c4b7163e94b013b6" id="r_ab10f2cfa5b0d58d9c4b7163e94b013b6"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#ab10f2cfa5b0d58d9c4b7163e94b013b6">getEnergy</a> ()</td></tr>
+<tr class="separator:ab10f2cfa5b0d58d9c4b7163e94b013b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:abbbac64429f4346e8eaadba482841d1c" id="r_abbbac64429f4346e8eaadba482841d1c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classResultRegistry.html">ResultRegistry</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#abbbac64429f4346e8eaadba482841d1c">registry</a></td></tr>
 <tr class="separator:abbbac64429f4346e8eaadba482841d1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa2d562623f4a0c9f37a3490d529fa46f" id="r_aa2d562623f4a0c9f37a3490d529fa46f"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#aa2d562623f4a0c9f37a3490d529fa46f">FunctionEnergyCache</a></td></tr>
+<tr class="separator:aa2d562623f4a0c9f37a3490d529fa46f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a014d3198371b32af5e8233b9c40c7cab" id="r_a014d3198371b32af5e8233b9c40c7cab"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a014d3198371b32af5e8233b9c40c7cab">functions</a></td></tr>
 <tr class="separator:a014d3198371b32af5e8233b9c40c7cab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -135,6 +141,49 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="ab10f2cfa5b0d58d9c4b7163e94b013b6" name="ab10f2cfa5b0d58d9c4b7163e94b013b6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab10f2cfa5b0d58d9c4b7163e94b013b6">&#9670;&#160;</a></span>getEnergy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::map&lt; std::string, double &gt; HLAC::hlac::getEnergy </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Return the energy of the contained functions </p><dl class="section return"><dt>Returns</dt><dd>Mapping between function name and energy as double value </dd></dl>
+
+</div>
+</div>
+<a id="afc9affc90a97753cb2a9d5ff27e64bc7" name="afc9affc90a97753cb2a9d5ff27e64bc7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afc9affc90a97753cb2a9d5ff27e64bc7">&#9670;&#160;</a></span>getEnergyPerFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double HLAC::hlac::getEnergyPerFunction </td>
+          <td>(</td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>functionName</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Return the energy of a given function </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">functionName</td><td>Name of the function to analyze </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Energy of the function under analysis </dd></dl>
+
+</div>
+</div>
 <a id="a2c0250ecb3687377b9634ea5aae25da4" name="a2c0250ecb3687377b9634ea5aae25da4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2c0250ecb3687377b9634ea5aae25da4">&#9670;&#160;</a></span>makeFunction()</h2>
 
@@ -189,6 +238,21 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
+<a id="aa2d562623f4a0c9f37a3490d529fa46f" name="aa2d562623f4a0c9f37a3490d529fa46f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa2d562623f4a0c9f37a3490d529fa46f">&#9670;&#160;</a></span>FunctionEnergyCache</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::map&lt;std::string, double&gt; HLAC::hlac::FunctionEnergyCache</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Simple cache to store the energy of functions that we have already calculated to avoid redundant calculations </p>
+
+</div>
+</div>
 <a id="a014d3198371b32af5e8233b9c40c7cab" name="a014d3198371b32af5e8233b9c40c7cab"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a014d3198371b32af5e8233b9c40c7cab">&#9670;&#160;</a></span>functions</h2>
 
