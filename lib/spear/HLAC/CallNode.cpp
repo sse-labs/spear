@@ -143,7 +143,9 @@ void CallNode::printDotRepresentation(std::ostream &os) {
 }
 
 
-std::string CallNode::getDotName() { return "CallNode" + this->getAddress(); }
+std::string CallNode::getDotName() {
+    return "CallNode" + this->getAddress();
+}
 
 bool CallNode::checkIfIsSyscall() {
     /**

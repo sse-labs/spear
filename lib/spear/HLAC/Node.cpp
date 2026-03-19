@@ -85,7 +85,7 @@ double Node::getEnergy() {
             energy += candiate.value();
         } else {
             // If we do not have an energy value for the instruction, we log this and continue with the next instruction
-            llvm::errs() << "No energy value found for instruction: " << I.getOpcodeName() << "\n";
+            // llvm::errs() << "No energy value found for instruction: " << I.getOpcodeName() << "\n";
             auto unknownCost = pHandler.getUnknownCost();
             if (unknownCost.has_value()) {
                 energy += unknownCost.value();

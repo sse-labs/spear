@@ -99,9 +99,40 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
     // Build set of nodes directly contained in this loop scope.
     std::unordered_set<GenericNode *> inLoop;
     inLoop.reserve(this->Nodes.size());
-    for (auto &nup : this->Nodes) {
+
+    int entryIndex = -1;
+    int exitIndex = -1;
+
+    for (int i=0; i < this->Nodes.size(); i++) {
+        auto &nup = this->Nodes[i];
+        if (auto *normalNup = dynamic_cast<Node *>(nup.get())) {
+            if (this->loop->isLoopLatch(normalNup->block)) {
+                exitIndex = i;
+            }
+
+            if (this->loop->isLoopExiting(normalNup->block)) {
+                entryIndex = i;
+            }
+        }
         inLoop.insert(nup.get());
     }
+
+    auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
+    auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
+
+    this->Nodes.push_back(std::move(entryNode));
+
+    int virtEntryIndex = this->Nodes.size() - 1;
+
+    this->Nodes.push_back(std::move(exitNode));
+
+    int virtExitIndex = this->Nodes.size() - 1;
+
+    auto entryEdge = std::make_unique<Edge>(Edge(this->Nodes[virtEntryIndex].get(), this->Nodes[entryIndex].get()));
+    auto exitEdge= std::make_unique<Edge>(Edge(this->Nodes[exitIndex].get(), this->Nodes[virtExitIndex].get()));
+
+    this->Edges.push_back(std::move(entryEdge));
+    this->Edges.push_back(std::move(exitEdge));
 
     // Collapse this loop:
     //    - move edges fully inside this loop into this->Edges
@@ -133,6 +164,21 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
 
         ++it;
     }
+
+    for (auto &e : this->Edges) {
+        auto srcNode = dynamic_cast<Node *>(e->soure);
+        auto dstNode = dynamic_cast<Node *>(e->destination);
+
+        if (srcNode && dstNode) {
+            bool fromIsLatch = this->loop->isLoopLatch(srcNode->block);
+            bool toIsExiting = this->loop->isLoopExiting(dstNode->block);
+
+            if (fromIsLatch && toIsExiting) {
+                this->backEdge = e.get();
+            }
+        }
+    }
+
 }
 
 void LoopNode::constructCallNodes(bool considerDebugFunctions) {

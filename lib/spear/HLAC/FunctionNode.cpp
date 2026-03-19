@@ -51,84 +51,88 @@ FunctionNode::FunctionNode(llvm::Function *function,
         int entryIndex = -1;
         int exitIndex = -1;
 
-        // Create all NormalNodes by iteration over the list of basic blocks
+        // create entry once
+        auto entry = VirtualNode::makeVirtualPoint(true, false, this);
+        this->Nodes.push_back(std::move(entry));
+        entryIndex = this->Nodes.size() - 1;
+
+        // create all BB nodes, remember whether an exit BB exists
+        bool hasExitBlock = false;
         for (auto &basic_block : *function) {
             llvm::Instruction *term = basic_block.getTerminator();
 
-            if (basic_block.isEntryBlock() ) {
-                // Virtual entry node
-                auto vpoint = VirtualNode::makeVirtualPoint(true, false);
-                this->Nodes.push_back(std::move(vpoint));
-                entryIndex = this->Nodes.size() - 1;
-            }
-
-            // Normal node
             auto normal_node = Node::makeNode(&basic_block);
             GenericNode *raw = normal_node.get();
             this->Nodes.push_back(std::move(normal_node));
             bb2node.emplace(&basic_block, raw);
 
-            if (term->getNumSuccessors() == 0) {
-                // Virtual exit node
-                auto vpoint = VirtualNode::makeVirtualPoint(false, true);
-                this->Nodes.push_back(std::move(vpoint));
-                exitIndex = this->Nodes.size() - 1;
+            if (term && term->getNumSuccessors() == 0) {
+                hasExitBlock = true;
             }
         }
 
+        if (hasExitBlock) {
+            auto exit = VirtualNode::makeVirtualPoint(false, true, this);
+            this->Nodes.push_back(std::move(exit));
+            exitIndex = this->Nodes.size() - 1;
+        }
 
-        Feasibility::BlockFeasibilityMap blockMapping = registry.getFeasibilityResults().at(this->name);
+        auto feasResult = registry.getFeasibilityResults();
 
-        // Create all Edges from the basic blocks
-        for (auto &basic_block : *function) {
-            GenericNode *src = bb2node.at(&basic_block);
+        if (feasResult.contains(this->name)) {
+            Feasibility::BlockFeasibilityMap blockMapping = feasResult.at(this->name);
 
-            llvm::Instruction *term = basic_block.getTerminator();
-            if (!term) continue;
+            // Create all Edges from the basic blocks
+            for (auto &basic_block : *function) {
+                GenericNode *src = bb2node.at(&basic_block);
 
-            const unsigned nSucc = term->getNumSuccessors();
+                llvm::Instruction *term = basic_block.getTerminator();
+                if (!term) continue;
 
-            // Handle virtual points
-            if (entryIndex != -1) {
-                if (basic_block.isEntryBlock()) {
-                    auto e = FunctionNode::makeEdge(this->Nodes[entryIndex].get(), src);
-                    e->feasibility = true;
+                const unsigned nSucc = term->getNumSuccessors();
+
+                // Handle virtual points
+                if (entryIndex != -1) {
+                    if (basic_block.isEntryBlock()) {
+                        auto e = FunctionNode::makeEdge(this->Nodes[entryIndex].get(), src);
+                        e->feasibility = true;
+                        this->Edges.push_back(std::move(e));
+                    }
+                }
+
+                if (exitIndex != -1) {
+                    if (term->getNumSuccessors() == 0) {
+                        auto e = FunctionNode::makeEdge(src, this->Nodes[exitIndex].get());
+                        e->feasibility = true;
+                        this->Edges.push_back(std::move(e));
+                    }
+                }
+
+
+                for (unsigned i = 0; i < nSucc; ++i) {
+                    const llvm::BasicBlock *succBB = term->getSuccessor(i);
+
+                    auto it = bb2node.find(succBB);
+                    if (it == bb2node.end()) {
+                        continue;
+                    }
+
+                    GenericNode *dst = it->second;
+
+                    auto blockName = succBB->getName().str();
+
+                    bool willEdgeBeFeasible = true;
+
+                    if (blockMapping.find(blockName) != blockMapping.end()) {
+                        willEdgeBeFeasible = blockMapping.at(succBB->getName().str()).Feasible;
+                    }
+
+                    auto e = FunctionNode::makeEdge(src, dst);
+
+                    e->feasibility = willEdgeBeFeasible;
+
                     this->Edges.push_back(std::move(e));
                 }
-            }
-
-            if (exitIndex != -1) {
-                if (term->getNumSuccessors() == 0) {
-                    auto e = FunctionNode::makeEdge(src, this->Nodes[exitIndex].get());
-                    e->feasibility = true;
-                    this->Edges.push_back(std::move(e));
-                }
-            }
-
-
-            for (unsigned i = 0; i < nSucc; ++i) {
-                const llvm::BasicBlock *succBB = term->getSuccessor(i);
-
-                auto it = bb2node.find(succBB);
-                if (it == bb2node.end()) {
-                    continue;
-                }
-
-                GenericNode *dst = it->second;
-
-                auto blockName = succBB->getName().str();
-
-                bool willEdgeBeFeasible = true;
-
-                if (blockMapping.find(blockName) != blockMapping.end()) {
-                    willEdgeBeFeasible = blockMapping.at(succBB->getName().str()).Feasible;
-                }
-
-                auto e = FunctionNode::makeEdge(src, dst);
-
-                e->feasibility = willEdgeBeFeasible;
-
-                this->Edges.push_back(std::move(e));
             }
         }
 

@@ -8,11 +8,11 @@
 
 std::string HLAC::VirtualNode::getDotName() {
     if (isEntry) {
-        return "Entry";
+        return "VirtEntry_" + parent->getAddress();
     } else if (isExit) {
-        return "Exit";
+        return "VirtExit" + parent->getAddress();
     } else {
-        return "VirtualPoint";
+        return "VirtualPoint" + parent->getAddress();
     }
 }
 
@@ -27,9 +27,9 @@ void HLAC::VirtualNode::printDotRepresentation(std::ostream &os) {
             << "height=0.1" << "\n";
 
             if (isEntry) {
-                llvmOS << "label=\"Entry\"";
+                llvmOS << "label=\"VEntry\"";
             } else if (isExit) {
-                llvmOS << "label=\"Exit\"";
+                llvmOS << "label=\"VExit\"";
             } else {
                 llvmOS << "label=\"VirtualPoint\"";
             }
@@ -39,9 +39,10 @@ void HLAC::VirtualNode::printDotRepresentation(std::ostream &os) {
     llvmOS.flush();
 }
 
-std::unique_ptr<HLAC::VirtualNode> HLAC::VirtualNode::makeVirtualPoint(bool isEntry, bool isExit) {
+std::unique_ptr<HLAC::VirtualNode> HLAC::VirtualNode::makeVirtualPoint(bool isEntry, bool isExit, GenericNode *givparent) {
     auto virtualPoint = std::make_unique<VirtualNode>();
     virtualPoint->isExit = isExit;
     virtualPoint->isEntry = isEntry;
+    virtualPoint->parent = givparent;
     return virtualPoint;
 }

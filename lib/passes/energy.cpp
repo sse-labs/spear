@@ -448,7 +448,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             // mem2reg
 
-            llvm::errs() << module << "\n";
+            // llvm::errs() << module << "\n";
 
             /**
              * Execute the mem2reg pass late to allow phasar to infer more variables.
@@ -500,9 +500,9 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             auto ilps = graph->buildILPS();
 
-            for (const auto &[funcName, energy] : res) {
+            /*for (const auto &[funcName, energy] : res) {
                 llvm::outs() << "HLAC Energy of " << funcName << ": " << energy << " J\n";
-            }
+            }*/
 
             if (functionTree != nullptr) {
                 std::vector<llvm::StringRef> names;

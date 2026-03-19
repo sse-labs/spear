@@ -81,7 +81,9 @@ class VirtualNode : public GenericNode {
     bool isEntry = false;
     bool isExit = false;
 
-    static std::unique_ptr<VirtualNode> makeVirtualPoint(bool isEntry, bool isExit);
+    GenericNode *parent;
+
+    static std::unique_ptr<VirtualNode> makeVirtualPoint(bool isEntry, bool isExit, GenericNode *givparent);
 
     /**
      * Print this NormalNode as dot representation
@@ -102,6 +104,8 @@ class VirtualNode : public GenericNode {
  */
 class Edge {
 public:
+
+    int ilpIndex = -1;
 
     std::string id;
 
@@ -187,6 +191,8 @@ class Node : public GenericNode {
 class LoopNode : public GenericNode {
  public:
     ResultRegistry registry;
+
+    HLAC::Edge *backEdge = nullptr;
 
     /**
      * List of contained Nodes

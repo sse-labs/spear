@@ -9,8 +9,9 @@
 #include <string>
 #include <map>
 
-#include "OsiClpSolverInterface.hpp"
 #include "CbcModel.hpp"
+#include "HLAC/util.h"
+#include "OsiClpSolverInterface.hpp"
 
 #include "ILP/ILPBuilder.h"
 
@@ -53,45 +54,24 @@ double hlac::getEnergyPerFunction(std::string functionName) {
 std::map<std::string, CoinPackedMatrix> hlac::buildILPS() {
     // Assume we iterate in postOrder
     for (auto &functionNode : functions) {
-        if (functionNode->name == "main") {
+        // ignore phasar hooks
+        if (!Util::starts_with(functionNode->function->getName().str(), "__psr") && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
             auto ilpModel = ILPBuilder::buildMonolithicILP(functionNode.get());
 
-            OsiClpSolverInterface solver;
+            auto solvedModel = ILPBuilder::solveModel(ilpModel);
 
-            solver.loadProblem(ilpModel.matrix,
-                ilpModel.col_lb.data(),
-                ilpModel.col_ub.data(),
-                ilpModel.obj.data(),
-                ilpModel.row_lb.data(),
-                ilpModel.row_ub.data());
+            if (solvedModel.has_value()) {
+                auto [objectiveValue, variableValues] = solvedModel.value();
+                std::cout << "Objective value for function " << functionNode->name << ": " << objectiveValue << "\n";
 
-            // Set to maximize
-            solver.setObjSense(-1.0);
+                std::cout << "Taken path: " << std::endl;
 
-            // All integer
-            for (int e = 0; e < functionNode->Edges.size(); ++e) {
-                solver.setInteger(e);
-            }
-
-            CbcModel model(solver);
-
-            model.branchAndBound();
-
-            if (!model.isProvenOptimal()) {
-                std::cerr << "No optimal solution found\n";
-                if (model.isProvenInfeasible()) {
-                    std::cerr << "Model is infeasible\n";
+                for (int i = 0; i < variableValues.size(); ++i) {
+                    std::cout << "x[" << i << "] = " << variableValues[i] << "\n";
                 }
-                if (model.isContinuousUnbounded()) {
-                    std::cerr << "Model is unbounded\n";
-                }
-            }else {
-                std::cout << "Optimal objective: " << model.getObjValue() << "\n";
 
-                const double *solution = model.bestSolution();
-                for (int i = 0; i < static_cast<int>(ilpModel.obj.size()); ++i) {
-                    std::cout << "x[" << i << "] = " << solution[i] << "\n";
-                }
+            } else {
+                std::cout << "Failed to solve ILP for function " << functionNode->name << "\n";
             }
         }
     }
