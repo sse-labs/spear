@@ -233,11 +233,11 @@ double CallNode::getEnergy() {
     // If we have a normal call we need to calculate the energy of the called function and return this as the energy of
     // the call
     if (isLinkerFunction) {
-        std::cout << "Warning: CallNode " << this->calledFunction->getName().str()
+        /*std::cout << "Warning: CallNode " << this->calledFunction->getName().str()
                   << " is a linker function. We do not have the body of "
                      "the function and thus cannot analyze it. Returning "
                      "energy 0.0."
-                  << std::endl;
+                  << std::endl;*/
         return 0.0;
     }
 

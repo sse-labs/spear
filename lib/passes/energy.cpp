@@ -433,7 +433,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      * @param module LLVM::Module to run the analysis on
      * @param MAM llvm::ModuleAnalysisManager
      * @param analysisStrategy Strategy to analyze the module with
-     * @param maxiterations Upper bound of loops
      */
     void analysisRunner(llvm::Module &module, llvm::ModuleAnalysisManager &MAM,
                         AnalysisStrategy::Strategy analysisStrategy) {
@@ -498,7 +497,27 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             auto res = graph->getEnergy();
 
-            auto ilps = graph->buildILPS();
+            // auto ilps = graph->buildMonolithicILPS();
+            auto ilpSolvingStart = std::chrono::high_resolution_clock::now();
+            // auto solvedResults = graph->solveMonolithicIlps(ilps);
+            auto ilpSolvingEnd = std::chrono::high_resolution_clock::now();
+
+            /*for (const auto &[funcName, resultpair] : solvedResults) {
+                llvm::outs() << "ILP Energy of " << funcName << ": " << resultpair.first << " J\n";
+                graph->printDotRepresentationWithSolution(resultpair.second);
+            }*/
+
+            auto solvingDuration = std::chrono::duration_cast<std::chrono::milliseconds>(ilpSolvingEnd - ilpSolvingStart);
+
+            std::cout << "Monolithic ILP solving took: " << solvingDuration.count() << " ms\n";
+
+            auto clusteredILPs = graph->buildClusteredILPS();
+            auto ilpClusteredSolvingStart = std::chrono::high_resolution_clock::now();
+            auto clusteredsolvedResults = graph->solveClusteredIlps(clusteredILPs);
+            auto ilpClusteredSolvingEnd = std::chrono::high_resolution_clock::now();
+            auto clusteredSolvingDuration = std::chrono::duration_cast<std::chrono::milliseconds>(ilpClusteredSolvingEnd - ilpClusteredSolvingStart);
+
+            std::cout << "Clustered ILP solving took: " << clusteredSolvingDuration.count() << " ms\n";
 
             /*for (const auto &[funcName, energy] : res) {
                 llvm::outs() << "HLAC Energy of " << funcName << ": " << energy << " J\n";

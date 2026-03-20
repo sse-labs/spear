@@ -6,9 +6,6 @@
 #ifndef SRC_SPEAR_HLAC_HLAC_H_
 #define SRC_SPEAR_HLAC_HLAC_H_
 
-#include <CoinPackedMatrix.hpp>
-#include "OsiClpSolverInterface.hpp"
-#include "CbcModel.hpp"
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/BasicBlock.h>
 
@@ -19,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "ILP/ILPBuilder.h"
 #include "analyses/ResultRegistry.h"
 
 namespace HLAC {
@@ -547,7 +545,13 @@ class hlac {
      * @return Returns mapping between function name and the constructed CoinPackedMatrix representing the ILP for the
      * function
      */
-    std::map<std::string, CoinPackedMatrix> buildILPS();
+    std::map<std::string, ILPModel> buildMonolithicILPS();
+
+    std::map<std::string, std::map<LoopNode *, ILPModel>> buildClusteredILPS();
+
+    std::map<std::string, std::pair<double, std::vector<double>>> solveMonolithicIlps(std::map<std::string, ILPModel> modelMapping);
+
+    std::map<std::string, std::pair<double, std::vector<double>>> solveClusteredIlps(std::map<std::string, std::map<HLAC::LoopNode *, ILPModel>> modelMapping);
 };
 }  // namespace HLAC
 

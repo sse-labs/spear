@@ -5,6 +5,8 @@
 
 #include "ILP/ILPBuilder.h"
 #include "ILP/ILPSolver.h"
+#include  "ILP/ILPUtil.h"
+#include "HLAC/hlac.h"
 
 #include <unordered_set>
 
@@ -20,6 +22,23 @@ int ILPBuilder::assignEdgeIndicesFunction(HLAC::FunctionNode *func, int nextInde
     }
 
     for (auto &nodeUP : func->Nodes) {
+        // For loopnodes we need to consider the contained edges. Therefore we need to index them as well
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
+            nextIndex = assignEdgeIndicesLoop(loopNode, nextIndex);
+        }
+    }
+
+    // For the recursive behavior we need to return the last used index
+    return nextIndex;
+}
+
+int ILPBuilder::assignEdgeIndicesFunction(HLAC::LoopNode *loop, int nextIndex) {
+    // Iterate over the edges in this function and assign them an index
+    for (auto &edgeUP : loop->Edges) {
+        edgeUP->ilpIndex = nextIndex++;
+    }
+
+    for (auto &nodeUP : loop->Nodes) {
         // For loopnodes we need to consider the contained edges. Therefore we need to index them as well
         if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
             nextIndex = assignEdgeIndicesLoop(loopNode, nextIndex);
@@ -112,10 +131,10 @@ void ILPBuilder::appendGraphConstraints(
     buildIncidenceMaps(edges, incomingEdgesPerNode, outgoingEdgesPerNode);
 
     // Print the mapping
-    for (auto &e : edges) {
+    /*for (auto &e : edges) {
         std::cout << "Edge from " << e->soure->getDotName() << " to " << e->destination->getDotName()
                   << " with ILP index " << e->ilpIndex << std::endl;
-    }
+    }*/
 
     /**
      * We need to add constraints for all nodes in this scope.
@@ -217,12 +236,10 @@ void ILPBuilder::appendLoopBoundConstraint(ILPModel &model,HLAC::LoopNode *loopN
         CoinPackedVector row;
         std::unordered_set<int> usedCols;
 
-        insertUnique(row, usedCols, backCol, 1.0,
-                     "Loop upper bound for " + loopNode->getDotName());
+        insertUnique(row, usedCols, backCol, 1.0, "Loop upper bound for " + loopNode->getDotName());
 
         for (int col : invocationCols) {
-            insertUnique(row, usedCols, col, -ub,
-                         "Loop upper bound for " + loopNode->getDotName());
+            insertUnique(row, usedCols, col, -ub, "Loop upper bound for " + loopNode->getDotName());
         }
 
         appendRow(model, row, -COIN_DBL_MAX, 0.0);
@@ -234,12 +251,10 @@ void ILPBuilder::appendLoopBoundConstraint(ILPModel &model,HLAC::LoopNode *loopN
         CoinPackedVector row;
         std::unordered_set<int> usedCols;
 
-        insertUnique(row, usedCols, backCol, 1.0,
-                     "Loop lower bound for " + loopNode->getDotName());
+        insertUnique(row, usedCols, backCol, 1.0, "Loop lower bound for " + loopNode->getDotName());
 
         for (int col : invocationCols) {
-            insertUnique(row, usedCols, col, -lb,
-                         "Loop lower bound for " + loopNode->getDotName());
+            insertUnique(row, usedCols, col, -lb, "Loop lower bound for " + loopNode->getDotName());
         }
 
         appendRow(model, row, 0.0, COIN_DBL_MAX);
@@ -277,55 +292,6 @@ void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::LoopNode *loopNode
     }
 }
 
-
-ILPModel ILPBuilder::buildMonolithicILP(HLAC::FunctionNode *func) {
-    std::cout << "Building ILP for function " << func->function->getName().str() << std::endl;
-
-    // Assign global ILP column indices to every edge recursively.
-    const int numVars = assignEdgeIndicesFunction(func, 0);
-
-    // Create empty model storage.
-    ILPModel model{
-        .matrix = CoinPackedMatrix(false, 0, 0),
-        .row_lb = {},
-        .row_ub = {},
-        .col_lb = std::vector<double>(numVars, 0.0),
-        .col_ub = std::vector<double>(numVars, COIN_DBL_MAX),
-        .obj = std::vector<double>(numVars, 0.0)
-    };
-
-    // Append all flow and loop constraints recursively.
-    appendGraphConstraints(model, func->Nodes, func->Edges, nullptr);
-
-    // Fill objective recursively with energy cost
-    fillObjectiveFunction(model, func);
-
-    return model;
-}
-
-ILPModel ILPBuilder::buildClusteredILP(HLAC::FunctionNode *func) {
-    CoinPackedMatrix matrix(false, 0, 0);
-
-    // Bounds of the variables
-    // CBC models them as lower and upper bound to express lb < Ax < ub
-    std::vector<double> row_lb;
-    std::vector<double> row_ub;
-
-    int numVars = static_cast<int>(func->Edges.size());
-
-    std::vector<double> col_lb(numVars, 0.0);
-    std::vector<double> col_ub(numVars, COIN_DBL_MAX);
-    std::vector<double> obj(numVars, 0.0);
-
-    return ILPModel{
-        .matrix = matrix,
-        .row_lb = row_lb,
-        .row_ub = row_ub,
-        .col_lb = col_lb,
-        .col_ub = col_ub,
-        .obj = obj
-    };
-}
 
 std::optional<std::pair<double, std::vector<double>>> ILPBuilder::solveModel(ILPModel ilpModel) {
     ILPSolver modelSolver(ilpModel);
@@ -393,12 +359,12 @@ ILPModel ILPBuilder::appendLoopNodeContents(ILPModel model, HLAC::LoopNode *loop
                 }
 
                 for (int e : incomingEdgesPerNode[localNode]) {
-                    std::cout << "incoming index " << e << " of node " << localNode->name << std::endl;
+                    // std::cout << "incoming index " << e << " of node " << localNode->name << std::endl;
                     row.insert(e, 1.0);
                 }
 
                 for (int e : outgoingEdgesPerNode[localNode]) {
-                    std::cout << "outgoing index " << e << " of node " << localNode->name << std::endl;
+                    // std::cout << "outgoing index " << e << " of node " << localNode->name << std::endl;
                     row.insert(e, -1.0);
                 }
 
@@ -416,4 +382,112 @@ ILPModel ILPBuilder::appendLoopNodeContents(ILPModel model, HLAC::LoopNode *loop
     }
 
     return model;
+}
+
+void ILPBuilder::appendLoopBoundConstraint(ILPModel &model, HLAC::LoopNode *loopNode) {
+    if (loopNode->backEdge == nullptr) {
+        std::cerr << "Warning: Loop " << loopNode->getDotName()
+                  << " has no backedge, skipping loop bound constraint.\n";
+        return;
+    }
+
+    const int backCol = loopNode->backEdge->ilpIndex;
+
+    if (backCol < 0 || backCol >= static_cast<int>(model.obj.size())) {
+        std::cerr << "Warning: invalid backedge ilpIndex for loop "
+                  << loopNode->getDotName() << '\n';
+        return;
+    }
+
+    CoinPackedVector row;
+    std::unordered_set<int> usedCols;
+
+    insertUnique(row, usedCols, backCol, 1.0,
+                 "Standalone loop bound for " + loopNode->getDotName());
+
+    // backedge counts re-iterations
+    const double lb = std::max(0.0, static_cast<double>(loopNode->bounds.getLowerBound()) - 1.0);
+    const double ub = std::max(0.0, static_cast<double>(loopNode->bounds.getUpperBound()) - 1.0);
+
+    appendRow(model, row, lb, ub);
+}
+
+ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
+    // std::cout << "Building ILP for function " << func->function->getName().str() << std::endl;
+
+    // Assign global ILP column indices to every edge recursively.
+    const int numVars = assignEdgeIndicesFunction(loop, 0);
+
+    // Create empty model storage.
+    ILPModel model{
+        .matrix = CoinPackedMatrix(false, 0, 0),
+        .row_lb = {},
+        .row_ub = {},
+        .col_lb = std::vector<double>(numVars, 0.0),
+        .col_ub = std::vector<double>(numVars, COIN_DBL_MAX),
+        .obj = std::vector<double>(numVars, 0.0)
+    };
+
+    // Append all flow and loop constraints recursively.
+    appendGraphConstraints(model, loop->Nodes, loop->Edges, nullptr);
+
+    // As we are already in a loop, we need to append all loop bound constrains right here
+    // We calculate loop constrains via the scale of how often the loopnode will be entered,
+    // This works perfectly fine for monolithic ILP calculation, where all constrains exit.
+    // However, for clustered ILP construction, we have to assume that the top level loop(and only the top level loop)
+    // Will be entered exactly one time.
+    appendLoopBoundConstraint(model, loop);
+
+    // Fill objective recursively with energy cost
+    fillObjectiveFunction(model, loop);
+
+    return model;
+}
+
+ILPModel ILPBuilder::buildMonolithicILP(HLAC::FunctionNode *func) {
+    // std::cout << "Building ILP for function " << func->function->getName().str() << std::endl;
+
+    // Assign global ILP column indices to every edge recursively.
+    const int numVars = assignEdgeIndicesFunction(func, 0);
+
+    // Create empty model storage.
+    ILPModel model{
+        .matrix = CoinPackedMatrix(false, 0, 0),
+        .row_lb = {},
+        .row_ub = {},
+        .col_lb = std::vector<double>(numVars, 0.0),
+        .col_ub = std::vector<double>(numVars, COIN_DBL_MAX),
+        .obj = std::vector<double>(numVars, 0.0)
+    };
+
+    // Append all flow and loop constraints recursively.
+    appendGraphConstraints(model, func->Nodes, func->Edges, nullptr);
+
+    // Fill objective recursively with energy cost
+    fillObjectiveFunction(model, func);
+
+    return model;
+}
+
+std::map<HLAC::LoopNode *, ILPModel> ILPBuilder::buildClusteredILP(HLAC::FunctionNode *func) {
+    /**
+     * In contrary to the monolithic ILP, we do not build one big ILP for the whole function,
+     * but instead we build separate ILPs for each loop in the function and use a generic graph algorithm for finding the
+     * worst path in the function
+     */
+    std::map<HLAC::LoopNode *, ILPModel> resultMapping;
+
+    for (auto &nodeUP : func->Nodes) {
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
+            // Build the ILP for the loop node
+            ILPModel loopModel = buildMonolithicILP(loopNode);
+
+            ILPUtil::printILPModelHumanReadable(func->name, loopNode->loop->getName().str(), loopModel);
+
+            // Store the model in the result mapping
+            resultMapping[loopNode] = loopModel;
+        }
+    }
+
+    return resultMapping;
 }
