@@ -33,6 +33,17 @@ void hlac::printDotRepresentation() {
     }
 }
 
+void hlac::printDotRepresentationWithSolution(std::vector<double> result) {
+    std::filesystem::create_directories("./dot");
+
+    for (auto &fn : functions) {
+        std::string filename = "./dot/" + fn->name + "_solution.dot";
+        std::ofstream out(filename);
+
+        fn->printDotRepresentationWithSolution(out, result);
+    }
+}
+
 std::map<std::string, double> hlac::getEnergy() {
     // assume we are executing in postorder!!!
     for (auto &functionNode : functions) {
@@ -69,6 +80,8 @@ std::map<std::string, CoinPackedMatrix> hlac::buildILPS() {
                 for (int i = 0; i < variableValues.size(); ++i) {
                     std::cout << "x[" << i << "] = " << variableValues[i] << "\n";
                 }
+
+                this->printDotRepresentationWithSolution(variableValues);
 
             } else {
                 std::cout << "Failed to solve ILP for function " << functionNode->name << "\n";

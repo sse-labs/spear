@@ -254,6 +254,29 @@ void LoopNode::printDotRepresentation(std::ostream &os) {
     os << "}\n";
 }
 
+void LoopNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> solution) {
+    os << "subgraph \"" << this->getDotName() << "\" {\n";
+    os << "style=filled;", os << "fillcolor=\"#FFFFFF\";", os << "color=\"#2B2B2B\";";
+    os << "penwidth=2;";
+    os << "style=\"rounded,filled\";";
+    os << "fontname=\"Courier\";";
+    os << "tooltip=" << "\"" << "METDADATA" << "\";";
+    os << "  labelloc=\"t\";\n";
+    os << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", "
+       << this->bounds.getUpperBound() << ")" << "\r\";\n";
+    os << "  " << this->getAnchorDotName() << " [shape=point, width=0.01, label=\"\", style=invis];\n";
+
+    for (auto &node : this->Nodes) {
+        node->printDotRepresentationWithSolution(os, solution);
+    }
+
+    for (auto &edge : this->Edges) {
+        edge->printDotRepresentationWithSolution(os, solution);
+    }
+
+    os << "}\n";
+}
+
 std::string LoopNode::getDotName() { return "cluster_" + this->getAddress(); }
 
 std::string LoopNode::getAnchorDotName() { return this->getDotName() + "_anchor"; }

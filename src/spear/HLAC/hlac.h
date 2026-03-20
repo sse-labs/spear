@@ -49,6 +49,15 @@ class GenericNode {
     virtual void printDotRepresentation(std::ostream &os) { os << "NOT IMPLEMENTED" << std::endl; }
 
     /**
+     * Print the original dot representation, but color edges that will be considered in the optimal solution
+     * @param os
+     * @param result
+     */
+    virtual void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) {
+        os << "NOT IMPLEMENTED" << std::endl;
+    }
+
+    /**
      * Constructs the dot name of the node.
      * @return Debug Value if function is not overriden
      */
@@ -91,6 +100,8 @@ class VirtualNode : public GenericNode {
      * @param os Outputstream to print to
      */
     void printDotRepresentation(std::ostream &os) override;
+
+    void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) override;
 
     /**
      * Get the name of the NormalNode escaped for dot
@@ -138,6 +149,8 @@ public:
      */
     void printDotRepresentation(std::ostream &os);
 
+    void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result);
+
 private:
     /**
      * Searches for the first occasion of a non-LoopNode in the given LoopNode so we can draw an edge to this Node
@@ -170,6 +183,8 @@ class Node : public GenericNode {
      * @param os Outputstream to print to
      */
     void printDotRepresentation(std::ostream &os) override;
+
+    void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) override;
 
     /**
      * Get the name of the NormalNode escaped for dot
@@ -258,6 +273,8 @@ class LoopNode : public GenericNode {
      */
     void printDotRepresentation(std::ostream &os) override;
 
+    void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) override;
+
     /**
      * Get the name of the LoopNode escaped for dot
      * @return Name of the node as escaped dot string
@@ -345,6 +362,8 @@ class FunctionNode : public GenericNode {
      * @param os
      */
     void printDotRepresentation(std::ostream &os) override;
+
+    void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) override;
 
     /**
      * Construct the dot escaped name of the FunctionNode
@@ -443,6 +462,8 @@ class CallNode : public GenericNode {
      */
     void printDotRepresentation(std::ostream &os) override;
 
+    void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) override;
+
     /**
      * Get dot escaped name of the FunctionNode
      * @return String representation of the FunctionNode
@@ -505,6 +526,8 @@ class hlac {
      * Print dot representation of the HLAC
      */
     void printDotRepresentation();
+
+    void printDotRepresentationWithSolution(std::vector<double> result);
 
     /**
      * Return the energy of a given function

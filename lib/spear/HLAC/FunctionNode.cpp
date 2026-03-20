@@ -245,6 +245,26 @@ void FunctionNode::printDotRepresentation(std::ostream &os) {
     os << "}" << std::endl;
 }
 
+void FunctionNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> solution) {
+    os << "digraph " << "\"" << this->getDotName() << "\"" << " {" << std::endl;
+    os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\"];" << std::endl;
+    os << "compound=true;" << std::endl;
+    os << "style=\"rounded,filled\";" << std::endl;
+    os << "fontname=\"Courier\";" << std::endl;
+    os << "  labelloc=\"t\";\n";
+    os << "label=" << "\"" << this->getDotName() << "\";" << std::endl;
+
+    for (auto &node : this->Nodes) {
+        node->printDotRepresentationWithSolution(os, solution);
+    }
+
+    for (auto &edge : this->Edges) {
+        edge->printDotRepresentationWithSolution(os, solution);
+    }
+
+    os << "}" << std::endl;
+}
+
 std::string FunctionNode::getDotName() {
     return "FunctionNode " + this->name;
 }

@@ -142,6 +142,40 @@ void CallNode::printDotRepresentation(std::ostream &os) {
        << "];\n";
 }
 
+void CallNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) {
+    // Demangle name of the function
+    std::string full = llvm::demangle(this->calledFunction->getName().str());
+
+    // Call dot string cleaning pipeline
+    std::string shortLabel = full;
+    shortLabel = Util::shortenStdStreamOps(std::move(shortLabel));
+    shortLabel = Util::dropReturnType(std::move(shortLabel));
+    shortLabel = Util::stripParameters(std::move(shortLabel));
+
+    // Print dot representation to the given OS
+    os << getDotName() << "["
+       << "shape=record,"
+       << "style=filled,"
+       << "fillcolor=\"#8D89A6\","
+       << "color=\"#2B2B2B\","
+       << "style=\"rounded,filled\","
+       << "penwidth=2,"
+       << "fontname=\"Courier\","
+       << "label=\"{"
+       << "call:\\l"
+       << "| " << Util::dotRecordEscape(shortLabel) << "| { LINKERFUNC=" << isLinkerFunction
+       << " | DEBUGFUNC=" << isDebugFunction << " | SYSCALL=" << isSyscall;
+
+    if (syscallId.has_value()) {
+        os << " | SID=" << syscallId.value() << " }";
+    } else {
+        os << " }";
+    }
+
+    os << "}\""
+       << "];\n";
+}
+
 
 std::string CallNode::getDotName() {
     return "CallNode" + this->getAddress();
