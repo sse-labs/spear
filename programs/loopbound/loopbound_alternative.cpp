@@ -9,7 +9,7 @@
 int main(int argc, char **argv) {
     int q = 0;
 
-    if (argc == 0) {
+    if (q == 2) {
         for (int i = 0; i < 1000; i++) {
             q += i;
         }

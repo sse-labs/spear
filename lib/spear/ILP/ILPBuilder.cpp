@@ -436,39 +436,23 @@ ILPModel ILPBuilder::appendLoopNodeContents(ILPModel model, HLAC::LoopNode *loop
     return model;
 }
 
-void ILPBuilder::appendLoopBoundConstraint(ILPModel &model, HLAC::LoopNode *loopNode) {
-    if (loopNode->backEdge == nullptr) {
-        std::cerr << "Warning: Loop " << loopNode->getDotName()
-                  << " has no backedge, skipping loop bound constraint.\n";
-        return;
-    }
-
-    const int backCol = loopNode->backEdge->ilpIndex;
-
-    if (backCol < 0 || backCol >= static_cast<int>(model.obj.size())) {
-        std::cerr << "Warning: invalid backedge ilpIndex for loop "
-                  << loopNode->getDotName() << '\n';
-        return;
-    }
-
+void ILPBuilder::appendEqualityConstraint(ILPModel &model, int col, double value, const std::string &context) {
     CoinPackedVector row;
     std::unordered_set<int> usedCols;
 
-    insertUnique(row, usedCols, backCol, 1.0,
-                 "Standalone loop bound for " + loopNode->getDotName());
-
-    // backedge counts re-iterations
-    const double lb = std::max(0.0, static_cast<double>(loopNode->bounds.getLowerBound()));
-    const double ub = std::max(0.0, static_cast<double>(loopNode->bounds.getUpperBound()));
-
-    appendRow(model, row, lb, ub);
+    insertUnique(row, usedCols, col, 1.0, context);
+    appendRow(model, row, value, value);
 }
 
 ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
     // std::cout << "Building ILP for function " << func->function->getName().str() << std::endl;
 
     // Assign global ILP column indices to every edge recursively.
-    const int numVars = assignEdgeIndicesFunction(loop, 0);
+    const int numEdgeVars = assignEdgeIndicesFunction(loop, 0);
+    const int invocationCol = numEdgeVars;
+    const int numVars = numEdgeVars + 1;
+
+    const std::vector<int> invocationCols = {invocationCol};
 
     // Create empty model storage.
     ILPModel model{
@@ -484,15 +468,17 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
     applyEdgeFeasibilityBounds(model, loop);
 
     // Append all flow and loop constraints recursively.
-    appendGraphConstraints(model, loop->Nodes, loop->Edges, nullptr);
+    appendGraphConstraints(model, loop->Nodes, loop->Edges, &invocationCols);
 
     // As we are already in a loop, we need to append all loop bound constrains right here
     // We calculate loop constrains via the scale of how often the loopnode will be entered,
     // This works perfectly fine for monolithic ILP calculation, where all constrains exit.
     // However, for clustered ILP construction, we have to assume that the top level loop(and only the top level loop)
     // Will be entered exactly one time.
-    appendLoopBoundConstraint(model, loop);
+    appendLoopBoundConstraint(model, loop, invocationCols);
 
+    // Append backedge simulation variable
+    appendEqualityConstraint(model, invocationCol, 1.0, "Synthetic invocation count for " + loop->getDotName());
 
     // Fill objective recursively with energy cost
     fillObjectiveFunction(model, loop);

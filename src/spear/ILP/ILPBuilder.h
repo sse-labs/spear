@@ -74,9 +74,10 @@ class ILPBuilder {
     static void fillObjectiveFunction(ILPModel &model, HLAC::LoopNode *loopNode);
 
     static ILPModel appendLoopNodeContents(ILPModel model, HLAC::LoopNode *node);
-    static void appendLoopBoundConstraint(ILPModel &model, HLAC::LoopNode *loopNode);
 
     static ILPModel buildMonolithicILP(HLAC::LoopNode *loop);
+
+    static void appendEqualityConstraint(ILPModel &model, int col, double value, const std::string &context);
 };
 
 #endif  // SPEAR_ILPBUILDER_H
