@@ -497,15 +497,15 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             auto res = graph->getEnergy();
 
-            // auto ilps = graph->buildMonolithicILPS();
+            auto ilps = graph->buildMonolithicILPS();
             auto ilpSolvingStart = std::chrono::high_resolution_clock::now();
-            // auto solvedResults = graph->solveMonolithicIlps(ilps);
+            auto solvedResults = graph->solveMonolithicIlps(ilps);
             auto ilpSolvingEnd = std::chrono::high_resolution_clock::now();
 
-            /*for (const auto &[funcName, resultpair] : solvedResults) {
-                llvm::outs() << "ILP Energy of " << funcName << ": " << resultpair.first << " J\n";
-                graph->printDotRepresentationWithSolution(resultpair.second);
-            }*/
+            for (const auto &[funcName, resultpair] : solvedResults) {
+                llvm::outs() << "Monolithic Energy of " << funcName << ": " << resultpair.first << " J\n";
+                //graph->printDotRepresentationWithSolution(resultpair.second);
+            }
 
             auto solvingDuration = std::chrono::duration_cast<std::chrono::milliseconds>(ilpSolvingEnd - ilpSolvingStart);
 
@@ -519,9 +519,13 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             std::cout << "Clustered ILP solving took: " << clusteredSolvingDuration.count() << " ms\n";
 
-            /*for (const auto &[funcName, energy] : res) {
-                llvm::outs() << "HLAC Energy of " << funcName << ": " << energy << " J\n";
-            }*/
+            std::map<std::string, double> dagResults;
+
+            auto dagdag = graph->DAGLongestPath(clusteredsolvedResults);
+
+            for (const auto &[funcName, energy] : dagdag) {
+                llvm::outs() << "Clustered Energy of " << funcName << ": " << energy << " J\n";
+            }
 
             if (functionTree != nullptr) {
                 std::vector<llvm::StringRef> names;

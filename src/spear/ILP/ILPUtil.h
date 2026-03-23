@@ -15,10 +15,15 @@
 class ILPUtil {
 public:
     static void printILPModelHumanReadable(std::string funcname, std::string loopname, const ILPModel &model);
+    static void printILPModelHumanReadable(std::string funcname, const ILPModel &model);
+
+    static std::pair<std::map<HLAC::GenericNode*, double>, std::map<HLAC::GenericNode*, HLAC::GenericNode*>>
+    longestPathDAG(HLAC::FunctionNode *func, std::map<HLAC::LoopNode *, double> loopMapping);
 
 private:
     static std::string boundToString(double value);
     static std::string formatLinearExpr(const CoinPackedMatrix &matrix, int row);
+
 };
 
 #endif  // SPEAR_ILPUTIL_H

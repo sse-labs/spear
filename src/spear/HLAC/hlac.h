@@ -323,6 +323,9 @@ class FunctionNode : public GenericNode {
 
     HLAC::hlac *parentGraph = nullptr;
 
+    int entryIndex = 0;
+    int exitIndex = 0;
+
     /**
      * Meta flags to distinguish different kinds of function
      */
@@ -374,6 +377,8 @@ class FunctionNode : public GenericNode {
      * @return Energy as double value
      */
     double getEnergy() override;
+
+    std::vector<GenericNode *> getTopologicalOrdering();
 
  private:
     /**
@@ -540,6 +545,8 @@ class hlac {
      */
     std::map<std::string, double> getEnergy();
 
+    std::map<std::string, double> DAGLongestPath(std::map<std::string, std::map<HLAC::LoopNode *, double>> clusteredResult);
+
     /**
      * Build an ILP representation for the contained functions
      * @return Returns mapping between function name and the constructed CoinPackedMatrix representing the ILP for the
@@ -551,7 +558,7 @@ class hlac {
 
     std::map<std::string, std::pair<double, std::vector<double>>> solveMonolithicIlps(std::map<std::string, ILPModel> modelMapping);
 
-    std::map<std::string, std::pair<double, std::vector<double>>> solveClusteredIlps(std::map<std::string, std::map<HLAC::LoopNode *, ILPModel>> modelMapping);
+    std::map<std::string, std::map<LoopNode *, double>> solveClusteredIlps(std::map<std::string, std::map<HLAC::LoopNode *, ILPModel>> modelMapping);
 };
 }  // namespace HLAC
 

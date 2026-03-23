@@ -14,6 +14,7 @@
 #include "OsiClpSolverInterface.hpp"
 
 #include "ILP/ILPBuilder.h"
+#include "ILP/ILPUtil.h"
 
 namespace HLAC {
 void hlac::makeFunction(llvm::Function* function, llvm::FunctionAnalysisManager *fam) {
@@ -126,15 +127,37 @@ std::map<std::string, std::pair<double, std::vector<double>>> hlac::solveMonolit
     return result;
 }
 
-std::map<std::string, std::pair<double, std::vector<double>>>
+std::map<std::string, double> hlac::DAGLongestPath(std::map<std::string, std::map<HLAC::LoopNode *, double>> clusteredResult) {
+    std::map<std::string, double> result;
+
+    for (auto &functionNode : functions) {
+        if (!Util::starts_with(functionNode->function->getName().str(), "__psr") && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
+            auto [distances, predecessors] = ILPUtil::longestPathDAG(functionNode.get(), clusteredResult[functionNode->name]);
+
+            auto funcNode = functionNode.get();
+
+            // auto entryNode = funcNode->Nodes[funcNode->entryIndex];
+            auto exitNode = funcNode->Nodes[funcNode->exitIndex].get();
+
+            double exitEnergy = distances[exitNode];
+
+            result[functionNode->name] = exitEnergy;
+        }
+    }
+
+    return result;
+}
+
+std::map<std::string, std::map<LoopNode *, double>>
 hlac::solveClusteredIlps(std::map<std::string, std::map<HLAC::LoopNode *, ILPModel>> modelMapping) {
-    std::map<std::string, std::pair<double, std::vector<double>>> result;
+    std::map<std::string, std::map<LoopNode *, double>> result;
 
     for (auto &[name, loopModelMapping] : modelMapping) {
         // We need to solve the ILP for each loop and then combine the results to get the overall energy and path for the function
         std::vector<double> combinedVariableValues;
+        std::map<LoopNode *, double> loopEnergyMapping;
 
-        std::cout << "Clustered results for " << name << ":\n";
+        // std::cout << "Clustered results for " << name << ":\n";
 
         for (auto &[loopNode, model] : loopModelMapping) {
             auto solvedModel = ILPBuilder::solveModel(model);
@@ -144,11 +167,12 @@ hlac::solveClusteredIlps(std::map<std::string, std::map<HLAC::LoopNode *, ILPMod
                 double objectiveValue = solvedPair.first;
                 std::vector<double> variableValues = solvedPair.second;
 
-                std::cout << "Loop " << loopNode->loop->getName().str() << " -> " << objectiveValue << std::endl;
+                // std::cout << "Loop " << loopNode->loop->getName().str() << " -> " << objectiveValue << std::endl;
+                loopEnergyMapping[loopNode] = objectiveValue;
             }
         }
 
-        result[name] = {0.0, combinedVariableValues};
+        result[name] = loopEnergyMapping;
     }
 
     return result;

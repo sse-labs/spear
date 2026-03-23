@@ -119,6 +119,58 @@ void ILPBuilder::insertUnique(
     row.insert(col, coeff);
 }
 
+void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode *func) {
+    for (auto &edgeUP : func->Edges) {
+        auto *edge = edgeUP.get();
+        if (!edge) {
+            continue;
+        }
+
+        const int col = edge->ilpIndex;
+        if (col < 0 || col >= static_cast<int>(model.col_ub.size())) {
+            std::cerr << "Warning: invalid ilpIndex while applying feasibility bound.\n";
+            continue;
+        }
+
+        if (!edge->feasibility) {
+            model.col_lb[col] = 0.0;
+            model.col_ub[col] = 0.0;
+        }
+    }
+
+    for (auto &nodeUP : func->Nodes) {
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
+            applyEdgeFeasibilityBounds(model, loopNode);
+        }
+    }
+}
+
+void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::LoopNode *loopNode) {
+    for (auto &edgeUP : loopNode->Edges) {
+        auto *edge = edgeUP.get();
+        if (!edge) {
+            continue;
+        }
+
+        const int col = edge->ilpIndex;
+        if (col < 0 || col >= static_cast<int>(model.col_ub.size())) {
+            std::cerr << "Warning: invalid ilpIndex while applying feasibility bound.\n";
+            continue;
+        }
+
+        if (!edge->feasibility) {
+            model.col_lb[col] = 0.0;
+            model.col_ub[col] = 0.0;
+        }
+    }
+
+    for (auto &nodeUP : loopNode->Nodes) {
+        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
+            applyEdgeFeasibilityBounds(model, innerLoop);
+        }
+    }
+}
+
 void ILPBuilder::appendGraphConstraints(
     ILPModel &model,
     const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
@@ -406,8 +458,8 @@ void ILPBuilder::appendLoopBoundConstraint(ILPModel &model, HLAC::LoopNode *loop
                  "Standalone loop bound for " + loopNode->getDotName());
 
     // backedge counts re-iterations
-    const double lb = std::max(0.0, static_cast<double>(loopNode->bounds.getLowerBound()) - 1.0);
-    const double ub = std::max(0.0, static_cast<double>(loopNode->bounds.getUpperBound()) - 1.0);
+    const double lb = std::max(0.0, static_cast<double>(loopNode->bounds.getLowerBound()));
+    const double ub = std::max(0.0, static_cast<double>(loopNode->bounds.getUpperBound()));
 
     appendRow(model, row, lb, ub);
 }
@@ -428,6 +480,9 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
         .obj = std::vector<double>(numVars, 0.0)
     };
 
+    // Encode edge feasibility
+    applyEdgeFeasibilityBounds(model, loop);
+
     // Append all flow and loop constraints recursively.
     appendGraphConstraints(model, loop->Nodes, loop->Edges, nullptr);
 
@@ -438,8 +493,11 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
     // Will be entered exactly one time.
     appendLoopBoundConstraint(model, loop);
 
+
     // Fill objective recursively with energy cost
     fillObjectiveFunction(model, loop);
+
+
 
     return model;
 }
@@ -460,11 +518,17 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::FunctionNode *func) {
         .obj = std::vector<double>(numVars, 0.0)
     };
 
+    // Encode edge feasibility
+    applyEdgeFeasibilityBounds(model, func);
+
     // Append all flow and loop constraints recursively.
     appendGraphConstraints(model, func->Nodes, func->Edges, nullptr);
 
     // Fill objective recursively with energy cost
     fillObjectiveFunction(model, func);
+
+    ILPUtil::printILPModelHumanReadable(func->name, model);
+
 
     return model;
 }

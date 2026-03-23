@@ -97,6 +97,17 @@ class Util {
      * @return Vector containing the callgraph in postorder fashion
      */
     static std::vector<llvm::Function *> getLazyCallGraphPostOrder(llvm::Module &M, llvm::FunctionAnalysisManager &FAM);
+
+    static std::map<HLAC::GenericNode *, std::vector<HLAC::Edge *>>
+    createAdjacentList(const std::vector<GenericNode *> &nodes, const std::vector<std::unique_ptr<Edge>> &edges);
+
+    static std::map<HLAC::GenericNode *, std::vector<HLAC::Edge *>>
+    createAdjacentList(const std::vector<std::unique_ptr<GenericNode>> &nodes, const std::vector<std::unique_ptr<Edge>> &edges);
+
+    static std::map<HLAC::GenericNode *, std::vector<HLAC::Edge *>>
+    createIncomingList(const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
+                       const std::vector<std::unique_ptr<HLAC::Edge>> &edges);
+
 };
 
 }  // namespace HLAC

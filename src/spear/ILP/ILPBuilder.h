@@ -57,7 +57,9 @@ class ILPBuilder {
 
     static void insertUnique(CoinPackedVector &row, std::unordered_set<int> &used, int col, double coeff,
                              const std::string &context);
+    static void applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode *func);
 
+    static void applyEdgeFeasibilityBounds(ILPModel &model, HLAC::LoopNode *loopNode);
     static void appendGraphConstraints(
         ILPModel &model,
         const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,

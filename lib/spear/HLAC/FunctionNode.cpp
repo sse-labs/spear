@@ -1,8 +1,9 @@
 /*
  * Copyright (c) 2026 Maximilian Krebs
  * All rights reserved.
-*/
+ */
 
+#include <ClpEventHandler.hpp>
 #include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Dominators.h>
@@ -48,13 +49,13 @@ FunctionNode::FunctionNode(llvm::Function *function,
         std::unordered_map<const llvm::BasicBlock *, GenericNode *> bb2node;
         bb2node.reserve(function->size());
 
-        int entryIndex = -1;
-        int exitIndex = -1;
+        int localEntryIndex = -1;
+        int localExitIndex = -1;
 
         // create entry once
-        auto entry = VirtualNode::makeVirtualPoint(true, false, this);
-        this->Nodes.push_back(std::move(entry));
-        entryIndex = this->Nodes.size() - 1;
+        auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
+        this->Nodes.push_back(std::move(entryNode));
+        localEntryIndex = this->Nodes.size() - 1;
 
         // create all BB nodes, remember whether an exit BB exists
         bool hasExitBlock = false;
@@ -72,9 +73,9 @@ FunctionNode::FunctionNode(llvm::Function *function,
         }
 
         if (hasExitBlock) {
-            auto exit = VirtualNode::makeVirtualPoint(false, true, this);
-            this->Nodes.push_back(std::move(exit));
-            exitIndex = this->Nodes.size() - 1;
+            auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
+            this->Nodes.push_back(std::move(exitNode));
+            localExitIndex = this->Nodes.size() - 1;
         }
 
         auto feasResult = registry.getFeasibilityResults();
@@ -92,17 +93,17 @@ FunctionNode::FunctionNode(llvm::Function *function,
                 const unsigned nSucc = term->getNumSuccessors();
 
                 // Handle virtual points
-                if (entryIndex != -1) {
+                if (localEntryIndex != -1) {
                     if (basic_block.isEntryBlock()) {
-                        auto e = FunctionNode::makeEdge(this->Nodes[entryIndex].get(), src);
+                        auto e = FunctionNode::makeEdge(this->Nodes[localEntryIndex].get(), src);
                         e->feasibility = true;
                         this->Edges.push_back(std::move(e));
                     }
                 }
 
-                if (exitIndex != -1) {
+                if (localExitIndex != -1) {
                     if (term->getNumSuccessors() == 0) {
-                        auto e = FunctionNode::makeEdge(src, this->Nodes[exitIndex].get());
+                        auto e = FunctionNode::makeEdge(src, this->Nodes[localExitIndex].get());
                         e->feasibility = true;
                         this->Edges.push_back(std::move(e));
                     }
@@ -150,6 +151,22 @@ FunctionNode::FunctionNode(llvm::Function *function,
 
         // Construct all CallNodes
         constructCallNodes(SPR_IGNORE_DEBUG_FUNCTIONS);
+
+        // Set entry and exit indices
+        for (int i = 0; i < this->Nodes.size(); ++i) {
+            auto &node = this->Nodes[i];;
+
+            if (auto *virtualNode = dynamic_cast<VirtualNode *>(node.get())) {
+                if (virtualNode->isEntry) {
+                    entryIndex = i;
+                }
+                if (virtualNode->isExit) {
+                    exitIndex = i;
+                }
+            }
+        }
+
+
     }
 }
 
@@ -284,6 +301,58 @@ double FunctionNode::getEnergy() {
     // After the energy is calculated store it in the energy cache of the parent graph to avoid redundant calculations
     this->parentGraph->FunctionEnergyCache[this->function->getName().str()] = energy;
     return energy;
+}
+
+std::vector<GenericNode *> FunctionNode::getTopologicalOrdering() {
+    // Node -> Incoming edge representation to access in degree more easily
+    auto incomingMapping = Util::createIncomingList(this->Nodes, this->Edges);
+
+    // Adjacent representation of our graph
+    auto G = Util::createAdjacentList(this->Nodes, this->Edges);
+    std::vector<GenericNode *> topologicalOrdering;
+
+    // Calculate in-degree
+    std::map<HLAC::GenericNode *, int> inDegree;
+    for (const auto [node, edgelist] : incomingMapping) {
+        inDegree[node] = incomingMapping[node].size();
+    }
+
+    // Heap where access the discovered nodes
+    std::queue<GenericNode *> H;
+
+    // Add all nodes to the heap that have 0 incoming edges (should only be the entry node)
+    for (auto [node, incomingEdges] : inDegree) {
+        if (incomingEdges == 0) {
+            H.push(node);
+        }
+    }
+
+    // Iterate over the node heap
+    while (!H.empty()) {
+        // Get the node at the front of the queue
+        auto minVertex = H.front();
+        H.pop();
+
+        // Add this element to the ordering. As we assume correct ordering for the element under analysis
+        topologicalOrdering.push_back(minVertex);
+
+        // Iterate over the adjacent edges of our element
+        for (auto edge : G[minVertex]) {
+            // We simulate the removal of the edge from the graph
+            // Decrease indegree of destination node
+            auto dest = edge->destination;
+            inDegree[dest]--;
+
+            // If the destination node is now no longer accesible from any other node (e.g there is no other node
+            // that we need to deal with first)
+            if (inDegree[dest] == 0) {
+                H.push(dest);
+            }
+        }
+    }
+
+
+    return topologicalOrdering;
 }
 
 }  // namespace HLAC

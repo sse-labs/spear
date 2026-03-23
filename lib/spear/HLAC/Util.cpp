@@ -242,4 +242,63 @@ std::vector<llvm::Function*> Util::getLazyCallGraphPostOrder(
     return result;
 }
 
+std::map<HLAC::GenericNode *, std::vector<HLAC::Edge *>>
+Util::createAdjacentList(const std::vector<std::unique_ptr<GenericNode>> &nodes,
+                         const std::vector<std::unique_ptr<Edge>> &edges) {
+    std::vector<HLAC::GenericNode*> nodePtrs;
+    for (const auto &nodeUP : nodes) {
+        nodePtrs.push_back(nodeUP.get());
+    }
+
+    return createAdjacentList(nodePtrs, edges);
+}
+
+std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> Util::createAdjacentList(
+    const std::vector<GenericNode *> &nodes,
+    const std::vector<std::unique_ptr<HLAC::Edge>> &edges)
+{
+    std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> adjacentList;
+
+    // Initialize all nodes
+    for (const auto &nodeUP : nodes) {
+        adjacentList[nodeUP] = {};
+    }
+
+    // Fill adjacency
+    for (const auto &edgeUP : edges) {
+        const auto *edge = edgeUP.get();
+        if (!edge) {
+            continue;
+        }
+
+        adjacentList[edge->soure].push_back(edgeUP.get());
+    }
+
+    return adjacentList;
+}
+
+std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> Util::createIncomingList(
+    const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
+    const std::vector<std::unique_ptr<HLAC::Edge>> &edges)
+{
+    std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> adjacentList;
+
+    // Initialize all nodes
+    for (const auto &nodeUP : nodes) {
+        adjacentList[nodeUP.get()] = {};
+    }
+
+    // Fill adjacency
+    for (const auto &edgeUP : edges) {
+        const auto *edge = edgeUP.get();
+        if (!edge) {
+            continue;
+        }
+
+        adjacentList[edge->destination].push_back(edgeUP.get());
+    }
+
+    return adjacentList;
+}
+
 }  // namespace HLAC
