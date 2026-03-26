@@ -497,37 +497,116 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             auto res = graph->getEnergy();
 
-            auto ilps = graph->buildMonolithicILPS();
-            auto ilpSolvingStart = std::chrono::high_resolution_clock::now();
-            auto solvedResults = graph->solveMonolithicIlps(ilps);
-            auto ilpSolvingEnd = std::chrono::high_resolution_clock::now();
+            // ================= Monolithic ILP Timing =================
 
+            // Total start
+            auto monoTotalStart = std::chrono::high_resolution_clock::now();
+
+
+            // ---------- Build ----------
+            auto monoBuildStart = std::chrono::high_resolution_clock::now();
+            auto ilps = graph->buildMonolithicILPS();
+            auto monoBuildEnd = std::chrono::high_resolution_clock::now();
+
+            auto monoBuildDuration =
+                std::chrono::duration_cast<std::chrono::microseconds>(monoBuildEnd - monoBuildStart);
+
+
+            // ---------- Solve ----------
+            auto monoSolveStart = std::chrono::high_resolution_clock::now();
+            auto solvedResults = graph->solveMonolithicIlps(ilps);
+            auto monoSolveEnd = std::chrono::high_resolution_clock::now();
+
+            auto monoSolveDuration =
+                std::chrono::duration_cast<std::chrono::microseconds>(monoSolveEnd - monoSolveStart);
+
+
+            // ---------- Total ----------
+            auto monoTotalEnd = std::chrono::high_resolution_clock::now();
+
+            auto monoTotalDuration =
+                std::chrono::duration_cast<std::chrono::microseconds>(monoTotalEnd - monoTotalStart);
+
+
+            // ---------- Output ----------
+            std::cout << "Monolithic ILP Build Time: " << monoBuildDuration.count() << " µs\n";
+            std::cout << "Monolithic ILP Solve Time: " << monoSolveDuration.count() << " µs\n";
+            std::cout << "Monolithic Total Time:     " << monoTotalDuration.count() << " µs\n";
+
+
+            // ---------- Results ----------
             for (const auto &[funcName, resultpair] : solvedResults) {
                 llvm::outs() << "Monolithic Energy of " << funcName << ": " << resultpair.first << " J\n";
-                //graph->printDotRepresentationWithSolution(resultpair.second);
+
+                graph->printDotRepresentationWithSolution(
+                    graph->getFunctionByName(funcName),
+                    resultpair.second,
+                    "monolithic"
+                );
             }
 
-            auto solvingDuration = std::chrono::duration_cast<std::chrono::milliseconds>(ilpSolvingEnd - ilpSolvingStart);
 
-            std::cout << "Monolithic ILP solving took: " << solvingDuration.count() << " ms\n";
 
+            // ================= Clustered ILP Timing =================
+
+            // Total start
+            auto clusteredTotalStart = std::chrono::high_resolution_clock::now();
+
+
+            // ---------- Build ----------
+            auto clusteredBuildStart = std::chrono::high_resolution_clock::now();
             auto clusteredILPs = graph->buildClusteredILPS();
-            auto ilpClusteredSolvingStart = std::chrono::high_resolution_clock::now();
-            auto clusteredsolvedResults = graph->solveClusteredIlps(clusteredILPs);
-            auto ilpClusteredSolvingEnd = std::chrono::high_resolution_clock::now();
-            auto clusteredSolvingDuration = std::chrono::duration_cast<std::chrono::milliseconds>(ilpClusteredSolvingEnd - ilpClusteredSolvingStart);
+            auto clusteredBuildEnd = std::chrono::high_resolution_clock::now();
 
-            std::cout << "Clustered ILP solving took: " << clusteredSolvingDuration.count() << " ms\n";
+            auto clusteredBuildDuration =
+                std::chrono::duration_cast<std::chrono::microseconds>(clusteredBuildEnd - clusteredBuildStart);
 
-            std::map<std::string, double> dagResults;
 
-            auto dagdag = graph->DAGLongestPath(clusteredsolvedResults);
+            // ---------- Solve ----------
+            auto clusteredSolveStart = std::chrono::high_resolution_clock::now();
+            auto clusteredSolvedResults = graph->solveClusteredIlps(clusteredILPs);
+            auto clusteredSolveEnd = std::chrono::high_resolution_clock::now();
 
-            for (const auto &[funcName, energy] : dagdag) {
-                llvm::outs() << "Clustered Energy of " << funcName << ": " << energy << " J\n";
+            auto clusteredSolveDuration =
+                std::chrono::duration_cast<std::chrono::microseconds>(clusteredSolveEnd - clusteredSolveStart);
+
+
+            // ---------- DAG Longest Path ----------
+            auto clusteredDagStart = std::chrono::high_resolution_clock::now();
+
+            auto dagdag = graph->DAGLongestPath(clusteredSolvedResults);
+
+            auto clusteredDagEnd = std::chrono::high_resolution_clock::now();
+
+            auto clusteredDagDuration =
+                std::chrono::duration_cast<std::chrono::microseconds>(clusteredDagEnd - clusteredDagStart);
+
+
+            // ---------- Total ----------
+            auto clusteredTotalEnd = std::chrono::high_resolution_clock::now();
+
+            auto clusteredTotalDuration =
+                std::chrono::duration_cast<std::chrono::microseconds>(clusteredTotalEnd - clusteredTotalStart);
+
+
+            // ---------- Output ----------
+            std::cout << "Clustered ILP Build Time:  " << clusteredBuildDuration.count() << " µs\n";
+            std::cout << "Clustered ILP Solve Time:  " << clusteredSolveDuration.count() << " µs\n";
+            std::cout << "DAG Longest Path Time:     " << clusteredDagDuration.count() << " µs\n";
+            std::cout << "Clustered Total Time:      " << clusteredTotalDuration.count() << " µs\n";
+
+            for (const auto &[funcName, resultpair] : dagdag) {
+                auto resVector = resultpair.second;
+
+                auto loopResults = clusteredSolvedResults[funcName];
+
+                HLAC::Util::appendLoopContainedEdges(loopResults, resultpair, resVector);
+
+                llvm::outs() << "Clustered Energy of " << funcName << ": " << resultpair.first << " J\n";
+                graph->printDotRepresentationWithSolution(graph->getFunctionByName(funcName), resVector, "clustered");
             }
 
-            if (functionTree != nullptr) {
+            /*if (functionTree != nullptr) {
                 std::vector<llvm::StringRef> names;
                 for (auto function : functionTree->getPreOrderVector()) {
                     names.push_back(function->getName());
@@ -589,7 +668,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 }
             } else {
                 llvm::errs() << "Functiontree could not be determined!" << "\n";
-            }
+            }*/
         } else {
             llvm::errs() << "Please provide valid an energyfile" << "\n";
         }

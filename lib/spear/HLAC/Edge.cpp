@@ -63,7 +63,7 @@ void Edge::printDotRepresentation(std::ostream &os) {
     };
 
     openAttrs();
-    os << "label=\"" << Util::feasibilityToString(this->feasibility) << "\"";
+    os << "label=\"" << Util::feasibilityToString(this->feasibility) << "(" << this->ilpIndex << ")" << "\"";
 
     if (srcLoop) {
         openAttrs();
@@ -139,7 +139,7 @@ void Edge::printDotRepresentationWithSolution(std::ostream &os, std::vector<doub
     };
 
     openAttrs();
-    os << "label=\"" << Util::feasibilityToString(this->feasibility) << "\"";
+    os << "label=\"" << Util::feasibilityToString(this->feasibility) << "(" << this->ilpIndex << ")" << "\"";
 
     if (srcLoop) {
         openAttrs();

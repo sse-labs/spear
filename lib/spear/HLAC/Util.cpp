@@ -301,4 +301,80 @@ std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> Util::createIncomingList(
     return adjacentList;
 }
 
+std::vector<Edge *> Util::findTakenEdges(GenericNode *entryNode, std::unordered_map<HLAC::GenericNode*, HLAC::GenericNode *> predecessors, std::vector<std::unique_ptr<Edge>> &edges) {
+    std::vector<Edge *> result;
+
+    HLAC::GenericNode *node = entryNode;
+    auto parent = predecessors[node];
+
+    while (parent != nullptr) {
+        // Find the edge from parent to node
+        for (auto &edgeUP : edges) {
+            auto *edge = edgeUP.get();
+            if (!edge) {
+                continue;
+            }
+
+            if (edge->soure == parent && edge->destination == node) {
+                result.push_back(edge);
+                break;
+            }
+        }
+
+        node = parent;
+        parent = predecessors[node];
+    }
+
+    return result;
+}
+
+Edge * Util::findEdgeByGlobalId(std::vector<std::unique_ptr<Edge>> &edgeList, int globalId) {
+    auto foundEdge = std::find_if(edgeList.begin(), edgeList.end(),
+        [globalId](const std::unique_ptr<Edge> &edgeUP) {
+            return edgeUP && edgeUP->ilpIndex == globalId;
+        }
+    );
+
+    if (foundEdge == edgeList.end()) {
+        return nullptr;
+    }
+
+    return foundEdge->get();
+}
+
+
+void Util::appendLoopContainedEdges(
+    std::unordered_map<HLAC::LoopNode *, std::pair<double, std::vector<double>>> loopResults,
+    const std::pair<double, std::vector<HLAC::Edge *>> resultpair,
+    std::vector<Edge *> &resVector) {
+
+    for (auto &LN : loopResults) {
+        bool loopNodeIsTaken = false;
+
+        for (auto &dagEdges : resultpair.second) {
+            if (dagEdges->destination->getDotName() == LN.first->getDotName()) {
+                loopNodeIsTaken = true;
+                break;
+            }
+        }
+
+        /*for (int i=0; i < LN.second.second.size(); i++) {
+            std::cout << i << ": " << LN.second.second[i] << std::endl;
+        }*/
+
+        if (loopNodeIsTaken) {
+            auto &loopEdges = LN.first->Edges;
+
+            for (int i = 0; i < LN.second.second.size(); i++) {
+                if (LN.second.second[i] > 0.0) {
+                    auto foundEdge = HLAC::Util::findEdgeByGlobalId(loopEdges, i);
+                    if (foundEdge != nullptr) {
+                        resVector.push_back(foundEdge);
+                    }
+                }
+            }
+        }
+    }
+}
+
 }  // namespace HLAC

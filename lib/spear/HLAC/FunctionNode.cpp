@@ -166,7 +166,28 @@ FunctionNode::FunctionNode(llvm::Function *function,
             }
         }
 
+        topologicalSortedRepresentationOfNodes = this->getTopologicalOrdering();
 
+        for (std::size_t i = 0; i < this->Nodes.size(); ++i) {
+            nodeLookup[topologicalSortedRepresentationOfNodes[i]] = i;
+        }
+
+        // Build adjacency list as vectors of raw edge pointers
+        std::vector<std::vector<HLAC::Edge*>> adjacencyList(this->Nodes.size());
+
+        for (const auto &edgeUP : this->Edges) {
+            HLAC::Edge *edge = edgeUP.get();
+            if (!edge || !edge->soure || !edge->destination) {
+                continue;
+            }
+
+            auto it = nodeLookup.find(edge->soure);
+            if (it != nodeLookup.end()) {
+                adjacencyList[it->second].push_back(edge);
+            }
+        }
+
+        this->adjacencyRepresentation = adjacencyList;
     }
 }
 

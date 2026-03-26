@@ -444,13 +444,96 @@ void ILPBuilder::appendEqualityConstraint(ILPModel &model, int col, double value
     appendRow(model, row, value, value);
 }
 
+bool ILPBuilder::hasValidEdgeIndices(HLAC::FunctionNode *func) {
+    for (auto &edgeUP : func->Edges) {
+        auto *edge = edgeUP.get();
+        if (!edge || edge->ilpIndex < 0) {
+            return false;
+        }
+    }
+
+    for (auto &nodeUP : func->Nodes) {
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
+            if (!hasValidEdgeIndices(loopNode)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+int ILPBuilder::getMaxEdgeIndex(HLAC::LoopNode *loopNode) {
+    int maxIndex = -1;
+
+    for (auto &edgeUP : loopNode->Edges) {
+        auto *edge = edgeUP.get();
+        if (edge && edge->ilpIndex > maxIndex) {
+            maxIndex = edge->ilpIndex;
+        }
+    }
+
+    for (auto &nodeUP : loopNode->Nodes) {
+        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
+            int innerMax = getMaxEdgeIndex(innerLoop);
+            if (innerMax > maxIndex) {
+                maxIndex = innerMax;
+            }
+        }
+    }
+
+    return maxIndex;
+}
+
+int ILPBuilder::getMaxEdgeIndex(HLAC::FunctionNode *func) {
+    int maxIndex = -1;
+
+    for (auto &edgeUP : func->Edges) {
+        auto *edge = edgeUP.get();
+        if (edge && edge->ilpIndex > maxIndex) {
+            maxIndex = edge->ilpIndex;
+        }
+    }
+
+    for (auto &nodeUP : func->Nodes) {
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
+            int innerMax = getMaxEdgeIndex(loopNode);
+            if (innerMax > maxIndex) {
+                maxIndex = innerMax;
+            }
+        }
+    }
+
+    return maxIndex;
+}
+
+bool ILPBuilder::hasValidEdgeIndices(HLAC::LoopNode *loopNode) {
+    for (auto &edgeUP : loopNode->Edges) {
+        auto *edge = edgeUP.get();
+        if (!edge || edge->ilpIndex < 0) {
+            return false;
+        }
+    }
+
+    for (auto &nodeUP : loopNode->Nodes) {
+        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
+            if (!hasValidEdgeIndices(innerLoop)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
     // std::cout << "Building ILP for function " << func->function->getName().str() << std::endl;
 
-    // Assign global ILP column indices to every edge recursively.
-    const int numEdgeVars = assignEdgeIndicesFunction(loop, 0);
-    const int invocationCol = numEdgeVars;
-    const int numVars = numEdgeVars + 1;
+    // The loop is part of a function graph whose edges already carry stable global ids.
+    // Therefore we must not renumber the loop edges locally here.
+    const int maxEdgeIndex = getMaxEdgeIndex(loop);
+    const int invocationCol = maxEdgeIndex + 1;
+    const int numVars = invocationCol + 1;
 
     const std::vector<int> invocationCols = {invocationCol};
 
@@ -483,8 +566,6 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
     // Fill objective recursively with energy cost
     fillObjectiveFunction(model, loop);
 
-
-
     return model;
 }
 
@@ -513,26 +594,28 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::FunctionNode *func) {
     // Fill objective recursively with energy cost
     fillObjectiveFunction(model, func);
 
-    ILPUtil::printILPModelHumanReadable(func->name, model);
-
+    // ILPUtil::printILPModelHumanReadable(func->name, model);
 
     return model;
 }
 
-std::map<HLAC::LoopNode *, ILPModel> ILPBuilder::buildClusteredILP(HLAC::FunctionNode *func) {
+std::unordered_map<HLAC::LoopNode *, ILPModel> ILPBuilder::buildClusteredILP(HLAC::FunctionNode *func) {
     /**
      * In contrary to the monolithic ILP, we do not build one big ILP for the whole function,
      * but instead we build separate ILPs for each loop in the function and use a generic graph algorithm for finding the
      * worst path in the function
      */
-    std::map<HLAC::LoopNode *, ILPModel> resultMapping;
+    std::unordered_map<HLAC::LoopNode *, ILPModel> resultMapping;
+
+    // Assign stable global ids once for the complete function graph.
+    assignEdgeIndicesFunction(func, 0);
 
     for (auto &nodeUP : func->Nodes) {
         if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
             // Build the ILP for the loop node
             ILPModel loopModel = buildMonolithicILP(loopNode);
 
-            ILPUtil::printILPModelHumanReadable(func->name, loopNode->loop->getName().str(), loopModel);
+            // ILPUtil::printILPModelHumanReadable(func->name, loopNode->loop->getName().str(), loopModel);
 
             // Store the model in the result mapping
             resultMapping[loopNode] = loopModel;

@@ -10,6 +10,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <chrono>
+#include <iostream>
 
 #include "HLAC/util.h"
 
@@ -235,53 +237,86 @@ void ILPUtil::printILPModelHumanReadable(std::string funcname, std::string loopn
     std::cout << "\n===========================================\n";
 }
 
-std::pair<std::map<HLAC::GenericNode*, double>, std::map<HLAC::GenericNode*, HLAC::GenericNode*>>
-    ILPUtil::longestPathDAG(HLAC::FunctionNode *func, std::map<HLAC::LoopNode *, double> loopMapping) {
+std::pair<std::unordered_map<HLAC::GenericNode*, double>, std::unordered_map<HLAC::GenericNode*, HLAC::GenericNode*>>
+ILPUtil::longestPathDAG(
+    HLAC::FunctionNode *func,
+    const std::unordered_map<HLAC::LoopNode*, std::pair<double, std::vector<double>>> &loopMapping) {
+
+
     const double NEG_INF = -std::numeric_limits<double>::infinity();
 
-    auto sortedNodes = func->getTopologicalOrdering();
-    auto &edges = func->Edges;
-    auto start = sortedNodes.front();  // Assuming the first node in topological order is the start node
 
-
-    std::map<HLAC::GenericNode*, double> distance;
-    std::map<HLAC::GenericNode*, HLAC::GenericNode*> parent;
-
-    auto adjacentList = HLAC::Util::createAdjacentList(sortedNodes, edges);
-
-    for (auto* node : sortedNodes) {
-        distance[node] = NEG_INF;
-        parent[node] = nullptr;
+    if (func->topologicalSortedRepresentationOfNodes.empty()) {
+        return {};
     }
 
-    distance[start] = 0.0;
+    const std::size_t n = func->topologicalSortedRepresentationOfNodes.size();
+    HLAC::GenericNode *start = func->topologicalSortedRepresentationOfNodes.front();
 
-    for (const auto &node : sortedNodes) {
-        if (distance[node] == NEG_INF) {
-            continue;  // Unreachable node
+    std::unordered_map<HLAC::GenericNode*, std::size_t> nodeToIndex;
+    nodeToIndex.reserve(n);
+
+    for (std::size_t i = 0; i < n; ++i) {
+        nodeToIndex[func->topologicalSortedRepresentationOfNodes[i]] = i;
+    }
+
+    std::vector<double> nodeEnergy(n, 0.0);
+
+    for (std::size_t i = 0; i < n; ++i) {
+        HLAC::GenericNode *node = func->topologicalSortedRepresentationOfNodes[i];
+
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
+            auto it = loopMapping.find(loopNode);
+            if (it != loopMapping.end()) {
+                nodeEnergy[i] = it->second.first;
+            } else {
+                nodeEnergy[i] = 0.0;
+            }
+        } else {
+            nodeEnergy[i] = node->getEnergy();
+        }
+    }
+
+    std::vector<double> distance(n, NEG_INF);
+    std::vector<HLAC::GenericNode*> parent(n, nullptr);
+
+    distance[nodeToIndex[start]] = 0.0;
+
+    for (std::size_t u = 0; u < n; ++u) {
+        if (distance[u] == NEG_INF) {
+            continue;
         }
 
-        for (const auto &edgeUP : adjacentList[node]) {
-            // Check if the edge is feasible. If not ignore this possible path.
-            // We assume here, that there is always another viable path...
-            if (edgeUP->feasibility) {
-                auto destinationNode = edgeUP->destination;
-                double candidateEnergy = distance[node];
+        for (HLAC::Edge *edge : func->adjacencyRepresentation[u]) {
+            if (!edge->feasibility) {
+                continue;
+            }
 
-                // If we have a loopNode use the result from the given clustered solving
-                if (auto candidateLoopNode = dynamic_cast<HLAC::LoopNode*>(destinationNode)) {
-                    candidateEnergy += loopMapping[candidateLoopNode];
-                } else {
-                    candidateEnergy += destinationNode->getEnergy();
-                }
+            auto it = nodeToIndex.find(edge->destination);
+            if (it == nodeToIndex.end()) {
+                continue;
+            }
 
-                if (candidateEnergy > distance[destinationNode]) {
-                    distance[destinationNode] = candidateEnergy;
-                    parent[destinationNode] = node;
-                }
+            std::size_t v = it->second;
+            double candidateEnergy = distance[u] + nodeEnergy[v];
+
+            if (candidateEnergy > distance[v]) {
+                distance[v] = candidateEnergy;
+                parent[v] = func->topologicalSortedRepresentationOfNodes[u];
             }
         }
     }
 
-    return std::make_pair(distance, parent);
+    std::unordered_map<HLAC::GenericNode*, double> distanceMap;
+    std::unordered_map<HLAC::GenericNode*, HLAC::GenericNode*> parentMap;
+
+    distanceMap.reserve(n);
+    parentMap.reserve(n);
+
+    for (std::size_t i = 0; i < n; ++i) {
+        distanceMap[func->topologicalSortedRepresentationOfNodes[i]] = distance[i];
+        parentMap[func->topologicalSortedRepresentationOfNodes[i]] = parent[i];
+    }
+
+    return std::make_pair(distanceMap, parentMap);
 }

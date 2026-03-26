@@ -316,6 +316,14 @@ class FunctionNode : public GenericNode {
      */
     std::vector<std::unique_ptr<Edge>> Edges;
 
+    std::vector<GenericNode *> topologicalSortedRepresentationOfNodes;
+
+    std::vector<double> nodeEnergy;
+
+    std::vector<std::vector<HLAC::Edge*>> adjacencyRepresentation;
+
+    std::unordered_map<GenericNode*, std::size_t> nodeLookup;
+
     /**
      * Function represented by the FunctionNode
      */
@@ -530,7 +538,12 @@ class hlac {
      */
     void printDotRepresentation();
 
-    void printDotRepresentationWithSolution(std::vector<double> result);
+    void printDotRepresentationWithSolution(FunctionNode *FN, std::vector<double> result, std::string appendName);
+    static int getMaxEdgeIndexInLoop(HLAC::LoopNode *loopNode);
+    static int getMaxEdgeIndexInFunction(HLAC::FunctionNode *FN);
+    void markTakenEdgesInLoop(LoopNode *loopNode, const std::unordered_set<Edge *> &takenSet,
+                              std::vector<double> &result);
+    void printDotRepresentationWithSolution(FunctionNode *FN, std::vector<Edge *> result, std::string appendName);
 
     /**
      * Return the energy of a given function
@@ -545,7 +558,9 @@ class hlac {
      */
     std::map<std::string, double> getEnergy();
 
-    std::map<std::string, double> DAGLongestPath(std::map<std::string, std::map<HLAC::LoopNode *, double>> clusteredResult);
+    std::unordered_map<std::string, std::pair<double, std::vector<Edge *>>> DAGLongestPath(
+            std::unordered_map<std::string, std::unordered_map<LoopNode *, std::pair<double, std::vector<double>>>>
+                    clusteredResult);
 
     /**
      * Build an ILP representation for the contained functions
@@ -554,11 +569,14 @@ class hlac {
      */
     std::map<std::string, ILPModel> buildMonolithicILPS();
 
-    std::map<std::string, std::map<LoopNode *, ILPModel>> buildClusteredILPS();
+    std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPModel>> buildClusteredILPS();
 
-    std::map<std::string, std::pair<double, std::vector<double>>> solveMonolithicIlps(std::map<std::string, ILPModel> modelMapping);
+    std::map<std::string, std::pair<double, std::vector<double>>> solveMonolithicIlps(const std::map<std::string, ILPModel> &modelMapping);
 
-    std::map<std::string, std::map<LoopNode *, double>> solveClusteredIlps(std::map<std::string, std::map<HLAC::LoopNode *, ILPModel>> modelMapping);
+    std::unordered_map<std::string, std::unordered_map<LoopNode *, std::pair<double, std::vector<double>>>> solveClusteredIlps(const std::unordered_map<std::string, std::unordered_map<HLAC::LoopNode *, ILPModel>> &modelMapping);
+
+
+    FunctionNode * getFunctionByName(std::string name);
 };
 }  // namespace HLAC
 

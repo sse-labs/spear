@@ -17,8 +17,9 @@ public:
     static void printILPModelHumanReadable(std::string funcname, std::string loopname, const ILPModel &model);
     static void printILPModelHumanReadable(std::string funcname, const ILPModel &model);
 
-    static std::pair<std::map<HLAC::GenericNode*, double>, std::map<HLAC::GenericNode*, HLAC::GenericNode*>>
-    longestPathDAG(HLAC::FunctionNode *func, std::map<HLAC::LoopNode *, double> loopMapping);
+    static std::pair<std::unordered_map<HLAC::GenericNode*, double>, std::unordered_map<HLAC::GenericNode*, HLAC::GenericNode*>>
+     longestPathDAG(HLAC::FunctionNode *func,
+                   const std::unordered_map<HLAC::LoopNode *, std::pair<double, std::vector<double>>> &loopMapping);
 
 private:
     static std::string boundToString(double value);

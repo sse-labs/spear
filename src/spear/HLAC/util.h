@@ -108,6 +108,13 @@ class Util {
     createIncomingList(const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
                        const std::vector<std::unique_ptr<HLAC::Edge>> &edges);
 
+    static std::vector<Edge *> findTakenEdges(GenericNode *entryNode,
+                                       std::unordered_map<HLAC::GenericNode *, HLAC::GenericNode *> predecessors,
+                                       std::vector<std::unique_ptr<Edge>> &edges);
+
+    static Edge * findEdgeByGlobalId(std::vector<std::unique_ptr<Edge>> &edgeList, int globalId);
+
+    static void appendLoopContainedEdges(std::unordered_map<HLAC::LoopNode *, std::pair<double, std::vector<double>>> loopResults, const std::pair<double, std::vector<HLAC::Edge *>> resultpair, std::vector<Edge *> &resVector);
 };
 
 }  // namespace HLAC

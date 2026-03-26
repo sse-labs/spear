@@ -30,6 +30,7 @@ struct ILPModel {
     std::vector<double> col_lb;
     std::vector<double> col_ub;
     std::vector<double> obj;
+    std::vector<HLAC::Edge*> colToEdge;
 };
 
 class ILPBuilder {
@@ -38,7 +39,7 @@ class ILPBuilder {
 
     static ILPModel buildMonolithicILP(HLAC::FunctionNode *func);
 
-    static std::map<HLAC::LoopNode *, ILPModel> buildClusteredILP(HLAC::FunctionNode *func);
+    static std::unordered_map<HLAC::LoopNode *, ILPModel> buildClusteredILP(HLAC::FunctionNode *func);
 
     static std::optional<std::pair<double, std::vector<double>>> solveModel(ILPModel model);
 
@@ -75,9 +76,13 @@ class ILPBuilder {
 
     static ILPModel appendLoopNodeContents(ILPModel model, HLAC::LoopNode *node);
 
+    static int getMaxEdgeIndex(HLAC::FunctionNode *func);
+    bool hasValidEdgeIndices(HLAC::LoopNode *loopNode);
     static ILPModel buildMonolithicILP(HLAC::LoopNode *loop);
 
     static void appendEqualityConstraint(ILPModel &model, int col, double value, const std::string &context);
+    bool hasValidEdgeIndices(HLAC::FunctionNode *func);
+    static int getMaxEdgeIndex(HLAC::LoopNode *loopNode);
 };
 
 #endif  // SPEAR_ILPBUILDER_H
