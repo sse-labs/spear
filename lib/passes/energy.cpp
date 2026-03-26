@@ -489,7 +489,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             std::cout << "HLAC construction took: " << constructionTime.count() << " µs\n";
 
             auto dotWritingStart = std::chrono::high_resolution_clock::now();
-            //graph->printDotRepresentation();
+            graph->printDotRepresentation();
             auto dotWritingEnd = std::chrono::high_resolution_clock::now();
 
             auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
@@ -622,18 +622,18 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 auto loopResults = clusteredSolvedResults[funcName];
 
-                /*for (auto loopres : loopResults) {
+                for (auto loopres : loopResults) {
                     std::cout << "Loop Results of " << loopres.first->getDotName() << "\n";
                     for (int i = 0; i < loopres.second.second.size(); i++) {
                         std::cout << "\t" << i << ": " << loopres.second.second[i] << "\n";
                     }
-                }*/
+                }
 
                 HLAC::Util::appendLoopContainedEdges(loopResults, resultpair, resVector);
 
-                /*for (auto containedEdge : resVector) {
-                    std::cout << "Edge " << containedEdge->soure->getDotName() << " -> " << containedEdge->destination->getDotName() << "\n";
-                }*/
+                for (auto containedEdge : resVector) {
+                    std::cout << "Edge " << containedEdge->soure->getDotName() << " ->(" << containedEdge->ilpIndex << ") " << containedEdge->destination->getDotName() << "\n";
+                }
 
                 llvm::outs() << "Clustered Energy of " << funcName << ": " << resultpair.first << " J\n";
                 graph->printDotRepresentationWithSolution(graph->getFunctionByName(funcName), resVector, "clustered");

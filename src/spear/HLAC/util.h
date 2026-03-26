@@ -112,7 +112,8 @@ class Util {
                                        std::unordered_map<HLAC::GenericNode *, HLAC::GenericNode *> predecessors,
                                        std::vector<std::unique_ptr<Edge>> &edges);
 
-    static Edge * findEdgeByGlobalId(std::vector<std::unique_ptr<Edge>> &edgeList, int globalId);
+    static Edge * findEdgeByGlobalId(std::vector<Edge *> &edgeList, int globalId);
+    static void collectAllContainedEdges(HLAC::LoopNode *loop, std::vector<HLAC::Edge *> &allEdges);
 
     static void appendLoopContainedEdges(std::unordered_map<HLAC::LoopNode *, std::pair<double, std::vector<double>>> loopResults, const std::pair<double, std::vector<HLAC::Edge *>> resultpair, std::vector<Edge *> &resVector);
 };

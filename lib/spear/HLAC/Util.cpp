@@ -328,9 +328,9 @@ std::vector<Edge *> Util::findTakenEdges(GenericNode *entryNode, std::unordered_
     return result;
 }
 
-Edge * Util::findEdgeByGlobalId(std::vector<std::unique_ptr<Edge>> &edgeList, int globalId) {
+Edge * Util::findEdgeByGlobalId(std::vector<Edge *> &edgeList, int globalId) {
     auto foundEdge = std::find_if(edgeList.begin(), edgeList.end(),
-        [globalId](const std::unique_ptr<Edge> &edgeUP) {
+        [globalId](const Edge* edgeUP) {
             return edgeUP && edgeUP->ilpIndex == globalId;
         }
     );
@@ -339,9 +339,20 @@ Edge * Util::findEdgeByGlobalId(std::vector<std::unique_ptr<Edge>> &edgeList, in
         return nullptr;
     }
 
-    return foundEdge->get();
+    return *foundEdge;
 }
 
+void Util::collectAllContainedEdges(HLAC::LoopNode *loop, std::vector<HLAC::Edge*> &allEdges) {
+    for (auto &edgeUP : loop->Edges) {
+        allEdges.push_back(edgeUP.get());
+    }
+
+    for (auto &nodeUP : loop->Nodes) {
+        if (auto *subLoop = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
+            collectAllContainedEdges(subLoop, allEdges);
+        }
+    }
+}
 
 void Util::appendLoopContainedEdges(
     std::unordered_map<HLAC::LoopNode *, std::pair<double, std::vector<double>>> loopResults,
@@ -363,11 +374,12 @@ void Util::appendLoopContainedEdges(
         }*/
 
         if (loopNodeIsTaken) {
-            auto &loopEdges = LN.first->Edges;
+            std::vector<HLAC::Edge*> allLoopEdges;
+            collectAllContainedEdges(LN.first, allLoopEdges);
 
             for (int i = 0; i < LN.second.second.size(); i++) {
                 if (LN.second.second[i] > 0.0) {
-                    auto foundEdge = HLAC::Util::findEdgeByGlobalId(loopEdges, i);
+                    auto foundEdge = HLAC::Util::findEdgeByGlobalId(allLoopEdges, i);
                     if (foundEdge != nullptr) {
                         resVector.push_back(foundEdge);
                     }
