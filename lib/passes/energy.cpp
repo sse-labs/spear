@@ -593,6 +593,13 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             auto clusteredDagEnd = std::chrono::high_resolution_clock::now();
 
+            /*for (auto dagfunc : dagdag) {
+                std::cout << "DAG result of " << dagfunc.first << "\n";
+                for (auto dagedge : dagfunc.second.second) {
+                    std::cout << "Edge " << dagedge->soure->getDotName() << " -> " << dagedge->destination->getDotName() << "\n";
+                }
+            }*/
+
             auto clusteredDagDuration =
                 std::chrono::duration_cast<std::chrono::microseconds>(clusteredDagEnd - clusteredDagStart);
 
@@ -615,7 +622,18 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 auto loopResults = clusteredSolvedResults[funcName];
 
+                /*for (auto loopres : loopResults) {
+                    std::cout << "Loop Results of " << loopres.first->getDotName() << "\n";
+                    for (int i = 0; i < loopres.second.second.size(); i++) {
+                        std::cout << "\t" << i << ": " << loopres.second.second[i] << "\n";
+                    }
+                }*/
+
                 HLAC::Util::appendLoopContainedEdges(loopResults, resultpair, resVector);
+
+                /*for (auto containedEdge : resVector) {
+                    std::cout << "Edge " << containedEdge->soure->getDotName() << " -> " << containedEdge->destination->getDotName() << "\n";
+                }*/
 
                 llvm::outs() << "Clustered Energy of " << funcName << ": " << resultpair.first << " J\n";
                 graph->printDotRepresentationWithSolution(graph->getFunctionByName(funcName), resVector, "clustered");

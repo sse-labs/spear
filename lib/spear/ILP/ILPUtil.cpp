@@ -237,19 +237,26 @@ void ILPUtil::printILPModelHumanReadable(std::string funcname, std::string loopn
     std::cout << "\n===========================================\n";
 }
 
-std::pair<std::unordered_map<HLAC::GenericNode*, double>,
-          std::unordered_map<HLAC::GenericNode*, HLAC::GenericNode*>>
-ILPUtil::longestPathDAG(
-    HLAC::FunctionNode *func,
-    const std::unordered_map<HLAC::LoopNode*, std::pair<double, std::vector<double>>> &loopMapping) {
-
-    (void)loopMapping;
-
+std::pair<std::unordered_map<HLAC::GenericNode*, double>, std::unordered_map<HLAC::GenericNode*, HLAC::GenericNode*>>
+ILPUtil::longestPathDAG(HLAC::FunctionNode *func, const std::unordered_map<HLAC::LoopNode*, std::pair<double, std::vector<double>>> &loopMapping) {
     const double NEG_INF = -std::numeric_limits<double>::infinity();
 
     const auto &nodes = func->topologicalSortedRepresentationOfNodes;
     if (nodes.empty()) {
         return {};
+    }
+
+
+    for (std::size_t i = 0; i < nodes.size(); ++i) {
+        HLAC::GenericNode *node = func->topologicalSortedRepresentationOfNodes[i];
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
+            auto it = loopMapping.find(loopNode);
+            if (it != loopMapping.end()) {
+                func->nodeEnergy[i] = it->second.first;
+            } else {
+                func->nodeEnergy[i] = 0.0;
+            }
+        }
     }
 
     const std::size_t n = nodes.size();

@@ -251,7 +251,6 @@ std::unordered_map<std::string, std::pair<double, std::vector<Edge *>>> hlac::DA
         if (!Util::starts_with(functionNode->function->getName().str(), "__psr") && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
             auto [distances, predecessors] = ILPUtil::longestPathDAG(functionNode.get(), clusteredResult[functionNode->name]);
 
-
             auto funcNode = functionNode.get();
 
             // auto entryNode = funcNode->Nodes[funcNode->entryIndex];
@@ -260,7 +259,6 @@ std::unordered_map<std::string, std::pair<double, std::vector<Edge *>>> hlac::DA
             double exitEnergy = distances[exitNode];
 
             std::vector<Edge *> takenEdges = Util::findTakenEdges(exitNode, predecessors, funcNode->Edges);
-
 
             result[functionNode->name] = std::make_pair(exitEnergy, takenEdges);
         }
