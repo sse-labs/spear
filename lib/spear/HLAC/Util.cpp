@@ -355,14 +355,14 @@ void Util::collectAllContainedEdges(HLAC::LoopNode *loop, std::vector<HLAC::Edge
 }
 
 void Util::appendLoopContainedEdges(
-    std::unordered_map<HLAC::LoopNode *, std::pair<double, std::vector<double>>> loopResults,
-    const std::pair<double, std::vector<HLAC::Edge *>> resultpair,
+    std::unordered_map<HLAC::LoopNode *, ILPResult> loopResults,
+    const DAGLongestPathSolution resultpair,
     std::vector<Edge *> &resVector) {
 
     for (auto &LN : loopResults) {
         bool loopNodeIsTaken = false;
 
-        for (auto &dagEdges : resultpair.second) {
+        for (auto &dagEdges : resultpair.longestPath) {
             if (dagEdges->destination->getDotName() == LN.first->getDotName()) {
                 loopNodeIsTaken = true;
                 break;
@@ -377,14 +377,91 @@ void Util::appendLoopContainedEdges(
             std::vector<HLAC::Edge*> allLoopEdges;
             collectAllContainedEdges(LN.first, allLoopEdges);
 
-            for (int i = 0; i < LN.second.second.size(); i++) {
-                if (LN.second.second[i] > 0.0) {
+            for (int i = 0; i < LN.second.variableValues.size(); i++) {
+                if (LN.second.variableValues[i] > 0.0) {
                     auto foundEdge = HLAC::Util::findEdgeByGlobalId(allLoopEdges, i);
                     if (foundEdge != nullptr) {
                         resVector.push_back(foundEdge);
                     }
                 }
             }
+        }
+    }
+}
+
+int Util::getMaxEdgeIndexInLoop(HLAC::LoopNode *loopNode) {
+    int maxIndex = 0;
+
+    // Check edges in this loop
+    for (const auto &edgeUP : loopNode->Edges) {
+        if (edgeUP && edgeUP->ilpIndex > maxIndex) {
+            maxIndex = edgeUP->ilpIndex;
+        }
+    }
+
+    // Recurse into nested loops
+    for (const auto &nodeUP : loopNode->Nodes) {
+        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
+            int innerMax = getMaxEdgeIndexInLoop(innerLoop);
+            if (innerMax > maxIndex) {
+                maxIndex = innerMax;
+            }
+        }
+    }
+
+    return maxIndex;
+}
+
+int Util::getMaxEdgeIndexInFunction(HLAC::FunctionNode *FN) {
+    int maxIndex = 0;
+
+    // Top-level edges
+    for (const auto &edgeUP : FN->Edges) {
+        if (edgeUP && edgeUP->ilpIndex > maxIndex) {
+            maxIndex = edgeUP->ilpIndex;
+        }
+    }
+
+    // Traverse loop nodes
+    for (const auto &nodeUP : FN->Nodes) {
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
+            int loopMax = getMaxEdgeIndexInLoop(loopNode);
+            if (loopMax > maxIndex) {
+                maxIndex = loopMax;
+            }
+        }
+    }
+
+    return maxIndex;
+}
+
+void Util::markTakenEdgesInLoop(
+    LoopNode *loopNode,
+    const std::unordered_set<Edge *> &takenSet,
+    std::vector<double> &result) {
+
+    if (!loopNode) {
+        return;
+    }
+
+    for (const auto &edgeUP : loopNode->Edges) {
+        Edge *edge = edgeUP.get();
+        if (!edge) {
+            continue;
+        }
+
+        if (edge->ilpIndex < 0 || edge->ilpIndex >= static_cast<int>(result.size())) {
+            continue;
+        }
+
+        if (takenSet.find(edge) != takenSet.end()) {
+            result[edge->ilpIndex] = 1.0;
+        }
+    }
+
+    for (const auto &nodeUP : loopNode->Nodes) {
+        if (auto *innerLoop = dynamic_cast<LoopNode *>(nodeUP.get())) {
+            markTakenEdgesInLoop(innerLoop, takenSet, result);
         }
     }
 }

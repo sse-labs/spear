@@ -13,10 +13,12 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "ILP/ILPBuilder.h"
+#include "ILP/ILPTypes.h"
 #include "analyses/ResultRegistry.h"
 
 namespace HLAC {
@@ -99,6 +101,11 @@ class VirtualNode : public GenericNode {
      */
     void printDotRepresentation(std::ostream &os) override;
 
+    /**
+     * Print the virtual node with information about the solution
+     * @param os Outputstream to print to
+     * @param result Result to consider during printing
+     */
     void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) override;
 
     /**
@@ -113,9 +120,14 @@ class VirtualNode : public GenericNode {
  */
 class Edge {
 public:
-
+    /**
+     * Global unique identifier of this edge
+     */
     int ilpIndex = -1;
 
+    /**
+     * Local string identifier used for dot printing
+     */
     std::string id;
 
     /**
@@ -147,6 +159,11 @@ public:
      */
     void printDotRepresentation(std::ostream &os);
 
+    /**
+     * Print the edge with information about the solution
+     * @param os Outputstream to print to
+     * @param result Result to consider during printing
+     */
     void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result);
 
 private:
@@ -182,6 +199,11 @@ class Node : public GenericNode {
      */
     void printDotRepresentation(std::ostream &os) override;
 
+    /**
+     * Print the node with information about the solution
+     * @param os Outputstream to print to
+     * @param result Result to consider during printing
+     */
     void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) override;
 
     /**
@@ -227,6 +249,9 @@ class LoopNode : public GenericNode {
      */
     LoopBound::DeltaInterval bounds;
 
+    /**
+     * Parent FunctionNode this LoopNode belongs to
+     */
     FunctionNode *parentFunction = nullptr;
 
     /**
@@ -271,6 +296,11 @@ class LoopNode : public GenericNode {
      */
     void printDotRepresentation(std::ostream &os) override;
 
+    /**
+     * Print the loopnode with information about the solution
+     * @param os Outputstream to print to
+     * @param result Result to consider during printing
+     */
     void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) override;
 
     /**
@@ -298,6 +328,9 @@ class LoopNode : public GenericNode {
  */
 class FunctionNode : public GenericNode {
  public:
+    /**
+     * Phasar result registry
+     */
     ResultRegistry registry;
 
     /**
@@ -316,12 +349,24 @@ class FunctionNode : public GenericNode {
      */
     std::vector<std::unique_ptr<Edge>> Edges;
 
+    /**
+     * Represents the nodes of this FunctioNode as vector in topological order
+     */
     std::vector<GenericNode *> topologicalSortedRepresentationOfNodes;
 
+    /**
+     * Representation of the function node as mapping of node index to list of adjacent edges
+     */
+    std::vector<std::vector<HLAC::Edge *>> adjacencyRepresentation;
+
+    /**
+     * Internal representation to map node index to precalculated energy values
+     */
     std::vector<double> nodeEnergy;
 
-    std::vector<std::vector<HLAC::Edge*>> adjacencyRepresentation;
-
+    /**
+     * Internal mapping that maps a GenericNode object to the respective index in the Nodes vector
+     */
     std::unordered_map<GenericNode*, std::size_t> nodeLookup;
 
     /**
@@ -329,9 +374,19 @@ class FunctionNode : public GenericNode {
      */
     llvm::Function *function = nullptr;
 
+    /**
+     * Reference to the HLAC this FunctionNode belongs to
+     */
     HLAC::hlac *parentGraph = nullptr;
 
+    /**
+     * Index of the node representing the entry of the function
+     */
     int entryIndex = 0;
+
+    /**
+     * Index of the node representing the exit of the function
+     */
     int exitIndex = 0;
 
     /**
@@ -372,6 +427,11 @@ class FunctionNode : public GenericNode {
      */
     void printDotRepresentation(std::ostream &os) override;
 
+    /**
+     * Print the function node with information about the solution
+     * @param os Outputstream to print to
+     * @param result Result to consider during printing
+     */
     void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) override;
 
     /**
@@ -386,8 +446,6 @@ class FunctionNode : public GenericNode {
      */
     double getEnergy() override;
 
-    std::vector<GenericNode *> getTopologicalOrdering();
-
  private:
     /**
      * Iterates over the contained nodes and constructs LoopNodes recursively for all contained loops
@@ -401,6 +459,12 @@ class FunctionNode : public GenericNode {
      * @param considerDebugFunctions Toggle to consider LLVM debug functions e.g. llvm.dbg.value
      */
     void constructCallNodes(bool considerDebugFunctions = false);
+
+    /**
+     * Create a vector of the contained nodes in topological order
+     * @return Vector representing the topological order of the contained nodes
+     */
+    std::vector<GenericNode *> getTopologicalOrdering();
 };
 
 /**
@@ -473,6 +537,11 @@ class CallNode : public GenericNode {
      */
     void printDotRepresentation(std::ostream &os) override;
 
+    /**
+     * Print the call node with information about the solution
+     * @param os Outputstream to print to
+     * @param result Result to consider during printing
+     */
     void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) override;
 
     /**
@@ -534,15 +603,39 @@ class hlac {
     void makeFunction(llvm::Function *function, llvm::FunctionAnalysisManager *fam);
 
     /**
-     * Print dot representation of the HLAC
+     * Print the DOT representation of the HLAC graph.
+     *
+     * This function generates a Graphviz DOT description of the current HLAC,
+     * including all nodes and edges, without any analysis or optimization results.
+     * It can be used to visualize the raw structure of the graph.
      */
     void printDotRepresentation();
 
+    /**
+     * Print the DOT representation of the HLAC graph annotated with an ILP solution.
+     *
+     * This variant expects a vector of doubles representing the ILP solution,
+     * where each entry corresponds to an edge variable (e.g., execution count).
+     * Edges that are part of the solution (e.g., with value > 0) are highlighted
+     * in the generated DOT output.
+     *
+     * @param FN The function node whose HLAC graph should be printed
+     * @param result ILP solution vector (edge execution counts)
+     * @param appendName Optional suffix added to the output file name
+     */
     void printDotRepresentationWithSolution(FunctionNode *FN, std::vector<double> result, std::string appendName);
-    static int getMaxEdgeIndexInLoop(HLAC::LoopNode *loopNode);
-    static int getMaxEdgeIndexInFunction(HLAC::FunctionNode *FN);
-    void markTakenEdgesInLoop(LoopNode *loopNode, const std::unordered_set<Edge *> &takenSet,
-                              std::vector<double> &result);
+
+    /**
+     * Print the DOT representation of the HLAC graph annotated with a selected edge set.
+     *
+     * This variant expects a list of edges that are part of the final solution
+     * (e.g., the extracted longest path or selected ILP edges). Only these edges
+     * are highlighted in the visualization.
+     *
+     * @param FN The function node whose HLAC graph should be printed
+     * @param result Vector of edges that should be emphasized in the output
+     * @param appendName Optional suffix added to the output file name
+     */
     void printDotRepresentationWithSolution(FunctionNode *FN, std::vector<Edge *> result, std::string appendName);
 
     /**
@@ -558,25 +651,49 @@ class hlac {
      */
     std::map<std::string, double> getEnergy();
 
-    std::unordered_map<std::string, std::pair<double, std::vector<Edge *>>> DAGLongestPath(
-            std::unordered_map<std::string, std::unordered_map<LoopNode *, std::pair<double, std::vector<double>>>>
-                    clusteredResult);
+    /**
+     * Query a pointer to a FunctionNode contained in the graph by name
+     * @param name Name of the function to look for
+     * @return Pointer to the found FunctionNode, nullptr otherwise
+     */
+    FunctionNode *getFunctionByName(std::string name);
+
+    /**
+     * Calculate the longest paths of each function contained inside the HLAC
+     * @param clusteredResult Mapping of functions to -> (LoopNode -> Clustered ILP Result)
+     * @return Mapping of function names to their respective solution of the DAG longest path search
+     */
+    std::unordered_map<std::string, DAGLongestPathSolution> DAGLongestPath(
+            std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPResult>> clusteredResult);
 
     /**
      * Build an ILP representation for the contained functions
-     * @return Returns mapping between function name and the constructed CoinPackedMatrix representing the ILP for the
-     * function
+     * @return Returns mapping between function name and the constructed CoinPackedMatrix representing
+     * the ILP for the function
      */
     std::map<std::string, ILPModel> buildMonolithicILPS();
 
+    /**
+     * Build clustered ILP representations for the contained functions
+     * @return Returns mapping of functionname to
+     */
     std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPModel>> buildClusteredILPS();
 
-    std::map<std::string, std::pair<double, std::vector<double>>> solveMonolithicIlps(const std::map<std::string, ILPModel> &modelMapping);
+    /**
+     * Solve the monolithic models of the contained functions
+     * @param modelMapping Mapping function name to constructed monolithic ILPModel
+     * @return Mapping of function name to monolithic ILP result
+     */
+    std::map<std::string, ILPResult> solveMonolithicIlps(const std::map<std::string, ILPModel> &modelMapping);
 
-    std::unordered_map<std::string, std::unordered_map<LoopNode *, std::pair<double, std::vector<double>>>> solveClusteredIlps(const std::unordered_map<std::string, std::unordered_map<HLAC::LoopNode *, ILPModel>> &modelMapping);
+    /**
+     * Solve the clustered models of the contained functions
+     * @param modelMapping Mapping function name to constructed clustered ILPModel
+     * @return Mapping of function name to clustered ILP result
+     */
+    std::unordered_map<std::string, ILPClusteredLoopResult> solveClusteredIlps(
+        const std::unordered_map<std::string, ILPLoopModelMapping> &modelMapping);
 
-
-    FunctionNode * getFunctionByName(std::string name);
 };
 }  // namespace HLAC
 

@@ -5,13 +5,13 @@
 
 #include "ILP/ILPUtil.h"
 
+#include <CoinPackedVector.hpp>
+#include <chrono>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <chrono>
-#include <iostream>
 
 #include "HLAC/util.h"
 
@@ -237,8 +237,9 @@ void ILPUtil::printILPModelHumanReadable(std::string funcname, std::string loopn
     std::cout << "\n===========================================\n";
 }
 
-std::pair<std::unordered_map<HLAC::GenericNode*, double>, std::unordered_map<HLAC::GenericNode*, HLAC::GenericNode*>>
-ILPUtil::longestPathDAG(HLAC::FunctionNode *func, const std::unordered_map<HLAC::LoopNode*, std::pair<double, std::vector<double>>> &loopMapping) {
+ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
+    HLAC::FunctionNode *func,
+    const std::unordered_map<HLAC::LoopNode*, ILPResult> &loopMapping) {
     const double NEG_INF = -std::numeric_limits<double>::infinity();
 
     const auto &nodes = func->topologicalSortedRepresentationOfNodes;
@@ -252,7 +253,7 @@ ILPUtil::longestPathDAG(HLAC::FunctionNode *func, const std::unordered_map<HLAC:
         if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
             auto it = loopMapping.find(loopNode);
             if (it != loopMapping.end()) {
-                func->nodeEnergy[i] = it->second.first;
+                func->nodeEnergy[i] = it->second.optimalValue;
             } else {
                 func->nodeEnergy[i] = 0.0;
             }
@@ -310,4 +311,112 @@ ILPUtil::longestPathDAG(HLAC::FunctionNode *func, const std::unordered_map<HLAC:
     }
 
     return {std::move(distanceMap), std::move(parentMap)};
+}
+
+int ILPUtil::assignEdgeIndicesFunction(HLAC::FunctionNode *func, int nextIndex) {
+    // Iterate over the edges in this function and assign them an index
+    for (auto &edgeUP : func->Edges) {
+        edgeUP->ilpIndex = nextIndex++;
+    }
+
+    for (auto &nodeUP : func->Nodes) {
+        // For loopnodes we need to consider the contained edges. Therefore we need to index them as well
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
+            nextIndex = assignEdgeIndicesLoop(loopNode, nextIndex);
+        }
+    }
+
+    // For the recursive behavior we need to return the last used index
+    return nextIndex;
+}
+
+int ILPUtil::assignEdgeIndicesLoop(HLAC::LoopNode *loopNode, int nextIndex) {
+    // Index the edges contained in this loop
+    for (auto &edgeUP : loopNode->Edges) {
+        edgeUP->ilpIndex = nextIndex++;
+    }
+
+    for (auto &nodeUP : loopNode->Nodes) {
+        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
+            // Index the subloops edges
+            nextIndex = assignEdgeIndicesLoop(innerLoop, nextIndex);
+        }
+    }
+
+    // Return the last index for the recursive behavior
+    return nextIndex;
+}
+
+void ILPUtil::buildIncidenceMaps(
+    const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
+    std::unordered_map<HLAC::GenericNode*, std::vector<int>> &incoming,
+    std::unordered_map<HLAC::GenericNode*, std::vector<int>> &outgoing) {
+    // Check that all incoming and outgoing vectors are empty
+    incoming.clear();
+    outgoing.clear();
+
+    // Check each edge contained in this scope
+    for (const auto &edgeUP : edges) {
+        // Get the current edge
+        auto *edge = edgeUP.get();
+
+        if (!edge) {
+            continue;
+        }
+
+        // Check that the index of the edge is valid
+        if (edge->ilpIndex < 0) {
+            std::cerr << "Error: edge without valid ilpIndex encountered.\n";
+            continue;
+        }
+
+        // Add the nodes to the respective vectors
+        incoming[edge->destination].push_back(edge->ilpIndex);
+        outgoing[edge->soure].push_back(edge->ilpIndex);
+    }
+}
+
+void ILPUtil::insertUnique(
+    CoinPackedVector &row,
+    std::unordered_set<int> &used,
+    int col,
+    double coeff) {
+
+    // Check that we do not add columns that are already contained in the vector
+    if (!used.insert(col).second) {
+        std::cerr << "Warning: duplicate column " << col
+                  << " while building row" << '\n';
+        return;
+    }
+
+    // Inser the row and the respective coefficient into the vector
+    row.insert(col, coeff);
+}
+
+void ILPUtil::appendRow(ILPModel &model, const CoinPackedVector &row, double lb, double ub) {
+    model.matrix.appendRow(row);
+    model.row_lb.push_back(lb);
+    model.row_ub.push_back(ub);
+}
+
+int ILPUtil::getMaxEdgeIndex(HLAC::LoopNode *loopNode) {
+    int maxIndex = -1;
+
+    for (auto &edgeUP : loopNode->Edges) {
+        auto *edge = edgeUP.get();
+        if (edge && edge->ilpIndex > maxIndex) {
+            maxIndex = edge->ilpIndex;
+        }
+    }
+
+    for (auto &nodeUP : loopNode->Nodes) {
+        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
+            int innerMax = getMaxEdgeIndex(innerLoop);
+            if (innerMax > maxIndex) {
+                maxIndex = innerMax;
+            }
+        }
+    }
+
+    return maxIndex;
 }

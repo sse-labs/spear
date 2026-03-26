@@ -15,6 +15,7 @@
 
 #include "ILP/ILPBuilder.h"
 #include "ILP/ILPUtil.h"
+#include "ILP/ILPTypes.h"
 
 namespace HLAC {
 void hlac::makeFunction(llvm::Function* function, llvm::FunctionAnalysisManager *fam) {
@@ -44,83 +45,6 @@ void hlac::printDotRepresentationWithSolution(FunctionNode *FN, std::vector<doub
     FN->printDotRepresentationWithSolution(out, result);
 }
 
-int hlac::getMaxEdgeIndexInLoop(HLAC::LoopNode *loopNode) {
-    int maxIndex = 0;
-
-    // Check edges in this loop
-    for (const auto &edgeUP : loopNode->Edges) {
-        if (edgeUP && edgeUP->ilpIndex > maxIndex) {
-            maxIndex = edgeUP->ilpIndex;
-        }
-    }
-
-    // Recurse into nested loops
-    for (const auto &nodeUP : loopNode->Nodes) {
-        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
-            int innerMax = getMaxEdgeIndexInLoop(innerLoop);
-            if (innerMax > maxIndex) {
-                maxIndex = innerMax;
-            }
-        }
-    }
-
-    return maxIndex;
-}
-
-int hlac::getMaxEdgeIndexInFunction(HLAC::FunctionNode *FN) {
-    int maxIndex = 0;
-
-    // Top-level edges
-    for (const auto &edgeUP : FN->Edges) {
-        if (edgeUP && edgeUP->ilpIndex > maxIndex) {
-            maxIndex = edgeUP->ilpIndex;
-        }
-    }
-
-    // Traverse loop nodes
-    for (const auto &nodeUP : FN->Nodes) {
-        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
-            int loopMax = getMaxEdgeIndexInLoop(loopNode);
-            if (loopMax > maxIndex) {
-                maxIndex = loopMax;
-            }
-        }
-    }
-
-    return maxIndex;
-}
-
-void hlac::markTakenEdgesInLoop(
-    LoopNode *loopNode,
-    const std::unordered_set<Edge *> &takenSet,
-    std::vector<double> &result) {
-
-    if (!loopNode) {
-        return;
-    }
-
-    for (const auto &edgeUP : loopNode->Edges) {
-        Edge *edge = edgeUP.get();
-        if (!edge) {
-            continue;
-        }
-
-        if (edge->ilpIndex < 0 || edge->ilpIndex >= static_cast<int>(result.size())) {
-            continue;
-        }
-
-        if (takenSet.find(edge) != takenSet.end()) {
-            result[edge->ilpIndex] = 1.0;
-        }
-    }
-
-    for (const auto &nodeUP : loopNode->Nodes) {
-        if (auto *innerLoop = dynamic_cast<LoopNode *>(nodeUP.get())) {
-            markTakenEdgesInLoop(innerLoop, takenSet, result);
-        }
-    }
-}
-
 void hlac::printDotRepresentationWithSolution(FunctionNode *FN, std::vector<Edge *> takenEdges, std::string appendName) {
     std::filesystem::create_directories("./dot");
 
@@ -130,7 +54,7 @@ void hlac::printDotRepresentationWithSolution(FunctionNode *FN, std::vector<Edge
      *
      */
 
-    int maxIndex = getMaxEdgeIndexInFunction(FN);
+    int maxIndex = Util::getMaxEdgeIndexInFunction(FN);
     if (maxIndex < 0) {
         maxIndex = 0;
     }
@@ -162,7 +86,7 @@ void hlac::printDotRepresentationWithSolution(FunctionNode *FN, std::vector<Edge
 
     for (const auto &nodeUP : FN->Nodes) {
         if (auto *loopNode = dynamic_cast<LoopNode *>(nodeUP.get())) {
-            markTakenEdgesInLoop(loopNode, takenSet, result);
+            Util::markTakenEdgesInLoop(loopNode, takenSet, result);
         }
     }
 
@@ -229,9 +153,9 @@ std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPModel>> hlac::
 }
 
 
-std::map<std::string, std::pair<double, std::vector<double>>>
+std::map<std::string, ILPResult>
 hlac::solveMonolithicIlps(const std::map<std::string, ILPModel> &modelMapping) {
-    std::map<std::string, std::pair<double, std::vector<double>>> result;
+    std::map<std::string, ILPResult> result;
 
     for (const auto &[name, model] : modelMapping) {
         auto solvedModel = ILPBuilder::solveModel(model);
@@ -244,8 +168,8 @@ hlac::solveMonolithicIlps(const std::map<std::string, ILPModel> &modelMapping) {
     return result;
 }
 
-std::unordered_map<std::string, std::pair<double, std::vector<Edge *>>> hlac::DAGLongestPath(std::unordered_map<std::string, std::unordered_map<HLAC::LoopNode *, std::pair<double, std::vector<double>>>> clusteredResult) {
-    std::unordered_map<std::string, std::pair<double, std::vector<Edge *>>> result;
+std::unordered_map<std::string, DAGLongestPathSolution> hlac::DAGLongestPath(std::unordered_map<std::string, std::unordered_map<HLAC::LoopNode *, ILPResult>> clusteredResult) {
+    std::unordered_map<std::string, DAGLongestPathSolution> result;
 
     for (auto &functionNode : functions) {
         if (!Util::starts_with(functionNode->function->getName().str(), "__psr") && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
@@ -260,23 +184,22 @@ std::unordered_map<std::string, std::pair<double, std::vector<Edge *>>> hlac::DA
 
             std::vector<Edge *> takenEdges = Util::findTakenEdges(exitNode, predecessors, funcNode->Edges);
 
-            result[functionNode->name] = std::make_pair(exitEnergy, takenEdges);
+            result[functionNode->name] = {exitEnergy, takenEdges};
         }
     }
 
     return result;
 }
 
-std::unordered_map<std::string, std::unordered_map<LoopNode *, std::pair<double, std::vector<double>>>>
-hlac::solveClusteredIlps(
-    const std::unordered_map<std::string, std::unordered_map<HLAC::LoopNode *, ILPModel>> &modelMapping) {
+std::unordered_map<std::string, ILPClusteredLoopResult> hlac::solveClusteredIlps(
+    const std::unordered_map<std::string, ILPLoopModelMapping> &modelMapping) {
 
-    std::unordered_map<std::string, std::unordered_map<LoopNode *, std::pair<double, std::vector<double>>>> result;
+    std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPResult>> result;
     result.reserve(modelMapping.size());
 
     for (const auto &[name, loopModelMapping] : modelMapping) {
         // We need to solve the ILP for each loop and then combine the results to get the overall energy and path for the function
-        std::unordered_map<LoopNode *, std::pair<double, std::vector<double>>> loopEnergyMapping;
+        std::unordered_map<LoopNode *, ILPResult> loopEnergyMapping;
         loopEnergyMapping.reserve(loopModelMapping.size());
 
         // std::cout << "Clustered results for " << name << ":\n";
