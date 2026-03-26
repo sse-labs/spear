@@ -489,13 +489,28 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             std::cout << "HLAC construction took: " << constructionTime.count() << " µs\n";
 
             auto dotWritingStart = std::chrono::high_resolution_clock::now();
-            graph->printDotRepresentation();
+            //graph->printDotRepresentation();
             auto dotWritingEnd = std::chrono::high_resolution_clock::now();
 
             auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
             std::cout << "Dot writing took: " << dotTime.count() << " µs\n";
 
             auto res = graph->getEnergy();
+
+
+            // Precalculate all basic energy values
+            for (auto &functionNode : graph->functions) {
+                functionNode->nodeEnergy = std::vector<double>(functionNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
+                for (std::size_t i = 0; i < functionNode->topologicalSortedRepresentationOfNodes.size(); ++i) {
+                    HLAC::GenericNode *node = functionNode->topologicalSortedRepresentationOfNodes[i];
+
+                    if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
+                        continue;
+                    } else {
+                        functionNode->nodeEnergy[i] = node->getEnergy();
+                    }
+                }
+            }
 
             // ================= Monolithic ILP Timing =================
 

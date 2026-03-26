@@ -188,6 +188,8 @@ FunctionNode::FunctionNode(llvm::Function *function,
         }
 
         this->adjacencyRepresentation = adjacencyList;
+
+
     }
 }
 
