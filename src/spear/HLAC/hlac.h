@@ -42,6 +42,8 @@ class GenericNode {
      */
     std::string name;
 
+    std::string hash;
+
     /**
      * Base dot representation printing
      * @param os
@@ -78,6 +80,8 @@ class GenericNode {
         return std::to_string(addr);
     }
 
+    virtual std::string calculateHash() { return "NOT IMPLEMENTED"; }
+
     /**
      * Generic destructor
      */
@@ -113,6 +117,8 @@ class VirtualNode : public GenericNode {
      * @return Name of the node as escaped dot string
      */
     std::string getDotName() override;
+
+    std::string calculateHash() override;
 };
 
 /**
@@ -217,6 +223,8 @@ class Node : public GenericNode {
      * @return Energy of the Node
      */
     double getEnergy() override;
+
+    std::string calculateHash() override;
 };
 
 /**
@@ -321,6 +329,8 @@ class LoopNode : public GenericNode {
      * @return Energy as double value
      */
     double getEnergy() override;
+
+    std::string calculateHash() override;
 };
 
 /**
@@ -446,6 +456,8 @@ class FunctionNode : public GenericNode {
      */
     double getEnergy() override;
 
+    std::string calculateHash() override;
+
  private:
     /**
      * Iterates over the contained nodes and constructs LoopNodes recursively for all contained loops
@@ -565,6 +577,8 @@ class CallNode : public GenericNode {
      * @return Energy as double value
      */
     double getEnergy() override;
+
+    std::string calculateHash() override;
 };
 
 /**

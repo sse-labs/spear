@@ -255,8 +255,7 @@ Util::createAdjacentList(const std::vector<std::unique_ptr<GenericNode>> &nodes,
 
 std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> Util::createAdjacentList(
     const std::vector<GenericNode *> &nodes,
-    const std::vector<std::unique_ptr<HLAC::Edge>> &edges)
-{
+    const std::vector<std::unique_ptr<HLAC::Edge>> &edges){
     std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> adjacentList;
 
     // Initialize all nodes
@@ -271,6 +270,7 @@ std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> Util::createAdjacentList(
             continue;
         }
 
+        // An edge is adjacent if it starts in the node
         adjacentList[edge->soure].push_back(edgeUP.get());
     }
 
@@ -295,18 +295,26 @@ std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> Util::createIncomingList(
             continue;
         }
 
+        // An edge is incoming, if it ends in the viewed node
         adjacentList[edge->destination].push_back(edgeUP.get());
     }
 
     return adjacentList;
 }
 
-std::vector<Edge *> Util::findTakenEdges(GenericNode *entryNode, std::unordered_map<HLAC::GenericNode*, HLAC::GenericNode *> predecessors, std::vector<std::unique_ptr<Edge>> &edges) {
+std::vector<Edge *> Util::findTakenEdges(
+    GenericNode *entryNode,
+    std::unordered_map<HLAC::GenericNode*,
+    HLAC::GenericNode *> predecessors,
+    std::vector<std::unique_ptr<Edge>> &edges) {
     std::vector<Edge *> result;
 
+    // Start at the given entry node (in most cases the exit node of the underlying function)
     HLAC::GenericNode *node = entryNode;
+    // Get the initial predecessor of the entry node
     auto parent = predecessors[node];
 
+    // Iterate over the nodes parents until we encouter a node that has no parent (the start node of the function)
     while (parent != nullptr) {
         // Find the edge from parent to node
         for (auto &edgeUP : edges) {
@@ -315,6 +323,7 @@ std::vector<Edge *> Util::findTakenEdges(GenericNode *entryNode, std::unordered_
                 continue;
             }
 
+            // If we find the edge to the parent, we store it
             if (edge->soure == parent && edge->destination == node) {
                 result.push_back(edge);
                 break;
@@ -325,10 +334,12 @@ std::vector<Edge *> Util::findTakenEdges(GenericNode *entryNode, std::unordered_
         parent = predecessors[node];
     }
 
+    // Return the list of edges found along the path
     return result;
 }
 
 Edge * Util::findEdgeByGlobalId(std::vector<Edge *> &edgeList, int globalId) {
+    // Search given edge list for the given ILPIndex
     auto foundEdge = std::find_if(edgeList.begin(), edgeList.end(),
         [globalId](const Edge* edgeUP) {
             return edgeUP && edgeUP->ilpIndex == globalId;
@@ -343,10 +354,13 @@ Edge * Util::findEdgeByGlobalId(std::vector<Edge *> &edgeList, int globalId) {
 }
 
 void Util::collectAllContainedEdges(HLAC::LoopNode *loop, std::vector<HLAC::Edge*> &allEdges) {
+    // Iterate over the edges in the loop
     for (auto &edgeUP : loop->Edges) {
+        // Append edge of loop to global given collection
         allEdges.push_back(edgeUP.get());
     }
 
+    // Repeat for sub loopnodes
     for (auto &nodeUP : loop->Nodes) {
         if (auto *subLoop = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
             collectAllContainedEdges(subLoop, allEdges);
@@ -359,21 +373,22 @@ void Util::appendLoopContainedEdges(
     const DAGLongestPathSolution resultpair,
     std::vector<Edge *> &resVector) {
 
+    // Iterate over loop->ILPResult mapping
     for (auto &LN : loopResults) {
         bool loopNodeIsTaken = false;
 
+        // Get vector of taken edges as calculated by the ILPsolver
         for (auto &dagEdges : resultpair.longestPath) {
+            // Check if the viewed loopnode is being referenced as destination by the longest path
             if (dagEdges->destination->getDotName() == LN.first->getDotName()) {
                 loopNodeIsTaken = true;
                 break;
             }
         }
 
-        /*for (int i=0; i < LN.second.second.size(); i++) {
-            std::cout << i << ": " << LN.second.second[i] << std::endl;
-        }*/
-
+        // If the loopnode is found to be taken
         if (loopNodeIsTaken) {
+            // Inser the edges inside the loop to our global edge collection
             std::vector<HLAC::Edge*> allLoopEdges;
             collectAllContainedEdges(LN.first, allLoopEdges);
 
@@ -444,6 +459,7 @@ void Util::markTakenEdgesInLoop(
         return;
     }
 
+    // Iterate over edges in the loop
     for (const auto &edgeUP : loopNode->Edges) {
         Edge *edge = edgeUP.get();
         if (!edge) {
@@ -454,11 +470,13 @@ void Util::markTakenEdgesInLoop(
             continue;
         }
 
+        // Mark the taken edge in the result vector as 1, so we interpret it as being taken
         if (takenSet.find(edge) != takenSet.end()) {
             result[edge->ilpIndex] = 1.0;
         }
     }
 
+    // Repeat the process for sub loopNodes
     for (const auto &nodeUP : loopNode->Nodes) {
         if (auto *innerLoop = dynamic_cast<LoopNode *>(nodeUP.get())) {
             markTakenEdgesInLoop(innerLoop, takenSet, result);

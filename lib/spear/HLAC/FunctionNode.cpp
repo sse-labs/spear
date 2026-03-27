@@ -14,9 +14,10 @@
 #include <vector>
 #include <string>
 
-#include "LLVMHandler.h"
+#include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
+#include "LLVMHandler.h"
 
 #define SPR_IGNORE_DEBUG_FUNCTIONS 1
 
@@ -191,6 +192,8 @@ FunctionNode::FunctionNode(llvm::Function *function,
 
 
     }
+
+    this->hash = FunctionNode::calculateHash();
 }
 
 void FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
@@ -376,6 +379,10 @@ std::vector<GenericNode *> FunctionNode::getTopologicalOrdering() {
 
 
     return topologicalOrdering;
+}
+
+std::string FunctionNode::calculateHash() {
+    return Hasher::getHashForNode(this);
 }
 
 }  // namespace HLAC

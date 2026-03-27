@@ -17,7 +17,7 @@ int main() {
 
     for (int i = 0; i < 1000; i++) {
         for (int j = 0; j < 300; j++) {
-            q += i*j;
+            q += i-j;
         }
     }
 

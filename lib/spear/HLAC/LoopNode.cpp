@@ -9,7 +9,9 @@
 #include <utility>
 #include <vector>
 
+#include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
+#include "HLAC/util.h"
 #include "analyses/loopbound/LoopBoundEdgeFunction.h"
 
 namespace HLAC {
@@ -86,6 +88,8 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
             ++it;
         }
     }
+
+    this->hash = LoopNode::calculateHash();
 }
 
 void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
@@ -277,9 +281,13 @@ void LoopNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<
     os << "}\n";
 }
 
-std::string LoopNode::getDotName() { return "cluster_" + this->getAddress(); }
+std::string LoopNode::getDotName() {
+    return "cluster_" + this->getAddress();
+}
 
-std::string LoopNode::getAnchorDotName() { return this->getDotName() + "_anchor"; }
+std::string LoopNode::getAnchorDotName() {
+    return this->getDotName() + "_anchor";
+}
 
 double LoopNode::getEnergy() {
     double energy = 0.0;
@@ -288,5 +296,10 @@ double LoopNode::getEnergy() {
 
     return energy;
 }
+
+std::string LoopNode::calculateHash() {
+    return Hasher::getHashForNode(this);
+}
+
 
 }  // namespace HLAC

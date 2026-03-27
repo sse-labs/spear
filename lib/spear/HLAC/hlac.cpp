@@ -14,8 +14,9 @@
 #include "OsiClpSolverInterface.hpp"
 
 #include "ILP/ILPBuilder.h"
-#include "ILP/ILPUtil.h"
+#include "ILP/ILPClusterCache.h"
 #include "ILP/ILPTypes.h"
+#include "ILP/ILPUtil.h"
 
 namespace HLAC {
 void hlac::makeFunction(llvm::Function* function, llvm::FunctionAnalysisManager *fam) {
@@ -197,6 +198,8 @@ std::unordered_map<std::string, ILPClusteredLoopResult> hlac::solveClusteredIlps
     std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPResult>> result;
     result.reserve(modelMapping.size());
 
+    ILPClusterCache &cache = ILPClusterCache::getInstance();
+
     for (const auto &[name, loopModelMapping] : modelMapping) {
         // We need to solve the ILP for each loop and then combine the results to get the overall energy and path for the function
         std::unordered_map<LoopNode *, ILPResult> loopEnergyMapping;
@@ -205,12 +208,24 @@ std::unordered_map<std::string, ILPClusteredLoopResult> hlac::solveClusteredIlps
         // std::cout << "Clustered results for " << name << ":\n";
 
         for (const auto &[loopNode, model] : loopModelMapping) {
-            auto solvedModel = ILPBuilder::solveModel(model);
 
-            if (solvedModel.has_value()) {
-                // std::cout << "Loop " << loopNode->loop->getName().str() << " -> " << objectiveValue << std::endl;
-                loopEnergyMapping.emplace(loopNode, std::move(*solvedModel));
+            if (cache.entryExists(loopNode->hash)) {
+                auto cachedResult = cache.getEntry(loopNode->hash);
+                if (cachedResult.has_value()) {
+                    loopEnergyMapping.emplace(loopNode, cachedResult.value());
+                }
+                continue;
+            } else {
+                auto solvedModel = ILPBuilder::solveModel(model);
+
+                if (solvedModel.has_value()) {
+                    // std::cout << "Loop " << loopNode->loop->getName().str() << " -> " << objectiveValue << std::endl;
+                    cache.setEntry(loopNode->hash, solvedModel.value());
+                    loopEnergyMapping.emplace(loopNode, std::move(*solvedModel));
+                }
             }
+
+
         }
 
         result.emplace(name, std::move(loopEnergyMapping));

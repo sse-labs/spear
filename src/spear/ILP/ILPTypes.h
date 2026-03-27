@@ -8,6 +8,7 @@
 #define SPEAR_ILPTYPES_H
 #include <CoinPackedMatrix.hpp>
 #include <unordered_map>
+#include <vector>
 
 /**
  * Forward declarations of the HLAC namespace

@@ -4,7 +4,9 @@
  */
 
 
+#include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
+#include "HLAC/util.h"
 
 std::string HLAC::VirtualNode::getDotName() {
     if (isEntry) {
@@ -67,5 +69,10 @@ std::unique_ptr<HLAC::VirtualNode> HLAC::VirtualNode::makeVirtualPoint(bool isEn
     virtualPoint->isExit = isExit;
     virtualPoint->isEntry = isEntry;
     virtualPoint->parent = givparent;
+    virtualPoint->hash = virtualPoint->calculateHash();
     return virtualPoint;
+}
+
+std::string HLAC::VirtualNode::calculateHash() {
+    return Hasher::getHashForNode(this);
 }

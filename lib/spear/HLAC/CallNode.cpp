@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
 #include "ProfileHandler.h"
@@ -26,6 +27,8 @@ CallNode::CallNode(llvm::Function *calls, llvm::CallBase *call, FunctionNode *pa
     this->isSyscall = checkIfIsSyscall();
     this->isDebugFunction = calledFunction->getName().startswith("llvm.");
     this->parentFunctionNode = parent;
+
+    this->hash = this->CallNode::calculateHash();
 }
 
 void CallNode::collapseCalls(Node *belongingNode, std::vector<std::unique_ptr<GenericNode>> &nodeList,
@@ -246,6 +249,10 @@ double CallNode::getEnergy() {
     auto energyOfCallee = parentFunctionNode->parentGraph->getEnergyPerFunction(this->calledFunction->getName().str());
 
     return energyOfCallee;
+}
+
+std::string CallNode::calculateHash() {
+    return Hasher::getHashForNode(this);
 }
 
 }  // namespace HLAC

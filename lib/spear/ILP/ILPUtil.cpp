@@ -3,8 +3,6 @@
  * All rights reserved.
  */
 
-#include "ILP/ILPUtil.h"
-
 #include <CoinPackedVector.hpp>
 #include <chrono>
 #include <cmath>
@@ -13,6 +11,7 @@
 #include <sstream>
 #include <string>
 
+#include "ILP/ILPUtil.h"
 #include "HLAC/util.h"
 
 std::string ILPUtil::boundToString(double value) {
@@ -242,19 +241,29 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
     const std::unordered_map<HLAC::LoopNode*, ILPResult> &loopMapping) {
     const double NEG_INF = -std::numeric_limits<double>::infinity();
 
+    // Query the topological sorting of the underlying functionNode
     const auto &nodes = func->topologicalSortedRepresentationOfNodes;
+    // Abort the longest path search early if no nodes exist
     if (nodes.empty()) {
+        // This case should never occur in the field...
         return {};
     }
 
-
+    // We iterate over the nodes and precalculate the energy of loopnodes from out clustered loop mapping
     for (std::size_t i = 0; i < nodes.size(); ++i) {
+        // Get the next node
         HLAC::GenericNode *node = func->topologicalSortedRepresentationOfNodes[i];
+
+        // Check if its a loopnode
         if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
-            auto it = loopMapping.find(loopNode);
-            if (it != loopMapping.end()) {
-                func->nodeEnergy[i] = it->second.optimalValue;
-            } else {
+            // Get the loopnode from the mapping
+            try {
+                auto ln = loopMapping.at(loopNode);
+                func->nodeEnergy[i] = ln.optimalValue;
+            } catch (const std::out_of_range &e) {
+                // If the loopnode could not be found in the mapping, perform a quick fallback and zero the value
+                std::cerr << "Warning: LoopNode " << loopNode->getDotName() << " not found in loop mapping, "
+                                                                               "using 0.0 as energy value.\n";
                 func->nodeEnergy[i] = 0.0;
             }
         }
@@ -263,16 +272,25 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
     const std::size_t n = nodes.size();
     HLAC::GenericNode *start = nodes.front();
 
+    // Query HLAC representation that can be used for DAG longest path search
     const auto &nodeToIndex = func->nodeLookup;
     const auto &nodeEnergy = func->nodeEnergy;
     const auto &adjacency = func->adjacencyRepresentation;
 
+    // Create a distance vector that maps the index of the node to its calculated distance to the startnode
+    // (= energy cost along the path)
     std::vector<double> distance(n, NEG_INF);
+
+    // Create a vector that saves the parent node for each node, so we can trace the path
     std::vector<HLAC::GenericNode*> parent(n, nullptr);
 
-    distance[nodeToIndex.at(start)] = 0.0;
+    // Init the cost of the start node
+    distance[nodeToIndex.at(start)] = start->getEnergy();
 
+    // Iterate over the nodes in des graph
     for (std::size_t u = 0; u < n; ++u) {
+        // Get the distance of the current node to the start node.
+        // If it is negative infinity, we have not found a path to this
         const double du = distance[u];
         if (du == NEG_INF) {
             continue;
@@ -280,19 +298,25 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
 
         HLAC::GenericNode *uNode = nodes[u];
 
+        // Check all adjacent nodes
         for (HLAC::Edge *edge : adjacency[u]) {
+            // Ignore the edge if its not feasible
             if (!edge->feasibility) {
                 continue;
             }
 
+            // Find the destination node
             auto it = nodeToIndex.find(edge->destination);
             if (it == nodeToIndex.end()) {
                 continue;
             }
 
+            // Destination vertex
             const std::size_t v = it->second;
+            // Compute the candidate energy for reaching node v via u.
             const double candidateEnergy = du + nodeEnergy[v];
 
+            // Relaxation step: update if we found a better (higher energy) path.
             if (candidateEnergy > distance[v]) {
                 distance[v] = candidateEnergy;
                 parent[v] = uNode;
@@ -300,6 +324,7 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
         }
     }
 
+    /// Conver the calculated distances and parents into the expected mapping format for the return type
     std::unordered_map<HLAC::GenericNode*, double> distanceMap;
     std::unordered_map<HLAC::GenericNode*, HLAC::GenericNode*> parentMap;
     distanceMap.reserve(n);
@@ -320,7 +345,7 @@ int ILPUtil::assignEdgeIndicesFunction(HLAC::FunctionNode *func, int nextIndex) 
     }
 
     for (auto &nodeUP : func->Nodes) {
-        // For loopnodes we need to consider the contained edges. Therefore we need to index them as well
+        // For loopnodes we need to consider the contained edges. Therefore, we need to index them as well
         if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
             nextIndex = assignEdgeIndicesLoop(loopNode, nextIndex);
         }
@@ -400,15 +425,20 @@ void ILPUtil::appendRow(ILPModel &model, const CoinPackedVector &row, double lb,
 }
 
 int ILPUtil::getMaxEdgeIndex(HLAC::LoopNode *loopNode) {
+    // Init the maxindex at -1 as all ILPindices are positive and 0
     int maxIndex = -1;
 
+    // Iterate over the edges in the loopNode
     for (auto &edgeUP : loopNode->Edges) {
         auto *edge = edgeUP.get();
+
+        // Check if the ILPIndex is larger than our last maxIndex
         if (edge && edge->ilpIndex > maxIndex) {
             maxIndex = edge->ilpIndex;
         }
     }
 
+    // Check if, the maxIndex is located in one of the sub loopnodes
     for (auto &nodeUP : loopNode->Nodes) {
         if (auto *innerLoop = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
             int innerMax = getMaxEdgeIndex(innerLoop);

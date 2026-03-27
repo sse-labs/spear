@@ -6,9 +6,12 @@
 #include "ILP/ILPSolver.h"
 
 ILPSolver::ILPSolver(ILPModel model) : underlyingILPModel(std::move(model)), solutionModel(nullptr) {
+    // Create a new solver instance
     OsiClpSolverInterface solver;
+    // Limit the log level of the solver to 0 to not get freacking spammed with log messages from the underlying solver.
     solver.getModelPtr()->setLogLevel(0);
 
+    // Inser the given ILP-Model into the solver
     solver.loadProblem(underlyingILPModel.matrix,
         underlyingILPModel.col_lb.data(),
         underlyingILPModel.col_ub.data(),
@@ -25,8 +28,14 @@ ILPSolver::ILPSolver(ILPModel model) : underlyingILPModel(std::move(model)), sol
         solver.setInteger(c);
     }
 
+    // Create a solution instance
     solutionModel = std::make_unique<CbcModel>(solver);
     solutionModel->setLogLevel(0);
+
+    // Pre-solve
+    solutionModel->initialSolve();
+
+    // PERFORM THE ACTUAL SOLVING
     solutionModel->branchAndBound();
 }
 

@@ -10,9 +10,10 @@
 #include <utility>
 #include <string>
 
-#include "ProfileHandler.h"
+#include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
+#include "ProfileHandler.h"
 
 namespace HLAC {
 
@@ -21,6 +22,7 @@ std::unique_ptr<Node> Node::makeNode(llvm::BasicBlock *basic_block) {
     auto node = std::make_unique<Node>();
     node->block = basic_block;
     node->name = basic_block->getName();
+    node->hash = node->calculateHash();
 
     return node;
 }
@@ -136,6 +138,10 @@ double Node::getEnergy() {
     }
 
     return energy;
+}
+
+std::string Node::calculateHash() {
+    return Hasher::getHashForNode(this);
 }
 
 }  // namespace HLAC

@@ -34,6 +34,7 @@
 
 #include "HLAC/util.h"
 #include "ILP/ILPBuilder.h"
+#include "ILP/ILPClusterCache.h"
 #include "analyses/ResultRegistry.h"
 
 
@@ -558,6 +559,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 );
             }
 
+            ILPClusterCache clusterCache("cluster_cache.json", true);
+
             // ================= Clustered ILP  =================
 
             auto clusteredTotalStart = std::chrono::high_resolution_clock::now();
@@ -603,11 +606,11 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 auto loopResults = clusteredSolvedResults[funcName];
 
-                HLAC::Util::appendLoopContainedEdges(loopResults, resultpair, resVector);
-
                 llvm::outs() << "Clustered Energy of " << funcName << ": " << resultpair.WCEC << " J\n";
                 graph->printDotRepresentationWithSolution(graph->getFunctionByName(funcName), resVector, "clustered");
             }
+
+            clusterCache.writeBackCache();
 
             /*if (functionTree != nullptr) {
                 std::vector<llvm::StringRef> names;
