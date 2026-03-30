@@ -15,8 +15,10 @@
 
 #include <nlohmann/json.hpp>
 
+#include "ConfigParser.h"
 
-ILPClusterCache* ILPClusterCache::instance = nullptr;
+
+ILPClusterCache * ILPClusterCache::instance = nullptr;
 
 
 ILPClusterCache& ILPClusterCache::getInstance() {
@@ -30,6 +32,14 @@ ILPClusterCache& ILPClusterCache::getInstance() {
 ILPClusterCache::ILPClusterCache(std::string filename, bool enabled) {
     cacheFile = std::move(filename);
     isEnabled = enabled;
+
+    if (ConfigParser::getAnalysisConfiguration().analysisType == AnalysisType::CLUSTERED) {
+        if (isEnabled) {
+            std::cout << "Clustered ILP caching enabled. Cache file: " << cacheFile << "\n";
+        } else {
+            std::cout << "Clustered ILP caching disabled.\n";
+        }
+    }
 
     // Check if file exists by trying to open it for reading
     std::ifstream existingFile(cacheFile);

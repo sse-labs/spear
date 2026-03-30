@@ -129,7 +129,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                                     std::string forFunction) {
         json outputObject = nullptr;
 
-        if (ConfigParser::getAnalysisConfiguration().mode == Mode::PROGRAM) {
+        if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::PROGRAM) {
             outputObject = json::object();
             outputObject["functions"] = json::array();
             outputObject["duration"] = duration;
@@ -161,7 +161,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 outputObject["functions"][i] = functionObject;
             }
-        } else if (ConfigParser::getAnalysisConfiguration().mode == Mode::BLOCK) {
+        } else if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::BLOCK) {
             outputObject = json::object();
             outputObject["functions"] = json::array();
             outputObject["duration"] = duration;
@@ -193,7 +193,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 outputObject["functions"][i] = functionObject;
             }
-        } else if (ConfigParser::getAnalysisConfiguration().mode == Mode::INSTRUCTION) {
+        } else if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::INSTRUCTION) {
             outputObject = json::object();
             outputObject["functions"] = json::array();
             outputObject["duration"] = duration;
@@ -226,7 +226,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                     outputObject["functions"].push_back(functionObject);
                 }
             }
-        } else if (ConfigParser::getAnalysisConfiguration().mode == Mode::GRAPH) {
+        } else if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::GRAPH) {
             bool functionExists = false;
             if (!forFunction.empty()) {
                 for (int i = 0; i < numberOfFuncs; i++) {
@@ -302,7 +302,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      */
     static void outputMetricsPlain(json &outputObject) {
         if (outputObject != nullptr) {
-            if (ConfigParser::getAnalysisConfiguration().mode == Mode::PROGRAM) {
+            if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::PROGRAM) {
                 auto timeused = outputObject["duration"].get<double>();
                 outputObject.erase("duration");
 
@@ -331,7 +331,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                     }
                 }
                 llvm::outs() << "The Analysis took: " << timeused << " s\n";
-            } else if (ConfigParser::getAnalysisConfiguration().mode == Mode::BLOCK) {
+            } else if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::BLOCK) {
                 llvm::errs() << "Not implemented" << "\n";
             } else {
                 llvm::errs() << "Please specify the mode the pass should run "
@@ -562,7 +562,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                     "monolithic");
             }
 
-            ILPClusterCache clusterCache("cluster_cache.json", true);
+            bool clusteredCacheEnabled = ConfigParser::getAnalysisConfiguration().cachingEnabled;
+            ILPClusterCache clusterCache("cluster_cache.json", clusteredCacheEnabled);
 
             // ================= Clustered ILP  =================
 
@@ -693,7 +694,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      * @param moduleAnalysisManager Reference to a ModuleAnalysisManager
      */
     llvm::PreservedAnalyses run(llvm::Module &module, llvm::ModuleAnalysisManager &moduleAnalysisManager) {
-        auto strategy = ConfigParser::getAnalysisConfiguration().strategy;
+        auto strategy = ConfigParser::getAnalysisConfiguration().legacyconfig.strategy;
 
         // Check the analysis-strategy the user requestet
         if (strategy == Strategy::BEST) {

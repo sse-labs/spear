@@ -6,86 +6,19 @@
 #ifndef SRC_SPEAR_CONFIGPARSER_H_
 #define SRC_SPEAR_CONFIGPARSER_H_
 
+#include "configuration/valuespace.h"
 
 #include <string>
 #include <map>
 
 #include <nlohmann/json.hpp>
 
+#include "configuration/configurationobjects.h"
+
+
 using json = nlohmann::json;
 
 #define ULTIMATEFALLBACK 10000
-
-/**
- * Enum to distinguish the analysis target in the application
- */
-enum class Mode {
-    UNDEFINED,
-    PROGRAM,
-    BLOCK,
-    FUNCTION,
-    INSTRUCTION,
-    GRAPH
-};
-
-/**
- * Enum to distinguish the analysis target in the application
- */
-enum class DeepCalls {
-    UNDEFINED,
-    ENABLED,
-};
-
-/**
- * Enum used to specify the output format
- */
-enum class Format {
-    UNDEFINED,
-    PLAIN,
-    JSON
-};
-
-/**
- * Enum describing the analysis strategy
- */
-enum class Strategy {
-    UNDEFINED,
-    WORST,
-    AVERAGE,
-    BEST
-};
-
-
-/**
- * Holds analysis-related configuration options parsed from the config file.
- */
-struct AnalysisConfiguration {
-    Mode mode;
-    Format format;
-    Strategy strategy;
-    DeepCalls deepcalls;
-    std::map<std::string, int64_t> fallback;
-};
-
-struct CPURegressionConfig {
-    int limit, step, offset;
-};
-
-struct SyscallProfilingConfig {
-    int runtime;
-    double defaultEnergy;
-    int maxSyscallId;
-};
-
-/**
- * Holds profiling-related configuration options parsed from the config file.
- */
-struct ProfilingConfiguration {
-    double min_program_energy;
-    double min_instruction_energy;
-    CPURegressionConfig cpuregression;
-    SyscallProfilingConfig syscallconfig;
-};
 
 class ConfigParser {
  public:
@@ -148,6 +81,9 @@ class ConfigParser {
      */
     bool profilingValid();
 
+
+    bool legacyValid(json object);
+
     /**
      * Validate the analysis configuration section.
      *
@@ -178,6 +114,7 @@ class ConfigParser {
      * @return True if valid, otherwise false
      */
     bool formatValid(json object);
+    bool analysisTypeValid(json object);
 
     /**
      * Validate the analysis strategy configuration section.
@@ -191,30 +128,6 @@ class ConfigParser {
     bool minInstructionEnergy(json object);
     bool CPURegressionValid(json object);
     bool SyscallProfilingConfigValid(json object);
-
-    /**
-     * Convert a string to mode enum type
-     *
-     * @param str String to convert
-     * @return Mode enum type
-     */
-    static Mode strToMode(const std::string& str);
-
-    /**
-     * Convert a string to format enum type
-     *
-     * @param str String to convert
-     * @return Format enum type
-     */
-    static Format strToFormat(const std::string& str);
-
-    /**
-     * Convert a string to strategy enum type
-     *
-     * @param str String to convert
-     * @return Strategy enum type
-     */
-    static Strategy strToStrategy(const std::string& str);
 };
 
 #endif  // SRC_SPEAR_CONFIGPARSER_H_
