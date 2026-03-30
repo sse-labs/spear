@@ -6,10 +6,19 @@
 #ifndef SRC_SPEAR_HLAC_UTIL_H_
 #define SRC_SPEAR_HLAC_UTIL_H_
 
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Function.h>
+
 #include <string>
 #include <vector>
+#include <unordered_set>
+#include <unordered_map>
+
+
+
 
 #include "HLAC/hlac.h"
+
 
 namespace HLAC {
 
@@ -97,6 +106,101 @@ class Util {
      * @return Vector containing the callgraph in postorder fashion
      */
     static std::vector<llvm::Function *> getLazyCallGraphPostOrder(llvm::Module &M, llvm::FunctionAnalysisManager &FAM);
+
+    /**
+     * Create adjacent representation from given nodes and edges
+     * @param nodes Nodes to consider
+     * @param edges Edges to consider
+     * @return Mapping from nodes to adjacent edges
+     */
+    static HLACAdjacentRepresentation createAdjacentList(
+        const std::vector<GenericNode *> &nodes,
+        const std::vector<std::unique_ptr<Edge>> &edges);
+
+    /**
+     * Create adjacent representation from given nodes and edges
+     * @param nodes Nodes to consider
+     * @param edges Edges to consider
+     * @return Mapping from nodes to adjacent edges
+     */
+    static HLACAdjacentRepresentation createAdjacentList(
+        const std::vector<std::unique_ptr<GenericNode>> &nodes,
+        const std::vector<std::unique_ptr<Edge>> &edges);
+
+    /**
+     * Create adjacent representation from given nodes and edges
+     * @param nodes Nodes to consider
+     * @param edges Edges to consider
+     * @return Mapping from nodes to adjacent edges
+     */
+    static HLACAdjacentRepresentation createIncomingList(
+        const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
+        const std::vector<std::unique_ptr<HLAC::Edge>> &edges);
+
+    /**
+     * Traces the given predecessor list beginning in the entryNode until NULL is reached.
+     * Stores all found edges along the way and returns them
+     * @param entryNode Node to start from
+     * @param predecessors Predecessor list
+     * @param edges Existing edges
+     * @return List of edges taken on the calculated path
+     */
+    static std::vector<Edge *> findTakenEdges(
+        GenericNode *entryNode,
+        std::unordered_map<HLAC::GenericNode *, HLAC::GenericNode *> predecessors,
+        std::vector<std::unique_ptr<Edge>> &edges);
+
+    /**
+     * Search for the edge under the given ILPIndex
+     * @param edgeList List of edges to search in
+     * @param globalId Id to search for
+     * @return Pointer to the found edge. Nullptr if no edge could be found
+     */
+    static Edge * findEdgeByGlobalId(std::vector<Edge *> &edgeList, int globalId);
+
+    /**
+     * Check the edges in the given LoopNode and append them to the given vector of edges
+     * @param loop LoopNode to inspect
+     * @param allEdges Vector the edges will be appended to
+     */
+    static void collectAllContainedEdges(HLAC::LoopNode *loop, std::vector<HLAC::Edge *> &allEdges);
+
+    /**
+     * Take the edges from the longest path search und analyse the used loop and append the edges to the given
+     * resVector
+     * @param loopResults LoopMapping to analyse
+     * @param resultpair DAGLongestPath to analyse
+     * @param resVector Vector to safe the edges to
+     */
+    static void appendLoopContainedEdges(
+        std::unordered_map<HLAC::LoopNode *, ILPResult> loopResults,
+        const DAGLongestPathSolution resultpair,
+        std::vector<Edge *> &resVector);
+
+    /**
+     * Find maximum edge ILPIndex in LoopNode
+     * @param loopNode LoopNode to analyse
+     * @return Maximum found index
+     */
+    static int getMaxEdgeIndexInLoop(HLAC::LoopNode *loopNode);
+
+    /**
+     * Find maximum edge ILPIndex in FunctionNode
+     * @param FN FunctionNode to analyse
+     * @return Maximum found index
+     */
+    static int getMaxEdgeIndexInFunction(HLAC::FunctionNode *FN);
+
+    /**
+     * Analyse which edges have been taken inside the given LoopNode
+     * @param loopNode LoopNode to analyse
+     * @param takenSet Edges that should have been taken
+     * @param result Vector of ids representing the taken edges
+     */
+    static void markTakenEdgesInLoop(
+        HLAC::LoopNode *loopNode,
+        const std::unordered_set<HLAC::Edge *> &takenSet,
+        std::vector<double> &result);
 };
 
 }  // namespace HLAC

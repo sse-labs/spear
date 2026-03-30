@@ -9,7 +9,9 @@
 #include <utility>
 #include <vector>
 
+#include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
+#include "HLAC/util.h"
 #include "analyses/loopbound/LoopBoundEdgeFunction.h"
 
 namespace HLAC {
@@ -86,6 +88,8 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
             ++it;
         }
     }
+
+    this->hash = LoopNode::calculateHash();
 }
 
 void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
@@ -99,9 +103,43 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
     // Build set of nodes directly contained in this loop scope.
     std::unordered_set<GenericNode *> inLoop;
     inLoop.reserve(this->Nodes.size());
-    for (auto &nup : this->Nodes) {
+
+    int entryIndex = -1;
+    int exitIndex = -1;
+
+    for (int i=0; i < this->Nodes.size(); i++) {
+        auto &nup = this->Nodes[i];
+        if (auto *normalNup = dynamic_cast<Node *>(nup.get())) {
+            if (this->loop->isLoopLatch(normalNup->block)) {
+                exitIndex = i;
+            }
+
+            if (this->loop->isLoopExiting(normalNup->block)) {
+                entryIndex = i;
+            }
+        }
         inLoop.insert(nup.get());
     }
+
+    auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
+    auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
+
+    this->Nodes.push_back(std::move(entryNode));
+
+    int virtEntryIndex = this->Nodes.size() - 1;
+
+    this->Nodes.push_back(std::move(exitNode));
+
+    int virtExitIndex = this->Nodes.size() - 1;
+
+    auto entryEdge = std::make_unique<Edge>(
+        Edge(this->Nodes[virtEntryIndex].get(), this->Nodes[entryIndex].get()));
+
+    auto exitEdge = std::make_unique<Edge>(
+        Edge(this->Nodes[exitIndex].get(), this->Nodes[virtExitIndex].get()));
+
+    this->Edges.push_back(std::move(entryEdge));
+    this->Edges.push_back(std::move(exitEdge));
 
     // Collapse this loop:
     //    - move edges fully inside this loop into this->Edges
@@ -132,6 +170,20 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
         }
 
         ++it;
+    }
+
+    for (auto &e : this->Edges) {
+        auto srcNode = dynamic_cast<Node *>(e->soure);
+        auto dstNode = dynamic_cast<Node *>(e->destination);
+
+        if (srcNode && dstNode) {
+            bool fromIsLatch = this->loop->isLoopLatch(srcNode->block);
+            bool toIsExiting = this->loop->isLoopExiting(dstNode->block);
+
+            if (fromIsLatch && toIsExiting) {
+                this->backEdge = e.get();
+            }
+        }
     }
 }
 
@@ -208,9 +260,36 @@ void LoopNode::printDotRepresentation(std::ostream &os) {
     os << "}\n";
 }
 
-std::string LoopNode::getDotName() { return "cluster_" + this->getAddress(); }
+void LoopNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> solution) {
+    os << "subgraph \"" << this->getDotName() << "\" {\n";
+    os << "style=filled;", os << "fillcolor=\"#FFFFFF\";", os << "color=\"#2B2B2B\";";
+    os << "penwidth=2;";
+    os << "style=\"rounded,filled\";";
+    os << "fontname=\"Courier\";";
+    os << "tooltip=" << "\"" << "METDADATA" << "\";";
+    os << "  labelloc=\"t\";\n";
+    os << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", "
+       << this->bounds.getUpperBound() << ")" << "\r\";\n";
+    os << "  " << this->getAnchorDotName() << " [shape=point, width=0.01, label=\"\", style=invis];\n";
 
-std::string LoopNode::getAnchorDotName() { return this->getDotName() + "_anchor"; }
+    for (auto &node : this->Nodes) {
+        node->printDotRepresentationWithSolution(os, solution);
+    }
+
+    for (auto &edge : this->Edges) {
+        edge->printDotRepresentationWithSolution(os, solution);
+    }
+
+    os << "}\n";
+}
+
+std::string LoopNode::getDotName() {
+    return "cluster_" + this->getAddress();
+}
+
+std::string LoopNode::getAnchorDotName() {
+    return this->getDotName() + "_anchor";
+}
 
 double LoopNode::getEnergy() {
     double energy = 0.0;
@@ -219,5 +298,10 @@ double LoopNode::getEnergy() {
 
     return energy;
 }
+
+std::string LoopNode::calculateHash() {
+    return Hasher::getHashForNode(this);
+}
+
 
 }  // namespace HLAC

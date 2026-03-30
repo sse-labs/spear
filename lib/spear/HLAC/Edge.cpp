@@ -5,6 +5,7 @@
 
 #include <string>
 #include <ostream>
+#include <vector>
 
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
@@ -63,7 +64,7 @@ void Edge::printDotRepresentation(std::ostream &os) {
     };
 
     openAttrs();
-    os << "label=\"" << Util::feasibilityToString(this->feasibility) << "\"";
+    os << "label=\"" << Util::feasibilityToString(this->feasibility) << "(" << this->ilpIndex << ")" << "\"";
 
     if (srcLoop) {
         openAttrs();
@@ -87,7 +88,92 @@ void Edge::printDotRepresentation(std::ostream &os) {
     os << ";\n";
 }
 
-GenericNode* Edge::pickNonLoopNode(LoopNode* loopNode, bool pickBack) {
+void Edge::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) {
+    // Cast source and destination as LoopNode
+    auto *srcLoop = dynamic_cast<LoopNode *>(this->soure);
+    auto *dstLoop = dynamic_cast<LoopNode *>(this->destination);
+
+    // Define containers for the nodes we are trying to connect
+    std::string srcName;
+    std::string dstName;
+
+    // If we are starting in a LoopNode
+    if (srcLoop) {
+        // Search for the last real Node.
+        // If we can find a real Node in the loop connect to this Node
+        if (GenericNode *rep = pickNonLoopNode(srcLoop, true)) {
+            srcName = rep->getDotName();
+        } else {
+            // Otherwise no real node is available -> use anchor node inside the cluster
+            srcName = srcLoop->getAnchorDotName();
+        }
+    } else {
+        // If the source node is no LoopNode we can just use this node
+        srcName = this->soure->getDotName();
+    }
+
+    if (dstLoop) {
+        // Search for the first real Node.
+        // If we can find a real Node in the loop connect to this Node
+        /*if (GenericNode *rep = pickNonLoopNode(dstLoop, false)) {
+            dstName = rep->getDotName();
+        } else {
+            dstName = dstLoop->getAnchorDotName();
+        }*/
+
+        dstName = dstLoop->getAnchorDotName();
+    } else {
+        // If the destination node is no LoopNode we can just use this node
+        dstName = this->destination->getDotName();
+    }
+
+    os << srcName << " -> " << dstName;
+
+    // Emit attributes
+    bool firstAttr = true;
+    auto openAttrs = [&]() {
+        if (firstAttr) {
+            os << " ["; firstAttr = false;
+        } else {
+            os << ",";
+        }
+    };
+
+    openAttrs();
+    os << "label=\"" << Util::feasibilityToString(this->feasibility) << "(" << this->ilpIndex << ")" << "\"";
+
+    if (srcLoop) {
+        openAttrs();
+        os << "ltail=\"" << srcLoop->getDotName() << "\"";
+    }
+    if (dstLoop) {
+        openAttrs();
+        os << "lhead=\"" << dstLoop->getDotName() << "\"";
+    }
+
+    if (result.size() > this->ilpIndex && this->ilpIndex != -1) {
+        double val = result[this->ilpIndex];
+        if (val > 0) {
+            os << " color=\"#F4B342\"" << ",";
+        } else {
+            os << " color=\"#E3E3E3\"" << ",";
+        }
+    } else {
+        if (feasibility) {
+            os << " color=\"#A3D78A\"" << ",";
+        } else {
+            os << " color=\"#FF5555\"" << ",";
+        }
+    }
+
+    os << "minlen=1,";
+    os << "penwidth=5";
+
+    if (!firstAttr) os << "]";
+    os << ";\n";
+}
+
+GenericNode * Edge::pickNonLoopNode(LoopNode* loopNode, bool pickBack) {
     if (!loopNode) return nullptr;
 
     // If pickBack is true search at the end of the LoopNode

@@ -32,8 +32,13 @@
 
 #include <nlohmann/json.hpp>
 
-#include "analyses/ResultRegistry.h"
 #include "HLAC/util.h"
+#include "ILP/ILPBuilder.h"
+#include "ILP/ILPClusterCache.h"
+#include "analyses/ResultRegistry.h"
+
+
+#define SHOWTIMINGS true
 
 using json = nlohmann::json;
 
@@ -432,7 +437,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      * @param module LLVM::Module to run the analysis on
      * @param MAM llvm::ModuleAnalysisManager
      * @param analysisStrategy Strategy to analyze the module with
-     * @param maxiterations Upper bound of loops
      */
     void analysisRunner(llvm::Module &module, llvm::ModuleAnalysisManager &MAM,
                         AnalysisStrategy::Strategy analysisStrategy) {
@@ -447,7 +451,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             // mem2reg
 
-            llvm::errs() << module << "\n";
+            // llvm::errs() << module << "\n";
 
             /**
              * Execute the mem2reg pass late to allow phasar to infer more variables.
@@ -497,11 +501,125 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             auto res = graph->getEnergy();
 
-            for (const auto &[funcName, energy] : res) {
-                llvm::outs() << "HLAC Energy of " << funcName << ": " << energy << " J\n";
+
+            // Precalculate all basic energy values
+            for (auto &functionNode : graph->functions) {
+                functionNode->nodeEnergy = std::vector<double>(
+                    functionNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
+                for (std::size_t i = 0; i < functionNode->topologicalSortedRepresentationOfNodes.size(); ++i) {
+                    HLAC::GenericNode *node = functionNode->topologicalSortedRepresentationOfNodes[i];
+
+                    if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
+                        continue;
+                    } else {
+                        functionNode->nodeEnergy[i] = node->getEnergy();
+                    }
+                }
             }
 
-            if (functionTree != nullptr) {
+            // ================= Monolithic ILP =================
+
+            auto monoTotalStart = std::chrono::high_resolution_clock::now();
+
+            auto monoBuildStart = std::chrono::high_resolution_clock::now();
+
+            // Build one big ILP for the program under analysis
+            auto ilps = graph->buildMonolithicILPS();
+            auto monoBuildEnd = std::chrono::high_resolution_clock::now();
+
+            auto monoBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                monoBuildEnd - monoBuildStart);
+
+
+            auto monoSolveStart = std::chrono::high_resolution_clock::now();
+
+            // Calculate the result of the big ILP
+            auto solvedResults = graph->solveMonolithicIlps(ilps);
+            auto monoSolveEnd = std::chrono::high_resolution_clock::now();
+
+            auto monoSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                monoSolveEnd - monoSolveStart);
+
+
+            auto monoTotalEnd = std::chrono::high_resolution_clock::now();
+
+            auto monoTotalDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                monoTotalEnd - monoTotalStart);
+
+
+            if (SHOWTIMINGS) {
+                std::cout << "Monolithic ILP Build Time: " << monoBuildDuration.count() << " µs\n";
+                std::cout << "Monolithic ILP Solve Time: " << monoSolveDuration.count() << " µs\n";
+                std::cout << "Monolithic Total Time:     " << monoTotalDuration.count() << " µs\n";
+            }
+
+            for (const auto &[funcName, resultpair] : solvedResults) {
+                llvm::outs() << "Monolithic Energy of " << funcName << ": " << resultpair.optimalValue << " J\n";
+
+                graph->printDotRepresentationWithSolution(
+                    graph->getFunctionByName(funcName),
+                    resultpair.variableValues,
+                    "monolithic");
+            }
+
+            ILPClusterCache clusterCache("cluster_cache.json", true);
+
+            // ================= Clustered ILP  =================
+
+            auto clusteredTotalStart = std::chrono::high_resolution_clock::now();
+
+            auto clusteredBuildStart = std::chrono::high_resolution_clock::now();
+
+            // build the clustered ILPs
+            auto clusteredILPs = graph->buildClusteredILPS();
+            auto clusteredBuildEnd = std::chrono::high_resolution_clock::now();
+
+            auto clusteredBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                clusteredBuildEnd - clusteredBuildStart);
+
+            auto clusteredSolveStart = std::chrono::high_resolution_clock::now();
+
+            // Solve the clustered ILPs of the program
+            auto clusteredSolvedResults = graph->solveClusteredIlps(clusteredILPs);
+            auto clusteredSolveEnd = std::chrono::high_resolution_clock::now();
+
+            auto clusteredSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                clusteredSolveEnd - clusteredSolveStart);
+
+
+            auto clusteredDagStart = std::chrono::high_resolution_clock::now();
+
+            // Calculate the longest path (= most expensive path) from the clustered results
+            auto dagResults = graph->DAGLongestPath(clusteredSolvedResults);
+
+            auto clusteredDagEnd = std::chrono::high_resolution_clock::now();
+            auto clusteredDagDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                clusteredDagEnd - clusteredDagStart);
+
+            auto clusteredTotalEnd = std::chrono::high_resolution_clock::now();
+            auto clusteredTotalDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                clusteredTotalEnd - clusteredTotalStart);
+
+            if (SHOWTIMINGS) {
+                std::cout << "Clustered ILP Build Time:  " << clusteredBuildDuration.count() << " µs\n";
+                std::cout << "Clustered ILP Solve Time:  " << clusteredSolveDuration.count() << " µs\n";
+                std::cout << "DAG Longest Path Time:     " << clusteredDagDuration.count() << " µs\n";
+                std::cout << "Clustered Total Time:      " << clusteredTotalDuration.count() << " µs\n";
+            }
+
+            // Trace the taken path and print the result of the clustered approach
+            for (const auto &[funcName, resultpair] : dagResults) {
+                auto resVector = resultpair.longestPath;
+
+                auto loopResults = clusteredSolvedResults[funcName];
+
+                llvm::outs() << "Clustered Energy of " << funcName << ": " << resultpair.WCEC << " J\n";
+                graph->printDotRepresentationWithSolution(graph->getFunctionByName(funcName), resVector, "clustered");
+            }
+
+            clusterCache.writeBackCache();
+
+            /*if (functionTree != nullptr) {
                 std::vector<llvm::StringRef> names;
                 for (auto function : functionTree->getPreOrderVector()) {
                     names.push_back(function->getName());
@@ -563,7 +681,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 }
             } else {
                 llvm::errs() << "Functiontree could not be determined!" << "\n";
-            }
+            }*/
         } else {
             llvm::errs() << "Please provide valid an energyfile" << "\n";
         }
