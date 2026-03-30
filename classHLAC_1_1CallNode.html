@@ -69,7 +69,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>HLAC</b></li><li class="navelem"><a class="el" href="classHLAC_1_1CallNode.html">CallNode</a></li>  </ul>
+<li class="navelem"><a class="el" href="namespaceHLAC.html">HLAC</a></li><li class="navelem"><a class="el" href="classHLAC_1_1CallNode.html">CallNode</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -101,12 +101,16 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a63b8c60fc56eafbd6bf55f49505f94e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a85368ee9a1346feb501b8616d858f8c3" id="r_a85368ee9a1346feb501b8616d858f8c3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1CallNode.html#a85368ee9a1346feb501b8616d858f8c3">printDotRepresentation</a> (std::ostream &amp;os) override</td></tr>
 <tr class="separator:a85368ee9a1346feb501b8616d858f8c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9a1bab059abc050809caee44ca2eb0c2" id="r_a9a1bab059abc050809caee44ca2eb0c2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1CallNode.html#a9a1bab059abc050809caee44ca2eb0c2">printDotRepresentationWithSolution</a> (std::ostream &amp;os, std::vector&lt; double &gt; result) override</td></tr>
+<tr class="separator:a9a1bab059abc050809caee44ca2eb0c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0689d9d55933089f14aa35d532a0dd0d" id="r_a0689d9d55933089f14aa35d532a0dd0d"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1CallNode.html#a0689d9d55933089f14aa35d532a0dd0d">getDotName</a> () override</td></tr>
 <tr class="separator:a0689d9d55933089f14aa35d532a0dd0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0e175dcfc63214a4934deccd8eade53d" id="r_a0e175dcfc63214a4934deccd8eade53d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1CallNode.html#a0e175dcfc63214a4934deccd8eade53d">checkIfIsSyscall</a> ()</td></tr>
 <tr class="separator:a0e175dcfc63214a4934deccd8eade53d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a807e284f332a9add1ba3152777161bb4" id="r_a807e284f332a9add1ba3152777161bb4"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1CallNode.html#a807e284f332a9add1ba3152777161bb4">getEnergy</a> () override</td></tr>
 <tr class="separator:a807e284f332a9add1ba3152777161bb4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa1b10f2c2c5d922cb4dac5a6bfb1328f" id="r_aa1b10f2c2c5d922cb4dac5a6bfb1328f"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1CallNode.html#aa1b10f2c2c5d922cb4dac5a6bfb1328f">calculateHash</a> () override</td></tr>
+<tr class="separator:aa1b10f2c2c5d922cb4dac5a6bfb1328f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classHLAC_1_1GenericNode"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classHLAC_1_1GenericNode')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a></td></tr>
 <tr class="memitem:ac928ce42dd0feff4b1a450ab69a4bc7e inherit pub_methods_classHLAC_1_1GenericNode" id="r_ac928ce42dd0feff4b1a450ab69a4bc7e"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1GenericNode.html#ac928ce42dd0feff4b1a450ab69a4bc7e">getAddress</a> ()</td></tr>
 <tr class="separator:ac928ce42dd0feff4b1a450ab69a4bc7e inherit pub_methods_classHLAC_1_1GenericNode"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -142,6 +146,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isSyscall</b> = false
 <tr class="inherit_header pub_attribs_classHLAC_1_1GenericNode"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classHLAC_1_1GenericNode')"><img src="closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a></td></tr>
 <tr class="memitem:a0846161d75459a69951eb59cb73a69b7 inherit pub_attribs_classHLAC_1_1GenericNode" id="r_a0846161d75459a69951eb59cb73a69b7"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1GenericNode.html#a0846161d75459a69951eb59cb73a69b7">name</a></td></tr>
 <tr class="separator:a0846161d75459a69951eb59cb73a69b7 inherit pub_attribs_classHLAC_1_1GenericNode"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a03fa4fabdd5867de9b7cc369cf38a3a8 inherit pub_attribs_classHLAC_1_1GenericNode" id="r_a03fa4fabdd5867de9b7cc369cf38a3a8"><td class="memItemLeft" align="right" valign="top">
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>hash</b></td></tr>
+<tr class="separator:a03fa4fabdd5867de9b7cc369cf38a3a8 inherit pub_attribs_classHLAC_1_1GenericNode"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>CallNodes that represent calls to other functions </p>
@@ -188,6 +195,33 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isSyscall</b> = false
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="aa1b10f2c2c5d922cb4dac5a6bfb1328f" name="aa1b10f2c2c5d922cb4dac5a6bfb1328f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa1b10f2c2c5d922cb4dac5a6bfb1328f">&#9670;&#160;</a></span>calculateHash()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string HLAC::CallNode::calculateHash </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a>.</p>
+
+</div>
+</div>
 <a id="a0e175dcfc63214a4934deccd8eade53d" name="a0e175dcfc63214a4934deccd8eade53d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a0e175dcfc63214a4934deccd8eade53d">&#9670;&#160;</a></span>checkIfIsSyscall()</h2>
 
@@ -438,6 +472,51 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isSyscall</b> = false
 </dl>
 
 <p>Reimplemented from <a class="el" href="classHLAC_1_1GenericNode.html#aa133eb3e6d9964e50bfa2b81b4093f3f">HLAC::GenericNode</a>.</p>
+
+</div>
+</div>
+<a id="a9a1bab059abc050809caee44ca2eb0c2" name="a9a1bab059abc050809caee44ca2eb0c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9a1bab059abc050809caee44ca2eb0c2">&#9670;&#160;</a></span>printDotRepresentationWithSolution()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void HLAC::CallNode::printDotRepresentationWithSolution </td>
+          <td>(</td>
+          <td class="paramtype">std::ostream &amp;&#160;</td>
+          <td class="paramname"><em>os</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; double &gt;&#160;</td>
+          <td class="paramname"><em>result</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Print the call node with information about the solution </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">os</td><td>Outputstream to print to </td></tr>
+    <tr><td class="paramname">result</td><td>Result to consider during printing </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Reimplemented from <a class="el" href="classHLAC_1_1GenericNode.html#a0247189bda9a6c81d89d9b2ce9fbbf5a">HLAC::GenericNode</a>.</p>
 
 </div>
 </div>

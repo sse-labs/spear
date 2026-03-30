@@ -4,7 +4,7 @@ var searchData=
   ['readmultiplier_1',['readMultiplier',['../classRegisterReader.html#a119b1f2fa4619881dd10e704650c1ca3',1,'RegisterReader']]],
   ['red_2',['red',['../classColor.html#a66cc90002e84ded9053aa91c9678f8e6',1,'Color']]],
   ['registerreader_3',['registerreader',['../classRegisterReader.html',1,'RegisterReader'],['../classRegisterReader.html#ae6c04ca1a23d22c2dcd5adcde62d6189',1,'RegisterReader::RegisterReader()']]],
-  ['registry_4',['registry',['../classHLAC_1_1hlac.html#abbbac64429f4346e8eaadba482841d1c',1,'HLAC::hlac']]],
+  ['registry_4',['registry',['../classHLAC_1_1FunctionNode.html#a0bc6b4f38ab769fce416103b43d9ed04',1,'HLAC::FunctionNode::registry'],['../classHLAC_1_1hlac.html#abbbac64429f4346e8eaadba482841d1c',1,'HLAC::hlac::registry']]],
   ['removeloopedgesfromsubgraphs_5',['removeLoopEdgesFromSubGraphs',['../classLoopNode.html#ae2c48a161e3fca624295b9c608c6e560',1,'LoopNode']]],
   ['removenode_6',['removeNode',['../classProgramGraph.html#a3d7172355f93bc903a9a3f6bdf215451',1,'ProgramGraph']]],
   ['removeorphanededges_7',['removeOrphanedEdges',['../classProgramGraph.html#afc10742190eb8fa0610e975032d71491',1,'ProgramGraph']]],

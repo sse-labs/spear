@@ -69,7 +69,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>HLAC</b></li><li class="navelem"><a class="el" href="classHLAC_1_1Edge.html">Edge</a></li>  </ul>
+<li class="navelem"><a class="el" href="namespaceHLAC.html">HLAC</a></li><li class="navelem"><a class="el" href="classHLAC_1_1Edge.html">Edge</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -89,9 +89,15 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a870066d71d1dde9ab1e14a1e230b89d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9612b547d664f9eac192922858b3d686" id="r_a9612b547d664f9eac192922858b3d686"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Edge.html#a9612b547d664f9eac192922858b3d686">printDotRepresentation</a> (std::ostream &amp;os)</td></tr>
 <tr class="separator:a9612b547d664f9eac192922858b3d686"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae551caf02133329c2fd14d41500bf832" id="r_ae551caf02133329c2fd14d41500bf832"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Edge.html#ae551caf02133329c2fd14d41500bf832">printDotRepresentationWithSolution</a> (std::ostream &amp;os, std::vector&lt; double &gt; result)</td></tr>
+<tr class="separator:ae551caf02133329c2fd14d41500bf832"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
+<tr class="memitem:a2e8522303f2df1bc68f60db7265090d4" id="r_a2e8522303f2df1bc68f60db7265090d4"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Edge.html#a2e8522303f2df1bc68f60db7265090d4">ilpIndex</a> = -1</td></tr>
+<tr class="separator:a2e8522303f2df1bc68f60db7265090d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a832d547bfd27f5401e7d28fde82fecd5" id="r_a832d547bfd27f5401e7d28fde82fecd5"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Edge.html#a832d547bfd27f5401e7d28fde82fecd5">id</a></td></tr>
+<tr class="separator:a832d547bfd27f5401e7d28fde82fecd5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae2a2b91e66bfe64f3ef3c09ca265e38a" id="r_ae2a2b91e66bfe64f3ef3c09ca265e38a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Edge.html#ae2a2b91e66bfe64f3ef3c09ca265e38a">soure</a> = nullptr</td></tr>
 <tr class="separator:ae2a2b91e66bfe64f3ef3c09ca265e38a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad1faa86198ea2c3131b2251619c6ae5c" id="r_ad1faa86198ea2c3131b2251619c6ae5c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Edge.html#ad1faa86198ea2c3131b2251619c6ae5c">destination</a> = nullptr</td></tr>
@@ -100,7 +106,7 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a513ac9600b07a3d3838c9705bfa267b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p><a class="el" href="classHLAC_1_1Edge.html">Edge</a> class that represents connections inside the HLAC </p>
+<div class="textblock"><p><a class="el" href="classHLAC_1_1Edge.html">Edge</a> class that represents connections inside the <a class="el" href="namespaceHLAC.html">HLAC</a> </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a870066d71d1dde9ab1e14a1e230b89d1" name="a870066d71d1dde9ab1e14a1e230b89d1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a870066d71d1dde9ab1e14a1e230b89d1">&#9670;&#160;</a></span>Edge()</h2>
@@ -161,9 +167,44 @@ Public Attributes</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Print the HLAC graph as dot representation </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Print the <a class="el" href="namespaceHLAC.html">HLAC</a> graph as dot representation </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">os</td><td>Outputstream to write to </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ae551caf02133329c2fd14d41500bf832" name="ae551caf02133329c2fd14d41500bf832"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae551caf02133329c2fd14d41500bf832">&#9670;&#160;</a></span>printDotRepresentationWithSolution()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void HLAC::Edge::printDotRepresentationWithSolution </td>
+          <td>(</td>
+          <td class="paramtype">std::ostream &amp;&#160;</td>
+          <td class="paramname"><em>os</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; double &gt;&#160;</td>
+          <td class="paramname"><em>result</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Print the edge with information about the solution </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">os</td><td>Outputstream to print to </td></tr>
+    <tr><td class="paramname">result</td><td>Result to consider during printing </td></tr>
   </table>
   </dd>
 </dl>
@@ -198,6 +239,36 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p><a class="el" href="namespaceFeasibility.html">Feasibility</a> state of the edge </p>
+
+</div>
+</div>
+<a id="a832d547bfd27f5401e7d28fde82fecd5" name="a832d547bfd27f5401e7d28fde82fecd5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a832d547bfd27f5401e7d28fde82fecd5">&#9670;&#160;</a></span>id</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string HLAC::Edge::id</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Local string identifier used for dot printing </p>
+
+</div>
+</div>
+<a id="a2e8522303f2df1bc68f60db7265090d4" name="a2e8522303f2df1bc68f60db7265090d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2e8522303f2df1bc68f60db7265090d4">&#9670;&#160;</a></span>ilpIndex</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int HLAC::Edge::ilpIndex = -1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Global unique identifier of this edge </p>
 
 </div>
 </div>

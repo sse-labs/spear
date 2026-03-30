@@ -7,9 +7,10 @@ var searchData=
   ['makenode_4',['makenode',['../classHLAC_1_1Node.html#a6303371bfa6eaa5c08a40d0088c4c202',1,'HLAC::Node::makeNode()'],['../classHLAC_1_1LoopNode.html#a85eec167646568d76c60c4cc18f7015a',1,'HLAC::LoopNode::makeNode()'],['../classHLAC_1_1FunctionNode.html#a03a52fb049136c21956036a8536d2505',1,'HLAC::FunctionNode::makeNode()'],['../classHLAC_1_1CallNode.html#a6a99f6d70d5036c2f721ac57e347c0cc',1,'HLAC::CallNode::makeNode()']]],
   ['makesetsattnesscacheentry_5',['makeSetSattnessCacheEntry',['../classFeasibility_1_1Util.html#a554044851ed06b86d77a9b08f560c275',1,'Feasibility::Util']]],
   ['manager_6',['manager',['../structFeasibility_1_1FeasibilityAddAtomsEF.html#a66dc149edcc780de7952f2a9bc3e6b13',1,'Feasibility::FeasibilityAddAtomsEF']]],
-  ['metaprofiler_7',['metaprofiler',['../classMetaProfiler.html',1,'MetaProfiler'],['../classMetaProfiler.html#acfbf2ba1d4ac8a0144299468f8ad62b3',1,'MetaProfiler::MetaProfiler()']]],
-  ['mgr_8',['Mgr',['../structSetSatnessKey.html#a461eb6d4af5b5aa4f585ef30fa5e03d0',1,'SetSatnessKey']]],
-  ['mksymbv_9',['mkSymBV',['../classFeasibility_1_1Util.html#ab28babbccadd52469b15cc3645f74086',1,'Feasibility::Util']]],
-  ['modelchecker_10',['Modelchecker',['../classModelchecker.html',1,'']]],
-  ['mulby_11',['MulBy',['../classLoopBound_1_1CheckExpr.html#ace1d83f355b8664bc1a21a843101e3ff',1,'LoopBound::CheckExpr']]]
+  ['marktakenedgesinloop_7',['markTakenEdgesInLoop',['../classHLAC_1_1Util.html#a80aafe96f34e5cf2a052059b44f87bac',1,'HLAC::Util']]],
+  ['metaprofiler_8',['metaprofiler',['../classMetaProfiler.html',1,'MetaProfiler'],['../classMetaProfiler.html#acfbf2ba1d4ac8a0144299468f8ad62b3',1,'MetaProfiler::MetaProfiler()']]],
+  ['mgr_9',['Mgr',['../structSetSatnessKey.html#a461eb6d4af5b5aa4f585ef30fa5e03d0',1,'SetSatnessKey']]],
+  ['mksymbv_10',['mkSymBV',['../classFeasibility_1_1Util.html#ab28babbccadd52469b15cc3645f74086',1,'Feasibility::Util']]],
+  ['modelchecker_11',['Modelchecker',['../classModelchecker.html',1,'']]],
+  ['mulby_12',['MulBy',['../classLoopBound_1_1CheckExpr.html#ace1d83f355b8664bc1a21a843101e3ff',1,'LoopBound::CheckExpr']]]
 ];

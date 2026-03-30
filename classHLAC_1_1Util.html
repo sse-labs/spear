@@ -69,7 +69,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>HLAC</b></li><li class="navelem"><a class="el" href="classHLAC_1_1Util.html">Util</a></li>  </ul>
+<li class="navelem"><a class="el" href="namespaceHLAC.html">HLAC</a></li><li class="navelem"><a class="el" href="classHLAC_1_1Util.html">Util</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -106,10 +106,255 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:ae55e5a7ff20053d16b1f6b8b71c19538"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5610fb3c30c200c11f4f93e3fd480798" id="r_a5610fb3c30c200c11f4f93e3fd480798"><td class="memItemLeft" align="right" valign="top">static std::vector&lt; llvm::Function * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a5610fb3c30c200c11f4f93e3fd480798">getLazyCallGraphPostOrder</a> (llvm::Module &amp;M, llvm::FunctionAnalysisManager &amp;FAM)</td></tr>
 <tr class="separator:a5610fb3c30c200c11f4f93e3fd480798"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8767e29dc1db9323f5933adf847981cd" id="r_a8767e29dc1db9323f5933adf847981cd"><td class="memItemLeft" align="right" valign="top">static HLACAdjacentRepresentation&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a8767e29dc1db9323f5933adf847981cd">createAdjacentList</a> (const std::vector&lt; <a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> * &gt; &amp;nodes, const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt; &amp;edges)</td></tr>
+<tr class="separator:a8767e29dc1db9323f5933adf847981cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a09de6aac55309640d39db78b07086cfe" id="r_a09de6aac55309640d39db78b07086cfe"><td class="memItemLeft" align="right" valign="top">static HLACAdjacentRepresentation&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a09de6aac55309640d39db78b07086cfe">createAdjacentList</a> (const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> &gt; &gt; &amp;nodes, const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt; &amp;edges)</td></tr>
+<tr class="separator:a09de6aac55309640d39db78b07086cfe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9b8137341355886fe36f97a1b6b2045" id="r_ae9b8137341355886fe36f97a1b6b2045"><td class="memItemLeft" align="right" valign="top">static HLACAdjacentRepresentation&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#ae9b8137341355886fe36f97a1b6b2045">createIncomingList</a> (const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> &gt; &gt; &amp;nodes, const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> &gt; &gt; &amp;edges)</td></tr>
+<tr class="separator:ae9b8137341355886fe36f97a1b6b2045"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9dca6b05221cda75b2b350dbabdf460b" id="r_a9dca6b05221cda75b2b350dbabdf460b"><td class="memItemLeft" align="right" valign="top">static std::vector&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a9dca6b05221cda75b2b350dbabdf460b">findTakenEdges</a> (<a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> *entryNode, std::unordered_map&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *, <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> * &gt; predecessors, std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt; &amp;edges)</td></tr>
+<tr class="separator:a9dca6b05221cda75b2b350dbabdf460b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07594c7d83d7a9545f684431dae24a78" id="r_a07594c7d83d7a9545f684431dae24a78"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classHLAC_1_1Edge.html">Edge</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a07594c7d83d7a9545f684431dae24a78">findEdgeByGlobalId</a> (std::vector&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> * &gt; &amp;edgeList, int globalId)</td></tr>
+<tr class="separator:a07594c7d83d7a9545f684431dae24a78"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2c82e3e9b476a2f8cabb2ed396d0fea3" id="r_a2c82e3e9b476a2f8cabb2ed396d0fea3"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a2c82e3e9b476a2f8cabb2ed396d0fea3">collectAllContainedEdges</a> (<a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loop, std::vector&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> * &gt; &amp;allEdges)</td></tr>
+<tr class="separator:a2c82e3e9b476a2f8cabb2ed396d0fea3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a78159efc034ade4479a34e416e9c898e" id="r_a78159efc034ade4479a34e416e9c898e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a78159efc034ade4479a34e416e9c898e">appendLoopContainedEdges</a> (std::unordered_map&lt; <a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *, <a class="el" href="structILPResult.html">ILPResult</a> &gt; loopResults, const <a class="el" href="structDAGLongestPathSolution.html">DAGLongestPathSolution</a> resultpair, std::vector&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> * &gt; &amp;resVector)</td></tr>
+<tr class="separator:a78159efc034ade4479a34e416e9c898e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a59ac497a7d051a967100522e279982d9" id="r_a59ac497a7d051a967100522e279982d9"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a59ac497a7d051a967100522e279982d9">getMaxEdgeIndexInLoop</a> (<a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loopNode)</td></tr>
+<tr class="separator:a59ac497a7d051a967100522e279982d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a353b7ea69a47aa5f511c9429ee1b59dd" id="r_a353b7ea69a47aa5f511c9429ee1b59dd"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a353b7ea69a47aa5f511c9429ee1b59dd">getMaxEdgeIndexInFunction</a> (<a class="el" href="classHLAC_1_1FunctionNode.html">HLAC::FunctionNode</a> *FN)</td></tr>
+<tr class="separator:a353b7ea69a47aa5f511c9429ee1b59dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a80aafe96f34e5cf2a052059b44f87bac" id="r_a80aafe96f34e5cf2a052059b44f87bac"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a80aafe96f34e5cf2a052059b44f87bac">markTakenEdgesInLoop</a> (<a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loopNode, const std::unordered_set&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> * &gt; &amp;takenSet, std::vector&lt; double &gt; &amp;result)</td></tr>
+<tr class="separator:a80aafe96f34e5cf2a052059b44f87bac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classHLAC_1_1Util.html">Util</a> class to implement utility functions for HLACS </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="a78159efc034ade4479a34e416e9c898e" name="a78159efc034ade4479a34e416e9c898e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a78159efc034ade4479a34e416e9c898e">&#9670;&#160;</a></span>appendLoopContainedEdges()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void HLAC::Util::appendLoopContainedEdges </td>
+          <td>(</td>
+          <td class="paramtype">std::unordered_map&lt; <a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *, <a class="el" href="structILPResult.html">ILPResult</a> &gt;&#160;</td>
+          <td class="paramname"><em>loopResults</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structDAGLongestPathSolution.html">DAGLongestPathSolution</a>&#160;</td>
+          <td class="paramname"><em>resultpair</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> * &gt; &amp;&#160;</td>
+          <td class="paramname"><em>resVector</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Take the edges from the longest path search und analyse the used loop and append the edges to the given resVector </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">loopResults</td><td>LoopMapping to analyse </td></tr>
+    <tr><td class="paramname">resultpair</td><td>DAGLongestPath to analyse </td></tr>
+    <tr><td class="paramname">resVector</td><td>Vector to safe the edges to </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a2c82e3e9b476a2f8cabb2ed396d0fea3" name="a2c82e3e9b476a2f8cabb2ed396d0fea3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c82e3e9b476a2f8cabb2ed396d0fea3">&#9670;&#160;</a></span>collectAllContainedEdges()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void HLAC::Util::collectAllContainedEdges </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *&#160;</td>
+          <td class="paramname"><em>loop</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> * &gt; &amp;&#160;</td>
+          <td class="paramname"><em>allEdges</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Check the edges in the given <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> and append them to the given vector of edges </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">loop</td><td><a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> to inspect </td></tr>
+    <tr><td class="paramname">allEdges</td><td>Vector the edges will be appended to </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a8767e29dc1db9323f5933adf847981cd" name="a8767e29dc1db9323f5933adf847981cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8767e29dc1db9323f5933adf847981cd">&#9670;&#160;</a></span>createAdjacentList() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static HLACAdjacentRepresentation HLAC::Util::createAdjacentList </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> * &gt; &amp;&#160;</td>
+          <td class="paramname"><em>nodes</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>edges</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Create adjacent representation from given nodes and edges </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">nodes</td><td>Nodes to consider </td></tr>
+    <tr><td class="paramname">edges</td><td>Edges to consider </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Mapping from nodes to adjacent edges </dd></dl>
+
+</div>
+</div>
+<a id="a09de6aac55309640d39db78b07086cfe" name="a09de6aac55309640d39db78b07086cfe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a09de6aac55309640d39db78b07086cfe">&#9670;&#160;</a></span>createAdjacentList() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static HLACAdjacentRepresentation HLAC::Util::createAdjacentList </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>nodes</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>edges</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Create adjacent representation from given nodes and edges </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">nodes</td><td>Nodes to consider </td></tr>
+    <tr><td class="paramname">edges</td><td>Edges to consider </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Mapping from nodes to adjacent edges </dd></dl>
+
+</div>
+</div>
+<a id="ae9b8137341355886fe36f97a1b6b2045" name="ae9b8137341355886fe36f97a1b6b2045"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae9b8137341355886fe36f97a1b6b2045">&#9670;&#160;</a></span>createIncomingList()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static HLACAdjacentRepresentation HLAC::Util::createIncomingList </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>nodes</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>edges</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Create adjacent representation from given nodes and edges </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">nodes</td><td>Nodes to consider </td></tr>
+    <tr><td class="paramname">edges</td><td>Edges to consider </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Mapping from nodes to adjacent edges </dd></dl>
+
+</div>
+</div>
 <a id="a2722bb68a02b31332994854d3be41115" name="a2722bb68a02b31332994854d3be41115"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2722bb68a02b31332994854d3be41115">&#9670;&#160;</a></span>dotRecordEscape()</h2>
 
@@ -275,6 +520,101 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a07594c7d83d7a9545f684431dae24a78" name="a07594c7d83d7a9545f684431dae24a78"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a07594c7d83d7a9545f684431dae24a78">&#9670;&#160;</a></span>findEdgeByGlobalId()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static <a class="el" href="classHLAC_1_1Edge.html">Edge</a> * HLAC::Util::findEdgeByGlobalId </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> * &gt; &amp;&#160;</td>
+          <td class="paramname"><em>edgeList</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>globalId</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Search for the edge under the given ILPIndex </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">edgeList</td><td>List of edges to search in </td></tr>
+    <tr><td class="paramname">globalId</td><td>Id to search for </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to the found edge. Nullptr if no edge could be found </dd></dl>
+
+</div>
+</div>
+<a id="a9dca6b05221cda75b2b350dbabdf460b" name="a9dca6b05221cda75b2b350dbabdf460b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9dca6b05221cda75b2b350dbabdf460b">&#9670;&#160;</a></span>findTakenEdges()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static std::vector&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> * &gt; HLAC::Util::findTakenEdges </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> *&#160;</td>
+          <td class="paramname"><em>entryNode</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::unordered_map&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *, <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> * &gt;&#160;</td>
+          <td class="paramname"><em>predecessors</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>edges</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Traces the given predecessor list beginning in the entryNode until NULL is reached. Stores all found edges along the way and returns them </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">entryNode</td><td><a class="el" href="classHLAC_1_1Node.html">Node</a> to start from </td></tr>
+    <tr><td class="paramname">predecessors</td><td>Predecessor list </td></tr>
+    <tr><td class="paramname">edges</td><td>Existing edges </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>List of edges taken on the calculated path </dd></dl>
+
+</div>
+</div>
 <a id="a5610fb3c30c200c11f4f93e3fd480798" name="a5610fb3c30c200c11f4f93e3fd480798"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5610fb3c30c200c11f4f93e3fd480798">&#9670;&#160;</a></span>getLazyCallGraphPostOrder()</h2>
 
@@ -319,6 +659,72 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a353b7ea69a47aa5f511c9429ee1b59dd" name="a353b7ea69a47aa5f511c9429ee1b59dd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a353b7ea69a47aa5f511c9429ee1b59dd">&#9670;&#160;</a></span>getMaxEdgeIndexInFunction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static int HLAC::Util::getMaxEdgeIndexInFunction </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1FunctionNode.html">HLAC::FunctionNode</a> *&#160;</td>
+          <td class="paramname"><em>FN</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Find maximum edge ILPIndex in <a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">FN</td><td><a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> to analyse </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Maximum found index </dd></dl>
+
+</div>
+</div>
+<a id="a59ac497a7d051a967100522e279982d9" name="a59ac497a7d051a967100522e279982d9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a59ac497a7d051a967100522e279982d9">&#9670;&#160;</a></span>getMaxEdgeIndexInLoop()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static int HLAC::Util::getMaxEdgeIndexInLoop </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *&#160;</td>
+          <td class="paramname"><em>loopNode</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Find maximum edge ILPIndex in <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">loopNode</td><td><a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> to analyse </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Maximum found index </dd></dl>
+
+</div>
+</div>
 <a id="a2318fc88a7ecd14f8ccb7cacd59acca4" name="a2318fc88a7ecd14f8ccb7cacd59acca4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2318fc88a7ecd14f8ccb7cacd59acca4">&#9670;&#160;</a></span>instToString()</h2>
 
@@ -349,6 +755,56 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>String representation of the instruction </dd></dl>
+
+</div>
+</div>
+<a id="a80aafe96f34e5cf2a052059b44f87bac" name="a80aafe96f34e5cf2a052059b44f87bac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a80aafe96f34e5cf2a052059b44f87bac">&#9670;&#160;</a></span>markTakenEdgesInLoop()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void HLAC::Util::markTakenEdgesInLoop </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *&#160;</td>
+          <td class="paramname"><em>loopNode</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::unordered_set&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> * &gt; &amp;&#160;</td>
+          <td class="paramname"><em>takenSet</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>result</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Analyse which edges have been taken inside the given <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">loopNode</td><td><a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> to analyse </td></tr>
+    <tr><td class="paramname">takenSet</td><td>Edges that should have been taken </td></tr>
+    <tr><td class="paramname">result</td><td>Vector of ids representing the taken edges </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>

@@ -8,8 +8,10 @@ var searchData=
   ['feasibilitywrapper_5',['FeasibilityWrapper',['../classFeasibility_1_1FeasibilityWrapper.html#a146e332caa9cbe731bf35b86de8c73a4',1,'Feasibility::FeasibilityWrapper']]],
   ['findblock_6',['findBlock',['../classProgramGraph.html#a9450ec4e99c330c26535491056e8a639',1,'ProgramGraph']]],
   ['findcounterfromicmp_7',['findCounterFromICMP',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a9d1f8d26a90d0ab769aabe56bfea055d',1,'LoopBound::LoopBoundIDEAnalysis']]],
-  ['findedgesstartingatnode_8',['findEdgesStartingAtNode',['../classProgramGraph.html#acef8229424136eb7f7cf35038d831e59',1,'ProgramGraph']]],
-  ['findloopcheckexpr_9',['findLoopCheckExpr',['../classLoopBound_1_1LoopBoundWrapper.html#a8d79267601928d46ce295549a58402c9',1,'LoopBound::LoopBoundWrapper']]],
-  ['functionnode_10',['FunctionNode',['../classHLAC_1_1FunctionNode.html#ab2723cb9a98843aa0c387cd0deaef8f4',1,'HLAC::FunctionNode']]],
-  ['functiontree_11',['FunctionTree',['../classFunctionTree.html#a53962ae644f6cbfa614728aa09f32c5a',1,'FunctionTree']]]
+  ['findedgebyglobalid_8',['findEdgeByGlobalId',['../classHLAC_1_1Util.html#a07594c7d83d7a9545f684431dae24a78',1,'HLAC::Util']]],
+  ['findedgesstartingatnode_9',['findEdgesStartingAtNode',['../classProgramGraph.html#acef8229424136eb7f7cf35038d831e59',1,'ProgramGraph']]],
+  ['findloopcheckexpr_10',['findLoopCheckExpr',['../classLoopBound_1_1LoopBoundWrapper.html#a8d79267601928d46ce295549a58402c9',1,'LoopBound::LoopBoundWrapper']]],
+  ['findtakenedges_11',['findTakenEdges',['../classHLAC_1_1Util.html#a9dca6b05221cda75b2b350dbabdf460b',1,'HLAC::Util']]],
+  ['functionnode_12',['FunctionNode',['../classHLAC_1_1FunctionNode.html#ab2723cb9a98843aa0c387cd0deaef8f4',1,'HLAC::FunctionNode']]],
+  ['functiontree_13',['FunctionTree',['../classFunctionTree.html#a53962ae644f6cbfa614728aa09f32c5a',1,'FunctionTree']]]
 ];
