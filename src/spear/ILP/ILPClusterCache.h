@@ -56,7 +56,7 @@ class ILPClusterCache {
      * @param hash Hash to store the energy for
      * @param value Energy to store at the hash
      */
-    void setEntry(std::string hash, ILPResult value);
+    void setEntry(const std::string& hash, ILPResult value);
 
     /**
      * Store the cache to the underlying file;
@@ -64,10 +64,19 @@ class ILPClusterCache {
     void writeBackCache();
 
  private:
+    /**
+     * Enables/Disables the cache
+     */
     bool isEnabled = true;
 
+     /**
+      * Filepath the actual cache is stored
+      */
     std::string cacheFile;
 
+    /**
+     * Internal cache data structure that maps loop cluster hashes to their calculated WCEC values.
+     */
     std::unordered_map<std::string, ILPResult> cache;
 };
 

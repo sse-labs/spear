@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <utility>
 
 #include "profilers/CPUProfiler.h"
 
@@ -24,7 +25,7 @@ ILPClusterCache& ILPClusterCache::getInstance() {
 }
 
 ILPClusterCache::ILPClusterCache(std::string filename, bool enabled) {
-    cacheFile = filename;
+    cacheFile = std::move(filename);
     isEnabled = enabled;
 
     // Check if file exists
@@ -62,7 +63,17 @@ ILPClusterCache::ILPClusterCache(std::string filename, bool enabled) {
 
                 ILPResult result;
                 result.optimalValue = value.at("optimalValue").get<double>();
-                result.variableValues = value.at("variableValues").get<std::vector<double>>();
+
+                // Reconstruct the variable values
+                int maxVal = value.at("variableCount").get<int>();
+                std::vector<std::pair<int, double>> nonEmptyEntries = value.at("variableValues").get<std::vector<std::pair<int, double>>>();
+
+                std::vector variables(maxVal, 0.0);
+                for (const auto& [index, varValue] : nonEmptyEntries) {
+                    variables[index] = varValue;
+                }
+
+                result.variableValues = variables;
 
                 cache[entry.key()] = result;
             }
@@ -102,8 +113,8 @@ std::optional<ILPResult> ILPClusterCache::getEntry(const std::string& hash) {
     return std::nullopt;
 }
 
-void ILPClusterCache::setEntry(std::string hash, ILPResult value) {
-    cache[hash] = value;
+void ILPClusterCache::setEntry(const std::string& hash, ILPResult value) {
+    cache[hash] = std::move(value);
 }
 
 void ILPClusterCache::writeBackCache() {
@@ -114,9 +125,19 @@ void ILPClusterCache::writeBackCache() {
     nlohmann::json jsonData = nlohmann::json::object();
 
     for (const auto &entry : cache) {
+        std::vector<std::pair<int, double>> nonEmptyEntries;
+
+        // Compress the values of the variables. We only store values that are not 0
+        for (size_t i = 0; i < entry.second.variableValues.size(); ++i) {
+            if (entry.second.variableValues[i] > 0.0) {
+                nonEmptyEntries.emplace_back(i, entry.second.variableValues[i]);
+            }
+        }
+
         jsonData[entry.first] = json::object({
             {"optimalValue", entry.second.optimalValue},
-            {"variableValues", entry.second.variableValues}
+            {"variableCount", entry.second.variableValues.size()},
+            {"variableValues", nonEmptyEntries}
         });
     }
 
@@ -125,6 +146,7 @@ void ILPClusterCache::writeBackCache() {
         throw std::runtime_error("Failed to open cache file for writing: " + cacheFile);
     }
 
-    outputFile << jsonData.dump(0);
+    // We need to remove the value here to safe space...
+    outputFile << jsonData.dump(4);
     outputFile.close();
 }
