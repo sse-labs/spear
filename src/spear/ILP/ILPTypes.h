@@ -4,11 +4,15 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_ILPTYPES_H
-#define SPEAR_ILPTYPES_H
-#include <CoinPackedMatrix.hpp>
+#ifndef SRC_SPEAR_ILP_ILPTYPES_H_
+#define SRC_SPEAR_ILP_ILPTYPES_H_
+
 #include <unordered_map>
 #include <vector>
+#include <map>
+
+#include <CoinPackedMatrix.hpp>
+
 
 /**
  * Forward declarations of the HLAC namespace
@@ -94,4 +98,4 @@ struct DAGLongestPathSolution {
 // Adjacent representation of the HLAC graph, mapping from node to its adjacent edges.
 using HLACAdjacentRepresentation = std::map<HLAC::GenericNode *, std::vector<HLAC::Edge *>>;
 
-#endif  // SPEAR_ILPTYPES_H
+#endif  // SRC_SPEAR_ILP_ILPTYPES_H_

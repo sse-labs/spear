@@ -504,7 +504,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             // Precalculate all basic energy values
             for (auto &functionNode : graph->functions) {
-                functionNode->nodeEnergy = std::vector<double>(functionNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
+                functionNode->nodeEnergy = std::vector<double>(
+                    functionNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
                 for (std::size_t i = 0; i < functionNode->topologicalSortedRepresentationOfNodes.size(); ++i) {
                     HLAC::GenericNode *node = functionNode->topologicalSortedRepresentationOfNodes[i];
 
@@ -526,7 +527,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             auto ilps = graph->buildMonolithicILPS();
             auto monoBuildEnd = std::chrono::high_resolution_clock::now();
 
-            auto monoBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(monoBuildEnd - monoBuildStart);
+            auto monoBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                monoBuildEnd - monoBuildStart);
 
 
             auto monoSolveStart = std::chrono::high_resolution_clock::now();
@@ -535,12 +537,14 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             auto solvedResults = graph->solveMonolithicIlps(ilps);
             auto monoSolveEnd = std::chrono::high_resolution_clock::now();
 
-            auto monoSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(monoSolveEnd - monoSolveStart);
+            auto monoSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                monoSolveEnd - monoSolveStart);
 
 
             auto monoTotalEnd = std::chrono::high_resolution_clock::now();
 
-            auto monoTotalDuration = std::chrono::duration_cast<std::chrono::microseconds>(monoTotalEnd - monoTotalStart);
+            auto monoTotalDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                monoTotalEnd - monoTotalStart);
 
 
             if (SHOWTIMINGS) {
@@ -555,8 +559,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 graph->printDotRepresentationWithSolution(
                     graph->getFunctionByName(funcName),
                     resultpair.variableValues,
-                    "monolithic"
-                );
+                    "monolithic");
             }
 
             ILPClusterCache clusterCache("cluster_cache.json", true);
@@ -571,7 +574,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             auto clusteredILPs = graph->buildClusteredILPS();
             auto clusteredBuildEnd = std::chrono::high_resolution_clock::now();
 
-            auto clusteredBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(clusteredBuildEnd - clusteredBuildStart);
+            auto clusteredBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                clusteredBuildEnd - clusteredBuildStart);
 
             auto clusteredSolveStart = std::chrono::high_resolution_clock::now();
 
@@ -579,7 +583,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             auto clusteredSolvedResults = graph->solveClusteredIlps(clusteredILPs);
             auto clusteredSolveEnd = std::chrono::high_resolution_clock::now();
 
-            auto clusteredSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(clusteredSolveEnd - clusteredSolveStart);
+            auto clusteredSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                clusteredSolveEnd - clusteredSolveStart);
 
 
             auto clusteredDagStart = std::chrono::high_resolution_clock::now();
@@ -588,10 +593,12 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             auto dagResults = graph->DAGLongestPath(clusteredSolvedResults);
 
             auto clusteredDagEnd = std::chrono::high_resolution_clock::now();
-            auto clusteredDagDuration = std::chrono::duration_cast<std::chrono::microseconds>(clusteredDagEnd - clusteredDagStart);
+            auto clusteredDagDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                clusteredDagEnd - clusteredDagStart);
 
             auto clusteredTotalEnd = std::chrono::high_resolution_clock::now();
-            auto clusteredTotalDuration = std::chrono::duration_cast<std::chrono::microseconds>(clusteredTotalEnd - clusteredTotalStart);
+            auto clusteredTotalDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                clusteredTotalEnd - clusteredTotalStart);
 
             if (SHOWTIMINGS) {
                 std::cout << "Clustered ILP Build Time:  " << clusteredBuildDuration.count() << " µs\n";

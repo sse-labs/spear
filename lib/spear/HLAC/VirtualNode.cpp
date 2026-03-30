@@ -3,6 +3,9 @@
  * All rights reserved.
  */
 
+#include <string>
+#include <memory>
+#include <vector>
 
 #include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
@@ -64,7 +67,10 @@ void HLAC::VirtualNode::printDotRepresentationWithSolution(std::ostream &os, std
     llvmOS.flush();
 }
 
-std::unique_ptr<HLAC::VirtualNode> HLAC::VirtualNode::makeVirtualPoint(bool isEntry, bool isExit, GenericNode *givparent) {
+std::unique_ptr<HLAC::VirtualNode> HLAC::VirtualNode::makeVirtualPoint(
+    bool isEntry,
+    bool isExit,
+    GenericNode *givparent) {
     auto virtualPoint = std::make_unique<VirtualNode>();
     virtualPoint->isExit = isExit;
     virtualPoint->isEntry = isEntry;

@@ -6,17 +6,19 @@
 #ifndef SRC_SPEAR_HLAC_UTIL_H_
 #define SRC_SPEAR_HLAC_UTIL_H_
 
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Function.h>
+
 #include <string>
 #include <vector>
+#include <unordered_set>
+#include <unordered_map>
+
+
+
 
 #include "HLAC/hlac.h"
 
-#include <llvm/IR/BasicBlock.h>
-#include <llvm/IR/Constants.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Instruction.h>
-#include <llvm/IR/Operator.h>
-#include <llvm/Support/raw_ostream.h>
 
 namespace HLAC {
 

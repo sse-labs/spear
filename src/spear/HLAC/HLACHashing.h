@@ -4,9 +4,12 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_HLACHASHING_H
-#define SPEAR_HLACHASHING_H
-#include "hlac.h"
+#ifndef SRC_SPEAR_HLAC_HLACHASHING_H_
+#define SRC_SPEAR_HLAC_HLACHASHING_H_
+
+#include <string>
+
+#include "HLAC/hlac.h"
 
 namespace HLAC {
 
@@ -21,9 +24,7 @@ class Hasher {
     static std::string getHashForNode(GenericNode * node);
 
  private:
-
     // Node specific hash getter
-
     static std::string getHashForVirtualNode(VirtualNode * node);
 
     static std::string getHashForCallNode(CallNode * node);
@@ -107,11 +108,7 @@ class Hasher {
      * @return String value as hex representation of the given value
      */
     static std::string toHexString(std::string value);
-
-
-
 };
+}  // namespace HLAC
 
-}
-
-#endif //SPEAR_HLACHASHING_H
+#endif  // SRC_SPEAR_HLAC_HLACHASHING_H_

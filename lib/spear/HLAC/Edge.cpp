@@ -5,6 +5,7 @@
 
 #include <string>
 #include <ostream>
+#include <vector>
 
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
@@ -88,7 +89,7 @@ void Edge::printDotRepresentation(std::ostream &os) {
 }
 
 void Edge::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) {
-   // Cast source and destination as LoopNode
+    // Cast source and destination as LoopNode
     auto *srcLoop = dynamic_cast<LoopNode *>(this->soure);
     auto *dstLoop = dynamic_cast<LoopNode *>(this->destination);
 

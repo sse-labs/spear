@@ -3,6 +3,10 @@
  * All rights reserved.
  */
 
+#include <vector>
+#include <memory>
+#include <utility>
+
 #include "ILP/ILPSolver.h"
 
 ILPSolver::ILPSolver(ILPModel model) : underlyingILPModel(std::move(model)), solutionModel(nullptr) {

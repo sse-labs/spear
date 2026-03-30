@@ -3,16 +3,22 @@
  * All rights reserved.
  */
 
-#include <CoinPackedVector.hpp>
 #include <chrono>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <unordered_set>
+#include <vector>
+#include <unordered_map>
+#include <utility>
 
 #include "ILP/ILPUtil.h"
 #include "HLAC/util.h"
+
+#include <CoinPackedVector.hpp>
+
 
 std::string ILPUtil::boundToString(double value) {
     if (value <= -COIN_DBL_MAX / 2) {
@@ -159,7 +165,8 @@ void ILPUtil::printILPModelHumanReadable(std::string funcname, std::string loopn
     const int numRows = matrix.getNumRows();
     const int numCols = matrix.getNumCols();
 
-    std::cout << "================ Clustered ILP Model - "<< funcname << "(" << loopname << ")" <<  " ================\n\n";
+    std::cout << "================ Clustered ILP Model - "<< funcname << "(" << loopname << ")"
+    <<  " ================\n\n";
 
     std::cout << "Objective:\n";
     std::cout << "  maximize ";

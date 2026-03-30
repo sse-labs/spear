@@ -3,15 +3,16 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_ILPUTIL_H
-#define SPEAR_ILPUTIL_H
+#ifndef SRC_SPEAR_ILP_ILPUTIL_H_
+#define SRC_SPEAR_ILP_ILPUTIL_H_
 
 #include <string>
 #include <unordered_set>
+#include <unordered_map>
+#include <vector>
 
-#include "CoinFinite.hpp"
-#include "CoinPackedMatrix.hpp"
-#include "ILP/ILPBuilder.h"
+#include <CoinFinite.hpp>
+#include <CoinPackedMatrix.hpp>
 #include "HLAC/hlac.h"
 
 /**
@@ -19,7 +20,7 @@
  * Exposes several helper methods used to interact with ILP solving
 */
 class ILPUtil {
-public:
+ public:
     /**
      * Print the ILP-Model of the loop with reference to the name of the parent function
      * @param funcname Name of the function the loop originates from
@@ -103,7 +104,7 @@ public:
      */
     static int getMaxEdgeIndex(HLAC::LoopNode *loopNode);
 
-private:
+ private:
     /**
      * Return the given double value of a bound to a string with fixed precission.
      * Used for ILP printing
@@ -119,8 +120,6 @@ private:
      * @return String representation of the row and matrix
      */
     static std::string formatLinearExpr(const CoinPackedMatrix &matrix, int row);
-
-
 };
 
-#endif  // SPEAR_ILPUTIL_H
+#endif  // SRC_SPEAR_ILP_ILPUTIL_H_

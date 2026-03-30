@@ -4,8 +4,9 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_ILPCLUSTERCACHE_H
-#define SPEAR_ILPCLUSTERCACHE_H
+#ifndef SRC_SPEAR_ILP_ILPCLUSTERCACHE_H_
+#define SRC_SPEAR_ILP_ILPCLUSTERCACHE_H_
+
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -80,4 +81,4 @@ class ILPClusterCache {
     std::unordered_map<std::string, ILPResult> cache;
 };
 
-#endif //SPEAR_ILPCLUSTERCACHE_H
+#endif  // SRC_SPEAR_ILP_ILPCLUSTERCACHE_H_

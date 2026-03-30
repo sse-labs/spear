@@ -3,7 +3,6 @@
  * All rights reserved.
  */
 
-#include <ClpEventHandler.hpp>
 #include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Dominators.h>
@@ -13,11 +12,15 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <queue>
+#include <map>
 
 #include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
 #include "LLVMHandler.h"
+
+#include <ClpEventHandler.hpp>
 
 #define SPR_IGNORE_DEBUG_FUNCTIONS 1
 
@@ -187,10 +190,7 @@ FunctionNode::FunctionNode(llvm::Function *function,
                 adjacencyList[it->second].push_back(edge);
             }
         }
-
         this->adjacencyRepresentation = adjacencyList;
-
-
     }
 
     this->hash = FunctionNode::calculateHash();

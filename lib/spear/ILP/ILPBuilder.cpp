@@ -3,13 +3,16 @@
  * All rights reserved.
  */
 
-#include "ILP/ILPBuilder.h"
-#include "ILP/ILPSolver.h"
-#include  "ILP/ILPUtil.h"
-#include "HLAC/hlac.h"
-
 #include <unordered_set>
 #include <utility>
+#include <unordered_map>
+#include <vector>
+#include <iostream>
+
+#include "ILP/ILPBuilder.h"
+#include "ILP/ILPSolver.h"
+#include "ILP/ILPUtil.h"
+#include "HLAC/hlac.h"
 
 void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode *func) {
     // Iterate over the edges in the function node
@@ -181,7 +184,7 @@ void ILPBuilder::appendGraphConstraints(
 }
 
 void ILPBuilder::appendLoopBoundConstraint(
-    ILPModel &model,HLAC::LoopNode *loopNode,
+    ILPModel &model, HLAC::LoopNode *loopNode,
     const std::vector<int> &invocationCols) {
     // Create an empty row
     CoinPackedVector row;

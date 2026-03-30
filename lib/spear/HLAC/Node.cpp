@@ -7,7 +7,7 @@
 #include <llvm/Support/raw_os_ostream.h>
 
 #include <memory>
-#include <utility>
+#include <vector>
 #include <string>
 
 #include "HLAC/HLACHashing.h"

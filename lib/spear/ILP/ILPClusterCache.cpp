@@ -5,13 +5,16 @@
 
 #include "ILP/ILPClusterCache.h"
 
-#include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <nlohmann/json.hpp>
 #include <utility>
+#include <vector>
+#include <string>
 
 #include "profilers/CPUProfiler.h"
+
+#include <nlohmann/json.hpp>
+
 
 ILPClusterCache* ILPClusterCache::instance = nullptr;
 
@@ -28,8 +31,12 @@ ILPClusterCache::ILPClusterCache(std::string filename, bool enabled) {
     cacheFile = std::move(filename);
     isEnabled = enabled;
 
-    // Check if file exists
-    if (!std::filesystem::exists(cacheFile)) {
+    // Check if file exists by trying to open it for reading
+    std::ifstream existingFile(cacheFile);
+    const bool fileExists = existingFile.good();
+    existingFile.close();
+
+    if (!fileExists) {
         // Create empty JSON file
         nlohmann::json emptyJson = nlohmann::json::object();
 
@@ -38,7 +45,7 @@ ILPClusterCache::ILPClusterCache(std::string filename, bool enabled) {
             throw std::runtime_error("Failed to create cache file: " + cacheFile);
         }
 
-        outputFile << emptyJson.dump(4); // Pretty print with indentation
+        outputFile << emptyJson.dump(4);
         outputFile.close();
 
         // Initialize internal cache state as empty
@@ -51,13 +58,14 @@ ILPClusterCache::ILPClusterCache(std::string filename, bool enabled) {
         }
 
         try {
-            json data = json::parse(inputFile);
+            nlohmann::json data = nlohmann::json::parse(inputFile);
 
             for (const auto& entry : data.items()) {
                 const auto& value = entry.value();
 
                 // Validate structure explicitly before accessing
-                if (!value.contains("optimalValue") || !value.contains("variableValues")) {
+                if (!value.contains("optimalValue") || !value.contains("variableValues")
+                    || !value.contains("variableCount")) {
                     continue;
                 }
 
@@ -66,18 +74,20 @@ ILPClusterCache::ILPClusterCache(std::string filename, bool enabled) {
 
                 // Reconstruct the variable values
                 int maxVal = value.at("variableCount").get<int>();
-                std::vector<std::pair<int, double>> nonEmptyEntries = value.at("variableValues").get<std::vector<std::pair<int, double>>>();
+                std::vector<double> variables(maxVal, 0.0);
 
-                std::vector variables(maxVal, 0.0);
+                std::vector<std::pair<int, double>> nonEmptyEntries =
+                    value.at("variableValues").get<std::vector<std::pair<int, double>>>();
+
                 for (const auto& [index, varValue] : nonEmptyEntries) {
-                    variables[index] = varValue;
+                    if (index >= 0 && index < maxVal) {
+                        variables[index] = varValue;
+                    }
                 }
 
                 result.variableValues = variables;
-
                 cache[entry.key()] = result;
             }
-
         } catch (const nlohmann::json::parse_error& parseException) {
             std::cerr << "Cache parse error: " << parseException.what() << "\n";
             cache = {};

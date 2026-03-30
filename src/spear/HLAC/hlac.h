@@ -16,6 +16,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include "ILP/ILPBuilder.h"
 #include "ILP/ILPTypes.h"
@@ -90,7 +91,6 @@ class GenericNode {
 
 class VirtualNode : public GenericNode {
  public:
-
     bool isEntry = false;
     bool isExit = false;
 
@@ -125,7 +125,7 @@ class VirtualNode : public GenericNode {
  * Edge class that represents connections inside the HLAC
  */
 class Edge {
-public:
+ public:
     /**
      * Global unique identifier of this edge
      */
@@ -172,7 +172,7 @@ public:
      */
     void printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result);
 
-private:
+ private:
     /**
      * Searches for the first occasion of a non-LoopNode in the given LoopNode so we can draw an edge to this Node
      * @param loopNode LoopNode to search in
@@ -707,7 +707,6 @@ class hlac {
      */
     std::unordered_map<std::string, ILPClusteredLoopResult> solveClusteredIlps(
         const std::unordered_map<std::string, ILPLoopModelMapping> &modelMapping);
-
 };
 }  // namespace HLAC
 

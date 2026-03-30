@@ -3,8 +3,8 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_ILPBUILDER_H
-#define SPEAR_ILPBUILDER_H
+#ifndef SRC_SPEAR_ILP_ILPBUILDER_H_
+#define SRC_SPEAR_ILP_ILPBUILDER_H_
 
 #include <memory>
 #include <optional>
@@ -22,7 +22,7 @@ class ILPBuilder {
     /**
      * Empty dummy constructor
      */
-    ILPBuilder() {};
+    ILPBuilder() {}
 
      /**
       * Construct a monolithic ILP from the given functionNode pointer
@@ -151,4 +151,4 @@ class ILPBuilder {
     static void fillObjectiveFunction(ILPModel &model, HLAC::LoopNode *loopNode);
 };
 
-#endif  // SPEAR_ILPBUILDER_H
+#endif  // SRC_SPEAR_ILP_ILPBUILDER_H_

@@ -3,15 +3,15 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_ILPSOLVER_H
-#define SPEAR_ILPSOLVER_H
+#ifndef SRC_SPEAR_ILP_ILPSOLVER_H_
+#define SRC_SPEAR_ILP_ILPSOLVER_H_
 
 #include <memory>
 #include <optional>
 #include <vector>
 
-#include "CbcModel.hpp"
-#include "OsiClpSolverInterface.hpp"
+#include <CbcModel.hpp>
+#include <OsiClpSolverInterface.hpp>
 #include "ILPBuilder.h"
 
 /**
@@ -19,7 +19,7 @@
  * Handles the solving of CBC ILP models with the underlying solver API exposed by CBC
  */
 class ILPSolver {
-public:
+ public:
     /**
      * Create a new solver for the given ILPModel
      * @param model Model to construct the solver for
@@ -44,7 +44,7 @@ public:
      */
     std::optional<std::vector<double>> getSolvedSolution() const;
 
-private:
+ private:
     /**
      * Model the solver was build upon
      */
@@ -56,4 +56,4 @@ private:
     std::unique_ptr<CbcModel> solutionModel;
 };
 
-#endif  // SPEAR_ILPSOLVER_H
+#endif  // SRC_SPEAR_ILP_ILPSOLVER_H_

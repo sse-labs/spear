@@ -11,6 +11,8 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <unordered_map>
+#include <map>
 
 #include "HLAC/util.h"
 
@@ -255,7 +257,7 @@ Util::createAdjacentList(const std::vector<std::unique_ptr<GenericNode>> &nodes,
 
 std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> Util::createAdjacentList(
     const std::vector<GenericNode *> &nodes,
-    const std::vector<std::unique_ptr<HLAC::Edge>> &edges){
+    const std::vector<std::unique_ptr<HLAC::Edge>> &edges) {
     std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> adjacentList;
 
     // Initialize all nodes
@@ -279,8 +281,7 @@ std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> Util::createAdjacentList(
 
 std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> Util::createIncomingList(
     const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
-    const std::vector<std::unique_ptr<HLAC::Edge>> &edges)
-{
+    const std::vector<std::unique_ptr<HLAC::Edge>> &edges) {
     std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> adjacentList;
 
     // Initialize all nodes
@@ -343,8 +344,7 @@ Edge * Util::findEdgeByGlobalId(std::vector<Edge *> &edgeList, int globalId) {
     auto foundEdge = std::find_if(edgeList.begin(), edgeList.end(),
         [globalId](const Edge* edgeUP) {
             return edgeUP && edgeUP->ilpIndex == globalId;
-        }
-    );
+        });
 
     if (foundEdge == edgeList.end()) {
         return nullptr;

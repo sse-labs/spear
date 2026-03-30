@@ -132,8 +132,11 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
 
     int virtExitIndex = this->Nodes.size() - 1;
 
-    auto entryEdge = std::make_unique<Edge>(Edge(this->Nodes[virtEntryIndex].get(), this->Nodes[entryIndex].get()));
-    auto exitEdge= std::make_unique<Edge>(Edge(this->Nodes[exitIndex].get(), this->Nodes[virtExitIndex].get()));
+    auto entryEdge = std::make_unique<Edge>(
+        Edge(this->Nodes[virtEntryIndex].get(), this->Nodes[entryIndex].get()));
+
+    auto exitEdge = std::make_unique<Edge>(
+        Edge(this->Nodes[exitIndex].get(), this->Nodes[virtExitIndex].get()));
 
     this->Edges.push_back(std::move(entryEdge));
     this->Edges.push_back(std::move(exitEdge));
@@ -182,7 +185,6 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
             }
         }
     }
-
 }
 
 void LoopNode::constructCallNodes(bool considerDebugFunctions) {

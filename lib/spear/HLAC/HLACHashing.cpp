@@ -3,13 +3,18 @@
  * All rights reserved.
  */
 
+#include <string>
+#include <algorithm>
+#include <vector>
+#include <unordered_map>
+#include <iostream>
+
 #include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 
 namespace HLAC {
 
 std::string Hasher::getHashForNode(GenericNode * node) {
-
     if (auto virtualNode = dynamic_cast<VirtualNode *>(node)) {
         return Hasher::getHashForVirtualNode(virtualNode);
     }
@@ -221,8 +226,8 @@ std::string Hasher::getHashForLoopNode(LoopNode * node) {
         }
     }
 
-
-    //std::cout << "Hash for loop " << node->loop->getHeader()->getName().str() << " " << signatureStream.str() << std::endl;
+    // std::cout << "Hash for loop " << node->loop->getHeader()->getName().str() << " "
+    // << signatureStream.str() << std::endl;
 
     return signatureStream.str();
 }
@@ -525,6 +530,4 @@ std::string Hasher::toHexString(std::string value) {
 
     return outputStream.str();
 }
-
-
-}
+}  // namespace HLAC
