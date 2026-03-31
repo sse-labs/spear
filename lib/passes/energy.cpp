@@ -3,7 +3,6 @@
  * All rights reserved.
  */
 
-#include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/Function.h>
 #include <llvm/Passes/PassBuilder.h>
@@ -13,11 +12,15 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
+#include <llvm/Transforms/Scalar/IndVarSimplify.h>
+#include <llvm/Transforms/Scalar/LoopPassManager.h>
+#include <llvm/Transforms/Scalar/LoopRotation.h>
+#include <llvm/Transforms/Utils/InstructionNamer.h>
+#include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 #include "ConfigParser.h"
 #include "DeMangler.h"
@@ -349,57 +352,102 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     }
 
 
+    static void prepareFunctionsForLegacyAnalysis(
+    llvm::Module &module,
+    llvm::FunctionAnalysisManager &functionAnalysisManager) {
+
+        llvm::FunctionPassManager functionPassManager;
+
+        // Give unnamed instructions stable names for debugging
+        functionPassManager.addPass(llvm::InstructionNamerPass());
+
+        // Promote allocas to SSA form
+        functionPassManager.addPass(llvm::PromotePass());
+
+        // Canonicalize loops so ScalarEvolution can reason about them better
+        //functionPassManager.addPass(llvm::LoopSimplifyPass());
+
+        // Keep loops in LCSSA form
+        //functionPassManager.addPass(llvm::LCSSAPass());
+
+        // Simplify induction variables
+        llvm::LoopPassManager loopPassManager;
+        //loopPassManager.addPass(llvm::IndVarSimplifyPass());
+
+        functionPassManager.addPass(
+            llvm::createFunctionToLoopPassAdaptor(std::move(loopPassManager)));
+
+        for (llvm::Function &function : module) {
+            if (function.isDeclaration()) {
+                continue;
+            }
+
+            functionPassManager.run(function, functionAnalysisManager);
+        }
+    }
+
     /**
      * Function to run the analysis on a given module
      * @param module LLVM::Module to run the analysis on
-     * @param MAM llvm::ModuleAnalysisManager
+     * @param moduleAnalysisManager llvm::ModuleAnalysisManager
      * @param analysisStrategy Strategy to analyze the module with
      */
-    void analysisRunner(llvm::Module &module, llvm::ModuleAnalysisManager &MAM,
-                        AnalysisStrategy::Strategy analysisStrategy) {
+    void analysisRunner(llvm::Module &module, llvm::ModuleAnalysisManager &moduleAnalysisManager,
+                    AnalysisStrategy::Strategy analysisStrategy) {
 
         Logger::getInstance().setLogLevel(LOGLEVEL::ERROR);
 
-        // Get the FunctionAnalysisManager from the ModuleAnalysisManager
-        auto &functionAnalysisManager = MAM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
+        auto &functionAnalysisManager =
+            moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 
-        // Get the functions from the module
-        // PhasarHandler phasar_handler(&module);
-        // PhasarHandler::getInstance(&module).runAnalysis();
+        if (ConfigParser::getAnalysisConfiguration().analysisType == AnalysisType::LEGACY) {
+            auto legacyPreparationStart = std::chrono::high_resolution_clock::now();
 
-        // mem2reg
+            prepareFunctionsForLegacyAnalysis(module, functionAnalysisManager);
 
-        // llvm::errs() << module << "\n";
+            auto legacyPreparationEnd = std::chrono::high_resolution_clock::now();
+            auto legacyPreparationTime = std::chrono::duration_cast<std::chrono::microseconds>(
+                legacyPreparationEnd - legacyPreparationStart);
 
-        /**
-         * Execute the mem2reg pass late to allow phasar to infer more variables.
-         * We need to execute the pass however, as scalarevolution depends
-         * somewhat on these results.
-         */
-        auto funcList = &module.getFunctionList();
+            Logger::getInstance().log(
+                "Legacy IR preparation took: " + std::to_string(legacyPreparationTime.count()) + " µs",
+                LOGLEVEL::INFO);
+
+            // Construct the functionTrees to the functions of the module
+            FunctionTree *functionTree = nullptr;
+            for (llvm::Function &function : module) {
+                if (function.getName() == "main") {
+                    functionTree = FunctionTree::construct(&function);
+                    break;
+                }
+            }
+
+            for (llvm::Function &function : module) {
+                if (function.isDeclaration()) {
+                    continue;
+                }
+
+                auto &loopInfo = functionAnalysisManager.getResult<llvm::LoopAnalysis>(function);
+                auto &scalarEvolution = functionAnalysisManager.getResult<llvm::ScalarEvolutionAnalysis>(function);
+            }
+
+            if (functionTree == nullptr) {
+                throw std::runtime_error("Could not construct FunctionTree: main function not found.");
+            }
+
+            LegacyAnalysis::run(functionAnalysisManager, functionTree, SHOWTIMINGS);
+            return;
+        }
+
         auto postOrderFuncList = HLAC::Util::getLazyCallGraphPostOrder(module, functionAnalysisManager);
 
-        std::vector<std::string > funcNamesPostOrder;
+        std::vector<std::string> functionNamesInPostOrder;
         for (auto &function : postOrderFuncList) {
-            funcNamesPostOrder.push_back(function->getName().str());
+            functionNamesInPostOrder.push_back(function->getName().str());
         }
 
-        FunctionTree *functionTree = nullptr;
         std::unique_ptr<HLAC::hlac> graph = HLAC::HLACWrapper::makeHLAC(this->resultRegistry);
-
-        // Transfer ownership to shared_ptr
         std::shared_ptr<HLAC::hlac> sharedGraph = std::move(graph);
-
-        // Construct the functionTrees to the functions of the module
-        for (auto &function : *funcList) {
-            // function.print(llvm::outs());
-
-            auto name = function.getName();
-            if (name == "main") {
-                auto mainFunctionTree = FunctionTree::construct(&function);
-                functionTree = (mainFunctionTree);
-            }
-        }
 
         auto startConstruction = std::chrono::high_resolution_clock::now();
 
@@ -408,10 +456,12 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         }
 
         auto endConstruction = std::chrono::high_resolution_clock::now();
-
         auto constructionTime = std::chrono::duration_cast<std::chrono::microseconds>(
             endConstruction - startConstruction);
-        Logger::getInstance().log("HLAC construction took: " + std::to_string(constructionTime.count()) + " µs", LOGLEVEL::INFO);
+
+        Logger::getInstance().log(
+            "HLAC construction took: " + std::to_string(constructionTime.count()) + " µs",
+            LOGLEVEL::INFO);
 
         auto dotWritingStart = std::chrono::high_resolution_clock::now();
         sharedGraph->printDotRepresentation();
@@ -420,47 +470,42 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
         Logger::getInstance().log("DOT writing took: " + std::to_string(dotTime.count()) + " µs", LOGLEVEL::INFO);
 
-        auto res = sharedGraph->getEnergy();
-
-
         // Precalculate all basic energy values
         for (auto &functionNode : sharedGraph->functions) {
             functionNode->nodeEnergy = std::vector<double>(
                 functionNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
-            for (std::size_t i = 0; i < functionNode->topologicalSortedRepresentationOfNodes.size(); ++i) {
-                HLAC::GenericNode *node = functionNode->topologicalSortedRepresentationOfNodes[i];
 
-                if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
+            for (std::size_t index = 0; index < functionNode->topologicalSortedRepresentationOfNodes.size(); ++index) {
+                HLAC::GenericNode *node = functionNode->topologicalSortedRepresentationOfNodes[index];
+
+                if (dynamic_cast<HLAC::LoopNode *>(node) != nullptr) {
                     continue;
-                } else {
-                    functionNode->nodeEnergy[i] = node->getEnergy();
                 }
+
+                functionNode->nodeEnergy[index] = node->getEnergy();
             }
         }
 
-        switch (ConfigParser::getAnalysisConfiguration().analysisType) {
-            case AnalysisType::MONOLITHIC:
-                MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
-                break;
-            case AnalysisType::CLUSTERED:
-                ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
-                break;
-            case AnalysisType::COMPARISON:
-                MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
-                ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
-                break;
-            case AnalysisType::LEGACY:
-                LegacyAnalysis::run(functionAnalysisManager, functionTree, SHOWTIMINGS);
-                break;
-            default:
-                llvm::errs() << "Please provide a valid analysis type: monolithic/clustered\n";
-        }
-
-
-        /**
-         * TODO Handle the output generated from the methods
-         */
+    switch (ConfigParser::getAnalysisConfiguration().analysisType) {
+        case AnalysisType::MONOLITHIC:
+            MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
+            break;
+        case AnalysisType::CLUSTERED:
+            ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
+            break;
+        case AnalysisType::COMPARISON:
+            MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
+            ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
+            break;
+        default:
+            llvm::errs() << "Please provide a valid analysis type: monolithic/clustered/legacy/comparison\n";
+            break;
     }
+
+    /**
+     * TODO Handle the output generated from the methods
+     */
+}
 
     /**
      * Main runner of the energy pass. The pass will apply module-wise.
