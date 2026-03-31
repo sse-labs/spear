@@ -287,7 +287,7 @@ void ConfigParser::parse() {
         analysisConfiguration.legacyconfig.mode = ConfigurationUtils::strToMode(legacyconfig["mode"].get<std::string>());
         analysisConfiguration.legacyconfig.format = ConfigurationUtils::strToFormat(legacyconfig["format"].get<std::string>());
         analysisConfiguration.legacyconfig.strategy = ConfigurationUtils::strToStrategy(legacyconfig["strategy"].get<std::string>());
-        analysisConfiguration.legacyconfig.deepcalls = DeepCalls::UNDEFINED;
+        analysisConfiguration.legacyconfig.deepcalls = false;
 
         analysisConfiguration.fallback.clear();
         if (analysis.contains("fallback") && analysis["fallback"].is_object()) {

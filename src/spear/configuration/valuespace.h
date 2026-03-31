@@ -50,7 +50,7 @@ enum class AnalysisType {
     UNDEFINED,
     MONOLITHIC,
     CLUSTERED,
-    COMPARISON,
+    COMPARISON,  // Only needed for now. We should remove this later on
     LEGACY
 };
 

@@ -16,7 +16,7 @@ struct LegacyAnalysisConfiguration {
     Mode mode;
     Format format;
     Strategy strategy;
-    DeepCalls deepcalls;
+    bool deepcalls;
 };
 
 struct CPURegressionConfig {
