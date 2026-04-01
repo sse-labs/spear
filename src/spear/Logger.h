@@ -10,6 +10,7 @@
 #include <mutex>
 
 enum class LOGLEVEL {
+    HIGHLIGHT = -999,
     INFO = 0,
     WARNING = 1,
     ERROR = 2,

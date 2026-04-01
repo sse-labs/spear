@@ -12,12 +12,13 @@
 #include "EnergyFunction.h"
 #include "LLVMHandler.h"
 #include "Logger.h"
+#include "PassUtil.h"
 #include "ProfileHandler.h"
 
 nlohmann::json LegacyAnalysis::run(
     llvm::FunctionAnalysisManager &FAM,
     FunctionTree *functionTree, bool showTimings) {
-
+    Logger::getInstance().log("Running Legacy Analysis for Energy", LOGLEVEL::INFO);
 
     if (functionTree != nullptr) {
         std::vector<llvm::StringRef> names;
@@ -127,16 +128,60 @@ void LegacyAnalysis::constructProgramRepresentation(ProgramGraph *pGraph, Energy
             pGraph->replaceNodesWithLoopNode(topLoop->getBlocksVector(), loopNode);
         }
 
-
         //energyCalculation(pGraph, handler, function);
-        energyFunc->energy = pGraph->getEnergy(handler);
+        //energyFunc->energy = pGraph->getEnergy(handler);
+        // Print only the currently available ProgramGraph pgraph to std::cout
+        if (pGraph == nullptr) {
+            std::cerr << "Error: ProgramGraph is null, nothing to print.\n";
+            return;
+        }
 
-        Logger::getInstance().log("Calculated energy for function " + energyFunc->name + ": " + std::to_string(energyFunc->energy), LOGLEVEL::INFO);
+        std::cout << "digraph SPEARGRAPH {\n";
+        std::cout << "compound=true;\n";
+        std::cout << "rankdir=\"TB\";\n";
+        std::cout << "nodesep=1.5;\n";
+        std::cout << "ranksep=1.5;\n";
+        std::cout << "linelength=30;\n";
+        std::cout << "graph[fontname=Arial]\n";
+        std::cout << "node[fontname=Arial, shape=\"rect\"]\n";
+        std::cout << "edge[fontname=Arial]\n";
+
+        // Compute energy for labeling
+        double maxEnergy = 0.0;
+
+        // Wrap in a single cluster
+        std::cout << "subgraph cluster_pgraph {\n";
+        std::cout << "rank=\"same\"\n";
+        std::cout << "margin=40\n";
+        std::cout << "bgcolor=white\n";
+        std::cout << "cluster=true\n";
+        std::cout << "\tlabel=<<b>ProgramGraph</b><br/>" << maxEnergy << " J>\n";
+
+        // Print the actual graph content
+        std::cout << pGraph->printDotRepresentation();
+
+        std::cout << "}\n";
+
+        // Optional: scale legend
+        std::cout << "subgraph scale {\n";
+        std::cout << "scale_image [label=\"\" shape=none image=\"/usr/share/spear/scale.png\"];\n";
+        std::cout << "margin=40\n";
+        std::cout << "bgcolor=white\n";
+        std::cout << "}\n";
+
+        std::cout << "}\n";
+
+        Logger::getInstance().log(
+            "Legacy Energy of " + energyFunc->name + ": " + formatScientific(energyFunc->energy) + " J",
+            LOGLEVEL::HIGHLIGHT
+        );
     }else{
-
         //energyCalculation(pGraph, handler, function);
         energyFunc->energy = pGraph->getEnergy(handler);
-        Logger::getInstance().log("Calculated energy for function " + energyFunc->name + ": " + std::to_string(energyFunc->energy), LOGLEVEL::INFO);
+        Logger::getInstance().log(
+            "Legacy Energy of " + energyFunc->name + ": " + formatScientific(energyFunc->energy) + " J",
+            LOGLEVEL::HIGHLIGHT
+        );
     }
     delete domtree;
 }

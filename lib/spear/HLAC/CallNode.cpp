@@ -14,6 +14,7 @@
 #include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
+#include "Logger.h"
 #include "ProfileHandler.h"
 #include "syscalls/generated_syscall_names.h"
 
@@ -246,7 +247,14 @@ double CallNode::getEnergy() {
 
     // Assume the function has been analyzed beforehand, so we can just look up the energy in the cache of the parent
     // graph
+    // Logger::getInstance().log("Caller:" + this->parentFunctionNode->function->getName().str());
+    auto callername = this->parentFunctionNode->function->getName().str();
+    auto calleename = this->calledFunction->getName().str();
     auto energyOfCallee = parentFunctionNode->parentGraph->getEnergyPerFunction(this->calledFunction->getName().str());
+
+    if (callername == "main") {
+        bool omni = false;
+    }
 
     return energyOfCallee;
 }

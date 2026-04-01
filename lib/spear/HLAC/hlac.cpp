@@ -22,6 +22,8 @@
 #include <CbcModel.hpp>
 #include <OsiClpSolverInterface.hpp>
 
+#include "Logger.h"
+
 namespace HLAC {
 void hlac::makeFunction(llvm::Function* function, llvm::FunctionAnalysisManager *fam) {
     auto fnptr = FunctionNode::makeNode(function, fam, registry, this);
@@ -112,7 +114,7 @@ double hlac::getEnergyPerFunction(std::string functionName) {
         return FunctionEnergyCache[functionName];
     }
 
-    llvm::errs() << "Trying to get energy of " << functionName << " which has not been analyzed yet!\n";
+    Logger::getInstance().log("Trying to get energy of " + functionName + " which has not been analyzed yet!", LOGLEVEL::ERROR);
     return -300000;
 }
 

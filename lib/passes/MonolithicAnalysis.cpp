@@ -7,9 +7,16 @@
 
 #include "HLAC/hlac.h"
 #include "Logger.h"
+#include "PassUtil.h"
 #include "nlohmann/json.hpp"
 
 nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings) {
+    /**
+     * TODO: We need to create a loop here that builds the ILP for one function in the graph,
+     * solves it and then saves the result to our function energy cache.
+     *
+     */
+
     Logger::getInstance().log("Running Monolithic ILP Analysis for Energy", LOGLEVEL::INFO);
     // ================= Monolithic ILP =================
 
@@ -49,7 +56,10 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
     }
 
     for (const auto &[funcName, resultpair] : solvedResults) {
-        // std::cout << "Monolithic Energy of " << funcName << ": " << resultpair.optimalValue << " J\n";
+        Logger::getInstance().log(
+            "Monolithic Energy of " + funcName + ": " + formatScientific(resultpair.optimalValue) + " J",
+            LOGLEVEL::HIGHLIGHT
+        );
 
         graph->printDotRepresentationWithSolution(
             graph->getFunctionByName(funcName),

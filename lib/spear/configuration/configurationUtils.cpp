@@ -49,6 +49,8 @@ AnalysisType ConfigurationUtils::strToAnalysisType(const std::string& str) {
         return AnalysisType::CLUSTERED;
     } else if (str == "legacy") {
         return AnalysisType::LEGACY;
+    } else if (str == "comparison") {
+        return AnalysisType::COMPARISON;
     } else {
         return AnalysisType::UNDEFINED;
     }

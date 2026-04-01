@@ -129,8 +129,8 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
     if (TI) {
         const auto *BI = llvm::dyn_cast<llvm::BranchInst>(TI);
         bool isAnIf = BI && BI->isConditional();
-        /*llvm::outs() << "Block " << this->block->getName().str() << " if: " << isAnIf << "\n";
-        llvm::outs() << "\t Adjacent => " << adjacentNodes.size() << "\n";*/
+        llvm::outs() << "Block " << this->block->getName().str() << " if: " << isAnIf << "\n";
+        llvm::outs() << "\t Adjacent => " << adjacentNodes.size() << "\n";
 
         if (!adjacentNodes.empty()) {
             // Find the smallest energy-value-path of all the adjacent nodes

@@ -247,7 +247,7 @@ uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
         boundValue = ConfigParser::getAnalysisConfiguration().fallback["UNKNOWN_LOOP"];
     }
 
-    Logger::getInstance().log("Loop " + loop->getName().str() + " in block " + bbName + " has upper bound: " + std::to_string(boundValue), LOGLEVEL::INFO);
+    // Logger::getInstance().log("Loop " + loop->getName().str() + " in block " + bbName + " has upper bound: " + std::to_string(boundValue), LOGLEVEL::INFO);
 
     return boundValue;
 }

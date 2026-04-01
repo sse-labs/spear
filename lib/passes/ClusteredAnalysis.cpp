@@ -8,6 +8,7 @@
 #include "ConfigParser.h"
 #include "ILP/ILPClusterCache.h"
 #include "Logger.h"
+#include "PassUtil.h"
 
 nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings) {
     Logger::getInstance().log("Running Clustered ILP Analysis for Energy", LOGLEVEL::INFO);
@@ -68,7 +69,11 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
         auto loopResults = clusteredSolvedResults[funcName];
 
-        // std::cout << "Clustered Energy of " << funcName << ": " << resultpair.WCEC << " J\n";
+        Logger::getInstance().log(
+            "Clustered Energy of " + funcName + ": " + formatScientific(resultpair.WCEC) + " J",
+            LOGLEVEL::HIGHLIGHT
+        );
+
         graph->printDotRepresentationWithSolution(graph->getFunctionByName(funcName), resVector, "clustered");
     }
 

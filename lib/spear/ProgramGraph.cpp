@@ -4,9 +4,12 @@
 */
 
 #include "ProgramGraph.h"
-#include "Color.h"
-#include <vector>
+
+#include <iostream>
+
 #include <string>
+#include <vector>
+#include "Color.h"
 
 // Static method for ProgramGraph-Graph construction
 void ProgramGraph::construct(
@@ -303,7 +306,8 @@ std::vector<LoopNode *> ProgramGraph::getLoopNodes() {
 
 std::string ProgramGraph::printDotRepresentation() {
     std::string dotStr;
-    double globalMaxEng = this->findMaxEnergy();
+    //double globalMaxEng = this->findMaxEnergy();
+    double globalMaxEng = 0.0;
 
     //  Iterate over the nodes
     for (int i=0; i < this->nodes.size(); i++) {
@@ -315,7 +319,7 @@ std::string ProgramGraph::printDotRepresentation() {
         //  Check if the current node is a loop node...
         auto *loopNodeCandidate = dynamic_cast<LoopNode *>(node);
         if (loopNodeCandidate != nullptr) {
-            double maxEng = this->findMaxEnergy();
+            double maxEng = 0.0;
             //  If we encountered a loopnode we should to create a subgraph/cluster to represent it
             for (auto subgraph : loopNodeCandidate->subgraphs) {
                 dotStr += "subgraph cluster_LOOPNODE_" + std::to_string(startAddress) + "{\n";
@@ -332,7 +336,9 @@ std::string ProgramGraph::printDotRepresentation() {
                 dotStr += "};\n";
             }
         } else {
-            double maxEng = this->findMaxEnergy();
+            //double maxEng = this->findMaxEnergy();
+            double maxEng = 0.0;
+
             //  If we didn't encounter a loopnode, we just add a normal node,
             //  prefixed with n, followed by the nodes address
             dotStr += "n" + std::to_string(startAddress) + " [label=<";

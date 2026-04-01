@@ -24,7 +24,7 @@ void Logger::log(const std::string &message, LOGLEVEL level) {
     auto logColor = getLogColor(level);
 
     if (level <= currentLogLevel) {
-        std::cout << logColor << timeStampTag << " " << message << colorResetTag << std::endl;
+        std::cout << logColor << timeStampTag << " " << logTag << " " << message << colorResetTag << std::endl;
     }
 }
 
@@ -33,7 +33,7 @@ std::string Logger::timeStampStr() {
     std::time_t currentTime = std::chrono::system_clock::to_time_t(currentTimePoint);
 
     std::tm timeInfo{};
-    localtime_r(&currentTime, &timeInfo); // thread-safe (POSIX)
+    localtime_r(&currentTime, &timeInfo);
 
     std::ostringstream stringStream;
     stringStream << "[" << std::put_time(&timeInfo, "%H:%M:%S") << "]";
@@ -43,6 +43,8 @@ std::string Logger::timeStampStr() {
 
 std::string Logger::logLevelToStr(LOGLEVEL level) {
     switch (level) {
+        case LOGLEVEL::HIGHLIGHT:
+            return  "[INFO] ";
         case LOGLEVEL::INFO:
             return  "[INFO] ";
         case LOGLEVEL::WARNING:
@@ -62,6 +64,8 @@ std::string Logger::getLogColor(LOGLEVEL level) {
             return TerminalColor::yellow;
         case LOGLEVEL::ERROR:
             return TerminalColor::red;
+        case LOGLEVEL::HIGHLIGHT:
+            return TerminalColor::green;
         default:
             return TerminalColor::reset;
     }

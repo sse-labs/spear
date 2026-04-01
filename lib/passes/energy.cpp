@@ -386,6 +386,36 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         }
     }
 
+   void legacyWrapper(llvm::Module &module, llvm::FunctionAnalysisManager &functionAnalysisManager) {
+        auto legacyPreparationStart = std::chrono::high_resolution_clock::now();
+
+        prepareFunctionsForLegacyAnalysis(module, functionAnalysisManager);
+
+        auto legacyPreparationEnd = std::chrono::high_resolution_clock::now();
+        auto legacyPreparationTime = std::chrono::duration_cast<std::chrono::microseconds>(
+            legacyPreparationEnd - legacyPreparationStart);
+
+        Logger::getInstance().log(
+            "Legacy IR preparation took: " + std::to_string(legacyPreparationTime.count()) + " µs",
+            LOGLEVEL::INFO);
+
+        // Construct the functionTrees to the functions of the module
+        FunctionTree *functionTree = nullptr;
+        for (llvm::Function &function : module) {
+            if (function.getName() == "main") {
+                functionTree = FunctionTree::construct(&function);
+                break;
+            }
+        }
+
+        if (functionTree == nullptr) {
+            throw std::runtime_error("Could not construct FunctionTree: main function not found.");
+        }
+
+        LegacyAnalysis::run(functionAnalysisManager, functionTree, SHOWTIMINGS);
+    }
+
+
     /**
      * Function to run the analysis on a given module
      * @param module LLVM::Module to run the analysis on
@@ -401,42 +431,12 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 
         if (ConfigParser::getAnalysisConfiguration().analysisType == AnalysisType::LEGACY) {
-            auto legacyPreparationStart = std::chrono::high_resolution_clock::now();
-
-            prepareFunctionsForLegacyAnalysis(module, functionAnalysisManager);
-
-            auto legacyPreparationEnd = std::chrono::high_resolution_clock::now();
-            auto legacyPreparationTime = std::chrono::duration_cast<std::chrono::microseconds>(
-                legacyPreparationEnd - legacyPreparationStart);
-
-            Logger::getInstance().log(
-                "Legacy IR preparation took: " + std::to_string(legacyPreparationTime.count()) + " µs",
-                LOGLEVEL::INFO);
-
-            // Construct the functionTrees to the functions of the module
-            FunctionTree *functionTree = nullptr;
-            for (llvm::Function &function : module) {
-                if (function.getName() == "main") {
-                    functionTree = FunctionTree::construct(&function);
-                    break;
-                }
-            }
-
-            for (llvm::Function &function : module) {
-                if (function.isDeclaration()) {
-                    continue;
-                }
-
-                auto &loopInfo = functionAnalysisManager.getResult<llvm::LoopAnalysis>(function);
-                auto &scalarEvolution = functionAnalysisManager.getResult<llvm::ScalarEvolutionAnalysis>(function);
-            }
-
-            if (functionTree == nullptr) {
-                throw std::runtime_error("Could not construct FunctionTree: main function not found.");
-            }
-
-            LegacyAnalysis::run(functionAnalysisManager, functionTree, SHOWTIMINGS);
+            legacyWrapper(module, functionAnalysisManager);
             return;
+        }
+
+        if (ConfigParser::getAnalysisConfiguration().analysisType == AnalysisType::COMPARISON) {
+            legacyWrapper(module, functionAnalysisManager);
         }
 
         auto postOrderFuncList = HLAC::Util::getLazyCallGraphPostOrder(module, functionAnalysisManager);
@@ -471,6 +471,14 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         Logger::getInstance().log("DOT writing took: " + std::to_string(dotTime.count()) + " µs", LOGLEVEL::INFO);
 
         // Precalculate all basic energy values
+
+
+        /**
+         * This block is bogus. We do not need to calculate the energy beforehand...
+         *
+         */
+
+        auto res = sharedGraph->getEnergy();
         for (auto &functionNode : sharedGraph->functions) {
             functionNode->nodeEnergy = std::vector<double>(
                 functionNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
@@ -486,26 +494,26 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             }
         }
 
-    switch (ConfigParser::getAnalysisConfiguration().analysisType) {
-        case AnalysisType::MONOLITHIC:
-            MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
-            break;
-        case AnalysisType::CLUSTERED:
-            ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
-            break;
-        case AnalysisType::COMPARISON:
-            MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
-            ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
-            break;
-        default:
-            llvm::errs() << "Please provide a valid analysis type: monolithic/clustered/legacy/comparison\n";
-            break;
-    }
+        switch (ConfigParser::getAnalysisConfiguration().analysisType) {
+            case AnalysisType::MONOLITHIC:
+                MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
+                break;
+            case AnalysisType::CLUSTERED:
+                ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
+                break;
+            case AnalysisType::COMPARISON:
+                MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
+                ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
+                break;
+            default:
+                llvm::errs() << "Please provide a valid analysis type: monolithic/clustered/legacy/comparison\n";
+                break;
+        }
 
-    /**
-     * TODO Handle the output generated from the methods
-     */
-}
+        /**
+         * TODO Handle the output generated from the methods
+         */
+    }
 
     /**
      * Main runner of the energy pass. The pass will apply module-wise.
