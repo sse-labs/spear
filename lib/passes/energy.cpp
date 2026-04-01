@@ -441,12 +441,20 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
         auto postOrderFuncList = HLAC::Util::getLazyCallGraphPostOrder(module, functionAnalysisManager);
 
+        auto GetTLI = [&functionAnalysisManager](llvm::Function &F) -> llvm::TargetLibraryInfo & {
+            return functionAnalysisManager.getResult<llvm::TargetLibraryAnalysis>(F);
+        };
+
+        llvm::LazyCallGraph LCG(module, GetTLI);
+        LCG.buildRefSCCs();
+
+
         std::vector<std::string> functionNamesInPostOrder;
         for (auto &function : postOrderFuncList) {
             functionNamesInPostOrder.push_back(function->getName().str());
         }
 
-        std::unique_ptr<HLAC::hlac> graph = HLAC::HLACWrapper::makeHLAC(this->resultRegistry);
+        std::unique_ptr<HLAC::hlac> graph = HLAC::HLACWrapper::makeHLAC(this->resultRegistry, LCG);
         std::shared_ptr<HLAC::hlac> sharedGraph = std::move(graph);
 
         auto startConstruction = std::chrono::high_resolution_clock::now();

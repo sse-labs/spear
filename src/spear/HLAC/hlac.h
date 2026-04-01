@@ -10,6 +10,7 @@
 #include <llvm/IR/BasicBlock.h>
 
 #include <catch2/internal/catch_unique_ptr.hpp>
+#include <llvm/Analysis/LazyCallGraph.h>
 #include <map>
 #include <memory>
 #include <ostream>
@@ -407,6 +408,8 @@ class FunctionNode : public GenericNode {
     bool isDebugFunction = false;
     bool isLinkerFunction = false;
 
+    bool isRecursive = false;
+
     /**
      * Create a new FunctionNode and return it
      * @param func Function that will be reprented by the FunctioNode
@@ -458,6 +461,8 @@ class FunctionNode : public GenericNode {
     double getEnergy() override;
 
     std::string calculateHash() override;
+
+    bool isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph);
 
  private:
     /**
@@ -593,6 +598,8 @@ class hlac {
      */
     ResultRegistry registry;
 
+    llvm::LazyCallGraph lazyCallGraph;
+
     /**
      * Simple cache to store the energy of functions that we have already calculated to avoid redundant calculations
      */
@@ -603,7 +610,7 @@ class hlac {
      * @param registry Registry containing the results of the analyses we want to consider for
      * the construction of the HLAC
      */
-    explicit hlac(ResultRegistry registry) : registry(std::move(registry)) {}
+    explicit hlac(ResultRegistry registry, llvm::LazyCallGraph &lcg) : registry(std::move(registry)), lazyCallGraph(std::move(lcg)) {}
 
     /**
      * List of FunctioNodes contained within the HLAC
@@ -656,9 +663,10 @@ class hlac {
     /**
      * Return the energy of a given function
      * @param functionName Name of the function to analyze
+     * @param isRecursive Flag if we are calling recursively
      * @return Energy of the function under analysis
      */
-    double getEnergyPerFunction(std::string functionName);
+    double getEnergyPerFunction(std::string functionName, bool isRecursive);
 
     /**
      * Return the energy of the contained functions

@@ -109,13 +109,27 @@ std::map<std::string, double> hlac::getEnergy() {
     return FunctionEnergyCache;
 }
 
-double hlac::getEnergyPerFunction(std::string functionName) {
+double hlac::getEnergyPerFunction(std::string functionName, bool isRecursive) {
     if (FunctionEnergyCache.contains(functionName)) {
         return FunctionEnergyCache[functionName];
     }
 
-    Logger::getInstance().log("Trying to get energy of " + functionName + " which has not been analyzed yet!", LOGLEVEL::ERROR);
-    return 0.0;
+    /**
+     * We land here if we encounter a call to a function that has not been analyzed yet.
+     * This can happen if we have recursive calls or if we call functions that are not defined in the program
+     * (e.g., library functions).
+     *
+     * Currently both cases return a 0.0.
+     * We could insert a fallback value here
+     */
+
+    if (isRecursive) {
+        Logger::getInstance().log("Trying to get energy of " + functionName + " which is currently being analyzed! This is likely due to recursion. Returning 0.0 for this call.", LOGLEVEL::WARNING);
+        return 0.0;
+    } else {
+        Logger::getInstance().log("Trying to get energy of " + functionName + " which has not been analyzed yet!", LOGLEVEL::ERROR);
+        return 0.0;
+    }
 }
 
 std::optional<ILPModel> hlac::buildMonolithicILP(FunctionNode *functionNode) {

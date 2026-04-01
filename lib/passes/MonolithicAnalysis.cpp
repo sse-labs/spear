@@ -6,6 +6,7 @@
 #include "MonolithicAnalysis.h"
 
 #include "HLAC/hlac.h"
+#include "ILP/ILPUtil.h"
 #include "Logger.h"
 #include "PassUtil.h"
 #include "nlohmann/json.hpp"
@@ -33,6 +34,8 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
 
         if (ilp.has_value()) {
             auto monoSolveStart = std::chrono::high_resolution_clock::now();
+
+            // ILPUtil::printILPModelHumanReadable(funcNode->function->getName().str(), ilp.value());
 
             auto solvedResults = graph->solveMonolithicIlp(ilp.value());
 

@@ -137,15 +137,18 @@ void runAnalysisRoutine(CLIOptions opts) {
     }
 
     // Run feasibility on the optimized module
-    auto startFeas = std::chrono::high_resolution_clock::now();
-    PhasarHandlerPass feasibilityPhasarHandler(false, true);
-    feasibilityPhasarHandler.runOnModule(*moduleOptimized);
-    auto feasibilityResults = feasibilityPhasarHandler.queryFeasibilty();
-    resultRegistry.storeFeasibilityResults(feasibilityResults);
-    auto endFeas = std::chrono::high_resolution_clock::now();
+    if (ConfigParser::getAnalysisConfiguration().feasibilityEnabled) {
+        auto startFeas = std::chrono::high_resolution_clock::now();
+        PhasarHandlerPass feasibilityPhasarHandler(false, true);
+        feasibilityPhasarHandler.runOnModule(*moduleOptimized);
+        auto feasibilityResults = feasibilityPhasarHandler.queryFeasibilty();
+        resultRegistry.storeFeasibilityResults(feasibilityResults);
+        auto endFeas = std::chrono::high_resolution_clock::now();
 
-    auto durationFeas = std::chrono::duration_cast<std::chrono::microseconds>(endFeas - startFeas);
-    std::cout << "Feasibility took: " << durationFeas.count() << " µs\n";
+        auto durationFeas = std::chrono::duration_cast<std::chrono::microseconds>(endFeas - startFeas);
+        std::cout << "Feasibility took: " << durationFeas.count() << " µs\n";
+    }
+
 
     // Run energy on the original module
     {
@@ -165,6 +168,7 @@ void runAnalysisRoutine(CLIOptions opts) {
                                          moduleAnalysisManager);
 
         llvm::ModulePassManager energyMPM;
+
         energyMPM.addPass(Energy(opts.profilePath, resultRegistry));
         energyMPM.run(*moduleOriginal, moduleAnalysisManager);
     }

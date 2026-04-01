@@ -250,11 +250,8 @@ double CallNode::getEnergy() {
     // Logger::getInstance().log("Caller:" + this->parentFunctionNode->function->getName().str());
     auto callername = this->parentFunctionNode->function->getName().str();
     auto calleename = this->calledFunction->getName().str();
-    auto energyOfCallee = parentFunctionNode->parentGraph->getEnergyPerFunction(this->calledFunction->getName().str());
 
-    if (callername == "main") {
-        bool omni = false;
-    }
+    auto energyOfCallee = parentFunctionNode->parentGraph->getEnergyPerFunction(calleename, this->parentFunctionNode->isRecursive);
 
     return energyOfCallee;
 }
