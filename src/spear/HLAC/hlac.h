@@ -9,14 +9,15 @@
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/BasicBlock.h>
 
+#include <catch2/internal/catch_unique_ptr.hpp>
 #include <map>
 #include <memory>
 #include <ostream>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <unordered_map>
 
 #include "ILP/ILPBuilder.h"
 #include "ILP/ILPTypes.h"
@@ -677,36 +678,34 @@ class hlac {
      * @param clusteredResult Mapping of functions to -> (LoopNode -> Clustered ILP Result)
      * @return Mapping of function names to their respective solution of the DAG longest path search
      */
-    std::unordered_map<std::string, DAGLongestPathSolution> DAGLongestPath(
-            std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPResult>> clusteredResult);
+    std::optional<DAGLongestPathSolution> DAGLongestPath(FunctionNode *functionNode, std::unordered_map<LoopNode *, ILPResult> clusteredResult);
 
     /**
      * Build an ILP representation for the contained functions
      * @return Returns mapping between function name and the constructed CoinPackedMatrix representing
      * the ILP for the function
      */
-    std::map<std::string, ILPModel> buildMonolithicILPS();
+    std::optional<ILPModel> buildMonolithicILP(FunctionNode *functionNode);
 
     /**
      * Build clustered ILP representations for the contained functions
      * @return Returns mapping of functionname to
      */
-    std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPModel>> buildClusteredILPS();
+    std::optional<ClusteredILPModel> buildClusteredILPS(FunctionNode *functionNode);
 
     /**
      * Solve the monolithic models of the contained functions
      * @param modelMapping Mapping function name to constructed monolithic ILPModel
      * @return Mapping of function name to monolithic ILP result
      */
-    std::map<std::string, ILPResult> solveMonolithicIlps(const std::map<std::string, ILPModel> &modelMapping);
+    std::optional<ILPResult> solveMonolithicIlp(ILPModel &model);
 
     /**
      * Solve the clustered models of the contained functions
      * @param modelMapping Mapping function name to constructed clustered ILPModel
      * @return Mapping of function name to clustered ILP result
      */
-    std::unordered_map<std::string, ILPClusteredLoopResult> solveClusteredIlps(
-        const std::unordered_map<std::string, ILPLoopModelMapping> &modelMapping);
+    ILPClusteredLoopResult solveClusteredIlps(ILPLoopModelMapping loopModelMapping);
 };
 }  // namespace HLAC
 

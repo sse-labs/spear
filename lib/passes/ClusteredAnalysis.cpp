@@ -23,33 +23,79 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
     auto clusteredTotalStart = std::chrono::high_resolution_clock::now();
 
-    auto clusteredBuildStart = std::chrono::high_resolution_clock::now();
+    auto totalBuildDuration = std::chrono::microseconds::zero();
+    auto totalSolveDuration = std::chrono::microseconds::zero();
+    auto totalDagDuration = std::chrono::microseconds::zero();
 
-    // build the clustered ILPs
-    auto clusteredILPs = graph->buildClusteredILPS();
-    auto clusteredBuildEnd = std::chrono::high_resolution_clock::now();
+    for (auto &funcNode : graph->functions) {
+        auto sortedNodeList = funcNode->topologicalSortedRepresentationOfNodes;
+        funcNode->nodeEnergy.resize(sortedNodeList.size());
 
-    auto clusteredBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-        clusteredBuildEnd - clusteredBuildStart);
+        // Set energy vector...
+        // TODO: Find a smarter way to do this elsewhere...
+        for (std::size_t index = 0; index < sortedNodeList.size(); ++index) {
+            HLAC::GenericNode *node = sortedNodeList[index];
 
-    auto clusteredSolveStart = std::chrono::high_resolution_clock::now();
+            if (dynamic_cast<HLAC::LoopNode *>(node) != nullptr) {
+                continue;
+            }
 
-    // Solve the clustered ILPs of the program
-    auto clusteredSolvedResults = graph->solveClusteredIlps(clusteredILPs);
-    auto clusteredSolveEnd = std::chrono::high_resolution_clock::now();
+            funcNode->nodeEnergy[index] = node->getEnergy();
+        }
 
-    auto clusteredSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-        clusteredSolveEnd - clusteredSolveStart);
+        auto clusteredBuildStart = std::chrono::high_resolution_clock::now();
 
+        // build the clustered ILPs
+        auto clusteredILPs = graph->buildClusteredILPS(funcNode.get());
 
-    auto clusteredDagStart = std::chrono::high_resolution_clock::now();
+        auto clusteredBuildEnd = std::chrono::high_resolution_clock::now();
+        auto clusteredBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+            clusteredBuildEnd - clusteredBuildStart);
+        totalBuildDuration += clusteredBuildDuration;
 
-    // Calculate the longest path (= most expensive path) from the clustered results
-    auto dagResults = graph->DAGLongestPath(clusteredSolvedResults);
+        if (clusteredILPs.has_value()) {
+            auto clusteredSolveStart = std::chrono::high_resolution_clock::now();
 
-    auto clusteredDagEnd = std::chrono::high_resolution_clock::now();
-    auto clusteredDagDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-        clusteredDagEnd - clusteredDagStart);
+            // Solve the clustered ILPs of the program
+            auto clusteredSolvedResults = graph->solveClusteredIlps(clusteredILPs.value());
+
+            auto clusteredSolveEnd = std::chrono::high_resolution_clock::now();
+            auto clusteredSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                clusteredSolveEnd - clusteredSolveStart);
+            totalSolveDuration += clusteredSolveDuration;
+
+            auto solvedResults = clusteredSolvedResults;
+
+            auto dagStart = std::chrono::high_resolution_clock::now();
+
+            // Calculate the longest path (= most expensive path) from the clustered results
+            auto dagResults = graph->DAGLongestPath(funcNode.get(), solvedResults);
+
+            auto dagEnd = std::chrono::high_resolution_clock::now();
+            auto dagDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+                dagEnd - dagStart);
+            totalDagDuration += dagDuration;
+
+            funcNode->nodeEnergy = std::vector<double>(funcNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
+
+            // Trace the taken path and print the result of the clustered approach
+            if (dagResults.has_value()) {
+                auto resultPair = dagResults.value();
+                auto resVector = resultPair.longestPath;
+                auto funcName = funcNode->function->getName().str();
+                auto funcEnergy = resultPair.WCEC;
+
+                graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
+
+                Logger::getInstance().log(
+                    "Clustered Energy of " + funcName + ": " + formatScientific(funcEnergy) + " J",
+                    LOGLEVEL::HIGHLIGHT
+                );
+
+                //graph->printDotRepresentationWithSolution(graph->getFunctionByName(funcName), resVector, "clustered");
+            }
+        }
+    }
 
     auto clusteredTotalEnd = std::chrono::high_resolution_clock::now();
     auto clusteredTotalDuration = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -57,24 +103,14 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
     if (showTimings) {
         auto &logger = Logger::getInstance();
-        logger.log("Clustered ILP Build Time: " + std::to_string(clusteredBuildDuration.count()) + " µs", LOGLEVEL::INFO);
-        logger.log("Clustered ILP Solve Time: " + std::to_string(clusteredSolveDuration.count()) + " µs", LOGLEVEL::INFO);
-        logger.log("DAG Longest Path Time: " + std::to_string(clusteredDagDuration.count()) + " µs", LOGLEVEL::INFO);
-        logger.log("Clustered Total Time: " + std::to_string(clusteredTotalDuration.count()) + " µs", LOGLEVEL::INFO);
-    }
-
-    // Trace the taken path and print the result of the clustered approach
-    for (const auto &[funcName, resultpair] : dagResults) {
-        auto resVector = resultpair.longestPath;
-
-        auto loopResults = clusteredSolvedResults[funcName];
-
-        Logger::getInstance().log(
-            "Clustered Energy of " + funcName + ": " + formatScientific(resultpair.WCEC) + " J",
-            LOGLEVEL::HIGHLIGHT
-        );
-
-        graph->printDotRepresentationWithSolution(graph->getFunctionByName(funcName), resVector, "clustered");
+        logger.log("Clustered ILP Build Time: " + std::to_string(totalBuildDuration.count()) + " µs",
+                   LOGLEVEL::INFO);
+        logger.log("Clustered ILP Solve Time: " + std::to_string(totalSolveDuration.count()) + " µs",
+                   LOGLEVEL::INFO);
+        logger.log("Clustered DAG Time: " + std::to_string(totalDagDuration.count()) + " µs",
+                   LOGLEVEL::INFO);
+        logger.log("Clustered Total Time: " + std::to_string(clusteredTotalDuration.count()) + " µs",
+                   LOGLEVEL::INFO);
     }
 
     clusterCache.writeBackCache();

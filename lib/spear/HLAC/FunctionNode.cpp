@@ -320,15 +320,6 @@ double FunctionNode::getEnergy() {
     // DAG search based approach
     double energy = 0.0;
 
-    // DUMMY CALCULATION
-    // Just sum up the energy of all contained nodes for now, this is not the actual energy calculation we want to do
-    // in the end, but it is sufficient for testing purposes
-    for (auto &node : this->Nodes) {
-        energy += node->getEnergy();
-    }
-
-    // After the energy is calculated store it in the energy cache of the parent graph to avoid redundant calculations
-    this->parentGraph->FunctionEnergyCache[this->function->getName().str()] = energy;
     return energy;
 }
 

@@ -470,30 +470,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
         Logger::getInstance().log("DOT writing took: " + std::to_string(dotTime.count()) + " µs", LOGLEVEL::INFO);
 
-        // Precalculate all basic energy values
-
-
-        /**
-         * This block is bogus. We do not need to calculate the energy beforehand...
-         *
-         */
-
-        auto res = sharedGraph->getEnergy();
-        for (auto &functionNode : sharedGraph->functions) {
-            functionNode->nodeEnergy = std::vector<double>(
-                functionNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
-
-            for (std::size_t index = 0; index < functionNode->topologicalSortedRepresentationOfNodes.size(); ++index) {
-                HLAC::GenericNode *node = functionNode->topologicalSortedRepresentationOfNodes[index];
-
-                if (dynamic_cast<HLAC::LoopNode *>(node) != nullptr) {
-                    continue;
-                }
-
-                functionNode->nodeEnergy[index] = node->getEnergy();
-            }
-        }
-
         switch (ConfigParser::getAnalysisConfiguration().analysisType) {
             case AnalysisType::MONOLITHIC:
                 MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
