@@ -70,6 +70,10 @@ class Node {
 
     double energy;
 
+    bool hasCachedTotalEnergy = false;
+    double cachedTotalEnergy = 0.0;
+    bool isCurrentlyEvaluating = false;
+
     /**
      * The strategy the analysis should follow
      */

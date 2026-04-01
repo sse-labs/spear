@@ -6,13 +6,14 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <cfloat>
 
 #include "ProgramGraph.h"
 #include "DeMangler.h"
 #include "PhasarHandler.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
+
+#define CACHINGENABLED true
 
 // Create a Node by setting the parent property with the given ProgramGraph
 Node::Node(ProgramGraph *parent, AnalysisStrategy::Strategy strategy) : block(nullptr), energy(0) {
@@ -116,111 +117,112 @@ const DomainVal* Node::findDeducedValue(BoundVarMap *resultsAtBlock, std::string
 
 // Calculate the energy of this Node. Is capable of dealing with if-conditions
 double Node::getNodeEnergy(LLVMHandler *handler) {
-    auto context = llvm::LLVMContext();
-    // Init the result of the calculation
-    double sum = 0.0;
+    if (hasCachedTotalEnergy) {
+        return cachedTotalEnergy;
+    }
 
-    // Calculate the adjacent nodes of this node
+    if (isCurrentlyEvaluating) {
+        // Cycle detected
+        // You need a real strategy here. Returning 0.0 is only a placeholder.
+        return 0.0;
+    }
+
+    isCurrentlyEvaluating = true;
+
+    double sum = 0.0;
     auto adjacentNodes = this->getAdjacentNodes();
 
-    llvm::BasicBlock *bToTake = nullptr;
+    if (!adjacentNodes.empty()) {
+        switch (this->strategy) {
+            case AnalysisStrategy::WORSTCASE: {
+                double maxPathEnergy = 0.0;
+                bool foundValidSuccessor = false;
 
-    const llvm::Instruction *TI = this->block->getTerminator();
-    if (TI) {
-        const auto *BI = llvm::dyn_cast<llvm::BranchInst>(TI);
-        bool isAnIf = BI && BI->isConditional();
-        llvm::outs() << "Block " << this->block->getName().str() << " if: " << isAnIf << "\n";
-        llvm::outs() << "\t Adjacent => " << adjacentNodes.size() << "\n";
-
-        if (!adjacentNodes.empty()) {
-            // Find the smallest energy-value-path of all the adjacent nodes
-            // Init the minimal pathvalue
-            auto compare = 0.00;
-
-            switch (this->strategy) {
-                case AnalysisStrategy::WORSTCASE :
-                    compare = DBL_MIN;
-
-                    // Iterate over the adjacent nodes
-                    for (auto node : adjacentNodes) {
-                        // Calculate the sum of the node
-                        if (!node->isExceptionFollowUp()) {
-                            double locsum = node->getNodeEnergy(handler);
-
-                            // Set the minimal energy value if the calculated energy is smaller than the current minimum
-                            if (locsum > compare) {
-                                compare = locsum;
-                            }
-                        }
+                for (auto *adjacentNode : adjacentNodes) {
+                    if (adjacentNode->isExceptionFollowUp()) {
+                        continue;
                     }
 
-                    sum += compare;
-                    break;
-                case AnalysisStrategy::BESTCASE :
-                    compare = DBL_MAX;
+                    double successorEnergy = adjacentNode->getNodeEnergy(handler);
+                    if (!foundValidSuccessor || successorEnergy > maxPathEnergy) {
+                        maxPathEnergy = successorEnergy;
+                        foundValidSuccessor = true;
+                    }
+                }
 
-                    // Iterate over the adjacent nodes
-                    for (auto node : adjacentNodes) {
-                        // Calculate the sum of the node
-                        double locsum = node->getNodeEnergy(handler);
+                if (foundValidSuccessor) {
+                    sum += maxPathEnergy;
+                }
+                break;
+            }
 
-                        // Set the minimal energy value if the calculated energy is smaller than the current minimum
-                        if (!node->isExceptionFollowUp()) {
-                            if (locsum < compare) {
-                                compare = locsum;
-                            }
-                        }
+            case AnalysisStrategy::BESTCASE: {
+                double minPathEnergy = 0.0;
+                bool foundValidSuccessor = false;
+
+                for (auto *adjacentNode : adjacentNodes) {
+                    if (adjacentNode->isExceptionFollowUp()) {
+                        continue;
                     }
 
-                    sum += compare;
-                    break;
-                case AnalysisStrategy::AVERAGECASE :
-                    double locsum = 0.00;
+                    double successorEnergy = adjacentNode->getNodeEnergy(handler);
+                    if (!foundValidSuccessor || successorEnergy < minPathEnergy) {
+                        minPathEnergy = successorEnergy;
+                        foundValidSuccessor = true;
+                    }
+                }
 
-                    if (adjacentNodes.size() > 1) {
-                        double leftSum = adjacentNodes[0]->getNodeEnergy(handler);
-                        double rightSum = adjacentNodes[1]->getNodeEnergy(handler);
+                if (foundValidSuccessor) {
+                    sum += minPathEnergy;
+                }
+                break;
+            }
 
-                        if (handler->inefficient <= handler->efficient) {
-                            if (adjacentNodes[0]->isExceptionFollowUp()) {
-                                locsum += rightSum;
-                            } else if (adjacentNodes[1]->isExceptionFollowUp()) {
-                                locsum += leftSum;
-                            } else {
-                                locsum += std::max(leftSum, rightSum);
-                                handler->inefficient++;
-                            }
+            case AnalysisStrategy::AVERAGECASE: {
+                double pathEnergy = 0.0;
 
-                        } else {
-                            if (adjacentNodes[0]->isExceptionFollowUp()) {
-                                locsum += rightSum;
-                            } else if (adjacentNodes[1]->isExceptionFollowUp()) {
-                                locsum += leftSum;
-                            } else {
-                                locsum += std::min(leftSum, rightSum);
-                                handler->efficient++;
-                            }
-                        }
+                if (adjacentNodes.size() > 1) {
+                    Node *leftNode = adjacentNodes[0];
+                    Node *rightNode = adjacentNodes[1];
+
+                    double leftEnergy = leftNode->isExceptionFollowUp() ? 0.0 : leftNode->getNodeEnergy(handler);
+                    double rightEnergy = rightNode->isExceptionFollowUp() ? 0.0 : rightNode->getNodeEnergy(handler);
+
+                    if (leftNode->isExceptionFollowUp()) {
+                        pathEnergy = rightEnergy;
+                    } else if (rightNode->isExceptionFollowUp()) {
+                        pathEnergy = leftEnergy;
+                    } else if (handler->inefficient <= handler->efficient) {
+                        pathEnergy = std::max(leftEnergy, rightEnergy);
+                        handler->inefficient++;
                     } else {
-                        locsum = adjacentNodes[0]->getNodeEnergy(handler);
+                        pathEnergy = std::min(leftEnergy, rightEnergy);
+                        handler->efficient++;
                     }
-                    sum += locsum;
+                } else {
+                    Node *onlySuccessor = adjacentNodes[0];
+                    if (!onlySuccessor->isExceptionFollowUp()) {
+                        pathEnergy = onlySuccessor->getNodeEnergy(handler);
+                    }
+                }
 
-                    break;
+                sum += pathEnergy;
+                break;
             }
         }
     }
 
-    auto nodename = this->block->getName();
-
-    // Calculate the energy-cost of this node's basic blocks and add it to the sum
     double localEnergy = handler->getNodeSum(this);
-    sum = sum + localEnergy;
-
     this->energy = localEnergy;
+    sum += localEnergy;
 
-    // Return the calculated energy
-    return sum;
+    cachedTotalEnergy = sum;
+    if (CACHINGENABLED) {
+        hasCachedTotalEnergy = true;
+    }
+    isCurrentlyEvaluating = false;
+
+    return cachedTotalEnergy;
 }
 
 // Calculate the adjacent Nodes

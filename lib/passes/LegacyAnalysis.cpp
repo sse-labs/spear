@@ -21,6 +21,8 @@ nlohmann::json LegacyAnalysis::run(
     Logger::getInstance().log("Running Legacy Analysis for Energy", LOGLEVEL::INFO);
 
     if (functionTree != nullptr) {
+        auto legacyTotalStart = std::chrono::high_resolution_clock::now();
+
         std::vector<llvm::StringRef> names;
         for (auto function : functionTree->getPreOrderVector()) {
             names.push_back(function->getName());
@@ -28,6 +30,8 @@ nlohmann::json LegacyAnalysis::run(
 
         const auto &preOrder = functionTree->getPreOrderVector();
         std::vector<EnergyFunction> funcPool(preOrder.size());
+
+        auto legacyPreparationStart = std::chrono::high_resolution_clock::now();
 
         for (int i = 0; i < functionTree->getPreOrderVector().size(); i++) {
             // Construct a new EnergyFunction to the current function
@@ -43,20 +47,32 @@ nlohmann::json LegacyAnalysis::run(
             funcPool[i].name = DeMangler::demangle(function->getName().str());
         }
 
+        auto legacyPreparationEnd = std::chrono::high_resolution_clock::now();
+        auto legacyPreparationDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+            legacyPreparationEnd - legacyPreparationStart);
+
         // Init the LLVMHandler with the given model and the upper bound for
         // unbounded loops
 
         bool deepCallsEnabled = ConfigParser::getAnalysisConfiguration().legacyconfig.deepcalls;
 
+        auto legacyHandlerInitStart = std::chrono::high_resolution_clock::now();
+
         LLVMHandler handler = LLVMHandler(ProfileHandler::get_instance().getProfile(), deepCallsEnabled, funcPool.data(),
                                           functionTree->getPreOrderVector().size());
+
+        auto legacyHandlerInitEnd = std::chrono::high_resolution_clock::now();
+        auto legacyHandlerInitDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+            legacyHandlerInitEnd - legacyHandlerInitStart);
+
+        auto legacyAnalysisStart = std::chrono::high_resolution_clock::now();
 
         for (int i = 0; i < functionTree->getPreOrderVector().size(); i++) {
             llvm::Function *function = functionTree->getPreOrderVector()[i];
 
             // Check if the current function is external. Analysis of external
             // functions, that only were declared, will result in an infinite loop
-            if (!function->isDeclarationForLinker()) {
+            if (!function->isDeclarationForLinker() && !function->getName().contains("llvm.dbg")) {
                 // Calculate the energy
                 constructProgramRepresentation(funcPool[i].programGraph, &funcPool[i], &handler,
                                                &FAM, AnalysisStrategy::WORSTCASE);
@@ -64,6 +80,26 @@ nlohmann::json LegacyAnalysis::run(
             } else {
                 funcPool[i].programGraph = nullptr;
             }
+        }
+
+        auto legacyAnalysisEnd = std::chrono::high_resolution_clock::now();
+        auto legacyAnalysisDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+            legacyAnalysisEnd - legacyAnalysisStart);
+
+        auto legacyTotalEnd = std::chrono::high_resolution_clock::now();
+        auto legacyTotalDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+            legacyTotalEnd - legacyTotalStart);
+
+        if (showTimings) {
+            auto &logger = Logger::getInstance();
+            logger.log("Legacy Preparation Time: " + std::to_string(legacyPreparationDuration.count()) + " µs",
+                       LOGLEVEL::INFO);
+            logger.log("Legacy Handler Init Time: " + std::to_string(legacyHandlerInitDuration.count()) + " µs",
+                       LOGLEVEL::INFO);
+            logger.log("Legacy Analysis Time: " + std::to_string(legacyAnalysisDuration.count()) + " µs",
+                       LOGLEVEL::INFO);
+            logger.log("Legacy Total Time: " + std::to_string(legacyTotalDuration.count()) + " µs",
+                       LOGLEVEL::INFO);
         }
 
         // this->stopwatch_end = std::chrono::steady_clock::now();
@@ -129,59 +165,23 @@ void LegacyAnalysis::constructProgramRepresentation(ProgramGraph *pGraph, Energy
         }
 
         //energyCalculation(pGraph, handler, function);
-        //energyFunc->energy = pGraph->getEnergy(handler);
-        // Print only the currently available ProgramGraph pgraph to std::cout
-        if (pGraph == nullptr) {
-            std::cerr << "Error: ProgramGraph is null, nothing to print.\n";
-            return;
-        }
-
-        std::cout << "digraph SPEARGRAPH {\n";
-        std::cout << "compound=true;\n";
-        std::cout << "rankdir=\"TB\";\n";
-        std::cout << "nodesep=1.5;\n";
-        std::cout << "ranksep=1.5;\n";
-        std::cout << "linelength=30;\n";
-        std::cout << "graph[fontname=Arial]\n";
-        std::cout << "node[fontname=Arial, shape=\"rect\"]\n";
-        std::cout << "edge[fontname=Arial]\n";
-
-        // Compute energy for labeling
-        double maxEnergy = 0.0;
-
-        // Wrap in a single cluster
-        std::cout << "subgraph cluster_pgraph {\n";
-        std::cout << "rank=\"same\"\n";
-        std::cout << "margin=40\n";
-        std::cout << "bgcolor=white\n";
-        std::cout << "cluster=true\n";
-        std::cout << "\tlabel=<<b>ProgramGraph</b><br/>" << maxEnergy << " J>\n";
-
-        // Print the actual graph content
-        std::cout << pGraph->printDotRepresentation();
-
-        std::cout << "}\n";
-
-        // Optional: scale legend
-        std::cout << "subgraph scale {\n";
-        std::cout << "scale_image [label=\"\" shape=none image=\"/usr/share/spear/scale.png\"];\n";
-        std::cout << "margin=40\n";
-        std::cout << "bgcolor=white\n";
-        std::cout << "}\n";
-
-        std::cout << "}\n";
+        energyFunc->energy = pGraph->getEnergy(handler);
 
         Logger::getInstance().log(
             "Legacy Energy of " + energyFunc->name + ": " + formatScientific(energyFunc->energy) + " J",
             LOGLEVEL::HIGHLIGHT
         );
     }else{
-        //energyCalculation(pGraph, handler, function);
-        energyFunc->energy = pGraph->getEnergy(handler);
-        Logger::getInstance().log(
-            "Legacy Energy of " + energyFunc->name + ": " + formatScientific(energyFunc->energy) + " J",
-            LOGLEVEL::HIGHLIGHT
-        );
+        if (pGraph != nullptr) {
+            //energyCalculation(pGraph, handler, function);
+            energyFunc->energy = pGraph->getEnergy(handler);
+            Logger::getInstance().log(
+                "Legacy Energy of " + energyFunc->name + ": " + formatScientific(energyFunc->energy) + " J",
+                LOGLEVEL::HIGHLIGHT
+            );
+        }
+
+
     }
     delete domtree;
 }
