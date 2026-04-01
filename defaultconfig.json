@@ -14,7 +14,7 @@
     }
   },
   "analysis": {
-    "type": "monolithic",
+    "type": "comparison",
     "clusteredCacheEnabled": false,
     "feasibilityEnabled": true,
     "legacyConfig": {

@@ -48,6 +48,33 @@ class FeasibilityAnalysisManager {
     using ExprSet = std::set<z3::expr, ExpressionComperator>;
 
     /**
+     * Struct representing a key for caching canonical formula sets.
+     * The key is based on the AST ids of the formulas in the set
+     */
+    struct SetKey {
+        std::vector<unsigned> astIds;
+
+        bool operator==(const SetKey &other) const noexcept {
+            return astIds == other.astIds;
+        }
+    };
+
+    /**
+     * Hash function for SetKey, used for storing SetKeys in unordered containers (e.g., std::unordered_map).
+     */
+    struct SetKeyHash {
+        std::size_t operator()(const SetKey &key) const noexcept {
+            std::size_t hashValue = 0x9e3779b97f4a7c15ULL;
+
+            for (unsigned astId : key.astIds) {
+                hashValue ^= std::hash<unsigned>{}(astId) + 0x9e3779b97f4a7c15ULL + (hashValue << 6) + (hashValue >> 2);
+            }
+
+            return hashValue;
+        }
+    };
+
+    /**
      * Default constructor for FeasibilityAnalysisManager.
      * Initializes the Z3 context and solver, and reserves initial IDs for the formula sets.
      * @param ctx Context for Z3 expressions, passed as a unique pointer to ensure proper ownership
@@ -147,6 +174,13 @@ class FeasibilityAnalysisManager {
      */
     std::vector<z3::expr> getPureSet(uint32_t id) const;
 
+    /**
+     * Create a key for the given expression set
+     * @param set Set to generate the key for
+     * @return Generated SetKey
+     */
+    SetKey makeSetKey(const ExprSet &set) const;
+
  private:
     /**
      * Internal storage for the Z3 context used by this manager.
@@ -193,7 +227,7 @@ class FeasibilityAnalysisManager {
      * to avoid creating duplicate sets. The key is a hash of the set of atomic formulas, and the value is a
      * vector of IDs of sets that have the same hash.
      */
-    std::unordered_map<std::size_t, std::vector<uint32_t>> SetsCache;
+    std::unordered_map<SetKey, uint32_t, SetKeyHash> CanonicalSetCache;
 
     /**
      * Mutex to ensure mutual exclusion when accessing the set cache

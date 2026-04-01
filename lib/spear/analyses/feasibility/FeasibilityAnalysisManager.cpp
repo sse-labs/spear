@@ -44,39 +44,30 @@ std::size_t FeasibilityAnalysisManager::hashSet(const ExprSet &S) {
   return h;
 }
 
-uint32_t FeasibilityAnalysisManager::internSet(const ExprSet &S) {
-  // If the set is empty, we return the reserved ID for the top element, which is the empty set of formulas
-  if (S.empty()) {
-    return FeasibilityElement::topId;
-  }
-
-  // Otherwise calculate the hash
-  const std::size_t h = hashSet(S);
-
-  // Query the cache for the bucket containing candidates with the same hash
-  std::lock_guard<std::mutex> lock(SetsMutex);
-  auto &bucket = SetsCache[h];
-
-  // Check existing candidates for equality to avoid hash collision issues.
-  for (uint32_t cand : bucket) {
-    auto set = getSet(cand);
-
-    if (set.size() != S.size()) {
-      continue;
+uint32_t FeasibilityAnalysisManager::internSet(const ExprSet &set) {
+    // If the set is empty, we return the reserved ID for the top element,
+    if (set.empty()) {
+        return FeasibilityElement::topId;
     }
 
-    // If we find a valid return the set id
-    if (set == S) {
-      return cand;
-    }
-  }
+    // Otherwise calculate the key
+    const SetKey key = makeSetKey(set);
 
-  // If we did not find a valid candidate, we need to add the new set to the manager and cache it.
-  // We add it to the end of the set storage and return the new ID.
-  const uint32_t newId = static_cast<uint32_t>(Sets.size());
-  Sets.push_back(S);
-  bucket.push_back(newId);
-  return newId;
+    std::lock_guard<std::mutex> lock(SetsMutex);
+
+    // Query the cache for the bucket containing candidates with the same hash
+    auto existing = CanonicalSetCache.find(key);
+    if (existing != CanonicalSetCache.end()) {
+        return existing->second;
+    }
+
+    // If we did not find a valid candidate, we need to add the new set to the manager and cache it.
+    // We add it to the end of the set storage and return the new ID.
+    const uint32_t newId = static_cast<uint32_t>(Sets.size());
+    Sets.push_back(set);
+    CanonicalSetCache.emplace(key, newId);
+
+    return newId;
 }
 
 uint32_t FeasibilityAnalysisManager::addAtom(uint32_t baseId, const z3::expr &atom) {
@@ -373,6 +364,20 @@ uint32_t FeasibilityAnalysisManager::applyPhiPack(uint32_t inEnvId,
   }
 
   return env;
+}
+
+FeasibilityAnalysisManager::SetKey FeasibilityAnalysisManager::makeSetKey(const ExprSet &set) const {
+    SetKey key;
+    key.astIds.reserve(set.size());
+
+    for (const auto &expression : set) {
+        key.astIds.push_back(Z3_get_ast_id(expression.ctx(), expression));
+    }
+
+    std::sort(key.astIds.begin(), key.astIds.end());
+    key.astIds.erase(std::unique(key.astIds.begin(), key.astIds.end()), key.astIds.end());
+
+    return key;
 }
 
 }  // namespace Feasibility
