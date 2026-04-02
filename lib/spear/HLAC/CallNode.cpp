@@ -28,6 +28,7 @@ CallNode::CallNode(llvm::Function *calls, llvm::CallBase *call, FunctionNode *pa
     this->isSyscall = checkIfIsSyscall();
     this->isDebugFunction = calledFunction->getName().startswith("llvm.");
     this->parentFunctionNode = parent;
+    this->nodeType = NodeType::CALLNODE;
 
     this->hash = this->CallNode::calculateHash();
 }

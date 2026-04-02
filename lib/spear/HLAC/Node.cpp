@@ -24,6 +24,7 @@ std::unique_ptr<Node> Node::makeNode(llvm::BasicBlock *basic_block) {
     node->block = basic_block;
     node->name = basic_block->getName();
     node->hash = node->calculateHash();
+    node->nodeType = NodeType::NODE;
 
     return node;
 }

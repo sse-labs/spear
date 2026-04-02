@@ -23,6 +23,7 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
     this->hasSubLoops = !loop->getSubLoops().empty();
     this->bounds = LoopBound::DeltaInterval();
     this->parentFunction = parentFunctionNode;
+    this->nodeType = NodeType::LOOPNODE;
 
     auto fName = function_node->function->getName().str();
     auto loopName = loop->getName().str();

@@ -19,33 +19,33 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
     bool clusteredCacheEnabled = ConfigParser::getAnalysisConfiguration().cachingEnabled;
     ILPClusterCache clusterCache("cluster_cache.json", clusteredCacheEnabled);
 
-    // ================= Clustered ILP  =================
-
-    auto clusteredTotalStart = std::chrono::high_resolution_clock::now();
-
+    auto totalGetEnergyInitDuration = std::chrono::microseconds::zero();
     auto totalBuildDuration = std::chrono::microseconds::zero();
     auto totalSolveDuration = std::chrono::microseconds::zero();
     auto totalDagDuration = std::chrono::microseconds::zero();
 
+    auto clusteredTotalStart = std::chrono::high_resolution_clock::now();
+
+    // ================= Clustered ILP  =================
+
     for (auto &funcNode : graph->functions) {
-        auto &sortedNodeList = funcNode->topologicalSortedRepresentationOfNodes;
-        auto &nodeEnergy = funcNode->nodeEnergy;
+        auto getEnergyInitStart = std::chrono::high_resolution_clock::now();
+        funcNode->nodeEnergy = funcNode->baseNodeEnergy;
 
-        if (nodeEnergy.size() != sortedNodeList.size()) {
-            nodeEnergy.resize(sortedNodeList.size());
-        }
+        for (const auto &binding : funcNode->callNodeBindings) {
+            auto cacheIterator = graph->FunctionEnergyCache.find(binding.calleeName);
 
-        std::fill(nodeEnergy.begin(), nodeEnergy.end(), 0.0);
-
-        for (std::size_t index = 0; index < sortedNodeList.size(); ++index) {
-            HLAC::GenericNode *currentNode = sortedNodeList[index];
-
-            if (dynamic_cast<HLAC::LoopNode *>(currentNode) != nullptr) {
-                continue;
+            if (cacheIterator != graph->FunctionEnergyCache.end()) {
+                funcNode->nodeEnergy[binding.nodeIndex] = cacheIterator->second;
+            } else {
+                funcNode->nodeEnergy[binding.nodeIndex] = 0.0;
             }
-
-            nodeEnergy[index] = currentNode->getEnergy();
         }
+
+        auto getEnergyInitEnd = std::chrono::high_resolution_clock::now();
+        auto getEnergyInitDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+            getEnergyInitEnd - getEnergyInitStart);
+        totalGetEnergyInitDuration += getEnergyInitDuration;
 
         auto clusteredBuildStart = std::chrono::high_resolution_clock::now();
 
@@ -112,6 +112,8 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
     if (showTimings) {
         auto &logger = Logger::getInstance();
+        logger.log("Clustered getEnergy Init Time: " + std::to_string(totalGetEnergyInitDuration.count()) + " µs",
+                   LOGLEVEL::INFO);
         logger.log("Clustered ILP Build Time: " + std::to_string(totalBuildDuration.count()) + " µs",
                    LOGLEVEL::INFO);
         logger.log("Clustered ILP Solve Time: " + std::to_string(totalSolveDuration.count()) + " µs",

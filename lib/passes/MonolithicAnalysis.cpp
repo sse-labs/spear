@@ -19,10 +19,29 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
 
     auto monoTotalStart = std::chrono::high_resolution_clock::now();
 
+    auto totalGetEnergyInitDuration = std::chrono::microseconds::zero();
     auto totalBuildDuration = std::chrono::microseconds::zero();
     auto totalSolveDuration = std::chrono::microseconds::zero();
 
     for (auto &funcNode : graph->functions) {
+        auto getEnergyInitStart = std::chrono::high_resolution_clock::now();
+        funcNode->nodeEnergy = funcNode->baseNodeEnergy;
+
+        for (const auto &binding : funcNode->callNodeBindings) {
+            auto cacheIterator = graph->FunctionEnergyCache.find(binding.calleeName);
+
+            if (cacheIterator != graph->FunctionEnergyCache.end()) {
+                funcNode->nodeEnergy[binding.nodeIndex] = cacheIterator->second;
+            } else {
+                funcNode->nodeEnergy[binding.nodeIndex] = 0.0;
+            }
+        }
+
+        auto getEnergyInitEnd = std::chrono::high_resolution_clock::now();
+        auto getEnergyInitDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+            getEnergyInitEnd - getEnergyInitStart);
+        totalGetEnergyInitDuration += getEnergyInitDuration;
+
         auto monoBuildStart = std::chrono::high_resolution_clock::now();
 
         // Build one big ILP for the program under analysis

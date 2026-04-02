@@ -476,6 +476,35 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
         Logger::getInstance().log("DOT writing took: " + std::to_string(dotTime.count()) + " µs", LOGLEVEL::INFO);
 
+        for (auto &functionNode : sharedGraph->functions) {
+            auto &sortedNodeList = functionNode->topologicalSortedRepresentationOfNodes;
+
+            functionNode->baseNodeEnergy.resize(sortedNodeList.size(), 0.0);
+            functionNode->nodeEnergy.resize(sortedNodeList.size(), 0.0);
+            functionNode->callNodeBindings.clear();
+
+            for (std::size_t index = 0; index < sortedNodeList.size(); ++index) {
+                HLAC::GenericNode *currentNode = sortedNodeList[index];
+
+                if (currentNode->nodeType == HLAC::NodeType::LOOPNODE) {
+                    continue;
+                }
+
+                if (currentNode->nodeType == HLAC::NodeType::CALLNODE) {
+                    auto *callNode = static_cast<HLAC::CallNode *>(currentNode);
+                    HLAC::FunctionNode::CallNodeBinding binding;
+                    binding.nodeIndex = index;
+                    binding.calleeName = callNode->calledFunction->getName().str();
+                    functionNode->callNodeBindings.push_back(binding);
+                    continue;
+                }
+
+                functionNode->baseNodeEnergy[index] = currentNode->getEnergy();
+            }
+
+            functionNode->nodeEnergy = functionNode->baseNodeEnergy;
+            functionNode->baseNodeEnergyInitialized = true;
+        }
 
         switch (ConfigParser::getAnalysisConfiguration().analysisType) {
             case AnalysisType::MONOLITHIC:
@@ -486,6 +515,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 break;
             case AnalysisType::COMPARISON:
                 MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
+                sharedGraph->FunctionEnergyCache.clear();
                 ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
                 break;
             default:

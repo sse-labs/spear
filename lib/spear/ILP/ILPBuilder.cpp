@@ -15,6 +15,7 @@
 #include "ILP/ILPSolver.h"
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
+#include "PassUtil.h"
 
 void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode *func) {
     // Iterate over the edges in the function node
@@ -239,7 +240,16 @@ void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::FunctionNode *func
     // For all edges in this functionnode set the objective vector values
     for (auto &edgeUP : func->Edges) {
         auto *edge = edgeUP.get();
-        model.obj[edge->ilpIndex] = edge->destination->getEnergy();
+
+        auto indexIterator = func->nodeLookup.find(edge->destination);
+        if (indexIterator == func->nodeLookup.end()) {
+            Logger::getInstance().log(
+                "Warning: edge with destination node not found in node lookup while filling objective function.",
+                LOGLEVEL::ERROR);
+            continue;
+        }
+
+        model.obj[edge->ilpIndex] = func->nodeEnergy[indexIterator->second];
     }
 
     // Then we need to check all contained loopnodes

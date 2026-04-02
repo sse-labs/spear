@@ -39,6 +39,7 @@ FunctionNode::FunctionNode(llvm::Function *function,
     this->name = function->getName();
     this->isLinkerFunction = function->isDeclarationForLinker();
     this->parentGraph = parentGraph;
+    this->nodeType = NodeType::FUNCTIONNODE;
 
     // Determine if the function is a LLVM debug function
     if (HLAC::Util::starts_with(this->name, "llvm.")) {

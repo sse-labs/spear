@@ -35,6 +35,16 @@ class FunctionNode;
 class GenericNode;
 class LoopNode;
 
+
+enum class NodeType {
+    UNDEFINED = 999,
+    NODE = 0,
+    LOOPNODE = 1,
+    CALLNODE = 2,
+    FUNCTIONNODE = 3,
+    VIRTUALNODE = 4,
+};
+
 /**
  * Polymorphic generic node type
  */
@@ -46,6 +56,8 @@ class GenericNode {
     std::string name;
 
     std::string hash;
+
+    NodeType nodeType = NodeType::UNDEFINED;
 
     /**
      * Base dot representation printing
@@ -409,6 +421,15 @@ class FunctionNode : public GenericNode {
     bool isLinkerFunction = false;
 
     bool isRecursive = false;
+
+    struct CallNodeBinding {
+        std::size_t nodeIndex;
+        std::string calleeName;
+    };
+
+    std::vector<double> baseNodeEnergy;
+    std::vector<CallNodeBinding> callNodeBindings;
+    bool baseNodeEnergyInitialized = false;
 
     /**
      * Create a new FunctionNode and return it
