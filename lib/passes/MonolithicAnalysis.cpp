@@ -64,6 +64,9 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
                 monoSolveEnd - monoSolveStart);
             totalSolveDuration += monoSolveDuration;
 
+            funcNode->nodeEnergy = std::vector<double>(funcNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
+
+
             if (solvedResults.has_value()) {
                 auto resultPair = solvedResults.value();
                 auto funcName = funcNode->function->getName().str();
@@ -72,7 +75,7 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
                 graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
 
                 Logger::getInstance().log(
-                    "Monolithic Energy of " + funcName + ": " + formatScientific(funcEnergy) + " J",
+                    "Monolithic Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J",
                     LOGLEVEL::HIGHLIGHT
                 );
 

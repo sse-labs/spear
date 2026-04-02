@@ -431,6 +431,9 @@ class FunctionNode : public GenericNode {
     std::vector<CallNodeBinding> callNodeBindings;
     bool baseNodeEnergyInitialized = false;
 
+    std::unordered_map<GenericNode *, double> directNodeEnergyCache;
+    bool directNodeEnergyCacheInitialized = false;
+
     /**
      * Create a new FunctionNode and return it
      * @param func Function that will be reprented by the FunctioNode

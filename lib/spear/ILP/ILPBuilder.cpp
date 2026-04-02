@@ -241,21 +241,19 @@ void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::FunctionNode *func
     for (auto &edgeUP : func->Edges) {
         auto *edge = edgeUP.get();
 
-        auto indexIterator = func->nodeLookup.find(edge->destination);
-        if (indexIterator == func->nodeLookup.end()) {
-            Logger::getInstance().log(
-                "Warning: edge with destination node not found in node lookup while filling objective function.",
-                LOGLEVEL::ERROR);
-            continue;
+        auto cacheIterator = func->directNodeEnergyCache.find(edge->destination);
+        if (cacheIterator != func->directNodeEnergyCache.end()) {
+            model.obj[edge->ilpIndex] = cacheIterator->second;
+        } else {
+            // Fall back to the live node energy for nodes that are intentionally
+            // not cached here, such as call nodes filled later.
+            model.obj[edge->ilpIndex] = edge->destination->getEnergy();
         }
-
-        model.obj[edge->ilpIndex] = func->nodeEnergy[indexIterator->second];
     }
 
     // Then we need to check all contained loopnodes
     for (auto &nodeUP : func->Nodes) {
-        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
-            // Fill the objective function for all loopnodes contained in the function
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
             fillObjectiveFunction(model, loopNode);
         }
     }

@@ -14,7 +14,7 @@
     }
   },
   "analysis": {
-    "type": "clustered",
+    "type": "comparison",
     "clusteredCacheEnabled": false,
     "feasibilityEnabled": true,
     "writeDotFiles": true,

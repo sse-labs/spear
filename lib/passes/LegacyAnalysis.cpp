@@ -168,7 +168,7 @@ void LegacyAnalysis::constructProgramRepresentation(ProgramGraph *pGraph, Energy
         energyFunc->energy = pGraph->getEnergy(handler);
 
         Logger::getInstance().log(
-            "Legacy Energy of " + energyFunc->name + ": " + formatScientific(energyFunc->energy) + " J",
+            "Legacy Energy of " + energyFunc->name + ": " + PassUtil::formatScientific(energyFunc->energy) + " J",
             LOGLEVEL::HIGHLIGHT
         );
     }else{
@@ -176,7 +176,7 @@ void LegacyAnalysis::constructProgramRepresentation(ProgramGraph *pGraph, Energy
             //energyCalculation(pGraph, handler, function);
             energyFunc->energy = pGraph->getEnergy(handler);
             Logger::getInstance().log(
-                "Legacy Energy of " + energyFunc->name + ": " + formatScientific(energyFunc->energy) + " J",
+                "Legacy Energy of " + energyFunc->name + ": " + PassUtil::formatScientific(energyFunc->energy) + " J",
                 LOGLEVEL::HIGHLIGHT
             );
         }

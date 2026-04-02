@@ -42,10 +42,9 @@
 #include "LegacyAnalysis.h"
 #include "Logger.h"
 #include "MonolithicAnalysis.h"
+#include "PassUtil.h"
 #include "analyses/ResultRegistry.h"
 
-
-#define SHOWTIMINGS true
 
 using json = nlohmann::json;
 
@@ -352,204 +351,41 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     }
 
 
-    static void prepareFunctionsForLegacyAnalysis(
-    llvm::Module &module,
-    llvm::FunctionAnalysisManager &functionAnalysisManager) {
-
-        llvm::FunctionPassManager functionPassManager;
-
-        // Give unnamed instructions stable names for debugging
-        functionPassManager.addPass(llvm::InstructionNamerPass());
-
-        // Promote allocas to SSA form
-        functionPassManager.addPass(llvm::PromotePass());
-
-        // Canonicalize loops so ScalarEvolution can reason about them better
-        //functionPassManager.addPass(llvm::LoopSimplifyPass());
-
-        // Keep loops in LCSSA form
-        //functionPassManager.addPass(llvm::LCSSAPass());
-
-        // Simplify induction variables
-        llvm::LoopPassManager loopPassManager;
-        //loopPassManager.addPass(llvm::IndVarSimplifyPass());
-
-        functionPassManager.addPass(
-            llvm::createFunctionToLoopPassAdaptor(std::move(loopPassManager)));
-
-        for (llvm::Function &function : module) {
-            if (function.isDeclaration()) {
-                continue;
-            }
-
-            functionPassManager.run(function, functionAnalysisManager);
-        }
-    }
-
-   void legacyWrapper(llvm::Module &module, llvm::FunctionAnalysisManager &functionAnalysisManager) {
-        auto legacyPreparationStart = std::chrono::high_resolution_clock::now();
-
-        prepareFunctionsForLegacyAnalysis(module, functionAnalysisManager);
-
-        auto legacyPreparationEnd = std::chrono::high_resolution_clock::now();
-        auto legacyPreparationTime = std::chrono::duration_cast<std::chrono::microseconds>(
-            legacyPreparationEnd - legacyPreparationStart);
-
-        Logger::getInstance().log(
-            "Legacy IR preparation took: " + std::to_string(legacyPreparationTime.count()) + " µs",
-            LOGLEVEL::INFO);
-
-        // Construct the functionTrees to the functions of the module
-        FunctionTree *functionTree = nullptr;
-        for (llvm::Function &function : module) {
-            if (function.getName() == "main") {
-                functionTree = FunctionTree::construct(&function);
-                break;
-            }
-        }
-
-        if (functionTree == nullptr) {
-            throw std::runtime_error("Could not construct FunctionTree: main function not found.");
-        }
-
-        LegacyAnalysis::run(functionAnalysisManager, functionTree, SHOWTIMINGS);
-    }
-
-    void collectCallNodeBindingsFromNestedNodes(
-    HLAC::GenericNode *currentNode,
-    std::size_t topLevelNodeIndex,
-    std::vector<HLAC::FunctionNode::CallNodeBinding> &callNodeBindings) {
-
-        if (currentNode->nodeType == HLAC::NodeType::CALLNODE) {
-            auto *callNode = static_cast<HLAC::CallNode *>(currentNode);
-
-            HLAC::FunctionNode::CallNodeBinding binding;
-            binding.nodeIndex = topLevelNodeIndex;
-            binding.calleeName = callNode->calledFunction->getName().str();
-
-            Logger::getInstance().log(
-                "Binding call node at index " + std::to_string(topLevelNodeIndex) + " to function " + binding.calleeName,
-                LOGLEVEL::INFO);
-
-            callNodeBindings.push_back(binding);
-
-            return;
-        }
-
-        if (currentNode->nodeType == HLAC::NodeType::LOOPNODE) {
-            auto *loopNode = static_cast<HLAC::LoopNode *>(currentNode);
-
-            for (auto &nestedNode : loopNode->Nodes) {
-                collectCallNodeBindingsFromNestedNodes(nestedNode.get(), topLevelNodeIndex, callNodeBindings);
-            }
-        }
-    }
-
     /**
      * Function to run the analysis on a given module
      * @param module LLVM::Module to run the analysis on
      * @param moduleAnalysisManager llvm::ModuleAnalysisManager
      * @param analysisStrategy Strategy to analyze the module with
      */
-    void analysisRunner(llvm::Module &module, llvm::ModuleAnalysisManager &moduleAnalysisManager,
-                    AnalysisStrategy::Strategy analysisStrategy) {
+    void analysisRunner(
+        llvm::Module &module,
+        llvm::ModuleAnalysisManager &moduleAnalysisManager,
+        AnalysisStrategy::Strategy analysisStrategy) {
 
         auto &functionAnalysisManager =
             moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 
-        if (ConfigParser::getAnalysisConfiguration().analysisType == AnalysisType::LEGACY) {
-            legacyWrapper(module, functionAnalysisManager);
-            return;
-        }
+        switch (ConfigParser::getAnalysisConfiguration().analysisType) {
+            case AnalysisType::LEGACY:
+                PassUtil::legacyWrapper(module, functionAnalysisManager);
+                break;
 
-        if (ConfigParser::getAnalysisConfiguration().analysisType == AnalysisType::COMPARISON) {
-            legacyWrapper(module, functionAnalysisManager);
-        }
-
-        auto postOrderFuncList = HLAC::Util::getLazyCallGraphPostOrder(module, functionAnalysisManager);
-
-        auto GetTLI = [&functionAnalysisManager](llvm::Function &F) -> llvm::TargetLibraryInfo & {
-            return functionAnalysisManager.getResult<llvm::TargetLibraryAnalysis>(F);
-        };
-
-        llvm::LazyCallGraph LCG(module, GetTLI);
-        LCG.buildRefSCCs();
-
-
-        std::vector<std::string> functionNamesInPostOrder;
-        for (auto &function : postOrderFuncList) {
-            functionNamesInPostOrder.push_back(function->getName().str());
-        }
-
-        std::unique_ptr<HLAC::hlac> graph = HLAC::HLACWrapper::makeHLAC(this->resultRegistry, LCG);
-        std::shared_ptr<HLAC::hlac> sharedGraph = std::move(graph);
-
-        auto startConstruction = std::chrono::high_resolution_clock::now();
-
-        for (auto function : postOrderFuncList) {
-            sharedGraph->makeFunction(function, &functionAnalysisManager);
-        }
-
-        auto endConstruction = std::chrono::high_resolution_clock::now();
-        auto constructionTime = std::chrono::duration_cast<std::chrono::microseconds>(
-            endConstruction - startConstruction);
-
-        Logger::getInstance().log(
-            "HLAC construction took: " + std::to_string(constructionTime.count()) + " µs",
-            LOGLEVEL::INFO);
-
-        auto dotWritingStart = std::chrono::high_resolution_clock::now();
-        sharedGraph->printDotRepresentation();
-        auto dotWritingEnd = std::chrono::high_resolution_clock::now();
-
-        auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
-        Logger::getInstance().log("DOT writing took: " + std::to_string(dotTime.count()) + " µs", LOGLEVEL::INFO);
-
-        // Iterate over the function nodes
-        for (auto &functionNode : sharedGraph->functions) {
-            auto &sortedNodeList = functionNode->topologicalSortedRepresentationOfNodes;
-
-            functionNode->baseNodeEnergy.resize(sortedNodeList.size());
-            functionNode->nodeEnergy.resize(sortedNodeList.size());
-
-            std::fill(functionNode->baseNodeEnergy.begin(), functionNode->baseNodeEnergy.end(), 0.0);
-            std::fill(functionNode->nodeEnergy.begin(), functionNode->nodeEnergy.end(), 0.0);
-
-            // Init the vector to store call node references
-            functionNode->callNodeBindings.clear();
-
-            for (std::size_t index = 0; index < sortedNodeList.size(); ++index) {
-                HLAC::GenericNode *currentNode = sortedNodeList[index];
-
-                // Always cache the base energy of the current top-level node
-                // This mitigates getEnergy() calls down the line
-                functionNode->baseNodeEnergy[index] = currentNode->getEnergy();
-
-                // Collect call nodes, including call nodes nested inside loop nodes
-                collectCallNodeBindingsFromNestedNodes(
-                    currentNode,
-                    index,
-                    functionNode->callNodeBindings);
+            case AnalysisType::MONOLITHIC: {
+                ResultRegistry monolithicRegistry = this->resultRegistry;
+                PassUtil::runMonolithicOnModule(module, functionAnalysisManager, monolithicRegistry);
+                break;
             }
 
-            // Update the node_index to energy mapping
-            functionNode->nodeEnergy = functionNode->baseNodeEnergy;
-            functionNode->baseNodeEnergyInitialized = true;
-        }
+            case AnalysisType::CLUSTERED: {
+                ResultRegistry clusteredRegistry = this->resultRegistry;
+                PassUtil::runClusteredOnModule(module, functionAnalysisManager, clusteredRegistry);
+                break;
+            }
 
-        switch (ConfigParser::getAnalysisConfiguration().analysisType) {
-            case AnalysisType::MONOLITHIC:
-                MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
-                break;
-            case AnalysisType::CLUSTERED:
-                ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
-                break;
             case AnalysisType::COMPARISON:
-                MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
-                // Clear the functionEnergyCache so clustered does not benefit from monolithic run
-                sharedGraph->FunctionEnergyCache.clear();
-                ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
+                PassUtil::runComparisonAnalysesOnClonedModules(module, moduleAnalysisManager, this->resultRegistry);
                 break;
+
             default:
                 llvm::errs() << "Please provide a valid analysis type: monolithic/clustered/legacy/comparison\n";
                 break;
