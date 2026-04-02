@@ -7,6 +7,7 @@
 
 #include "ConfigParser.h"
 #include "ILP/ILPClusterCache.h"
+#include "ILP/ILPUtil.h"
 #include "Logger.h"
 #include "PassUtil.h"
 
@@ -60,6 +61,10 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
         if (clusteredILPs.has_value()) {
             auto clusteredSolveStart = std::chrono::high_resolution_clock::now();
 
+            for (auto &clp : clusteredILPs.value()) {
+                ILPUtil::printILPModelHumanReadable("main", clp.first->getDotName(), clp.second);
+            }
+
             // Solve the clustered ILPs of the program
             auto clusteredSolvedResults = graph->solveClusteredIlps(clusteredILPs.value());
 
@@ -69,6 +74,16 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
             totalSolveDuration += clusteredSolveDuration;
 
             auto solvedResults = clusteredSolvedResults;
+
+            for (auto &lpr : solvedResults) {
+                Logger::getInstance().log(
+                        "Loop " + lpr.first->getDotName() + " -> " + formatScientific(lpr.second.optimalValue) + " J",
+                        LOGLEVEL::INFO);
+
+                for (int i=0; i<lpr.second.variableValues.size(); ++i) {
+                    std::cout << i << " = " << lpr.second.variableValues[i] << std::endl;
+                }
+            }
 
             auto dagStart = std::chrono::high_resolution_clock::now();
 
@@ -86,6 +101,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
             if (dagResults.has_value()) {
                 auto resultPair = dagResults.value();
                 auto resVector = resultPair.longestPath;
+
                 auto funcName = funcNode->function->getName().str();
                 auto funcEnergy = resultPair.WCEC;
 

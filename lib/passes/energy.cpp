@@ -415,6 +415,35 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         LegacyAnalysis::run(functionAnalysisManager, functionTree, SHOWTIMINGS);
     }
 
+    void collectCallNodeBindingsFromNestedNodes(
+    HLAC::GenericNode *currentNode,
+    std::size_t topLevelNodeIndex,
+    std::vector<HLAC::FunctionNode::CallNodeBinding> &callNodeBindings) {
+
+        if (currentNode->nodeType == HLAC::NodeType::CALLNODE) {
+            auto *callNode = static_cast<HLAC::CallNode *>(currentNode);
+
+            HLAC::FunctionNode::CallNodeBinding binding;
+            binding.nodeIndex = topLevelNodeIndex;
+            binding.calleeName = callNode->calledFunction->getName().str();
+
+            Logger::getInstance().log(
+                "Binding call node at index " + std::to_string(topLevelNodeIndex) + " to function " + binding.calleeName,
+                LOGLEVEL::INFO);
+
+            callNodeBindings.push_back(binding);
+
+            return;
+        }
+
+        if (currentNode->nodeType == HLAC::NodeType::LOOPNODE) {
+            auto *loopNode = static_cast<HLAC::LoopNode *>(currentNode);
+
+            for (auto &nestedNode : loopNode->Nodes) {
+                collectCallNodeBindingsFromNestedNodes(nestedNode.get(), topLevelNodeIndex, callNodeBindings);
+            }
+        }
+    }
 
     /**
      * Function to run the analysis on a given module
@@ -476,32 +505,34 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
         Logger::getInstance().log("DOT writing took: " + std::to_string(dotTime.count()) + " µs", LOGLEVEL::INFO);
 
+        // Iterate over the function nodes
         for (auto &functionNode : sharedGraph->functions) {
             auto &sortedNodeList = functionNode->topologicalSortedRepresentationOfNodes;
 
-            functionNode->baseNodeEnergy.resize(sortedNodeList.size(), 0.0);
-            functionNode->nodeEnergy.resize(sortedNodeList.size(), 0.0);
+            functionNode->baseNodeEnergy.resize(sortedNodeList.size());
+            functionNode->nodeEnergy.resize(sortedNodeList.size());
+
+            std::fill(functionNode->baseNodeEnergy.begin(), functionNode->baseNodeEnergy.end(), 0.0);
+            std::fill(functionNode->nodeEnergy.begin(), functionNode->nodeEnergy.end(), 0.0);
+
+            // Init the vector to store call node references
             functionNode->callNodeBindings.clear();
 
             for (std::size_t index = 0; index < sortedNodeList.size(); ++index) {
                 HLAC::GenericNode *currentNode = sortedNodeList[index];
 
-                if (currentNode->nodeType == HLAC::NodeType::LOOPNODE) {
-                    continue;
-                }
-
-                if (currentNode->nodeType == HLAC::NodeType::CALLNODE) {
-                    auto *callNode = static_cast<HLAC::CallNode *>(currentNode);
-                    HLAC::FunctionNode::CallNodeBinding binding;
-                    binding.nodeIndex = index;
-                    binding.calleeName = callNode->calledFunction->getName().str();
-                    functionNode->callNodeBindings.push_back(binding);
-                    continue;
-                }
-
+                // Always cache the base energy of the current top-level node
+                // This mitigates getEnergy() calls down the line
                 functionNode->baseNodeEnergy[index] = currentNode->getEnergy();
+
+                // Collect call nodes, including call nodes nested inside loop nodes
+                collectCallNodeBindingsFromNestedNodes(
+                    currentNode,
+                    index,
+                    functionNode->callNodeBindings);
             }
 
+            // Update the node_index to energy mapping
             functionNode->nodeEnergy = functionNode->baseNodeEnergy;
             functionNode->baseNodeEnergyInitialized = true;
         }
@@ -515,6 +546,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 break;
             case AnalysisType::COMPARISON:
                 MonolithicAnalysis::run(sharedGraph, SHOWTIMINGS);
+                // Clear the functionEnergyCache so clustered does not benefit from monolithic run
                 sharedGraph->FunctionEnergyCache.clear();
                 ClusteredAnalysis::run(sharedGraph, SHOWTIMINGS);
                 break;

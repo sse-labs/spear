@@ -14,10 +14,10 @@
     }
   },
   "analysis": {
-    "type": "comparison",
-    "clusteredCacheEnabled": true,
+    "type": "clustered",
+    "clusteredCacheEnabled": false,
     "feasibilityEnabled": true,
-    "writeDotFiles": false,
+    "writeDotFiles": true,
     "legacyConfig": {
       "mode": "program",
       "format": "json",
