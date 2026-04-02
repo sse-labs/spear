@@ -28,19 +28,23 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
     auto totalDagDuration = std::chrono::microseconds::zero();
 
     for (auto &funcNode : graph->functions) {
-        auto sortedNodeList = funcNode->topologicalSortedRepresentationOfNodes;
-        funcNode->nodeEnergy.resize(sortedNodeList.size());
+        auto &sortedNodeList = funcNode->topologicalSortedRepresentationOfNodes;
+        auto &nodeEnergy = funcNode->nodeEnergy;
 
-        // Set energy vector...
-        // TODO: Find a smarter way to do this elsewhere...
+        if (nodeEnergy.size() != sortedNodeList.size()) {
+            nodeEnergy.resize(sortedNodeList.size());
+        }
+
+        std::fill(nodeEnergy.begin(), nodeEnergy.end(), 0.0);
+
         for (std::size_t index = 0; index < sortedNodeList.size(); ++index) {
-            HLAC::GenericNode *node = sortedNodeList[index];
+            HLAC::GenericNode *currentNode = sortedNodeList[index];
 
-            if (dynamic_cast<HLAC::LoopNode *>(node) != nullptr) {
+            if (dynamic_cast<HLAC::LoopNode *>(currentNode) != nullptr) {
                 continue;
             }
 
-            funcNode->nodeEnergy[index] = node->getEnergy();
+            nodeEnergy[index] = currentNode->getEnergy();
         }
 
         auto clusteredBuildStart = std::chrono::high_resolution_clock::now();
