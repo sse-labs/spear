@@ -25,6 +25,7 @@ worklist = [
     Instruction.complex_instruction("select", 'select i1 true, i64 17, i64 42\n  call void asm sideeffect "", "r"(i64 COUNTER)', "@global = global i64 0", "store volatile i64 %1, i64* @global","", True),
     Instruction.complex_instruction("sext", 'sext i32 257 to i64\n  call void asm sideeffect "", "r"(i64 COUNTER)', "@global = global i64 0", "store volatile i64 %1, i64* @global","", True),
     Instruction.complex_instruction("zext", 'zext i32 257 to i64\n  call void asm sideeffect "", "r"(i64 COUNTER)', "@global = global i64 0", "store volatile i64 %1, i64* @global", "", True),
+    Instruction("icmp eq", "i32", ["252", "42"], "i1"),
     Instruction("icmp ne", "i32", ["252", "42"], "i1"),
     Instruction("icmp sge", "i32", ["252", "42"], "i1"),
     Instruction("icmp sgt", "i32", ["252", "42"], "i1"),
@@ -43,6 +44,7 @@ worklist = [
         True
     ),
     Instruction("lshr", "i32", ["42", "1"]),
+    Instruction("ashr", "i32", ["42", "1"]),
     Instruction("srem", "i32", ["42", "3"]),
     Instruction.complex_instruction('store', 'store volatile i8 17, i8* @global_dst', '@global_dst = global i8 0', '',"", False),
     Instruction("sub", "i32", ["42", "311"]),

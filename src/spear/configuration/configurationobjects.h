@@ -48,6 +48,7 @@ struct AnalysisConfiguration {
     AnalysisType analysisType;
     bool cachingEnabled;
     bool feasibilityEnabled;
+    bool writeDotFiles;
     LegacyAnalysisConfiguration legacyconfig;
     std::map<std::string, int64_t> fallback;
 };

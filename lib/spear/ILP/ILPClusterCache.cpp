@@ -16,6 +16,7 @@
 #include <nlohmann/json.hpp>
 
 #include "ConfigParser.h"
+#include "Logger.h"
 
 
 ILPClusterCache * ILPClusterCache::instance = nullptr;
@@ -91,13 +92,19 @@ ILPClusterCache::ILPClusterCache(std::string filename, bool enabled) {
                 cache[entry.key()] = result;
             }
         } catch (const nlohmann::json::parse_error& parseException) {
-            std::cerr << "Cache parse error: " << parseException.what() << "\n";
+            Logger::getInstance().log(
+                "Failed to parse ILP cluster cache file: " + std::string(parseException.what()),
+                LOGLEVEL::ERROR);
             cache = {};
         } catch (const nlohmann::json::type_error& typeException) {
-            std::cerr << "Cache type error: " << typeException.what() << "\n";
+            Logger::getInstance().log(
+                "Cache type error: " + std::string(typeException.what()),
+                LOGLEVEL::ERROR);
             cache = {};
         } catch (const nlohmann::json::out_of_range& rangeException) {
-            std::cerr << "Cache schema error (missing field): " << rangeException.what() << "\n";
+            Logger::getInstance().log(
+                "Cache schema error (missing field): " + std::string(rangeException.what()),
+                LOGLEVEL::ERROR);
             cache = {};
         }
 

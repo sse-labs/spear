@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 
+#include "Logger.h"
 #include "ProfileHandler.h"
 
 LLVMHandler::LLVMHandler(
@@ -44,12 +45,18 @@ double LLVMHandler::getNodeSum(Node *node) {
             energy += candiate.value();
         } else {
             // If we do not have an energy value for the instruction, we log this and continue with the next instruction
-            // llvm::errs() << "No energy value found for instruction: " << I.getOpcodeName() << "\n";
+            /*Logger::getInstance().log(
+                    "No energy value found for instruction: " + std::string(I.getOpcodeName())
+                    + " Using unknown value if exists!",
+                    LOGLEVEL::WARNING);*/
+
             auto unknownCost = pHandler.getUnknownCost();
             if (unknownCost.has_value()) {
                 energy += unknownCost.value();
             } else {
-                llvm::errs() << "No unknown value specified by the profile! Recreate the profile!" << "\n";
+                Logger::getInstance().log(
+                    "No unknown value specified by the profile! Recreate the profile!",
+                    LOGLEVEL::ERROR);
             }
         }
     }

@@ -231,6 +231,7 @@ int main(int argc, char *argv[]) {
 
                     if (hasProfilePath && hasProgramPath) {
                         // std::cout << "Options valid" << std::endl;
+                        Logger::getInstance().setLogLevel(LOGLEVEL::ERROR);
                         runAnalysisRoutine(opts);
                         return 0;
                     } else {

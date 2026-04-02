@@ -283,6 +283,7 @@ void ConfigParser::parse() {
         analysisConfiguration.analysisType = ConfigurationUtils::strToAnalysisType(analysis["type"].get<std::string>());
         analysisConfiguration.cachingEnabled = analysis["clusteredCacheEnabled"].get<bool>();
         analysisConfiguration.feasibilityEnabled = analysis["feasibilityEnabled"].get<bool>();
+        analysisConfiguration.writeDotFiles = analysis["writeDotFiles"].get<bool>();
 
         analysisConfiguration.legacyconfig.mode = ConfigurationUtils::strToMode(legacyconfig["mode"].get<std::string>());
         analysisConfiguration.legacyconfig.format = ConfigurationUtils::strToFormat(legacyconfig["format"].get<std::string>());

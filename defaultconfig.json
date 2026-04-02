@@ -15,8 +15,9 @@
   },
   "analysis": {
     "type": "comparison",
-    "clusteredCacheEnabled": false,
+    "clusteredCacheEnabled": true,
     "feasibilityEnabled": true,
+    "writeDotFiles": true,
     "legacyConfig": {
       "mode": "program",
       "format": "json",

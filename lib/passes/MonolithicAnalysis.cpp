@@ -5,6 +5,7 @@
 
 #include "MonolithicAnalysis.h"
 
+#include "ConfigParser.h"
 #include "HLAC/hlac.h"
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
@@ -56,10 +57,12 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
                     LOGLEVEL::HIGHLIGHT
                 );
 
-                /*graph->printDotRepresentationWithSolution(
+                if (ConfigParser::getAnalysisConfiguration().writeDotFiles) {
+                    graph->printDotRepresentationWithSolution(
                     graph->getFunctionByName(funcName),
                     resultPair.variableValues,
-                    "monolithic");*/
+                    "monolithic");
+                }
             }
         }
     }

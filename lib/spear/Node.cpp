@@ -13,6 +13,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
 
+// Enables Node caching to mitigate recalculation of the same nodes every time
 #define CACHINGENABLED true
 
 // Create a Node by setting the parent property with the given ProgramGraph

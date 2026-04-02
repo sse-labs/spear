@@ -92,7 +92,12 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
                     LOGLEVEL::HIGHLIGHT
                 );
 
-                //graph->printDotRepresentationWithSolution(graph->getFunctionByName(funcName), resVector, "clustered");
+                if (ConfigParser::getAnalysisConfiguration().writeDotFiles) {
+                    graph->printDotRepresentationWithSolution(
+                        graph->getFunctionByName(funcName),
+                        resVector,
+                        "clustered");
+                }
             }
         }
     }

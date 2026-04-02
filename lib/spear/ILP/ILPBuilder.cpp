@@ -10,9 +10,11 @@
 #include <iostream>
 
 #include "ILP/ILPBuilder.h"
+
+#include "HLAC/hlac.h"
 #include "ILP/ILPSolver.h"
 #include "ILP/ILPUtil.h"
-#include "HLAC/hlac.h"
+#include "Logger.h"
 
 void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode *func) {
     // Iterate over the edges in the function node
@@ -25,7 +27,9 @@ void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode 
         // Check that the currently viewed edge has a valid ILPIndex
         const int col = edge->ilpIndex;
         if (col < 0 || col >= static_cast<int>(model.col_ub.size())) {
-            std::cerr << "Warning: invalid ilpIndex while applying feasibility bound.\n";
+            Logger::getInstance().log(
+                "Warning: invalid ilpIndex while applying feasibility bound.",
+                LOGLEVEL::ERROR);
             // If the index is invalid, throw everything against the wall and ignore the edge...
             continue;
         }
@@ -58,7 +62,9 @@ void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::LoopNode *loo
         // Check that the currently viewed edge has a valid ILPIndex
         const int col = edge->ilpIndex;
         if (col < 0 || col >= static_cast<int>(model.col_ub.size())) {
-            std::cerr << "Warning: invalid ilpIndex while applying feasibility bound.\n";
+            Logger::getInstance().log(
+                "Warning: invalid ilpIndex while applying feasibility bound.",
+                LOGLEVEL::ERROR);
             continue;
             // If the index is invalid, throw everything against the wall and ignore the edge...
         }
@@ -192,8 +198,9 @@ void ILPBuilder::appendLoopBoundConstraint(
     std::unordered_set<int> usedCols;
 
     if (loopNode->backEdge == nullptr) {
-        std::cerr << "Warning: Loop " << loopNode->getDotName()
-                  << " has no backedge, skipping loop bound constraint.\n";
+        Logger::getInstance().log(
+            "Warning: Loop " + loopNode->getDotName() + " has no backedge, skipping loop bound constraint.",
+            LOGLEVEL::ERROR);
         return;
     }
 

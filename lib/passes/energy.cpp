@@ -425,8 +425,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
     void analysisRunner(llvm::Module &module, llvm::ModuleAnalysisManager &moduleAnalysisManager,
                     AnalysisStrategy::Strategy analysisStrategy) {
 
-        Logger::getInstance().setLogLevel(LOGLEVEL::ERROR);
-
         auto &functionAnalysisManager =
             moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 
@@ -477,6 +475,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
         auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
         Logger::getInstance().log("DOT writing took: " + std::to_string(dotTime.count()) + " µs", LOGLEVEL::INFO);
+
 
         switch (ConfigParser::getAnalysisConfiguration().analysisType) {
             case AnalysisType::MONOLITHIC:
