@@ -17,7 +17,7 @@
 
 nlohmann::json LegacyAnalysis::run(
     llvm::FunctionAnalysisManager &FAM,
-    FunctionTree *functionTree, bool showTimings) {
+    FunctionTree *functionTree, bool showTimings, bool showAllTimings) {
     Logger::getInstance().log("Running Legacy Analysis for Energy", LOGLEVEL::INFO);
 
     if (functionTree != nullptr) {
@@ -92,12 +92,14 @@ nlohmann::json LegacyAnalysis::run(
 
         if (showTimings) {
             auto &logger = Logger::getInstance();
-            logger.log("Legacy Preparation Time: " + std::to_string(legacyPreparationDuration.count()) + " µs",
+            if (showAllTimings) {
+                logger.log("Legacy Preparation Time: " + std::to_string(legacyPreparationDuration.count()) + " µs",
                        LOGLEVEL::INFO);
-            logger.log("Legacy Handler Init Time: " + std::to_string(legacyHandlerInitDuration.count()) + " µs",
-                       LOGLEVEL::INFO);
-            logger.log("Legacy Analysis Time: " + std::to_string(legacyAnalysisDuration.count()) + " µs",
-                       LOGLEVEL::INFO);
+                logger.log("Legacy Handler Init Time: " + std::to_string(legacyHandlerInitDuration.count()) + " µs",
+                           LOGLEVEL::INFO);
+                logger.log("Legacy Analysis Time: " + std::to_string(legacyAnalysisDuration.count()) + " µs",
+                           LOGLEVEL::INFO);
+            }
             logger.log("Legacy Total Time: " + std::to_string(legacyTotalDuration.count()) + " µs",
                        LOGLEVEL::INFO);
         }

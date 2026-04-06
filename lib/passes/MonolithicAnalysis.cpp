@@ -12,7 +12,7 @@
 #include "PassUtil.h"
 #include "nlohmann/json.hpp"
 
-nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings) {
+nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings, bool showAllTimings) {
     Logger::getInstance().log("Running Monolithic ILP Analysis for Energy", LOGLEVEL::INFO);
 
     // ================= Monolithic ILP =================
@@ -96,10 +96,14 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
 
     if (showTimings) {
         auto &logger = Logger::getInstance();
-        logger.log("Monolithic ILP Build Time: " + std::to_string(totalBuildDuration.count()) + " µs",
+        if (showAllTimings) {
+            logger.log("Monolithic getEnergy Init Time: " + std::to_string(totalGetEnergyInitDuration.count()) + " µs",
                    LOGLEVEL::INFO);
-        logger.log("Monolithic ILP Solve Time: " + std::to_string(totalSolveDuration.count()) + " µs",
-                   LOGLEVEL::INFO);
+            logger.log("Monolithic ILP Build Time: " + std::to_string(totalBuildDuration.count()) + " µs",
+                       LOGLEVEL::INFO);
+            logger.log("Monolithic ILP Solve Time: " + std::to_string(totalSolveDuration.count()) + " µs",
+                       LOGLEVEL::INFO);
+        }
         logger.log("Monolithic Total Time: " + std::to_string(monoTotalDuration.count()) + " µs",
                    LOGLEVEL::INFO);
     }

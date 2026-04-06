@@ -12,7 +12,7 @@
 class ClusteredAnalysis {
 public:
 
-    static nlohmann::json run(std::shared_ptr<HLAC::hlac> graph, bool showTimings);
+    static nlohmann::json run(std::shared_ptr<HLAC::hlac> graph, bool showTimings, bool showAllTiming = false);
 };
 
 #endif //SPEAR_CLUSTEREDANALYSIS_H

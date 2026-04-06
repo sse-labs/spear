@@ -11,7 +11,7 @@
 #include "Logger.h"
 #include "PassUtil.h"
 
-nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings) {
+nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings, bool showAllTimings) {
     Logger::getInstance().log("Running Clustered ILP Analysis for Energy", LOGLEVEL::INFO);
 
     std::string cacheActiveStr = (ConfigParser::getAnalysisConfiguration().cachingEnabled ? "enabled" : "disabled");
@@ -114,14 +114,16 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
     if (showTimings) {
         auto &logger = Logger::getInstance();
-        logger.log("Clustered getEnergy Init Time: " + std::to_string(totalGetEnergyInitDuration.count()) + " µs",
+        if (showAllTimings) {
+            logger.log("Clustered getEnergy Init Time: " + std::to_string(totalGetEnergyInitDuration.count()) + " µs",
                    LOGLEVEL::INFO);
-        logger.log("Clustered ILP Build Time: " + std::to_string(totalBuildDuration.count()) + " µs",
-                   LOGLEVEL::INFO);
-        logger.log("Clustered ILP Solve Time: " + std::to_string(totalSolveDuration.count()) + " µs",
-                   LOGLEVEL::INFO);
-        logger.log("Clustered DAG Time: " + std::to_string(totalDagDuration.count()) + " µs",
-                   LOGLEVEL::INFO);
+            logger.log("Clustered ILP Build Time: " + std::to_string(totalBuildDuration.count()) + " µs",
+                       LOGLEVEL::INFO);
+            logger.log("Clustered ILP Solve Time: " + std::to_string(totalSolveDuration.count()) + " µs",
+                       LOGLEVEL::INFO);
+            logger.log("Clustered DAG Time: " + std::to_string(totalDagDuration.count()) + " µs",
+                       LOGLEVEL::INFO);
+        }
         logger.log("Clustered Total Time: " + std::to_string(clusteredTotalDuration.count()) + " µs",
                    LOGLEVEL::INFO);
     }

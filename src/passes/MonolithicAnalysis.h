@@ -12,7 +12,7 @@
 class MonolithicAnalysis {
  public:
 
-    static nlohmann::json run(std::shared_ptr<HLAC::hlac> graph, bool showTimings);
+    static nlohmann::json run(std::shared_ptr<HLAC::hlac> graph, bool showTimings, bool showAllTimings = false);
 };
 
 #endif //SPEAR_MONOLITHICANALYSIS_H

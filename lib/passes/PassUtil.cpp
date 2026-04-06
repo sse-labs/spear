@@ -82,9 +82,9 @@ void PassUtil::legacyWrapper(
     auto legacyPreparationTime = std::chrono::duration_cast<std::chrono::microseconds>(
         legacyPreparationEnd - legacyPreparationStart);
 
-    Logger::getInstance().log(
+    /*Logger::getInstance().log(
         "Legacy IR preparation took: " + std::to_string(legacyPreparationTime.count()) + " µs",
-        LOGLEVEL::INFO);
+        LOGLEVEL::INFO);*/
 
     // Construct the functionTrees to the functions of the module
     FunctionTree *functionTree = nullptr;
@@ -181,18 +181,18 @@ std::shared_ptr<HLAC::hlac> PassUtil::buildInitializedGraph(
     auto constructionTime = std::chrono::duration_cast<std::chrono::microseconds>(
         endConstruction - startConstruction);
 
-    Logger::getInstance().log(
+    /*Logger::getInstance().log(
         "HLAC construction took: " + std::to_string(constructionTime.count()) + " µs",
-        LOGLEVEL::INFO);
+        LOGLEVEL::INFO);*/
 
     auto dotWritingStart = std::chrono::high_resolution_clock::now();
     sharedGraph->printDotRepresentation();
     auto dotWritingEnd = std::chrono::high_resolution_clock::now();
 
     auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
-    Logger::getInstance().log(
+    /*Logger::getInstance().log(
         "DOT writing took: " + std::to_string(dotTime.count()) + " µs",
-        LOGLEVEL::INFO);
+        LOGLEVEL::INFO);*/
 
     // Iterate over the function nodes
     for (auto &functionNode : sharedGraph->functions) {
@@ -213,14 +213,17 @@ std::shared_ptr<HLAC::hlac> PassUtil::buildInitializedGraph(
         for (std::size_t index = 0; index < sortedNodeList.size(); ++index) {
             HLAC::GenericNode *currentNode = sortedNodeList[index];
 
+            if (currentNode->nodeType == HLAC::NodeType::CALLNODE || currentNode->nodeType == HLAC::NodeType::LOOPNODE) {
+                // Collect call nodes, including call nodes nested inside loop nodes
+                collectCallNodeBindingsFromNestedNodes(currentNode, index, functionNode->callNodeBindings);
+                continue;
+            }
+
             // Always cache the base energy of the current top-level node
             functionNode->baseNodeEnergy[index] = currentNode->getEnergy();
 
             // Cache direct energies for this node and all nested non-call nodes
             cacheDirectNodeEnergies(currentNode, functionNode->directNodeEnergyCache);
-
-            // Collect call nodes, including call nodes nested inside loop nodes
-            collectCallNodeBindingsFromNestedNodes(currentNode, index, functionNode->callNodeBindings);
         }
 
         // Update the node_index to energy mapping

@@ -17,7 +17,7 @@ public:
     static nlohmann::json run(
         llvm::FunctionAnalysisManager &FAM,
         FunctionTree *functionTree,
-        bool showTimings);
+        bool showTimings, bool showAllTiming = false);
 
  private:
     static void constructProgramRepresentation(ProgramGraph *pGraph, EnergyFunction *energyFunc, LLVMHandler *handler,
