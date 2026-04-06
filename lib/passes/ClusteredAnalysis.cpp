@@ -85,7 +85,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
             // Trace the taken path and print the result of the clustered approach
             if (dagResults.has_value()) {
-                auto resultPair = dagResults.value();
+                const auto& resultPair = dagResults.value();
                 auto resVector = resultPair.longestPath;
 
                 auto funcName = funcNode->function->getName().str();

@@ -181,7 +181,7 @@ std::optional<DAGLongestPathSolution> hlac::DAGLongestPath(FunctionNode *functio
 
         double exitEnergy = distances[exitNode];
 
-        std::vector<Edge *> takenEdges = Util::findTakenEdges(exitNode, predecessors, funcNode->Edges);
+        std::vector<Edge *> takenEdges = Util::findTakenEdges(exitNode, predecessors, funcNode->Edges, clusteredResult);
 
         return std::make_optional<DAGLongestPathSolution>({exitEnergy, takenEdges});
     }

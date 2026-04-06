@@ -18,6 +18,10 @@ static inline int opaque(int x, int salt) {
     return x & 0x7fffffff;
 }
 
+static inline int doubleIt(int x) {
+    return x * 2;
+}
+
 int benchmark_function(int input) {
     int acc = input;
 
@@ -33,55 +37,55 @@ int benchmark_function(int input) {
     if ((opaque(acc, 2) & 2) == 0) {
         acc += 17;
     } else {
-        acc += 5;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 3) % 3) == 0) {
         acc += 13;
     } else {
-        acc += 7;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 4) % 5) < 2) {
         acc += 19;
     } else {
-        acc += 2;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 5) & 4) != 0) {
         acc += 23;
     } else {
-        acc += 1;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 6) % 7) == 0) {
         acc += 29;
     } else {
-        acc += 4;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 7) & 8) != 0) {
         acc += 31;
     } else {
-        acc += 6;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 8) % 4) == 1) {
         acc += 37;
     } else {
-        acc += 8;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 9) % 6) < 3) {
         acc += 41;
     } else {
-        acc += 9;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 10) & 16) != 0) {
         acc += 43;
     } else {
-        acc += 10;
+        acc += doubleIt(acc);
     }
 
     // ------------------------------------------------------------------
@@ -91,19 +95,19 @@ int benchmark_function(int input) {
         if ((opaque(acc + i, 20) & 1) == 0) {
             acc += 12;
         } else {
-            acc += 4;
+            acc += doubleIt(acc);
         }
 
         if ((opaque(acc + i, 21) % 3) == 0) {
             acc += 15;
         } else {
-            acc += 5;
+            acc += doubleIt(acc);
         }
 
         if ((opaque(acc + i, 22) % 5) < 2) {
             acc += 18;
         } else {
-            acc += 6;
+            acc += doubleIt(acc);
         }
     }
 
@@ -113,73 +117,73 @@ int benchmark_function(int input) {
     if ((opaque(acc, 30) & 1) == 0) {
         acc += 14;
     } else {
-        acc += 2;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 31) & 2) == 0) {
         acc += 16;
     } else {
-        acc += 3;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 32) % 3) == 1) {
         acc += 21;
     } else {
-        acc += 4;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 33) % 5) == 2) {
         acc += 24;
     } else {
-        acc += 7;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 34) & 4) != 0) {
         acc += 27;
     } else {
-        acc += 8;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 35) % 7) < 3) {
         acc += 30;
     } else {
-        acc += 9;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 36) & 8) != 0) {
         acc += 33;
     } else {
-        acc += 10;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 37) % 4) == 0) {
         acc += 36;
     } else {
-        acc += 11;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 38) % 6) == 5) {
         acc += 39;
     } else {
-        acc += 12;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 39) & 16) != 0) {
         acc += 42;
     } else {
-        acc += 13;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 40) % 9) < 4) {
         acc += 45;
     } else {
-        acc += 14;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 41) & 32) != 0) {
         acc += 48;
     } else {
-        acc += 15;
+        acc += doubleIt(acc);
     }
 
     // ------------------------------------------------------------------
@@ -189,13 +193,13 @@ int benchmark_function(int input) {
         if ((opaque(acc + j, 50) % 4) == 0) {
             acc += 20;
         } else {
-            acc += 7;
+            acc += doubleIt(acc);
         }
 
         if ((opaque(acc + j, 51) & 2) != 0) {
             acc += 22;
         } else {
-            acc += 8;
+            acc += doubleIt(acc);
         }
     }
 
@@ -205,61 +209,61 @@ int benchmark_function(int input) {
     if ((opaque(acc, 60) & 1) == 0) {
         acc += 17;
     } else {
-        acc += 1;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 61) % 3) == 0) {
         acc += 19;
     } else {
-        acc += 2;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 62) % 5) < 2) {
         acc += 23;
     } else {
-        acc += 3;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 63) & 4) != 0) {
         acc += 29;
     } else {
-        acc += 4;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 64) % 7) == 0) {
         acc += 31;
     } else {
-        acc += 5;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 65) & 8) != 0) {
         acc += 37;
     } else {
-        acc += 6;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 66) % 4) == 1) {
         acc += 41;
     } else {
-        acc += 7;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 67) % 6) < 3) {
         acc += 43;
     } else {
-        acc += 8;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 68) & 16) != 0) {
         acc += 47;
     } else {
-        acc += 9;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 69) % 8) == 2) {
         acc += 53;
     } else {
-        acc += 10;
+        acc += doubleIt(acc);
     }
 
     // ------------------------------------------------------------------
@@ -269,25 +273,25 @@ int benchmark_function(int input) {
         if ((opaque(acc + k, 70) & 1) == 0) {
             acc += 9;
         } else {
-            acc += 3;
+            acc += doubleIt(acc);
         }
 
         if ((opaque(acc + k, 71) % 3) == 1) {
             acc += 14;
         } else {
-            acc += 4;
+            acc += doubleIt(acc);
         }
 
         if ((opaque(acc + k, 72) % 5) == 2) {
             acc += 25;
         } else {
-            acc += 6;
+            acc += doubleIt(acc);
         }
 
         if ((opaque(acc + k, 73) & 2) != 0) {
             acc += 11;
         } else {
-            acc += 2;
+            acc += doubleIt(acc);
         }
     }
 
@@ -297,61 +301,61 @@ int benchmark_function(int input) {
     if ((opaque(acc, 80) & 1) == 0) {
         acc += 12;
     } else {
-        acc += 1;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 81) & 2) == 0) {
         acc += 18;
     } else {
-        acc += 2;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 82) % 3) == 2) {
         acc += 24;
     } else {
-        acc += 3;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 83) % 5) == 1) {
         acc += 28;
     } else {
-        acc += 4;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 84) & 4) != 0) {
         acc += 32;
     } else {
-        acc += 5;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 85) % 7) < 3) {
         acc += 36;
     } else {
-        acc += 6;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 86) & 8) != 0) {
         acc += 40;
     } else {
-        acc += 7;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 87) % 4) == 0) {
         acc += 44;
     } else {
-        acc += 8;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 88) % 6) == 5) {
         acc += 48;
     } else {
-        acc += 9;
+        acc += doubleIt(acc);
     }
 
     if ((opaque(acc, 89) & 16) != 0) {
         acc += 52;
     } else {
-        acc += 10;
+        acc += doubleIt(acc);
     }
 
     return acc;

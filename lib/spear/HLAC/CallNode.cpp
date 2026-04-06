@@ -168,6 +168,7 @@ void CallNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<
        << "fontname=\"Courier\","
        << "label=\"{"
        << "call:\\l"
+       << this->getEnergy() << " J"
        << "| " << Util::dotRecordEscape(shortLabel) << "| { LINKERFUNC=" << isLinkerFunction
        << " | DEBUGFUNC=" << isDebugFunction << " | SYSCALL=" << isSyscall;
 

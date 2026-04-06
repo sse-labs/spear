@@ -102,7 +102,7 @@ void Node::printDotRepresentationWithSolution(std::ostream &os, std::vector<doub
            << "penwidth=2," << "\n"
            << "style=\"rounded,filled\"," << "\n"
            << "fontname=\"Courier\"," << "\n"
-           << "label=\"{" << escName << "|" << escBody << "}\""
+           << "label=\"{" << escName << this->getEnergy() << " J" << "|" << escBody << "}\""
            << ",tooltip=\"" << Util::dotRecordEscape(Util::stripParameters(this->name)) << "\""
            << "];\n";
 
