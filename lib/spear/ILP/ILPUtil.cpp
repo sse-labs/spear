@@ -19,6 +19,8 @@
 
 #include <CoinPackedVector.hpp>
 
+#include "Logger.h"
+
 
 std::string ILPUtil::boundToString(double value) {
     if (value <= -COIN_DBL_MAX / 2) {
@@ -269,8 +271,10 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
                 func->nodeEnergy[i] = ln.optimalValue;
             } catch (const std::out_of_range &e) {
                 // If the loopnode could not be found in the mapping, perform a quick fallback and zero the value
-                std::cerr << "Warning: LoopNode " << loopNode->getDotName() << " not found in loop mapping, "
-                                                                               "using 0.0 as energy value.\n";
+                Logger::getInstance().log(
+                    "Warning: LoopNode "
+                    + loopNode->getDotName() + " not found in loop mapping, using 0.0 as energy value.",
+                    LOGLEVEL::WARNING);
                 func->nodeEnergy[i] = 0.0;
             }
         }
@@ -398,7 +402,9 @@ void ILPUtil::buildIncidenceMaps(
 
         // Check that the index of the edge is valid
         if (edge->ilpIndex < 0) {
-            std::cerr << "Error: edge without valid ilpIndex encountered.\n";
+            Logger::getInstance().log(
+                "Error: edge without valid ilpIndex encountered.",
+                LOGLEVEL::ERROR);
             continue;
         }
 
@@ -416,8 +422,9 @@ void ILPUtil::insertUnique(
 
     // Check that we do not add columns that are already contained in the vector
     if (!used.insert(col).second) {
-        std::cerr << "Warning: duplicate column " << col
-                  << " while building row" << '\n';
+        Logger::getInstance().log(
+            "Warning: duplicate column " + std::to_string(col) + " while building row",
+            LOGLEVEL::WARNING);
         return;
     }
 

@@ -10,6 +10,9 @@
 #include <vector>
 #include <string>
 
+#include "Logger.h"
+#include "ProfileHandler.h"
+
 LLVMHandler::LLVMHandler(
     json energy,
     bool useCallAnalysis,
@@ -27,56 +30,36 @@ LLVMHandler::LLVMHandler(
 }
 
 double LLVMHandler::getNodeSum(Node *node) {
-    // Init the sum of this block
-    double blocksum = 0.0;
-    std::vector<InstructionElement> workingInstList = node->instructions;
-    auto nodename = node->block->getName();
+    double energy = 0.0;
+    auto &pHandler = ProfileHandler::get_instance();
 
-    // Iterate over the instructions in this block
-    for ( int i=0; i < node->instructions.size(); i++ ) {
-        auto &instruction = node->instructions[i].inst;
-        auto name = instruction->getOpcodeName();
+    for (const llvm::Instruction &I : *node->block) {
+        std::string instname = I.getOpcodeName();
 
-        double energy = 0.0;
+        if (auto icmpinst = llvm::dyn_cast<llvm::ICmpInst>(&I)) {
+            instname = std::string("icmp ") + llvm::ICmpInst::getPredicateName(icmpinst->getPredicate()).str();
+        }
 
-        if (auto *ICmp = llvm::dyn_cast<llvm::ICmpInst>(instruction)) {
-            llvm::ICmpInst::Predicate Pred = ICmp->getPredicate();
-
-            llvm::StringRef PredStr = llvm::ICmpInst::getPredicateName(Pred);
-
-            std::string icmpname = "icmp " + PredStr.str();
-            if (this->energyValues.contains(icmpname)) {
-                energy = this->energyValues[icmpname];
-            }
+        auto candiate = pHandler.getEnergyForInstruction(instname);
+        if (candiate.has_value()) {
+            energy += candiate.value();
         } else {
-            if (this->energyValues.contains(name)) {
-                energy = this->energyValues[name];
+            // If we do not have an energy value for the instruction, we log this and continue with the next instruction
+            /*Logger::getInstance().log(
+                    "No energy value found for instruction: " + std::string(I.getOpcodeName())
+                    + " Using unknown value if exists!",
+                    LOGLEVEL::WARNING);*/
+
+            auto unknownCost = pHandler.getUnknownCost();
+            if (unknownCost.has_value()) {
+                energy += unknownCost.value();
+            } else {
+                Logger::getInstance().log(
+                    "No unknown value specified by the profile! Recreate the profile!",
+                    LOGLEVEL::ERROR);
             }
         }
-
-        // Get the energy from the JSON energy values by referencing the category
-        double instructionValue = 0.00;
-        if (llvm::isa<llvm::CallBase>(instruction) && useCallAnalysis) {
-            double calledValue = InstructionCategory::getCalledFunctionEnergy(*instruction, this->funcmap);
-            instructionValue = energy;
-
-            instructionValue += calledValue;
-        } else {
-            instructionValue = energy;
-        }
-
-        // We catch the energy value of phi nodes here as they are a feature of llvm
-        // Their energy usage can not be translated directly to the energy usage of the source code
-        // Therefore we make the energy usage zero
-        if (llvm::isa<llvm::PHINode>(instruction)) {
-            instructionValue = 0.0;
-        }
-
-        node->instructions[i].energy = instructionValue;
-
-        // Add the value to the sum
-        blocksum += instructionValue;
     }
 
-    return blocksum;
+    return energy;
 }

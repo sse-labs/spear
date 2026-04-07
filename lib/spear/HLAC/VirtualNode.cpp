@@ -76,6 +76,7 @@ std::unique_ptr<HLAC::VirtualNode> HLAC::VirtualNode::makeVirtualPoint(
     virtualPoint->isEntry = isEntry;
     virtualPoint->parent = givparent;
     virtualPoint->hash = virtualPoint->calculateHash();
+    virtualPoint->nodeType = NodeType::VIRTUALNODE;
     return virtualPoint;
 }
 

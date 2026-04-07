@@ -182,6 +182,7 @@ add_custom_target(generate_syscall_table DEPENDS "${GENERATED_SYSCALL_HEADER}")
 # Sources
 # -----------------------
 file(GLOB_RECURSE SPEAR_HEADERS
+        src/passes/*.h
         src/spear/*.h
         lib/spear/HLAC/*.h
         src/spear/profilers/*.h
@@ -189,6 +190,7 @@ file(GLOB_RECURSE SPEAR_HEADERS
 )
 
 file(GLOB_RECURSE SPEAR_SOURCES
+        lib/passes/*.cpp
         lib/spear/*.cpp
         lib/spear/profilers/*.cpp
         lib/spear/HLAC/*.cpp
@@ -228,6 +230,7 @@ endif()
 
 target_include_directories(SpearLib
         PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/passes
         ${CMAKE_CURRENT_SOURCE_DIR}/src/spear
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/passes
         ${CMAKE_CURRENT_SOURCE_DIR}/src/spear/bpf
@@ -255,6 +258,7 @@ if(SPEAR_TEST_SOURCES)
     target_link_libraries(spear_tests PRIVATE SpearLib LLVM nlohmann_json phasar Catch2)
 
     target_include_directories(spear_tests PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/passes
             ${CMAKE_CURRENT_SOURCE_DIR}/src/spear
             ${CMAKE_CURRENT_SOURCE_DIR}/lib/passes
             ${CMAKE_CURRENT_SOURCE_DIR}/lib/test

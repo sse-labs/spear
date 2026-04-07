@@ -14,9 +14,15 @@
     }
   },
   "analysis": {
-    "mode": "program",
-    "format": "json",
-    "strategy": "worst",
+    "type": "comparison",
+    "clusteredCacheEnabled": false,
+    "feasibilityEnabled": true,
+    "writeDotFiles": false,
+    "legacyConfig": {
+      "mode": "program",
+      "format": "json",
+      "strategy": "worst"
+    },
     "fallback": {
       "MALFORMED_LOOP":  1000,
       "SYMBOLIC_BOUND_LOOP":  2000,

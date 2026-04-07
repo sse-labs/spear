@@ -8,22 +8,21 @@
 
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/Analysis/LazyCallGraph.h>
 
 #include <map>
 #include <memory>
 #include <ostream>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <unordered_map>
 
-#include "ILP/ILPBuilder.h"
 #include "ILP/ILPTypes.h"
 #include "analyses/ResultRegistry.h"
 
 namespace HLAC {
-
 
 /**
  * Forward declarations of Function and Generic nodes
@@ -32,6 +31,28 @@ class hlac;
 class FunctionNode;
 class GenericNode;
 class LoopNode;
+
+/**
+ * Enum to determine the type of node
+ */
+enum class NodeType {
+    UNDEFINED = 999,
+    NODE = 0,
+    LOOPNODE = 1,
+    CALLNODE = 2,
+    FUNCTIONNODE = 3,
+    VIRTUALNODE = 4,
+};
+
+/**
+ * Binding of node index to callee name for call nodes.
+ * This is used to determine which call nodes are relevant for the optimal solution and to print the
+ * optimal solution in a human-readable way.
+ */
+struct CallNodeBinding {
+    std::size_t nodeIndex;
+    std::string calleeName;
+};
 
 /**
  * Polymorphic generic node type
@@ -43,7 +64,15 @@ class GenericNode {
      */
     std::string name;
 
+    /**
+     * Hash of the node
+     */
     std::string hash;
+
+    /**
+     * Nodetype
+     */
+    NodeType nodeType = NodeType::UNDEFINED;
 
     /**
      * Base dot representation printing
@@ -91,11 +120,28 @@ class GenericNode {
 
 class VirtualNode : public GenericNode {
  public:
+    /**
+     * Flag to determine if a node is an entry node
+     */
     bool isEntry = false;
+
+    /**
+     * Flag to determine if a node is an exit node
+     */
     bool isExit = false;
 
+    /**
+     * Parent node of this node
+     */
     GenericNode *parent;
 
+    /**
+     * Create a new virtual points
+     * @param isEntry Flag to determine if the virtual point is an entry point
+     * @param isExit Flag to determine if the virtual point in an exit point
+     * @param givparent Parent node of the virtual point
+     * @return
+     */
     static std::unique_ptr<VirtualNode> makeVirtualPoint(bool isEntry, bool isExit, GenericNode *givparent);
 
     /**
@@ -118,6 +164,10 @@ class VirtualNode : public GenericNode {
      */
     std::string getDotName() override;
 
+    /**
+     * Calculate the hash of the node
+     * @return Hash of the node as string
+     */
     std::string calculateHash() override;
 };
 
@@ -233,8 +283,14 @@ class Node : public GenericNode {
  */
 class LoopNode : public GenericNode {
  public:
+    /**
+     * Phasar Registry for analysis results
+     */
     ResultRegistry registry;
 
+    /**
+     * Backedge of the loop
+     */
     HLAC::Edge *backEdge = nullptr;
 
     /**
@@ -330,6 +386,10 @@ class LoopNode : public GenericNode {
      */
     double getEnergy() override;
 
+    /**
+     * Calculate the hash of the node
+     * @return Hash as string
+     */
     std::string calculateHash() override;
 };
 
@@ -377,7 +437,7 @@ class FunctionNode : public GenericNode {
     /**
      * Internal mapping that maps a GenericNode object to the respective index in the Nodes vector
      */
-    std::unordered_map<GenericNode*, std::size_t> nodeLookup;
+    std::unordered_map<GenericNode *, std::size_t> nodeLookup;
 
     /**
      * Function represented by the FunctionNode
@@ -405,6 +465,39 @@ class FunctionNode : public GenericNode {
     bool isMainFunction = false;
     bool isDebugFunction = false;
     bool isLinkerFunction = false;
+
+    /**
+     * Flag to check if function is recursive
+     */
+    bool isRecursive = false;
+
+    /**
+     * Mapping of node index in the internal nodes vector to the energy of the corresponding node.
+     * This is used to precalculate the energy of all nodes in the function and to access it in O(1) time during
+     * ILP construction.
+     */
+    std::vector<double> baseNodeEnergy;
+
+    /**
+     * Vector of CallNodeBindings used to delay callnode energy retrieval to the point where the respective function
+     * has been analysed.
+     */
+    std::vector<CallNodeBinding> callNodeBindings;
+
+    /**
+     * Flag to determine whether the base node energy has been calculated and stored in the baseNodeEnergy vector.
+     */
+    bool baseNodeEnergyInitialized = false;
+
+    /**
+     * Node to energy cache
+     */
+    std::unordered_map<GenericNode *, double> directNodeEnergyCache;
+
+    /**
+     * Flag to determine if the node energy cache has been initialized.
+     */
+    bool directNodeEnergyCacheInitialized = false;
 
     /**
      * Create a new FunctionNode and return it
@@ -456,7 +549,19 @@ class FunctionNode : public GenericNode {
      */
     double getEnergy() override;
 
+    /**
+     * Calculate the hash of the function
+     * @return Hash as string
+     */
     std::string calculateHash() override;
+
+    /**
+     * Determine if the function represented by this function node is recursive under the given lazy call graph
+     * @param lazyCallGraph Lazy call graph describing the call relationships between the functions in the
+     * program under analysis
+     * @return True if the function is recursive, false otherwise
+     */
+    bool isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph);
 
  private:
     /**
@@ -578,6 +683,10 @@ class CallNode : public GenericNode {
      */
     double getEnergy() override;
 
+    /**
+     * Calculate the hash of the node
+     * @return Hash as string
+     */
     std::string calculateHash() override;
 };
 
@@ -593,6 +702,11 @@ class hlac {
     ResultRegistry registry;
 
     /**
+     * LLVM Lazy callgraph used to determine analysis order
+     */
+    llvm::LazyCallGraph lazyCallGraph;
+
+    /**
      * Simple cache to store the energy of functions that we have already calculated to avoid redundant calculations
      */
     std::map<std::string, double> FunctionEnergyCache;
@@ -602,7 +716,8 @@ class hlac {
      * @param registry Registry containing the results of the analyses we want to consider for
      * the construction of the HLAC
      */
-    explicit hlac(ResultRegistry registry) : registry(std::move(registry)) {}
+    explicit hlac(ResultRegistry registry, llvm::LazyCallGraph &lcg) :
+        registry(std::move(registry)), lazyCallGraph(std::move(lcg)) {}
 
     /**
      * List of FunctioNodes contained within the HLAC
@@ -655,9 +770,10 @@ class hlac {
     /**
      * Return the energy of a given function
      * @param functionName Name of the function to analyze
+     * @param isRecursive Flag if we are calling recursively
      * @return Energy of the function under analysis
      */
-    double getEnergyPerFunction(std::string functionName);
+    double getEnergyPerFunction(std::string functionName, bool isRecursive);
 
     /**
      * Return the energy of the contained functions
@@ -677,36 +793,35 @@ class hlac {
      * @param clusteredResult Mapping of functions to -> (LoopNode -> Clustered ILP Result)
      * @return Mapping of function names to their respective solution of the DAG longest path search
      */
-    std::unordered_map<std::string, DAGLongestPathSolution> DAGLongestPath(
-            std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPResult>> clusteredResult);
+    static std::optional<DAGLongestPathSolution> DAGLongestPath(FunctionNode *functionNode,
+                                                         std::unordered_map<LoopNode *, ILPResult> clusteredResult);
 
     /**
      * Build an ILP representation for the contained functions
      * @return Returns mapping between function name and the constructed CoinPackedMatrix representing
      * the ILP for the function
      */
-    std::map<std::string, ILPModel> buildMonolithicILPS();
+    std::optional<ILPModel> buildMonolithicILP(FunctionNode *functionNode);
 
     /**
      * Build clustered ILP representations for the contained functions
      * @return Returns mapping of functionname to
      */
-    std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPModel>> buildClusteredILPS();
+    std::optional<ClusteredILPModel> buildClusteredILPS(FunctionNode *functionNode);
 
     /**
      * Solve the monolithic models of the contained functions
-     * @param modelMapping Mapping function name to constructed monolithic ILPModel
+     * @param model Constructed monolithic model
      * @return Mapping of function name to monolithic ILP result
      */
-    std::map<std::string, ILPResult> solveMonolithicIlps(const std::map<std::string, ILPModel> &modelMapping);
+    std::optional<ILPResult> solveMonolithicIlp(ILPModel &model);
 
     /**
      * Solve the clustered models of the contained functions
-     * @param modelMapping Mapping function name to constructed clustered ILPModel
+     * @param loopModelMapping Mapping function name to constructed clustered ILPModel
      * @return Mapping of function name to clustered ILP result
      */
-    std::unordered_map<std::string, ILPClusteredLoopResult> solveClusteredIlps(
-        const std::unordered_map<std::string, ILPLoopModelMapping> &modelMapping);
+    static ILPClusteredLoopResult solveClusteredIlps(ILPLoopModelMapping loopModelMapping);
 };
 }  // namespace HLAC
 

@@ -20,8 +20,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "analyses/loopbound/LoopBound.h"
+#include "Logger.h"
 #include "analyses/feasibility/util.h"
+#include "analyses/loopbound/LoopBound.h"
 #include "analyses/loopbound/loopBoundWrapper.h"
 
 using llvm::Module;
@@ -79,13 +80,15 @@ void PhasarHandlerPass::runOnModule(llvm::Module &M) {
 
 void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManager *FAM) {
   if (!config.RUNFEASIBILITYANALYSIS && !config.RUNLOOPBOUNDANALYSIS) {
-    llvm::errs() << "No Phasar-based analysis selected. Please select at least one analysis to run.\n";
+    Logger::getInstance().log(
+        "No Phasar-based analysis selected. Please select at least one analysis to run.",
+        LOGLEVEL::ERROR);
     return;
   }
 
   if (config.RUNFEASIBILITYANALYSIS) {
     if (config.SHOWDEBUGOUTPUT) {
-        llvm::errs() << "Running Feasibility Analysis...\n";
+        Logger::getInstance().log("Running Feasibility Analysis...", LOGLEVEL::INFO);
     }
     feasibilitywrapper = make_unique<Feasibility::FeasibilityWrapper>(HA, FAM);
     feasibilityProblem = feasibilitywrapper->problem;
@@ -94,7 +97,7 @@ void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManag
 
   if (config.RUNLOOPBOUNDANALYSIS) {
     if (config.SHOWDEBUGOUTPUT) {
-        llvm::errs() << "Running Loop Bound Analysis...\n";
+        Logger::getInstance().log("Running Loopbound Analysis...", LOGLEVEL::INFO);
     }
     loopboundwrapper = make_unique<LoopBound::LoopBoundWrapper>(HA, FAM);
     loopboundProblem = loopboundwrapper->problem;
@@ -102,9 +105,11 @@ void PhasarHandlerPass::runAnalysis(llvm::Module &M, llvm::FunctionAnalysisManag
   }
 
   if (config.RUNFEASIBILITYANALYSIS && config.RUNLOOPBOUNDANALYSIS) {
-    llvm::errs() << "Running both analyses is currently not supported due to potential interference. "
-                    "Please run them separately.\n";
-    return;
+      Logger::getInstance().log(
+        "Running both analyses is currently not supported due to potential interference. "
+        "Please run them separately.",
+        LOGLEVEL::ERROR);
+      return;
   }
 }
 

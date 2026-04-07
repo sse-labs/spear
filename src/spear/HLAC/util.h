@@ -147,8 +147,9 @@ class Util {
      */
     static std::vector<Edge *> findTakenEdges(
         GenericNode *entryNode,
-        std::unordered_map<HLAC::GenericNode *, HLAC::GenericNode *> predecessors,
-        std::vector<std::unique_ptr<Edge>> &edges);
+        const std::unordered_map<HLAC::GenericNode *, HLAC::GenericNode *> &predecessors,
+        std::vector<std::unique_ptr<Edge>> &edges,
+        const std::unordered_map<HLAC::LoopNode *, ILPResult> &loopResults);
 
     /**
      * Search for the edge under the given ILPIndex

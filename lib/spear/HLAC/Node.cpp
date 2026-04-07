@@ -13,6 +13,7 @@
 #include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
+#include "Logger.h"
 #include "ProfileHandler.h"
 
 namespace HLAC {
@@ -23,6 +24,7 @@ std::unique_ptr<Node> Node::makeNode(llvm::BasicBlock *basic_block) {
     node->block = basic_block;
     node->name = basic_block->getName();
     node->hash = node->calculateHash();
+    node->nodeType = NodeType::NODE;
 
     return node;
 }
@@ -100,7 +102,7 @@ void Node::printDotRepresentationWithSolution(std::ostream &os, std::vector<doub
            << "penwidth=2," << "\n"
            << "style=\"rounded,filled\"," << "\n"
            << "fontname=\"Courier\"," << "\n"
-           << "label=\"{" << escName << "|" << escBody << "}\""
+           << "label=\"{" << escName << this->getEnergy() << " J" << "|" << escBody << "}\""
            << ",tooltip=\"" << Util::dotRecordEscape(Util::stripParameters(this->name)) << "\""
            << "];\n";
 
@@ -127,12 +129,18 @@ double Node::getEnergy() {
             energy += candiate.value();
         } else {
             // If we do not have an energy value for the instruction, we log this and continue with the next instruction
-            // llvm::errs() << "No energy value found for instruction: " << I.getOpcodeName() << "\n";
+            /*Logger::getInstance().log(
+                    "No energy value found for instruction: " + std::string(instname)
+                    + " Using unknown value if exists!",
+                    LOGLEVEL::WARNING);*/
+
             auto unknownCost = pHandler.getUnknownCost();
             if (unknownCost.has_value()) {
                 energy += unknownCost.value();
             } else {
-                llvm::errs() << "No unknown value specified by the profile! Recreate the profile!" << "\n";
+                Logger::getInstance().log(
+                    "No unknown value specified by the profile! Recreate the profile!",
+                    LOGLEVEL::ERROR);
             }
         }
     }

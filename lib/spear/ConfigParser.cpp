@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "configuration/configurationUtils.h"
+
 AnalysisConfiguration ConfigParser::analysisConfiguration = {};
 ProfilingConfiguration ConfigParser::profilingConfiguration = {};
 
@@ -82,7 +84,7 @@ bool ConfigParser::fallbackValid(json object) {
 bool ConfigParser::strategyValid(json object) {
     if (object.contains("strategy") && object["strategy"].is_string()) {
         std::string strategy = object["strategy"];
-        auto strat = strToStrategy(strategy);
+        auto strat = ConfigurationUtils::strToStrategy(strategy);
 
         if (strat != Strategy::UNDEFINED) {
             return true;
@@ -98,7 +100,7 @@ bool ConfigParser::strategyValid(json object) {
 bool ConfigParser::modeValid(json object) {
     if (object.contains("mode") && object["mode"].is_string()) {
         std::string mode = object["mode"];
-        auto m = strToMode(mode);
+        auto m = ConfigurationUtils::strToMode(mode);
 
         if (m != Mode::UNDEFINED) {
             return true;
@@ -114,12 +116,28 @@ bool ConfigParser::modeValid(json object) {
 bool ConfigParser::formatValid(json object) {
     if (object.contains("format") && object["format"].is_string()) {
         std::string format = object["format"];
-        auto fmt = strToFormat(format);
+        auto fmt = ConfigurationUtils::strToFormat(format);
 
         if (fmt != Format::UNDEFINED) {
             return true;
         }
         std::cout << "Invalid analysis.format: unsupported value." << std::endl;
+        return false;
+    }
+
+    std::cout << "Invalid analysis.format: missing or not a string." << std::endl;
+    return false;
+}
+
+bool ConfigParser::analysisTypeValid(json object) {
+    if (object.contains("type") && object["type"].is_string()) {
+        std::string type = object["type"];
+        auto tpe = ConfigurationUtils::strToAnalysisType(type);
+
+        if (tpe != AnalysisType::UNDEFINED) {
+            return true;
+        }
+        std::cout << "Invalid analysis.type: unsupported value." << std::endl;
         return false;
     }
 
@@ -205,17 +223,32 @@ bool ConfigParser::profilingValid() {
     return false;
 }
 
+bool ConfigParser::legacyValid(json object) {
+    if (object.contains("legacyConfig") && object["legacyConfig"].is_object()) {
+        auto legacyconfig = object["legacyConfig"];
+
+        if (legacyconfig.contains("mode") && modeValid(legacyconfig) &&
+            legacyconfig.contains("format") && formatValid(legacyconfig) &&
+            legacyconfig.contains("strategy") && strategyValid(legacyconfig)) {
+            return true;
+        }
+        std::cout << "Invalid legacyconfig: missing or invalid properties." << std::endl;
+        return false;
+    }
+
+    std::cout << "Invalid config: missing legacy section." << std::endl;
+    return false;
+}
+
 bool ConfigParser::analysisValid() {
     if (config.contains("analysis")) {
         auto analysis = config["analysis"];
 
         if (analysis.is_object()) {
             bool fallbackOk = fallbackValid(analysis);
-            bool modeOk = modeValid(analysis);
-            bool formatOk = formatValid(analysis);
-            bool strategyOk = strategyValid(analysis);
+            bool legacyOk = legacyValid(analysis) || analysis["type"] != "legacy";
 
-            if (fallbackOk && modeOk && formatOk && strategyOk) {
+            if (fallbackOk && legacyOk) {
                 return true;
             }
             std::cout << "Invalid analysis: one or more properties are invalid." << std::endl;
@@ -228,42 +261,6 @@ bool ConfigParser::analysisValid() {
 
     std::cout << "Invalid config: missing analysis section." << std::endl;
     return false;
-}
-
-Mode ConfigParser::strToMode(const std::string& str) {
-    if (str == "program") {
-        return Mode::PROGRAM;
-    } else if (str == "function") {
-        return Mode::FUNCTION;
-    } else if (str == "instruction") {
-        return Mode::INSTRUCTION;
-    } else if (str == "block") {
-        return Mode::BLOCK;
-    } else {
-        return Mode::UNDEFINED;
-    }
-}
-
-Strategy ConfigParser::strToStrategy(const std::string &str) {
-    if (str == "worst") {
-        return Strategy::WORST;
-    } else if (str == "average") {
-        return Strategy::AVERAGE;
-    } else if (str == "worst") {
-        return Strategy::WORST;
-    } else {
-        return Strategy::UNDEFINED;
-    }
-}
-
-Format ConfigParser::strToFormat(const std::string &str) {
-    if (str == "plain") {
-        return Format::PLAIN;
-    } else if (str == "json") {
-        return Format::JSON;
-    } else {
-        return Format::UNDEFINED;
-    }
 }
 
 AnalysisConfiguration ConfigParser::getAnalysisConfiguration() {
@@ -281,11 +278,20 @@ void ConfigParser::parse() {
 
     if (analysisValid()) {
         auto analysis = config["analysis"];
+        auto legacyconfig = analysis["legacyConfig"];
 
-        analysisConfiguration.mode = strToMode(analysis["mode"].get<std::string>());
-        analysisConfiguration.format = strToFormat(analysis["format"].get<std::string>());
-        analysisConfiguration.strategy = strToStrategy(analysis["strategy"].get<std::string>());
-        analysisConfiguration.deepcalls = DeepCalls::UNDEFINED;
+        analysisConfiguration.analysisType = ConfigurationUtils::strToAnalysisType(analysis["type"].get<std::string>());
+        analysisConfiguration.cachingEnabled = analysis["clusteredCacheEnabled"].get<bool>();
+        analysisConfiguration.feasibilityEnabled = analysis["feasibilityEnabled"].get<bool>();
+        analysisConfiguration.writeDotFiles = analysis["writeDotFiles"].get<bool>();
+
+        analysisConfiguration.legacyconfig.mode = ConfigurationUtils::strToMode(
+            legacyconfig["mode"].get<std::string>());
+        analysisConfiguration.legacyconfig.format = ConfigurationUtils::strToFormat(
+            legacyconfig["format"].get<std::string>());
+        analysisConfiguration.legacyconfig.strategy = ConfigurationUtils::strToStrategy(
+            legacyconfig["strategy"].get<std::string>());
+        analysisConfiguration.legacyconfig.deepcalls = false;
 
         analysisConfiguration.fallback.clear();
         if (analysis.contains("fallback") && analysis["fallback"].is_object()) {

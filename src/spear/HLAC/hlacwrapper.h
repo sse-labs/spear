@@ -19,7 +19,7 @@ class HLACWrapper {
      * Create a new HLAC graph
      * @return Returns unique pointer to the constructed graph
      */
-    static std::unique_ptr<hlac> makeHLAC(ResultRegistry registry);
+    static std::unique_ptr<hlac> makeHLAC(ResultRegistry registry, llvm::LazyCallGraph &lazyCallGraph);
 };
 
 }  // namespace HLAC

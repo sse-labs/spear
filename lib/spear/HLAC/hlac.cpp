@@ -22,6 +22,8 @@
 #include <CbcModel.hpp>
 #include <OsiClpSolverInterface.hpp>
 
+#include "Logger.h"
+
 namespace HLAC {
 void hlac::makeFunction(llvm::Function* function, llvm::FunctionAnalysisManager *fam) {
     auto fnptr = FunctionNode::makeNode(function, fam, registry, this);
@@ -107,135 +109,115 @@ std::map<std::string, double> hlac::getEnergy() {
     return FunctionEnergyCache;
 }
 
-double hlac::getEnergyPerFunction(std::string functionName) {
+double hlac::getEnergyPerFunction(std::string functionName, bool isRecursive) {
     if (FunctionEnergyCache.contains(functionName)) {
         return FunctionEnergyCache[functionName];
     }
 
-    llvm::errs() << "Trying to get energy of " << functionName << " which has not been analyzed yet!\n";
-    return -300000;
+    /**
+     * We land here if we encounter a call to a function that has not been analyzed yet.
+     * This can happen if we have recursive calls or if we call functions that are not defined in the program
+     * (e.g., library functions).
+     *
+     * Currently both cases return a 0.0.
+     * We could insert a fallback value here
+     */
+
+    if (isRecursive) {
+        Logger::getInstance().log("Trying to get energy of " + functionName +
+            " which is currently being analyzed! This is likely due to recursion. Returning 0.0 for this call.",
+            LOGLEVEL::WARNING);
+        return 0.0;
+    } else {
+        Logger::getInstance().log("Trying to get energy of " + functionName +
+            " which has not been analyzed yet!", LOGLEVEL::ERROR);
+        return 0.0;
+    }
 }
 
-std::map<std::string, ILPModel> hlac::buildMonolithicILPS() {
-    std::map<std::string, ILPModel> resultMapping;
+std::optional<ILPModel> hlac::buildMonolithicILP(FunctionNode *functionNode) {
+    // ignore phasar hooks
+    if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
+        && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
+        auto ilpModel = ILPBuilder::buildMonolithicILP(functionNode);
 
-    // Assume we iterate in postOrder
-    for (auto &functionNode : functions) {
-        // ignore phasar hooks
-        if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
+        return ilpModel;
+    }
+
+    return std::nullopt;
+}
+
+std::optional<ClusteredILPModel> hlac::buildClusteredILPS(FunctionNode *functionNode) {
+    // ignore phasar hooks
+    if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
+        && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
+        auto ilpModelMapping = ILPBuilder::buildClusteredILP(functionNode);
+
+        return ilpModelMapping;
+    } else {
+        // std::cout << "Ignored ILP building for function " << functionNode->name << "\n";
+    }
+
+    return std::nullopt;
+}
+
+
+std::optional<ILPResult> hlac::solveMonolithicIlp(ILPModel &model) {
+    auto solvedModel = ILPBuilder::solveModel(model);
+
+    return solvedModel;
+}
+
+std::optional<DAGLongestPathSolution> hlac::DAGLongestPath(FunctionNode *functionNode,
+    std::unordered_map<LoopNode *, ILPResult> clusteredResult) {
+    if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
             && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
-            auto ilpModel = ILPBuilder::buildMonolithicILP(functionNode.get());
+        auto [distances, predecessors] =
+            ILPUtil::longestPathDAG(functionNode, clusteredResult);
 
-            resultMapping[functionNode->name] = ilpModel;
+        auto funcNode = functionNode;
 
-        } else {
-            // std::cout << "Ignored ILP building for function " << functionNode->name << "\n";
-        }
+        // auto entryNode = funcNode->Nodes[funcNode->entryIndex];
+        auto exitNode = funcNode->Nodes[funcNode->exitIndex].get();
+
+        double exitEnergy = distances[exitNode];
+
+        std::vector<Edge *> takenEdges = Util::findTakenEdges(exitNode, predecessors, funcNode->Edges, clusteredResult);
+
+        return std::make_optional<DAGLongestPathSolution>({exitEnergy, takenEdges});
     }
 
-    return resultMapping;
+    return std::nullopt;
 }
 
-std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPModel>> hlac::buildClusteredILPS() {
-    std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPModel>> resultMapping;
-
-    // Assume we iterate in postOrder
-    for (auto &functionNode : functions) {
-        // ignore phasar hooks
-        if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
-            && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
-            auto ilpModelMapping = ILPBuilder::buildClusteredILP(functionNode.get());
-
-            resultMapping[functionNode->name] = ilpModelMapping;
-
-        } else {
-            // std::cout << "Ignored ILP building for function " << functionNode->name << "\n";
-        }
-    }
-
-    return resultMapping;
-}
-
-
-std::map<std::string, ILPResult>
-hlac::solveMonolithicIlps(const std::map<std::string, ILPModel> &modelMapping) {
-    std::map<std::string, ILPResult> result;
-
-    for (const auto &[name, model] : modelMapping) {
-        auto solvedModel = ILPBuilder::solveModel(model);
-
-        if (solvedModel.has_value()) {
-            result.emplace(name, std::move(*solvedModel));
-        }
-    }
-
-    return result;
-}
-
-std::unordered_map<std::string, DAGLongestPathSolution> hlac::DAGLongestPath(
-    std::unordered_map<std::string, std::unordered_map<HLAC::LoopNode *, ILPResult>> clusteredResult) {
-    std::unordered_map<std::string, DAGLongestPathSolution> result;
-
-    for (auto &functionNode : functions) {
-        if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
-            && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
-            auto [distances, predecessors] =
-                ILPUtil::longestPathDAG(functionNode.get(), clusteredResult[functionNode->name]);
-
-            auto funcNode = functionNode.get();
-
-            // auto entryNode = funcNode->Nodes[funcNode->entryIndex];
-            auto exitNode = funcNode->Nodes[funcNode->exitIndex].get();
-
-            double exitEnergy = distances[exitNode];
-
-            std::vector<Edge *> takenEdges = Util::findTakenEdges(exitNode, predecessors, funcNode->Edges);
-
-            result[functionNode->name] = {exitEnergy, takenEdges};
-        }
-    }
-
-    return result;
-}
-
-std::unordered_map<std::string, ILPClusteredLoopResult> hlac::solveClusteredIlps(
-    const std::unordered_map<std::string, ILPLoopModelMapping> &modelMapping) {
-
-    std::unordered_map<std::string, std::unordered_map<LoopNode *, ILPResult>> result;
-    result.reserve(modelMapping.size());
-
+ILPClusteredLoopResult hlac::solveClusteredIlps(ILPLoopModelMapping loopModelMapping) {
     ILPClusterCache &cache = ILPClusterCache::getInstance();
 
-    for (const auto &[name, loopModelMapping] : modelMapping) {
-        // We need to solve the ILP for each loop and then combine the results to get the overall energy and path
-        // for the function
-        std::unordered_map<LoopNode *, ILPResult> loopEnergyMapping;
-        loopEnergyMapping.reserve(loopModelMapping.size());
+    // We need to solve the ILP for each loop and then combine the results to get the overall energy and path
+    // for the function
+    std::unordered_map<LoopNode *, ILPResult> loopEnergyMapping;
+    loopEnergyMapping.reserve(loopModelMapping.size());
 
-        // std::cout << "Clustered results for " << name << ":\n";
+    // std::cout << "Clustered results for " << name << ":\n";
 
-        for (const auto &[loopNode, model] : loopModelMapping) {
-            if (cache.entryExists(loopNode->hash)) {
-                auto cachedResult = cache.getEntry(loopNode->hash);
-                if (cachedResult.has_value()) {
-                    loopEnergyMapping.emplace(loopNode, cachedResult.value());
-                }
-                continue;
-            } else {
-                auto solvedModel = ILPBuilder::solveModel(model);
+    for (const auto &[loopNode, model] : loopModelMapping) {
+        if (cache.entryExists(loopNode->hash)) {
+            auto cachedResult = cache.getEntry(loopNode->hash);
+            if (cachedResult.has_value()) {
+                loopEnergyMapping.emplace(loopNode, cachedResult.value());
+            }
+        } else {
+            auto solvedModel = ILPBuilder::solveModel(model);
 
-                if (solvedModel.has_value()) {
-                    // std::cout << "Loop " << loopNode->loop->getName().str() << " -> " << objectiveValue << std::endl;
-                    cache.setEntry(loopNode->hash, solvedModel.value());
-                    loopEnergyMapping.emplace(loopNode, std::move(*solvedModel));
-                }
+            if (solvedModel.has_value()) {
+                // std::cout << "Loop " << loopNode->loop->getName().str() << " -> " << objectiveValue << std::endl;
+                cache.setEntry(loopNode->hash, solvedModel.value());
+                loopEnergyMapping.emplace(loopNode, std::move(*solvedModel));
             }
         }
-
-        result.emplace(name, std::move(loopEnergyMapping));
     }
 
-    return result;
+    return loopEnergyMapping;
 }
 
 HLAC::FunctionNode * HLAC::hlac::getFunctionByName(std::string name) {

@@ -10,9 +10,12 @@
 #include <iostream>
 
 #include "ILP/ILPBuilder.h"
+
+#include "HLAC/hlac.h"
 #include "ILP/ILPSolver.h"
 #include "ILP/ILPUtil.h"
-#include "HLAC/hlac.h"
+#include "Logger.h"
+#include "PassUtil.h"
 
 void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode *func) {
     // Iterate over the edges in the function node
@@ -25,7 +28,9 @@ void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode 
         // Check that the currently viewed edge has a valid ILPIndex
         const int col = edge->ilpIndex;
         if (col < 0 || col >= static_cast<int>(model.col_ub.size())) {
-            std::cerr << "Warning: invalid ilpIndex while applying feasibility bound.\n";
+            Logger::getInstance().log(
+                "Warning: invalid ilpIndex while applying feasibility bound.",
+                LOGLEVEL::ERROR);
             // If the index is invalid, throw everything against the wall and ignore the edge...
             continue;
         }
@@ -58,7 +63,9 @@ void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::LoopNode *loo
         // Check that the currently viewed edge has a valid ILPIndex
         const int col = edge->ilpIndex;
         if (col < 0 || col >= static_cast<int>(model.col_ub.size())) {
-            std::cerr << "Warning: invalid ilpIndex while applying feasibility bound.\n";
+            Logger::getInstance().log(
+                "Warning: invalid ilpIndex while applying feasibility bound.",
+                LOGLEVEL::ERROR);
             continue;
             // If the index is invalid, throw everything against the wall and ignore the edge...
         }
@@ -192,8 +199,9 @@ void ILPBuilder::appendLoopBoundConstraint(
     std::unordered_set<int> usedCols;
 
     if (loopNode->backEdge == nullptr) {
-        std::cerr << "Warning: Loop " << loopNode->getDotName()
-                  << " has no backedge, skipping loop bound constraint.\n";
+        Logger::getInstance().log(
+            "Warning: Loop " + loopNode->getDotName() + " has no backedge, skipping loop bound constraint.",
+            LOGLEVEL::ERROR);
         return;
     }
 
@@ -232,13 +240,20 @@ void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::FunctionNode *func
     // For all edges in this functionnode set the objective vector values
     for (auto &edgeUP : func->Edges) {
         auto *edge = edgeUP.get();
-        model.obj[edge->ilpIndex] = edge->destination->getEnergy();
+
+        auto cacheIterator = func->directNodeEnergyCache.find(edge->destination);
+        if (cacheIterator != func->directNodeEnergyCache.end()) {
+            model.obj[edge->ilpIndex] = cacheIterator->second;
+        } else {
+            // Fall back to the live node energy for nodes that are intentionally
+            // not cached here, such as call nodes filled later.
+            model.obj[edge->ilpIndex] = edge->destination->getEnergy();
+        }
     }
 
     // Then we need to check all contained loopnodes
     for (auto &nodeUP : func->Nodes) {
-        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
-            // Fill the objective function for all loopnodes contained in the function
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
             fillObjectiveFunction(model, loopNode);
         }
     }

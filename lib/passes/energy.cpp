@@ -3,7 +3,6 @@
  * All rights reserved.
  */
 
-#include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/Function.h>
 #include <llvm/Passes/PassBuilder.h>
@@ -13,11 +12,15 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
+#include <llvm/Transforms/Scalar/IndVarSimplify.h>
+#include <llvm/Transforms/Scalar/LoopPassManager.h>
+#include <llvm/Transforms/Scalar/LoopRotation.h>
+#include <llvm/Transforms/Utils/InstructionNamer.h>
+#include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 #include "ConfigParser.h"
 #include "DeMangler.h"
@@ -32,13 +35,16 @@
 
 #include <nlohmann/json.hpp>
 
+#include "ClusteredAnalysis.h"
 #include "HLAC/util.h"
 #include "ILP/ILPBuilder.h"
 #include "ILP/ILPClusterCache.h"
+#include "LegacyAnalysis.h"
+#include "Logger.h"
+#include "MonolithicAnalysis.h"
+#include "PassUtil.h"
 #include "analyses/ResultRegistry.h"
 
-
-#define SHOWTIMINGS true
 
 using json = nlohmann::json;
 
@@ -129,7 +135,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                                     std::string forFunction) {
         json outputObject = nullptr;
 
-        if (ConfigParser::getAnalysisConfiguration().mode == Mode::PROGRAM) {
+        if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::PROGRAM) {
             outputObject = json::object();
             outputObject["functions"] = json::array();
             outputObject["duration"] = duration;
@@ -161,7 +167,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 outputObject["functions"][i] = functionObject;
             }
-        } else if (ConfigParser::getAnalysisConfiguration().mode == Mode::BLOCK) {
+        } else if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::BLOCK) {
             outputObject = json::object();
             outputObject["functions"] = json::array();
             outputObject["duration"] = duration;
@@ -193,7 +199,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
                 outputObject["functions"][i] = functionObject;
             }
-        } else if (ConfigParser::getAnalysisConfiguration().mode == Mode::INSTRUCTION) {
+        } else if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::INSTRUCTION) {
             outputObject = json::object();
             outputObject["functions"] = json::array();
             outputObject["duration"] = duration;
@@ -226,7 +232,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                     outputObject["functions"].push_back(functionObject);
                 }
             }
-        } else if (ConfigParser::getAnalysisConfiguration().mode == Mode::GRAPH) {
+        } else if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::GRAPH) {
             bool functionExists = false;
             if (!forFunction.empty()) {
                 for (int i = 0; i < numberOfFuncs; i++) {
@@ -302,7 +308,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      */
     static void outputMetricsPlain(json &outputObject) {
         if (outputObject != nullptr) {
-            if (ConfigParser::getAnalysisConfiguration().mode == Mode::PROGRAM) {
+            if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::PROGRAM) {
                 auto timeused = outputObject["duration"].get<double>();
                 outputObject.erase("duration");
 
@@ -331,7 +337,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                     }
                 }
                 llvm::outs() << "The Analysis took: " << timeused << " s\n";
-            } else if (ConfigParser::getAnalysisConfiguration().mode == Mode::BLOCK) {
+            } else if (ConfigParser::getAnalysisConfiguration().legacyconfig.mode == Mode::BLOCK) {
                 llvm::errs() << "Not implemented" << "\n";
             } else {
                 llvm::errs() << "Please specify the mode the pass should run "
@@ -344,347 +350,49 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         }
     }
 
-    /**
-     * Calculates ProgramGraph-representation of a function
-     * @param energyFunc Function to construct the graph for
-     * @param handler A LLVMHandler containing the energy-Model
-     * @param FAM A llvm::FunctionAnalysisManager
-     * @param analysisStrategy The strategy to analyze the function with
-     * @return Returns the calculated ProgramGraph
-     */
-    static void constructProgramRepresentation(ProgramGraph *pGraph, EnergyFunction *energyFunc, LLVMHandler *handler,
-                                               llvm::FunctionAnalysisManager *FAM,
-                                               AnalysisStrategy::Strategy analysisStrategy) {
-        auto *domtree = new llvm::DominatorTree();
-        llvm::Function *function = energyFunc->func;
-        domtree->recalculate(*function);
-
-        // Always create a local LoopInfo from the freshly computed DomTree.
-        // This avoids using stale Loop* pointers across IR changes / analysis
-        // invalidation.
-        llvm::LoopInfo localLI(*domtree);
-
-        // If you still want SCEV, keep it optional; LoopInfo should be local.
-        llvm::ScalarEvolution *scevPtr = nullptr;
-        if (FAM) {
-            // SCEV may assert if not registered; keep optional.
-            // If this asserts in your setup, set scevPtr = nullptr unconditionally.
-            scevPtr = &FAM->getResult<llvm::ScalarEvolutionAnalysis>(*function);
-        }
-
-        // Init a vector of references to BasicBlocks for all BBs in the function
-        std::vector<llvm::BasicBlock *> functionBlocks;
-        for (auto &blocks : *function) {
-            functionBlocks.push_back(&blocks);
-        }
-
-        // Create the ProgramGraph for the BBs present in the current function
-        ProgramGraph::construct(pGraph, functionBlocks, analysisStrategy);
-
-        // Get the vector of Top-Level loops present in the program (LOCAL)
-        auto loops = localLI.getTopLevelLoops();
-
-        // We need to distinguish if the function contains loops
-        if (!loops.empty()) {
-            for (auto liiter = loops.begin(); liiter < loops.end(); ++liiter) {
-                llvm::Loop *topLoop = *liiter;
-
-                // Hard guards against bad/dangling loops (prevents EXC_BAD_ACCESS in
-                // getExitingBlocks etc.)
-                if (!topLoop) {
-                    continue;
-                }
-                llvm::BasicBlock *H = topLoop->getHeader();
-
-                if (!H) {
-                    continue;
-                }
-
-                llvm::Function *PF = H->getParent();
-                if (!PF || PF != function) {
-                    continue;
-                }
-
-                // Optional: trigger a safe query to ensure loop is well-formed before
-                // deeper usage. (getBlocksVector is usually safe if loop is valid)
-                auto Blocks = topLoop->getBlocksVector();
-                if (Blocks.empty()) {
-                    continue;
-                }
-
-                // Construct the LoopTree from the Information of the current top-level
-                // loop
-                LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, scevPtr);
-
-                // Construct a LoopNode for the current loop
-                LoopNode *loopNode = LoopNode::construct(LT, pGraph, analysisStrategy);
-                // Replace the blocks used by loop in the previous created ProgramGraph
-                pGraph->replaceNodesWithLoopNode(topLoop->getBlocksVector(), loopNode);
-            }
-
-            // energyCalculation(pGraph, handler, function);
-            energyFunc->energy = pGraph->getEnergy(handler);
-
-        } else {
-            // energyCalculation(pGraph, handler, function);
-            energyFunc->energy = pGraph->getEnergy(handler);
-        }
-        delete domtree;
-    }
 
     /**
      * Function to run the analysis on a given module
      * @param module LLVM::Module to run the analysis on
-     * @param MAM llvm::ModuleAnalysisManager
+     * @param moduleAnalysisManager llvm::ModuleAnalysisManager
      * @param analysisStrategy Strategy to analyze the module with
      */
-    void analysisRunner(llvm::Module &module, llvm::ModuleAnalysisManager &MAM,
-                        AnalysisStrategy::Strategy analysisStrategy) {
-        // Get the FunctionAnalysisManager from the ModuleAnalysisManager
-        auto &functionAnalysisManager = MAM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
+    void analysisRunner(
+        llvm::Module &module,
+        llvm::ModuleAnalysisManager &moduleAnalysisManager,
+        AnalysisStrategy::Strategy analysisStrategy) {
+        auto &functionAnalysisManager =
+            moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 
-        // If a model was provided
-        if (this->energyJson.contains("add") && this->energyJson.contains("urem")) {
-            // Get the functions from the module
-            // PhasarHandler phasar_handler(&module);
-            // PhasarHandler::getInstance(&module).runAnalysis();
+        switch (ConfigParser::getAnalysisConfiguration().analysisType) {
+            case AnalysisType::LEGACY:
+                PassUtil::legacyWrapper(module, functionAnalysisManager);
+                break;
 
-            // mem2reg
-
-            // llvm::errs() << module << "\n";
-
-            /**
-             * Execute the mem2reg pass late to allow phasar to infer more variables.
-             * We need to execute the pass however, as scalarevolution depends
-             * somewhat on these results.
-             */
-            auto funcList = &module.getFunctionList();
-            auto postOrderFuncList = HLAC::Util::getLazyCallGraphPostOrder(module, functionAnalysisManager);
-
-            std::vector<std::string > funcNamesPostOrder;
-            for (auto &function : postOrderFuncList) {
-                funcNamesPostOrder.push_back(function->getName().str());
+            case AnalysisType::MONOLITHIC: {
+                ResultRegistry monolithicRegistry = this->resultRegistry;
+                PassUtil::runMonolithicOnModule(module, functionAnalysisManager, monolithicRegistry);
+                break;
             }
 
-            FunctionTree *functionTree = nullptr;
-            std::unique_ptr<HLAC::hlac> graph = HLAC::HLACWrapper::makeHLAC(this->resultRegistry);
-
-            // Construct the functionTrees to the functions of the module
-            for (auto &function : *funcList) {
-                // function.print(llvm::outs());
-
-                auto name = function.getName();
-                if (name == "main") {
-                    auto mainFunctionTree = FunctionTree::construct(&function);
-                    functionTree = (mainFunctionTree);
-                }
+            case AnalysisType::CLUSTERED: {
+                ResultRegistry clusteredRegistry = this->resultRegistry;
+                PassUtil::runClusteredOnModule(module, functionAnalysisManager, clusteredRegistry);
+                break;
             }
 
-            auto startConstruction = std::chrono::high_resolution_clock::now();
+            case AnalysisType::COMPARISON:
+                PassUtil::runComparisonAnalysesOnClonedModules(module, moduleAnalysisManager, this->resultRegistry);
+                break;
 
-            for (auto function : postOrderFuncList) {
-                graph->makeFunction(function, &functionAnalysisManager);
-            }
-
-            auto endConstruction = std::chrono::high_resolution_clock::now();
-
-            auto constructionTime = std::chrono::duration_cast<std::chrono::microseconds>(
-                endConstruction - startConstruction);
-            std::cout << "HLAC construction took: " << constructionTime.count() << " µs\n";
-
-            auto dotWritingStart = std::chrono::high_resolution_clock::now();
-            graph->printDotRepresentation();
-            auto dotWritingEnd = std::chrono::high_resolution_clock::now();
-
-            auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
-            std::cout << "Dot writing took: " << dotTime.count() << " µs\n";
-
-            auto res = graph->getEnergy();
-
-
-            // Precalculate all basic energy values
-            for (auto &functionNode : graph->functions) {
-                functionNode->nodeEnergy = std::vector<double>(
-                    functionNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
-                for (std::size_t i = 0; i < functionNode->topologicalSortedRepresentationOfNodes.size(); ++i) {
-                    HLAC::GenericNode *node = functionNode->topologicalSortedRepresentationOfNodes[i];
-
-                    if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
-                        continue;
-                    } else {
-                        functionNode->nodeEnergy[i] = node->getEnergy();
-                    }
-                }
-            }
-
-            // ================= Monolithic ILP =================
-
-            auto monoTotalStart = std::chrono::high_resolution_clock::now();
-
-            auto monoBuildStart = std::chrono::high_resolution_clock::now();
-
-            // Build one big ILP for the program under analysis
-            auto ilps = graph->buildMonolithicILPS();
-            auto monoBuildEnd = std::chrono::high_resolution_clock::now();
-
-            auto monoBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-                monoBuildEnd - monoBuildStart);
-
-
-            auto monoSolveStart = std::chrono::high_resolution_clock::now();
-
-            // Calculate the result of the big ILP
-            auto solvedResults = graph->solveMonolithicIlps(ilps);
-            auto monoSolveEnd = std::chrono::high_resolution_clock::now();
-
-            auto monoSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-                monoSolveEnd - monoSolveStart);
-
-
-            auto monoTotalEnd = std::chrono::high_resolution_clock::now();
-
-            auto monoTotalDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-                monoTotalEnd - monoTotalStart);
-
-
-            if (SHOWTIMINGS) {
-                std::cout << "Monolithic ILP Build Time: " << monoBuildDuration.count() << " µs\n";
-                std::cout << "Monolithic ILP Solve Time: " << monoSolveDuration.count() << " µs\n";
-                std::cout << "Monolithic Total Time:     " << monoTotalDuration.count() << " µs\n";
-            }
-
-            for (const auto &[funcName, resultpair] : solvedResults) {
-                llvm::outs() << "Monolithic Energy of " << funcName << ": " << resultpair.optimalValue << " J\n";
-
-                graph->printDotRepresentationWithSolution(
-                    graph->getFunctionByName(funcName),
-                    resultpair.variableValues,
-                    "monolithic");
-            }
-
-            ILPClusterCache clusterCache("cluster_cache.json", true);
-
-            // ================= Clustered ILP  =================
-
-            auto clusteredTotalStart = std::chrono::high_resolution_clock::now();
-
-            auto clusteredBuildStart = std::chrono::high_resolution_clock::now();
-
-            // build the clustered ILPs
-            auto clusteredILPs = graph->buildClusteredILPS();
-            auto clusteredBuildEnd = std::chrono::high_resolution_clock::now();
-
-            auto clusteredBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-                clusteredBuildEnd - clusteredBuildStart);
-
-            auto clusteredSolveStart = std::chrono::high_resolution_clock::now();
-
-            // Solve the clustered ILPs of the program
-            auto clusteredSolvedResults = graph->solveClusteredIlps(clusteredILPs);
-            auto clusteredSolveEnd = std::chrono::high_resolution_clock::now();
-
-            auto clusteredSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-                clusteredSolveEnd - clusteredSolveStart);
-
-
-            auto clusteredDagStart = std::chrono::high_resolution_clock::now();
-
-            // Calculate the longest path (= most expensive path) from the clustered results
-            auto dagResults = graph->DAGLongestPath(clusteredSolvedResults);
-
-            auto clusteredDagEnd = std::chrono::high_resolution_clock::now();
-            auto clusteredDagDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-                clusteredDagEnd - clusteredDagStart);
-
-            auto clusteredTotalEnd = std::chrono::high_resolution_clock::now();
-            auto clusteredTotalDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-                clusteredTotalEnd - clusteredTotalStart);
-
-            if (SHOWTIMINGS) {
-                std::cout << "Clustered ILP Build Time:  " << clusteredBuildDuration.count() << " µs\n";
-                std::cout << "Clustered ILP Solve Time:  " << clusteredSolveDuration.count() << " µs\n";
-                std::cout << "DAG Longest Path Time:     " << clusteredDagDuration.count() << " µs\n";
-                std::cout << "Clustered Total Time:      " << clusteredTotalDuration.count() << " µs\n";
-            }
-
-            // Trace the taken path and print the result of the clustered approach
-            for (const auto &[funcName, resultpair] : dagResults) {
-                auto resVector = resultpair.longestPath;
-
-                auto loopResults = clusteredSolvedResults[funcName];
-
-                llvm::outs() << "Clustered Energy of " << funcName << ": " << resultpair.WCEC << " J\n";
-                graph->printDotRepresentationWithSolution(graph->getFunctionByName(funcName), resVector, "clustered");
-            }
-
-            clusterCache.writeBackCache();
-
-            /*if (functionTree != nullptr) {
-                std::vector<llvm::StringRef> names;
-                for (auto function : functionTree->getPreOrderVector()) {
-                    names.push_back(function->getName());
-                }
-
-                const auto &preOrder = functionTree->getPreOrderVector();
-                std::vector<EnergyFunction> funcPool(preOrder.size());
-
-                for (int i = 0; i < functionTree->getPreOrderVector().size(); i++) {
-                    // Construct a new EnergyFunction to the current function
-                    // auto newFuntion = new EnergyFunction(function);
-                    llvm::Function *function = functionTree->getPreOrderVector()[i];
-
-                    // Add the EnergyFunction to the queue
-                    // handler.funcqueue.push_back(newFuntion);
-                    // auto energyFunction =
-                    // handler.funcmap.at(function->getName().str());
-
-                    funcPool[i].func = function;
-                    funcPool[i].name = DeMangler::demangle(function->getName().str());
-                }
-
-                // Init the LLVMHandler with the given model and the upper bound for
-                // unbounded loops
-                LLVMHandler handler = LLVMHandler(this->energyJson, deepCallsEnabled, funcPool.data(),
-                                                  functionTree->getPreOrderVector().size());
-
-                for (int i = 0; i < functionTree->getPreOrderVector().size(); i++) {
-                    llvm::Function *function = functionTree->getPreOrderVector()[i];
-
-                    // Check if the current function is external. Analysis of external
-                    // functions, that only were declared, will result in an infinite loop
-                    if (!function->isDeclarationForLinker()) {
-                        // Calculate the energy
-                        constructProgramRepresentation(funcPool[i].programGraph, &funcPool[i], &handler,
-                                                       &functionAnalysisManager, analysisStrategy);
-                        //  Calculate the maximal amount of energy of the programgraph
-                    } else {
-                        funcPool[i].programGraph = nullptr;
-                    }
-                }
-
-                this->stopwatch_end = std::chrono::steady_clock::now();
-                std::chrono::duration<double, std::milli> ms_double = this->stopwatch_end - this->stopwatch_start;
-
-                double duration = ms_double.count() / 1000;
-
-                // Construct the output
-                json output = constructOutputObject(funcPool.data(),
-                functionTree->getPreOrderVector().size(), duration, this->forFunction);
-
-                if (ConfigParser::getAnalysisConfiguration().format == Format::JSON) {
-                    outputMetricsJSON(output);
-                } else if (ConfigParser::getAnalysisConfiguration().format == Format::PLAIN) {
-                    outputMetricsPlain(output);
-                } else {
-                    llvm::errs() << "Please provide a valid output format: plain/JSON"
-                                 << "\n";
-                }
-            } else {
-                llvm::errs() << "Functiontree could not be determined!" << "\n";
-            }*/
-        } else {
-            llvm::errs() << "Please provide valid an energyfile" << "\n";
+            default:
+                llvm::errs() << "Please provide a valid analysis type: monolithic/clustered/legacy/comparison\n";
+                break;
         }
+
+        /**
+         * TODO Handle the output generated from the methods
+         */
     }
 
     /**
@@ -693,7 +401,7 @@ struct Energy : llvm::PassInfoMixin<Energy> {
      * @param moduleAnalysisManager Reference to a ModuleAnalysisManager
      */
     llvm::PreservedAnalyses run(llvm::Module &module, llvm::ModuleAnalysisManager &moduleAnalysisManager) {
-        auto strategy = ConfigParser::getAnalysisConfiguration().strategy;
+        auto strategy = ConfigParser::getAnalysisConfiguration().legacyconfig.strategy;
 
         // Check the analysis-strategy the user requestet
         if (strategy == Strategy::BEST) {

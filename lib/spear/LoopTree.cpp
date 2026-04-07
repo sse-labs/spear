@@ -14,8 +14,9 @@
 #include <string>
 #include <map>
 
-#include "ConfigParser.h"
 #include "../../src/spear/analyses/loopbound/LoopBound.h"
+#include "ConfigParser.h"
+#include "Logger.h"
 
 LoopTree::LoopTree(
     llvm::Loop *main,
@@ -130,7 +131,6 @@ std::vector<const llvm::Value *> LoopTree::getSourceVariablesFromSCEV(const llvm
 }
 
 void LoopTree::findBoundVars(llvm::ScalarEvolution *scalarEvolution) {
-    llvm::errs() << "\tLoop " << this->mainloop->getName() << "\n";
     // Get the induction variable using SCEV
     llvm::PHINode *IndVar = this->mainloop->getInductionVariable(*scalarEvolution);
     if (!IndVar) {
@@ -227,7 +227,8 @@ uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
 
     llvm::BasicBlock *bb = latch ? latch : exiting;
     if (!bb) {
-        llvm::errs() << "Loop has no latch or exiting block\n";
+        Logger::getInstance().log("Could not find latch or exiting block for loop " +
+            loop->getName().str() + ". Using fallback value.", LOGLEVEL::WARNING);
         return boundValue;
     }
 
@@ -242,13 +243,8 @@ uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
     const llvm::SCEV *tripCount = scalarEvolution->getBackedgeTakenCount(loop);
 
     if (auto *c = llvm::dyn_cast<llvm::SCEVConstant>(tripCount)) {
-        boundValue = c->getValue()->getSExtValue() + 1;
-        llvm::errs() << "\t\tTrip count = " << boundValue << "\n";
+        boundValue = c->getValue()->getSExtValue();
     } else {
-        llvm::errs() << "\t\tTrip count symbolic = ";
-        tripCount->print(llvm::errs());
-        llvm::errs() << "\n";
-        llvm::errs() << "\t\t\t=> Fallback loop bound = " << boundValue << "\n";
         boundValue = ConfigParser::getAnalysisConfiguration().fallback["UNKNOWN_LOOP"];
     }
 

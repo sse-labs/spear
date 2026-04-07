@@ -4,6 +4,7 @@
  */
 
 #include <llvm/Analysis/ScalarEvolution.h>
+#include <llvm/Analysis/LazyCallGraph.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Dominators.h>
 
@@ -20,7 +21,7 @@
 #include "HLAC/util.h"
 #include "LLVMHandler.h"
 
-#include <ClpEventHandler.hpp>
+#include "ConfigParser.h"
 
 #define SPR_IGNORE_DEBUG_FUNCTIONS 1
 
@@ -36,6 +37,7 @@ FunctionNode::FunctionNode(llvm::Function *function,
     this->name = function->getName();
     this->isLinkerFunction = function->isDeclarationForLinker();
     this->parentGraph = parentGraph;
+    this->nodeType = NodeType::FUNCTIONNODE;
 
     // Determine if the function is a LLVM debug function
     if (HLAC::Util::starts_with(this->name, "llvm.")) {
@@ -84,60 +86,62 @@ FunctionNode::FunctionNode(llvm::Function *function,
 
         auto feasResult = registry.getFeasibilityResults();
 
-        if (feasResult.contains(this->name)) {
-            Feasibility::BlockFeasibilityMap blockMapping = feasResult.at(this->name);
+        Feasibility::BlockFeasibilityMap blockMapping;
 
-            // Create all Edges from the basic blocks
-            for (auto &basic_block : *function) {
-                GenericNode *src = bb2node.at(&basic_block);
+        if (ConfigParser::getAnalysisConfiguration().feasibilityEnabled) {
+            blockMapping = feasResult.at(this->name);
+        }
 
-                llvm::Instruction *term = basic_block.getTerminator();
-                if (!term) continue;
+        // Create all Edges from the basic blocks
+        for (auto &basic_block : *function) {
+            GenericNode *src = bb2node.at(&basic_block);
 
-                const unsigned nSucc = term->getNumSuccessors();
+            llvm::Instruction *term = basic_block.getTerminator();
+            if (!term) continue;
 
-                // Handle virtual points
-                if (localEntryIndex != -1) {
-                    if (basic_block.isEntryBlock()) {
-                        auto e = FunctionNode::makeEdge(this->Nodes[localEntryIndex].get(), src);
-                        e->feasibility = true;
-                        this->Edges.push_back(std::move(e));
-                    }
-                }
+            const unsigned nSucc = term->getNumSuccessors();
 
-                if (localExitIndex != -1) {
-                    if (term->getNumSuccessors() == 0) {
-                        auto e = FunctionNode::makeEdge(src, this->Nodes[localExitIndex].get());
-                        e->feasibility = true;
-                        this->Edges.push_back(std::move(e));
-                    }
-                }
-
-
-                for (unsigned i = 0; i < nSucc; ++i) {
-                    const llvm::BasicBlock *succBB = term->getSuccessor(i);
-
-                    auto it = bb2node.find(succBB);
-                    if (it == bb2node.end()) {
-                        continue;
-                    }
-
-                    GenericNode *dst = it->second;
-
-                    auto blockName = succBB->getName().str();
-
-                    bool willEdgeBeFeasible = true;
-
-                    if (blockMapping.find(blockName) != blockMapping.end()) {
-                        willEdgeBeFeasible = blockMapping.at(succBB->getName().str()).Feasible;
-                    }
-
-                    auto e = FunctionNode::makeEdge(src, dst);
-
-                    e->feasibility = willEdgeBeFeasible;
-
+            // Handle virtual points
+            if (localEntryIndex != -1) {
+                if (basic_block.isEntryBlock()) {
+                    auto e = FunctionNode::makeEdge(this->Nodes[localEntryIndex].get(), src);
+                    e->feasibility = true;
                     this->Edges.push_back(std::move(e));
                 }
+            }
+
+            if (localExitIndex != -1) {
+                if (term->getNumSuccessors() == 0) {
+                    auto e = FunctionNode::makeEdge(src, this->Nodes[localExitIndex].get());
+                    e->feasibility = true;
+                    this->Edges.push_back(std::move(e));
+                }
+            }
+
+
+            for (unsigned i = 0; i < nSucc; ++i) {
+                const llvm::BasicBlock *succBB = term->getSuccessor(i);
+
+                auto it = bb2node.find(succBB);
+                if (it == bb2node.end()) {
+                    continue;
+                }
+
+                GenericNode *dst = it->second;
+
+                auto blockName = succBB->getName().str();
+
+                bool willEdgeBeFeasible = true;
+
+                if (blockMapping.find(blockName) != blockMapping.end()) {
+                    willEdgeBeFeasible = blockMapping.at(succBB->getName().str()).Feasible;
+                }
+
+                auto e = FunctionNode::makeEdge(src, dst);
+
+                e->feasibility = willEdgeBeFeasible;
+
+                this->Edges.push_back(std::move(e));
             }
         }
 
@@ -193,8 +197,33 @@ FunctionNode::FunctionNode(llvm::Function *function,
         this->adjacencyRepresentation = adjacencyList;
     }
 
+    this->isRecursive = isFunctionRecursive(parentGraph->lazyCallGraph);
+
     this->hash = FunctionNode::calculateHash();
 }
+
+bool FunctionNode::isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph) {
+    llvm::LazyCallGraph::Node &node = lazyCallGraph.get(*function);
+    llvm::LazyCallGraph::SCC *scc = lazyCallGraph.lookupSCC(node);
+    if (scc == nullptr) {
+        return false;
+    }
+
+    // Mutual recursion
+    if (std::distance(scc->begin(), scc->end()) > 1) {
+        return true;
+    }
+
+    // Direct self recursion
+    for (llvm::LazyCallGraph::Edge edge : *node) {
+        if (&edge.getNode() == &node) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 void FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
     for (auto &loop : loops) {
@@ -234,15 +263,19 @@ void FunctionNode::constructCallNodes(bool considerDebugFunctions) {
                 if (!callbase || !callbase->getParent()) continue;
 
                 llvm::Function *calledFunction = callbase->getCalledFunction();
+                llvm::Function *calleeFunction = callbase->getCaller();
 
                 // Construct the CallNode
-                auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this);
-                CallNode *callNode = callNodeUP.get();
+                if ( !calledFunction->getName().starts_with("__psr")
+                    && !calleeFunction->getName().starts_with("__psr") ) {
+                    auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this);
+                    CallNode *callNode = callNodeUP.get();
 
-                if (!callNode->isDebugFunction || !considerDebugFunctions) {
-                    // Add the CallNode to the list of Nodes and rewrite the edges of this FunctionNode
-                    this->Nodes.emplace_back(std::move(callNodeUP));
-                    callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                    if (!callNode->isDebugFunction || !considerDebugFunctions) {
+                        // Add the CallNode to the list of Nodes and rewrite the edges of this FunctionNode
+                        this->Nodes.emplace_back(std::move(callNodeUP));
+                        callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                    }
                 }
             }
 
@@ -317,15 +350,6 @@ double FunctionNode::getEnergy() {
     // DAG search based approach
     double energy = 0.0;
 
-    // DUMMY CALCULATION
-    // Just sum up the energy of all contained nodes for now, this is not the actual energy calculation we want to do
-    // in the end, but it is sufficient for testing purposes
-    for (auto &node : this->Nodes) {
-        energy += node->getEnergy();
-    }
-
-    // After the energy is calculated store it in the energy cache of the parent graph to avoid redundant calculations
-    this->parentGraph->FunctionEnergyCache[this->function->getName().str()] = energy;
     return energy;
 }
 

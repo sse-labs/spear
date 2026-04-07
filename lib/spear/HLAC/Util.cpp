@@ -303,39 +303,72 @@ std::map<HLAC::GenericNode*, std::vector<HLAC::Edge*>> Util::createIncomingList(
     return adjacentList;
 }
 
-std::vector<Edge *> Util::findTakenEdges(
+std::vector<HLAC::Edge *> HLAC::Util::findTakenEdges(
     GenericNode *entryNode,
-    std::unordered_map<HLAC::GenericNode*,
-    HLAC::GenericNode *> predecessors,
-    std::vector<std::unique_ptr<Edge>> &edges) {
-    std::vector<Edge *> result;
+    const std::unordered_map<HLAC::GenericNode *, HLAC::GenericNode *> &predecessors,
+    std::vector<std::unique_ptr<HLAC::Edge>> &edges,
+    const std::unordered_map<HLAC::LoopNode *, ILPResult> &loopResults) {
+
+    std::vector<HLAC::Edge *> result;
+    std::unordered_set<HLAC::Edge *> alreadyAddedEdges;
 
     // Start at the given entry node (in most cases the exit node of the underlying function)
-    HLAC::GenericNode *node = entryNode;
-    // Get the initial predecessor of the entry node
-    auto parent = predecessors[node];
+    HLAC::GenericNode *currentNode = entryNode;
 
-    // Iterate over the nodes parents until we encouter a node that has no parent (the start node of the function)
-    while (parent != nullptr) {
-        // Find the edge from parent to node
+    // Walk backwards through the predecessor chain until we reach the root node
+    while (currentNode != nullptr) {
+        auto predecessorIterator = predecessors.find(currentNode);
+        if (predecessorIterator == predecessors.end()) {
+            break;
+        }
+
+        HLAC::GenericNode *parentNode = predecessorIterator->second;
+        if (parentNode == nullptr) {
+            break;
+        }
+
+        HLAC::Edge *takenEdge = nullptr;
+
+        // Find the edge from parentNode to currentNode
         for (auto &edgeUP : edges) {
-            auto *edge = edgeUP.get();
+            HLAC::Edge *edge = edgeUP.get();
             if (!edge) {
                 continue;
             }
 
-            // If we find the edge to the parent, we store it
-            if (edge->soure == parent && edge->destination == node) {
-                result.push_back(edge);
+            if (edge->soure == parentNode && edge->destination == currentNode) {
+                takenEdge = edge;
                 break;
             }
         }
 
-        node = parent;
-        parent = predecessors[node];
+        if (takenEdge != nullptr && alreadyAddedEdges.insert(takenEdge).second) {
+            result.push_back(takenEdge);
+        }
+
+        // If the current node is a loop node, also append the inner edges selected by the loop ILP
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(currentNode)) {
+            auto loopResultIterator = loopResults.find(loopNode);
+            if (loopResultIterator != loopResults.end()) {
+                std::vector<HLAC::Edge *> allContainedEdges;
+                HLAC::Util::collectAllContainedEdges(loopNode, allContainedEdges);
+
+                for (int variableIndex = 0;
+                     variableIndex < static_cast<int>(loopResultIterator->second.variableValues.size());
+                     ++variableIndex) {
+                    if (loopResultIterator->second.variableValues[variableIndex] > 0.0) {
+                        HLAC::Edge *innerTakenEdge = HLAC::Util::findEdgeByGlobalId(allContainedEdges, variableIndex);
+                        if (innerTakenEdge != nullptr && alreadyAddedEdges.insert(innerTakenEdge).second) {
+                            result.push_back(innerTakenEdge);
+                        }
+                    }
+                }
+            }
+        }
+
+        currentNode = parentNode;
     }
 
-    // Return the list of edges found along the path
     return result;
 }
 

@@ -23,6 +23,7 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
     this->hasSubLoops = !loop->getSubLoops().empty();
     this->bounds = LoopBound::DeltaInterval();
     this->parentFunction = parentFunctionNode;
+    this->nodeType = NodeType::LOOPNODE;
 
     auto fName = function_node->function->getName().str();
     auto loopName = loop->getName().str();
@@ -219,7 +220,7 @@ void LoopNode::constructCallNodes(bool considerDebugFunctions) {
                 auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this->parentFunction);
 
                 CallNode *callNode = callNodeUP.get();
-                if (!callNode->isDebugFunction && !considerDebugFunctions) {
+                if (!callNode->isDebugFunction || !considerDebugFunctions) {
                     this->Nodes.emplace_back(std::move(callNodeUP));
                     callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
                 }
