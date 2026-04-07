@@ -9,6 +9,7 @@
 
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 #include "analyses/feasibility/FeasibilityAnalysisManager.h"
 

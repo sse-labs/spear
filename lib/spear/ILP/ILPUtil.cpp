@@ -422,7 +422,6 @@ void ILPUtil::insertUnique(
 
     // Check that we do not add columns that are already contained in the vector
     if (!used.insert(col).second) {
-
         Logger::getInstance().log(
             "Warning: duplicate column " + std::to_string(col) + " while building row",
             LOGLEVEL::WARNING);

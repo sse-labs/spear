@@ -3,9 +3,9 @@
  * All rights reserved.
  */
 
-#include "LegacyAnalysis.h"
-
 #include <llvm/IR/Dominators.h>
+
+#include <vector>
 
 #include "ConfigParser.h"
 #include "DeMangler.h"
@@ -14,6 +14,7 @@
 #include "Logger.h"
 #include "PassUtil.h"
 #include "ProfileHandler.h"
+#include "LegacyAnalysis.h"
 
 nlohmann::json LegacyAnalysis::run(
     llvm::FunctionAnalysisManager &FAM,
@@ -58,8 +59,10 @@ nlohmann::json LegacyAnalysis::run(
 
         auto legacyHandlerInitStart = std::chrono::high_resolution_clock::now();
 
-        LLVMHandler handler = LLVMHandler(ProfileHandler::get_instance().getProfile(), deepCallsEnabled, funcPool.data(),
-                                          functionTree->getPreOrderVector().size());
+        LLVMHandler handler = LLVMHandler(ProfileHandler::get_instance().getProfile(),
+                                            deepCallsEnabled,
+                                            funcPool.data(),
+                                            functionTree->getPreOrderVector().size());
 
         auto legacyHandlerInitEnd = std::chrono::high_resolution_clock::now();
         auto legacyHandlerInitDuration = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -107,7 +110,7 @@ nlohmann::json LegacyAnalysis::run(
         // this->stopwatch_end = std::chrono::steady_clock::now();
         // std::chrono::duration<double, std::milli> ms_double = this->stopwatch_end - this->stopwatch_start;
 
-        //double duration = ms_double.count() / 1000;
+        // double duration = ms_double.count() / 1000;
 
         return json::object();
     } else {
@@ -124,9 +127,11 @@ nlohmann::json LegacyAnalysis::run(
  * @param analysisStrategy The strategy to analyze the function with
  * @return Returns the calculated ProgramGraph
  */
-void LegacyAnalysis::constructProgramRepresentation(ProgramGraph *pGraph, EnergyFunction *energyFunc, LLVMHandler *handler,
-                                           llvm::FunctionAnalysisManager *FAM,
-                                           AnalysisStrategy::Strategy analysisStrategy) {
+void LegacyAnalysis::constructProgramRepresentation(ProgramGraph *pGraph,
+                                                    EnergyFunction *energyFunc,
+                                                    LLVMHandler *handler,
+                                                    llvm::FunctionAnalysisManager *FAM,
+                                                    AnalysisStrategy::Strategy analysisStrategy) {
     auto* domtree = new llvm::DominatorTree();
     llvm::Function* function = energyFunc->func;
 
@@ -135,55 +140,50 @@ void LegacyAnalysis::constructProgramRepresentation(ProgramGraph *pGraph, Energy
     auto &loopAnalysis = FAM->getResult<llvm::LoopAnalysis>(*function);
     auto &scalarEvolution = FAM->getResult<llvm::ScalarEvolutionAnalysis>(*function);
 
-
-    //Init a vector of references to BasicBlocks for all BBs in the function
+    // Init a vector of references to BasicBlocks for all BBs in the function
     std::vector<llvm::BasicBlock *> functionBlocks;
-    for(auto &blocks : *function){
+    for (auto &blocks : *function) {
         functionBlocks.push_back(&blocks);
     }
 
-    //Create the ProgramGraph for the BBs present in the current function
+    // Create the ProgramGraph for the BBs present in the current function
     ProgramGraph::construct(pGraph, functionBlocks, analysisStrategy);
 
-    //Get the vector of Top-Level loops present in the program
+    // Get the vector of Top-Level loops present in the program
     auto loops = loopAnalysis.getTopLevelLoops();
 
-    //We need to distinguish if the function contains loops
-    if(!loops.empty()){
-        //If the function contains loops
+    // We need to distinguish if the function contains loops
+    if (!loops.empty()) {
+        // If the function contains loops
 
-        //Iterate over the top-level loops
+        // Iterate over the top-level loops
         for (auto liiter = loops.begin(); liiter < loops.end(); ++liiter) {
-            //Get the loop, the iterator points to
-            auto topLoop= *liiter;
+            // Get the loop, the iterator points to
+            auto topLoop = *liiter;
 
-            //Construct the LoopTree from the Information of the current top-level loop
+            // Construct the LoopTree from the Information of the current top-level loop
             LoopTree *LT = new LoopTree(topLoop, topLoop->getSubLoops(), handler, &scalarEvolution);
 
-            //Construct a LoopNode for the current loop
+            // Construct a LoopNode for the current loop
             LoopNode *loopNode = LoopNode::construct(LT, pGraph, analysisStrategy);
-            //Replace the blocks used by loop in the previous created ProgramGraph
+            // Replace the blocks used by loop in the previous created ProgramGraph
             pGraph->replaceNodesWithLoopNode(topLoop->getBlocksVector(), loopNode);
         }
 
-        //energyCalculation(pGraph, handler, function);
+        // energyCalculation(pGraph, handler, function);
         energyFunc->energy = pGraph->getEnergy(handler);
 
         Logger::getInstance().log(
             "Legacy Energy of " + energyFunc->name + ": " + PassUtil::formatScientific(energyFunc->energy) + " J",
-            LOGLEVEL::HIGHLIGHT
-        );
-    }else{
+            LOGLEVEL::HIGHLIGHT);
+    } else {
         if (pGraph != nullptr) {
-            //energyCalculation(pGraph, handler, function);
+            // energyCalculation(pGraph, handler, function);
             energyFunc->energy = pGraph->getEnergy(handler);
             Logger::getInstance().log(
                 "Legacy Energy of " + energyFunc->name + ": " + PassUtil::formatScientific(energyFunc->energy) + " J",
-                LOGLEVEL::HIGHLIGHT
-            );
+                LOGLEVEL::HIGHLIGHT);
         }
-
-
     }
     delete domtree;
 }

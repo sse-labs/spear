@@ -227,7 +227,8 @@ uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
 
     llvm::BasicBlock *bb = latch ? latch : exiting;
     if (!bb) {
-        Logger::getInstance().log("Could not find latch or exiting block for loop " + loop->getName().str() + ". Using fallback value.", LOGLEVEL::WARNING);
+        Logger::getInstance().log("Could not find latch or exiting block for loop " +
+            loop->getName().str() + ". Using fallback value.", LOGLEVEL::WARNING);
         return boundValue;
     }
 
@@ -246,8 +247,6 @@ uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
     } else {
         boundValue = ConfigParser::getAnalysisConfiguration().fallback["UNKNOWN_LOOP"];
     }
-
-    // Logger::getInstance().log("Loop " + loop->getName().str() + " in block " + bbName + " has upper bound: " + std::to_string(boundValue), LOGLEVEL::INFO);
 
     return boundValue;
 }

@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <string>
 
 Logger& Logger::getInstance() {
     static Logger instance;  // Thread-safe since C++11

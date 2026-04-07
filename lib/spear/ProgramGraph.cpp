@@ -306,7 +306,7 @@ std::vector<LoopNode *> ProgramGraph::getLoopNodes() {
 
 std::string ProgramGraph::printDotRepresentation() {
     std::string dotStr;
-    //double globalMaxEng = this->findMaxEnergy();
+    // double globalMaxEng = this->findMaxEnergy();
     double globalMaxEng = 0.0;
 
     //  Iterate over the nodes
@@ -336,7 +336,7 @@ std::string ProgramGraph::printDotRepresentation() {
                 dotStr += "};\n";
             }
         } else {
-            //double maxEng = this->findMaxEnergy();
+            // double maxEng = this->findMaxEnergy();
             double maxEng = 0.0;
 
             //  If we didn't encounter a loopnode, we just add a normal node,

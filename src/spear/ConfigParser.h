@@ -6,13 +6,10 @@
 #ifndef SRC_SPEAR_CONFIGPARSER_H_
 #define SRC_SPEAR_CONFIGPARSER_H_
 
-#include "configuration/valuespace.h"
 
 #include <string>
-#include <map>
 
 #include <nlohmann/json.hpp>
-
 #include "configuration/configurationobjects.h"
 
 

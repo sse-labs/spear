@@ -40,7 +40,7 @@ public:
     static void collectCallNodeBindingsFromNestedNodes(
         HLAC::GenericNode *currentNode,
         std::size_t topLevelNodeIndex,
-        std::vector<HLAC::FunctionNode::CallNodeBinding> &callNodeBindings);
+        std::vector<HLAC::CallNodeBinding> &callNodeBindings);
 
     static void cacheDirectNodeEnergies(
         HLAC::GenericNode *currentNode,

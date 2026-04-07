@@ -5,6 +5,9 @@
 
 #include "ClusteredAnalysis.h"
 
+#include <vector>
+#include <string>
+
 #include "ConfigParser.h"
 #include "ILP/ILPClusterCache.h"
 #include "ILP/ILPUtil.h"
@@ -95,8 +98,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
                 Logger::getInstance().log(
                     "Clustered Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J",
-                    LOGLEVEL::HIGHLIGHT
-                );
+                    LOGLEVEL::HIGHLIGHT);
 
                 if (ConfigParser::getAnalysisConfiguration().writeDotFiles) {
                     graph->printDotRepresentationWithSolution(

@@ -4,6 +4,7 @@
  */
 
 #include <llvm/Analysis/ScalarEvolution.h>
+#include <llvm/Analysis/LazyCallGraph.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Dominators.h>
 
@@ -19,9 +20,6 @@
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
 #include "LLVMHandler.h"
-
-#include <ClpEventHandler.hpp>
-#include <llvm/Analysis/LazyCallGraph.h>
 
 #include "ConfigParser.h"
 
@@ -268,7 +266,8 @@ void FunctionNode::constructCallNodes(bool considerDebugFunctions) {
                 llvm::Function *calleeFunction = callbase->getCaller();
 
                 // Construct the CallNode
-                if (!calledFunction->getName().starts_with("__psr") && !calleeFunction->getName().starts_with("__psr") ) {
+                if ( !calledFunction->getName().starts_with("__psr")
+                    && !calleeFunction->getName().starts_with("__psr") ) {
                     auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this);
                     CallNode *callNode = callNodeUP.get();
 

@@ -5,6 +5,8 @@
 
 #include "MonolithicAnalysis.h"
 
+#include <vector>
+
 #include "ConfigParser.h"
 #include "HLAC/hlac.h"
 #include "ILP/ILPUtil.h"
@@ -64,8 +66,8 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
                 monoSolveEnd - monoSolveStart);
             totalSolveDuration += monoSolveDuration;
 
-            funcNode->nodeEnergy = std::vector<double>(funcNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
-
+            funcNode->nodeEnergy = std::vector<double>(
+                funcNode->topologicalSortedRepresentationOfNodes.size(), 0.0);
 
             if (solvedResults.has_value()) {
                 auto resultPair = solvedResults.value();
@@ -76,8 +78,7 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
 
                 Logger::getInstance().log(
                     "Monolithic Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J",
-                    LOGLEVEL::HIGHLIGHT
-                );
+                    LOGLEVEL::HIGHLIGHT);
 
                 if (ConfigParser::getAnalysisConfiguration().writeDotFiles) {
                     graph->printDotRepresentationWithSolution(

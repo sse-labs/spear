@@ -361,7 +361,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         llvm::Module &module,
         llvm::ModuleAnalysisManager &moduleAnalysisManager,
         AnalysisStrategy::Strategy analysisStrategy) {
-
         auto &functionAnalysisManager =
             moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 

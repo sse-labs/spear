@@ -253,7 +253,8 @@ double CallNode::getEnergy() {
     auto callername = this->parentFunctionNode->function->getName().str();
     auto calleename = this->calledFunction->getName().str();
 
-    auto energyOfCallee = parentFunctionNode->parentGraph->getEnergyPerFunction(calleename, this->parentFunctionNode->isRecursive);
+    auto energyOfCallee = parentFunctionNode->parentGraph->getEnergyPerFunction(calleename,
+        this->parentFunctionNode->isRecursive);
 
     return energyOfCallee;
 }

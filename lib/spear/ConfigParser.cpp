@@ -285,9 +285,12 @@ void ConfigParser::parse() {
         analysisConfiguration.feasibilityEnabled = analysis["feasibilityEnabled"].get<bool>();
         analysisConfiguration.writeDotFiles = analysis["writeDotFiles"].get<bool>();
 
-        analysisConfiguration.legacyconfig.mode = ConfigurationUtils::strToMode(legacyconfig["mode"].get<std::string>());
-        analysisConfiguration.legacyconfig.format = ConfigurationUtils::strToFormat(legacyconfig["format"].get<std::string>());
-        analysisConfiguration.legacyconfig.strategy = ConfigurationUtils::strToStrategy(legacyconfig["strategy"].get<std::string>());
+        analysisConfiguration.legacyconfig.mode = ConfigurationUtils::strToMode(
+            legacyconfig["mode"].get<std::string>());
+        analysisConfiguration.legacyconfig.format = ConfigurationUtils::strToFormat(
+            legacyconfig["format"].get<std::string>());
+        analysisConfiguration.legacyconfig.strategy = ConfigurationUtils::strToStrategy(
+            legacyconfig["strategy"].get<std::string>());
         analysisConfiguration.legacyconfig.deepcalls = false;
 
         analysisConfiguration.fallback.clear();

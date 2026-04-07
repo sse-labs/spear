@@ -124,16 +124,18 @@ double hlac::getEnergyPerFunction(std::string functionName, bool isRecursive) {
      */
 
     if (isRecursive) {
-        Logger::getInstance().log("Trying to get energy of " + functionName + " which is currently being analyzed! This is likely due to recursion. Returning 0.0 for this call.", LOGLEVEL::WARNING);
+        Logger::getInstance().log("Trying to get energy of " + functionName +
+            " which is currently being analyzed! This is likely due to recursion. Returning 0.0 for this call.",
+            LOGLEVEL::WARNING);
         return 0.0;
     } else {
-        Logger::getInstance().log("Trying to get energy of " + functionName + " which has not been analyzed yet!", LOGLEVEL::ERROR);
+        Logger::getInstance().log("Trying to get energy of " + functionName +
+            " which has not been analyzed yet!", LOGLEVEL::ERROR);
         return 0.0;
     }
 }
 
 std::optional<ILPModel> hlac::buildMonolithicILP(FunctionNode *functionNode) {
-
     // ignore phasar hooks
     if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
         && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
@@ -146,7 +148,6 @@ std::optional<ILPModel> hlac::buildMonolithicILP(FunctionNode *functionNode) {
 }
 
 std::optional<ClusteredILPModel> hlac::buildClusteredILPS(FunctionNode *functionNode) {
-
     // ignore phasar hooks
     if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
         && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
@@ -167,8 +168,8 @@ std::optional<ILPResult> hlac::solveMonolithicIlp(ILPModel &model) {
     return solvedModel;
 }
 
-std::optional<DAGLongestPathSolution> hlac::DAGLongestPath(FunctionNode *functionNode, std::unordered_map<LoopNode *, ILPResult> clusteredResult) {
-
+std::optional<DAGLongestPathSolution> hlac::DAGLongestPath(FunctionNode *functionNode,
+    std::unordered_map<LoopNode *, ILPResult> clusteredResult) {
     if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
             && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
         auto [distances, predecessors] =
@@ -190,7 +191,6 @@ std::optional<DAGLongestPathSolution> hlac::DAGLongestPath(FunctionNode *functio
 }
 
 ILPClusteredLoopResult hlac::solveClusteredIlps(ILPLoopModelMapping loopModelMapping) {
-
     ILPClusterCache &cache = ILPClusterCache::getInstance();
 
     // We need to solve the ILP for each loop and then combine the results to get the overall energy and path

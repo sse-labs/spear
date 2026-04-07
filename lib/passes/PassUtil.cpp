@@ -3,7 +3,12 @@
  * All rights reserved.
  */
 
-#include "PassUtil.h"
+#include <llvm/Analysis/LazyCallGraph.h>
+#include <llvm/Analysis/TargetLibraryInfo.h>
+#include <llvm/Transforms/Scalar/LoopPassManager.h>
+#include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/Transforms/Utils/InstructionNamer.h>
+#include <llvm/Transforms/Utils/Mem2Reg.h>
 
 #include <algorithm>
 #include <chrono>
@@ -14,21 +19,15 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <llvm/Analysis/LazyCallGraph.h>
-#include <llvm/Analysis/TargetLibraryInfo.h>
-#include <llvm/Transforms/Scalar/LoopPassManager.h>
-#include <llvm/Transforms/Utils/Cloning.h>
-#include <llvm/Transforms/Utils/InstructionNamer.h>
-#include <llvm/Transforms/Utils/Mem2Reg.h>
+#include <unordered_map>
 
 #include "ClusteredAnalysis.h"
 #include "FunctionTree.h"
 #include "HLAC/hlacwrapper.h"
 #include "HLAC/util.h"
 #include "LegacyAnalysis.h"
-#include "Logger.h"
 #include "MonolithicAnalysis.h"
+#include "PassUtil.h"
 
 std::string PassUtil::formatScientific(double value, int precision) {
     std::ostringstream outputStream;
@@ -105,12 +104,12 @@ void PassUtil::legacyWrapper(
 void PassUtil::collectCallNodeBindingsFromNestedNodes(
     HLAC::GenericNode *currentNode,
     std::size_t topLevelNodeIndex,
-    std::vector<HLAC::FunctionNode::CallNodeBinding> &callNodeBindings) {
+    std::vector<HLAC::CallNodeBinding> &callNodeBindings) {
 
     if (currentNode->nodeType == HLAC::NodeType::CALLNODE) {
         auto *callNode = static_cast<HLAC::CallNode *>(currentNode);
 
-        HLAC::FunctionNode::CallNodeBinding binding;
+        HLAC::CallNodeBinding binding;
         binding.nodeIndex = topLevelNodeIndex;
         binding.calleeName = callNode->calledFunction->getName().str();
 
@@ -213,7 +212,8 @@ std::shared_ptr<HLAC::hlac> PassUtil::buildInitializedGraph(
         for (std::size_t index = 0; index < sortedNodeList.size(); ++index) {
             HLAC::GenericNode *currentNode = sortedNodeList[index];
 
-            if (currentNode->nodeType == HLAC::NodeType::CALLNODE || currentNode->nodeType == HLAC::NodeType::LOOPNODE) {
+            if (currentNode->nodeType == HLAC::NodeType::CALLNODE
+                || currentNode->nodeType == HLAC::NodeType::LOOPNODE) {
                 // Collect call nodes, including call nodes nested inside loop nodes
                 collectCallNodeBindingsFromNestedNodes(currentNode, index, functionNode->callNodeBindings);
                 continue;

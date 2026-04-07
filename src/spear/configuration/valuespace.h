@@ -4,8 +4,8 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_VALUESPACE_H
-#define SPEAR_VALUESPACE_H
+#ifndef SRC_SPEAR_CONFIGURATION_VALUESPACE_H_
+#define SRC_SPEAR_CONFIGURATION_VALUESPACE_H_
 
 /**
  * Enum to distinguish the analysis target in the application
@@ -55,4 +55,4 @@ enum class AnalysisType {
 };
 
 
-#endif //SPEAR_VALUESPACE_H
+#endif  // SRC_SPEAR_CONFIGURATION_VALUESPACE_H_

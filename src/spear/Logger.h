@@ -3,8 +3,8 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_LOGGER_H
-#define SPEAR_LOGGER_H
+#ifndef SRC_SPEAR_LOGGER_H_
+#define SRC_SPEAR_LOGGER_H_
 
 #include <string>
 #include <mutex>
@@ -17,16 +17,16 @@ enum class LOGLEVEL {
 };
 
 namespace TerminalColor {
-const std::string reset  = "\033[0m";
-const std::string black   = "\033[0m";
-const std::string gray   = "\033[90m";
-const std::string green  = "\033[32m";
-const std::string yellow = "\033[33m";
-const std::string red    = "\033[31m";
+constexpr char reset[]  = "\033[0m";
+constexpr char black[]   = "\033[0m";
+constexpr char gray[]   = "\033[90m";
+constexpr char green[]  = "\033[32m";
+constexpr char yellow[] = "\033[33m";
+constexpr char red[]    = "\033[31m";
 }
 
 class Logger {
-public:
+ public:
     // Access the singleton instance
     static Logger& getInstance();
 
@@ -41,7 +41,7 @@ public:
 
     void setLogLevel(LOGLEVEL level);
 
-private:
+ private:
     Logger() = default;  // private constructor
 
     std::string logLevelToStr(LOGLEVEL level);
@@ -52,4 +52,4 @@ private:
     std::mutex logMutex;  // ensures thread-safe logging
 };
 
-#endif // SPEAR_LOGGER_H
+#endif  // SRC_SPEAR_LOGGER_H_

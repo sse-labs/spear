@@ -4,12 +4,11 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_CONFIGURATIONUTILS_H
-#define SPEAR_CONFIGURATIONUTILS_H
+#ifndef SRC_SPEAR_CONFIGURATION_CONFIGURATIONUTILS_H_
+#define SRC_SPEAR_CONFIGURATION_CONFIGURATIONUTILS_H_
+
 #include <string>
-
-
-#include "valuespace.h"
+#include "configuration/valuespace.h"
 
 class ConfigurationUtils {
  public:
@@ -46,4 +45,4 @@ class ConfigurationUtils {
     static AnalysisType strToAnalysisType(const std::string& str);
 };
 
-#endif //SPEAR_CONFIGURATIONUTILS_H
+#endif  // SRC_SPEAR_CONFIGURATION_CONFIGURATIONUTILS_H_

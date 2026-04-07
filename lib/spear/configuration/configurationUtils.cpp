@@ -3,6 +3,7 @@
  * All rights reserved.
  */
 
+#include <string>
 #include "configuration/configurationUtils.h"
 
 

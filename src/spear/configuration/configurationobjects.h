@@ -4,13 +4,13 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_CONFIGURATIONOBJECTS_H
-#define SPEAR_CONFIGURATIONOBJECTS_H
+#ifndef SRC_SPEAR_CONFIGURATION_CONFIGURATIONOBJECTS_H_
+#define SRC_SPEAR_CONFIGURATION_CONFIGURATIONOBJECTS_H_
 
 #include <map>
 #include <string>
 
-#include "valuespace.h"
+#include "configuration/valuespace.h"
 
 struct LegacyAnalysisConfiguration {
     Mode mode;
@@ -53,4 +53,4 @@ struct AnalysisConfiguration {
     std::map<std::string, int64_t> fallback;
 };
 
-#endif //SPEAR_CONFIGURATIONOBJECTS_H
+#endif  // SRC_SPEAR_CONFIGURATION_CONFIGURATIONOBJECTS_H_
