@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['strategy_0',['Strategy',['../classAnalysisStrategy.html#a4f55ee7abd18085d3a94537512fb673b',1,'AnalysisStrategy']]]
+  ['nodetype_0',['NodeType',['../namespaceHLAC.html#a33be043931e89bbaf48cc6381a3de1ae',1,'HLAC']]]
 ];

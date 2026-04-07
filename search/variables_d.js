@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['parent_0',['parent',['../classFeasibility_1_1EnvNode.html#a7e2cd72c32a515c11a0e65d1eb7b2b0e',1,'Feasibility::EnvNode::parent'],['../classNode.html#a06d203029b4fd6f499b2879a7fda03a4',1,'Node::parent']]],
+  ['parent_0',['parent',['../classFeasibility_1_1EnvNode.html#a7e2cd72c32a515c11a0e65d1eb7b2b0e',1,'Feasibility::EnvNode::parent'],['../classHLAC_1_1VirtualNode.html#a749b2bf8cdaf2bcff52f0bbbfcb1a5d9',1,'HLAC::VirtualNode::parent'],['../classNode.html#a06d203029b4fd6f499b2879a7fda03a4',1,'Node::parent']]],
   ['parentfunction_1',['parentFunction',['../classHLAC_1_1LoopNode.html#af357fc78be2a8817cea044fb7847d831',1,'HLAC::LoopNode']]],
   ['parentgraph_2',['parentGraph',['../classHLAC_1_1FunctionNode.html#ae1f9c1714b83696201711b9cc478e67d',1,'HLAC::FunctionNode']]],
   ['predbb_3',['PredBB',['../structFeasibility_1_1LazyAtom.html#a10f0faa6f5f7aa62d3954f96b3a076d3',1,'Feasibility::LazyAtom']]],

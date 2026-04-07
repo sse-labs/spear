@@ -75,6 +75,7 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classHLAC_1_1hlac-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">HLAC::hlac Class Reference</div></div>
@@ -85,8 +86,8 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a29cb6740f533fb0ea2055a3fb94a22cb" id="r_a29cb6740f533fb0ea2055a3fb94a22cb"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a29cb6740f533fb0ea2055a3fb94a22cb">hlac</a> (<a class="el" href="classResultRegistry.html">ResultRegistry</a> <a class="el" href="classHLAC_1_1hlac.html#abbbac64429f4346e8eaadba482841d1c">registry</a>)</td></tr>
-<tr class="separator:a29cb6740f533fb0ea2055a3fb94a22cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a822ee782125d239b269dd787244931cd" id="r_a822ee782125d239b269dd787244931cd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a822ee782125d239b269dd787244931cd">hlac</a> (<a class="el" href="classResultRegistry.html">ResultRegistry</a> <a class="el" href="classHLAC_1_1hlac.html#abbbac64429f4346e8eaadba482841d1c">registry</a>, llvm::LazyCallGraph &amp;lcg)</td></tr>
+<tr class="separator:a822ee782125d239b269dd787244931cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2c0250ecb3687377b9634ea5aae25da4" id="r_a2c0250ecb3687377b9634ea5aae25da4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a2c0250ecb3687377b9634ea5aae25da4">makeFunction</a> (llvm::Function *function, llvm::FunctionAnalysisManager *fam)</td></tr>
 <tr class="separator:a2c0250ecb3687377b9634ea5aae25da4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a42f5220325a85f46b3984ffb003aeadd" id="r_a42f5220325a85f46b3984ffb003aeadd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a42f5220325a85f46b3984ffb003aeadd">printDotRepresentation</a> ()</td></tr>
@@ -95,27 +96,32 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:aca92e0d2441d0b787b3d4267df7639a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac115f9dfff2a9b42777076f63a7d0386" id="r_ac115f9dfff2a9b42777076f63a7d0386"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#ac115f9dfff2a9b42777076f63a7d0386">printDotRepresentationWithSolution</a> (<a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> *FN, std::vector&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> * &gt; result, std::string appendName)</td></tr>
 <tr class="separator:ac115f9dfff2a9b42777076f63a7d0386"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afc9affc90a97753cb2a9d5ff27e64bc7" id="r_afc9affc90a97753cb2a9d5ff27e64bc7"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#afc9affc90a97753cb2a9d5ff27e64bc7">getEnergyPerFunction</a> (std::string functionName)</td></tr>
-<tr class="separator:afc9affc90a97753cb2a9d5ff27e64bc7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac87cc842492e8f6fa344ed1f501847a6" id="r_ac87cc842492e8f6fa344ed1f501847a6"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#ac87cc842492e8f6fa344ed1f501847a6">getEnergyPerFunction</a> (std::string functionName, bool isRecursive)</td></tr>
+<tr class="separator:ac87cc842492e8f6fa344ed1f501847a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab10f2cfa5b0d58d9c4b7163e94b013b6" id="r_ab10f2cfa5b0d58d9c4b7163e94b013b6"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#ab10f2cfa5b0d58d9c4b7163e94b013b6">getEnergy</a> ()</td></tr>
 <tr class="separator:ab10f2cfa5b0d58d9c4b7163e94b013b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8f4dc5f70ce3ed49b249e1eda06c8ba0" id="r_a8f4dc5f70ce3ed49b249e1eda06c8ba0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a8f4dc5f70ce3ed49b249e1eda06c8ba0">getFunctionByName</a> (std::string name)</td></tr>
 <tr class="separator:a8f4dc5f70ce3ed49b249e1eda06c8ba0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a747e5fc30de7dd5c9eb2d7d6f9bff217" id="r_a747e5fc30de7dd5c9eb2d7d6f9bff217"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; std::string, <a class="el" href="structDAGLongestPathSolution.html">DAGLongestPathSolution</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a747e5fc30de7dd5c9eb2d7d6f9bff217">DAGLongestPath</a> (std::unordered_map&lt; std::string, std::unordered_map&lt; <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> *, <a class="el" href="structILPResult.html">ILPResult</a> &gt; &gt; clusteredResult)</td></tr>
-<tr class="separator:a747e5fc30de7dd5c9eb2d7d6f9bff217"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1a71ea154ebdc24c61f63fd46b99ea63" id="r_a1a71ea154ebdc24c61f63fd46b99ea63"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, <a class="el" href="structILPModel.html">ILPModel</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a1a71ea154ebdc24c61f63fd46b99ea63">buildMonolithicILPS</a> ()</td></tr>
-<tr class="separator:a1a71ea154ebdc24c61f63fd46b99ea63"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aae204508ac8d7cfec99613c8efc0e6e7" id="r_aae204508ac8d7cfec99613c8efc0e6e7"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; std::string, std::unordered_map&lt; <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> *, <a class="el" href="structILPModel.html">ILPModel</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#aae204508ac8d7cfec99613c8efc0e6e7">buildClusteredILPS</a> ()</td></tr>
-<tr class="separator:aae204508ac8d7cfec99613c8efc0e6e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aea0704f6df1eb48674216c89172865c2" id="r_aea0704f6df1eb48674216c89172865c2"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, <a class="el" href="structILPResult.html">ILPResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#aea0704f6df1eb48674216c89172865c2">solveMonolithicIlps</a> (const std::map&lt; std::string, <a class="el" href="structILPModel.html">ILPModel</a> &gt; &amp;modelMapping)</td></tr>
-<tr class="separator:aea0704f6df1eb48674216c89172865c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a479a9825deafad0f89c21ecb343ae4b1" id="r_a479a9825deafad0f89c21ecb343ae4b1"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; std::string, ILPClusteredLoopResult &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a479a9825deafad0f89c21ecb343ae4b1">solveClusteredIlps</a> (const std::unordered_map&lt; std::string, ILPLoopModelMapping &gt; &amp;modelMapping)</td></tr>
-<tr class="separator:a479a9825deafad0f89c21ecb343ae4b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aafdc51bc1fb6ca6abd87c7b765683092" id="r_aafdc51bc1fb6ca6abd87c7b765683092"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="structILPModel.html">ILPModel</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#aafdc51bc1fb6ca6abd87c7b765683092">buildMonolithicILP</a> (<a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> *functionNode)</td></tr>
+<tr class="separator:aafdc51bc1fb6ca6abd87c7b765683092"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4c205ef75e555de110594861f78a532a" id="r_a4c205ef75e555de110594861f78a532a"><td class="memItemLeft" align="right" valign="top">std::optional&lt; ClusteredILPModel &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a4c205ef75e555de110594861f78a532a">buildClusteredILPS</a> (<a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> *functionNode)</td></tr>
+<tr class="separator:a4c205ef75e555de110594861f78a532a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8fa9c443d29eef2ac04e38c48491080b" id="r_a8fa9c443d29eef2ac04e38c48491080b"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a8fa9c443d29eef2ac04e38c48491080b">solveMonolithicIlp</a> (<a class="el" href="structILPModel.html">ILPModel</a> &amp;model)</td></tr>
+<tr class="separator:a8fa9c443d29eef2ac04e38c48491080b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:abc7cb15750ebcfd44a29589d66473454" id="r_abc7cb15750ebcfd44a29589d66473454"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; <a class="el" href="structDAGLongestPathSolution.html">DAGLongestPathSolution</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#abc7cb15750ebcfd44a29589d66473454">DAGLongestPath</a> (<a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> *functionNode, std::unordered_map&lt; <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> *, <a class="el" href="structILPResult.html">ILPResult</a> &gt; clusteredResult)</td></tr>
+<tr class="separator:abc7cb15750ebcfd44a29589d66473454"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad4cecc5fb074a4b72b9a1a776abf73a8" id="r_ad4cecc5fb074a4b72b9a1a776abf73a8"><td class="memItemLeft" align="right" valign="top">static ILPClusteredLoopResult&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#ad4cecc5fb074a4b72b9a1a776abf73a8">solveClusteredIlps</a> (ILPLoopModelMapping loopModelMapping)</td></tr>
+<tr class="separator:ad4cecc5fb074a4b72b9a1a776abf73a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:abbbac64429f4346e8eaadba482841d1c" id="r_abbbac64429f4346e8eaadba482841d1c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classResultRegistry.html">ResultRegistry</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#abbbac64429f4346e8eaadba482841d1c">registry</a></td></tr>
 <tr class="separator:abbbac64429f4346e8eaadba482841d1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a80c89be96bada0fe02335645adef728b" id="r_a80c89be96bada0fe02335645adef728b"><td class="memItemLeft" align="right" valign="top">llvm::LazyCallGraph&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a80c89be96bada0fe02335645adef728b">lazyCallGraph</a></td></tr>
+<tr class="separator:a80c89be96bada0fe02335645adef728b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa2d562623f4a0c9f37a3490d529fa46f" id="r_aa2d562623f4a0c9f37a3490d529fa46f"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#aa2d562623f4a0c9f37a3490d529fa46f">FunctionEnergyCache</a></td></tr>
 <tr class="separator:aa2d562623f4a0c9f37a3490d529fa46f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a014d3198371b32af5e8233b9c40c7cab" id="r_a014d3198371b32af5e8233b9c40c7cab"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1hlac.html#a014d3198371b32af5e8233b9c40c7cab">functions</a></td></tr>
@@ -124,8 +130,8 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="namespaceHLAC.html">HLAC</a> graph representation </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a29cb6740f533fb0ea2055a3fb94a22cb" name="a29cb6740f533fb0ea2055a3fb94a22cb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a29cb6740f533fb0ea2055a3fb94a22cb">&#9670;&#160;</a></span>hlac()</h2>
+<a id="a822ee782125d239b269dd787244931cd" name="a822ee782125d239b269dd787244931cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a822ee782125d239b269dd787244931cd">&#9670;&#160;</a></span>hlac()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -137,8 +143,18 @@ Public Attributes</h2></td></tr>
           <td class="memname">HLAC::hlac::hlac </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classResultRegistry.html">ResultRegistry</a>&#160;</td>
-          <td class="paramname"><em>registry</em></td><td>)</td>
+          <td class="paramname"><em>registry</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">llvm::LazyCallGraph &amp;&#160;</td>
+          <td class="paramname"><em>lcg</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
   </td>
@@ -157,16 +173,17 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="aae204508ac8d7cfec99613c8efc0e6e7" name="aae204508ac8d7cfec99613c8efc0e6e7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aae204508ac8d7cfec99613c8efc0e6e7">&#9670;&#160;</a></span>buildClusteredILPS()</h2>
+<a id="a4c205ef75e555de110594861f78a532a" name="a4c205ef75e555de110594861f78a532a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4c205ef75e555de110594861f78a532a">&#9670;&#160;</a></span>buildClusteredILPS()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::unordered_map&lt; std::string, std::unordered_map&lt; <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> *, <a class="el" href="structILPModel.html">ILPModel</a> &gt; &gt; HLAC::hlac::buildClusteredILPS </td>
+          <td class="memname">std::optional&lt; ClusteredILPModel &gt; HLAC::hlac::buildClusteredILPS </td>
           <td>(</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> *&#160;</td>
+          <td class="paramname"><em>functionNode</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -175,16 +192,17 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a1a71ea154ebdc24c61f63fd46b99ea63" name="a1a71ea154ebdc24c61f63fd46b99ea63"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1a71ea154ebdc24c61f63fd46b99ea63">&#9670;&#160;</a></span>buildMonolithicILPS()</h2>
+<a id="aafdc51bc1fb6ca6abd87c7b765683092" name="aafdc51bc1fb6ca6abd87c7b765683092"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aafdc51bc1fb6ca6abd87c7b765683092">&#9670;&#160;</a></span>buildMonolithicILP()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::map&lt; std::string, <a class="el" href="structILPModel.html">ILPModel</a> &gt; HLAC::hlac::buildMonolithicILPS </td>
+          <td class="memname">std::optional&lt; <a class="el" href="structILPModel.html">ILPModel</a> &gt; HLAC::hlac::buildMonolithicILP </td>
           <td>(</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> *&#160;</td>
+          <td class="paramname"><em>functionNode</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -193,20 +211,38 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a747e5fc30de7dd5c9eb2d7d6f9bff217" name="a747e5fc30de7dd5c9eb2d7d6f9bff217"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a747e5fc30de7dd5c9eb2d7d6f9bff217">&#9670;&#160;</a></span>DAGLongestPath()</h2>
+<a id="abc7cb15750ebcfd44a29589d66473454" name="abc7cb15750ebcfd44a29589d66473454"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abc7cb15750ebcfd44a29589d66473454">&#9670;&#160;</a></span>DAGLongestPath()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::unordered_map&lt; std::string, <a class="el" href="structDAGLongestPathSolution.html">DAGLongestPathSolution</a> &gt; HLAC::hlac::DAGLongestPath </td>
+          <td class="memname">static std::optional&lt; <a class="el" href="structDAGLongestPathSolution.html">DAGLongestPathSolution</a> &gt; HLAC::hlac::DAGLongestPath </td>
           <td>(</td>
-          <td class="paramtype">std::unordered_map&lt; std::string, std::unordered_map&lt; <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> *, <a class="el" href="structILPResult.html">ILPResult</a> &gt; &gt;&#160;</td>
-          <td class="paramname"><em>clusteredResult</em></td><td>)</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1FunctionNode.html">FunctionNode</a> *&#160;</td>
+          <td class="paramname"><em>functionNode</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">std::unordered_map&lt; <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> *, <a class="el" href="structILPResult.html">ILPResult</a> &gt;&#160;</td>
+          <td class="paramname"><em>clusteredResult</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 <p>Calculate the longest paths of each function contained inside the <a class="el" href="namespaceHLAC.html">HLAC</a> </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -236,8 +272,8 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="afc9affc90a97753cb2a9d5ff27e64bc7" name="afc9affc90a97753cb2a9d5ff27e64bc7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afc9affc90a97753cb2a9d5ff27e64bc7">&#9670;&#160;</a></span>getEnergyPerFunction()</h2>
+<a id="ac87cc842492e8f6fa344ed1f501847a6" name="ac87cc842492e8f6fa344ed1f501847a6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac87cc842492e8f6fa344ed1f501847a6">&#9670;&#160;</a></span>getEnergyPerFunction()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -246,14 +282,25 @@ Public Attributes</h2></td></tr>
           <td class="memname">double HLAC::hlac::getEnergyPerFunction </td>
           <td>(</td>
           <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>functionName</em></td><td>)</td>
+          <td class="paramname"><em>functionName</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>isRecursive</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 <p>Return the energy of a given function </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">functionName</td><td>Name of the function to analyze </td></tr>
+    <tr><td class="paramname">isRecursive</td><td>Flag if we are calling recursively </td></tr>
   </table>
   </dd>
 </dl>
@@ -428,24 +475,32 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a479a9825deafad0f89c21ecb343ae4b1" name="a479a9825deafad0f89c21ecb343ae4b1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a479a9825deafad0f89c21ecb343ae4b1">&#9670;&#160;</a></span>solveClusteredIlps()</h2>
+<a id="ad4cecc5fb074a4b72b9a1a776abf73a8" name="ad4cecc5fb074a4b72b9a1a776abf73a8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad4cecc5fb074a4b72b9a1a776abf73a8">&#9670;&#160;</a></span>solveClusteredIlps()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::unordered_map&lt; std::string, ILPClusteredLoopResult &gt; HLAC::hlac::solveClusteredIlps </td>
+          <td class="memname">static ILPClusteredLoopResult HLAC::hlac::solveClusteredIlps </td>
           <td>(</td>
-          <td class="paramtype">const std::unordered_map&lt; std::string, ILPLoopModelMapping &gt; &amp;&#160;</td>
-          <td class="paramname"><em>modelMapping</em></td><td>)</td>
+          <td class="paramtype">ILPLoopModelMapping&#160;</td>
+          <td class="paramname"><em>loopModelMapping</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 <p>Solve the clustered models of the contained functions </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">modelMapping</td><td>Mapping function name to constructed clustered <a class="el" href="structILPModel.html">ILPModel</a> </td></tr>
+    <tr><td class="paramname">loopModelMapping</td><td>Mapping function name to constructed clustered <a class="el" href="structILPModel.html">ILPModel</a> </td></tr>
   </table>
   </dd>
 </dl>
@@ -453,24 +508,24 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="aea0704f6df1eb48674216c89172865c2" name="aea0704f6df1eb48674216c89172865c2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aea0704f6df1eb48674216c89172865c2">&#9670;&#160;</a></span>solveMonolithicIlps()</h2>
+<a id="a8fa9c443d29eef2ac04e38c48491080b" name="a8fa9c443d29eef2ac04e38c48491080b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8fa9c443d29eef2ac04e38c48491080b">&#9670;&#160;</a></span>solveMonolithicIlp()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::map&lt; std::string, <a class="el" href="structILPResult.html">ILPResult</a> &gt; HLAC::hlac::solveMonolithicIlps </td>
+          <td class="memname">std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a> &gt; HLAC::hlac::solveMonolithicIlp </td>
           <td>(</td>
-          <td class="paramtype">const std::map&lt; std::string, <a class="el" href="structILPModel.html">ILPModel</a> &gt; &amp;&#160;</td>
-          <td class="paramname"><em>modelMapping</em></td><td>)</td>
+          <td class="paramtype"><a class="el" href="structILPModel.html">ILPModel</a> &amp;&#160;</td>
+          <td class="paramname"><em>model</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 <p>Solve the monolithic models of the contained functions </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">modelMapping</td><td>Mapping function name to constructed monolithic <a class="el" href="structILPModel.html">ILPModel</a> </td></tr>
+    <tr><td class="paramname">model</td><td>Constructed monolithic model </td></tr>
   </table>
   </dd>
 </dl>
@@ -506,6 +561,21 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>List of FunctioNodes contained within the <a class="el" href="namespaceHLAC.html">HLAC</a> </p>
+
+</div>
+</div>
+<a id="a80c89be96bada0fe02335645adef728b" name="a80c89be96bada0fe02335645adef728b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a80c89be96bada0fe02335645adef728b">&#9670;&#160;</a></span>lazyCallGraph</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">llvm::LazyCallGraph HLAC::hlac::lazyCallGraph</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>LLVM Lazy callgraph used to determine analysis order </p>
 
 </div>
 </div>

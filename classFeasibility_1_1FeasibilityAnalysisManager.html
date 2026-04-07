@@ -74,6 +74,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="classFeasibility_1_1FeasibilityAnalysisManager-members.html">List of all members</a>  </div>
@@ -83,6 +84,13 @@ $(function() {
 
 <p><code>#include &lt;<a class="el" href="FeasibilityAnalysisManager_8h_source.html">FeasibilityAnalysisManager.h</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeasibility_1_1FeasibilityAnalysisManager_1_1SetKey.html">SetKey</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeasibility_1_1FeasibilityAnalysisManager_1_1SetKeyHash.html">SetKeyHash</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
 <tr class="memitem:a732096f7a11f9109089e5eb2387762e3" id="r_a732096f7a11f9109089e5eb2387762e3"><td class="memItemLeft" align="right" valign="top"><a id="a732096f7a11f9109089e5eb2387762e3" name="a732096f7a11f9109089e5eb2387762e3"></a>
@@ -119,6 +127,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a57dcb6a5b0e07ea7f271dee39cd98e96"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaa3b3c5855c4814cf70cf25e10a0e5c4" id="r_aaa3b3c5855c4814cf70cf25e10a0e5c4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; z3::expr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classFeasibility_1_1FeasibilityAnalysisManager.html#aaa3b3c5855c4814cf70cf25e10a0e5c4">getPureSet</a> (uint32_t id) const</td></tr>
 <tr class="separator:aaa3b3c5855c4814cf70cf25e10a0e5c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7dfaa348b70e7d743b73c649594d886a" id="r_a7dfaa348b70e7d743b73c649594d886a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structFeasibility_1_1FeasibilityAnalysisManager_1_1SetKey.html">SetKey</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classFeasibility_1_1FeasibilityAnalysisManager.html#a7dfaa348b70e7d743b73c649594d886a">makeSetKey</a> (const ExprSet &amp;set) const</td></tr>
+<tr class="separator:a7dfaa348b70e7d743b73c649594d886a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classFeasibility_1_1FeasibilityAnalysisManager.html">FeasibilityAnalysisManager</a> is the central component for managing the state of the feasibility analysis, including the storage of formulas (as sets of atomic formulas) and environments (variable bindings). It provides methods for interning formula sets, extending environments, and applying PHI node effects on environments. The manager also holds the Z3 context and solver used for formula manipulation and satisfiability checking. </p>
@@ -454,6 +464,31 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Id of the set representing the intersection of the sets represented by aId and bId. If the resulting set is empty, returns topId. </dd></dl>
+
+</div>
+</div>
+<a id="a7dfaa348b70e7d743b73c649594d886a" name="a7dfaa348b70e7d743b73c649594d886a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7dfaa348b70e7d743b73c649594d886a">&#9670;&#160;</a></span>makeSetKey()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structFeasibility_1_1FeasibilityAnalysisManager_1_1SetKey.html">SetKey</a> Feasibility::FeasibilityAnalysisManager::makeSetKey </td>
+          <td>(</td>
+          <td class="paramtype">const ExprSet &amp;&#160;</td>
+          <td class="paramname"><em>set</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Create a key for the given expression set </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">set</td><td>Set to generate the key for </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Generated <a class="el" href="structFeasibility_1_1FeasibilityAnalysisManager_1_1SetKey.html">SetKey</a> </dd></dl>
 
 </div>
 </div>

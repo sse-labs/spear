@@ -8,14 +8,18 @@ var searchData=
   ['setsat_5',['setSat',['../classFeasibility_1_1Util.html#ab6bf8fe47735bb7362f966c39eae1250',1,'Feasibility::Util']]],
   ['shortenstdstreamops_6',['shortenStdStreamOps',['../classHLAC_1_1Util.html#a7a93af7bb1535c75341cda5054ae7966',1,'HLAC::Util']]],
   ['solutionexists_7',['solutionExists',['../classILPSolver.html#a467f45a7c1b72ed0ccdab36478bd7f57',1,'ILPSolver']]],
-  ['solveclusteredilps_8',['solveClusteredIlps',['../classHLAC_1_1hlac.html#a479a9825deafad0f89c21ecb343ae4b1',1,'HLAC::hlac']]],
+  ['solveclusteredilps_8',['solveClusteredIlps',['../classHLAC_1_1hlac.html#ad4cecc5fb074a4b72b9a1a776abf73a8',1,'HLAC::hlac']]],
   ['solvemodel_9',['solveModel',['../classILPBuilder.html#aa12b9967d0349f1a25c6c09d648c104e',1,'ILPBuilder']]],
-  ['solvemonolithicilps_10',['solveMonolithicIlps',['../classHLAC_1_1hlac.html#aea0704f6df1eb48674216c89172865c2',1,'HLAC::hlac']]],
+  ['solvemonolithicilp_10',['solveMonolithicIlp',['../classHLAC_1_1hlac.html#a8fa9c443d29eef2ac04e38c48491080b',1,'HLAC::hlac']]],
   ['starts_5fwith_11',['starts_with',['../classHLAC_1_1Util.html#ae55e5a7ff20053d16b1f6b8b71c19538',1,'HLAC::Util']]],
   ['starttime_12',['startTime',['../classMetaProfiler.html#a49aabe8bd6f2c9f58f5ddc9358afc669',1,'MetaProfiler']]],
   ['stoptime_13',['stopTime',['../classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e',1,'MetaProfiler']]],
   ['storefeasibilityresults_14',['storeFeasibilityResults',['../classResultRegistry.html#a46a2c636e6c4933aac039bf35397978f',1,'ResultRegistry']]],
   ['storeloopboundresults_15',['storeLoopBoundResults',['../classResultRegistry.html#a446ef83be281ca6cd7b3fee6d569e6c7',1,'ResultRegistry']]],
   ['stripparameters_16',['stripParameters',['../classHLAC_1_1Util.html#a79ee9e15c5d8b16851825a381071e908',1,'HLAC::Util']]],
-  ['syscallprofiler_17',['SyscallProfiler',['../classSyscallProfiler.html#a748a933c75b89ee43b4db91aea0c2cab',1,'SyscallProfiler']]]
+  ['strtoanalysistype_17',['strToAnalysisType',['../classConfigurationUtils.html#a933d91e83ebf0ecc2a1c09bfdac5dcc9',1,'ConfigurationUtils']]],
+  ['strtoformat_18',['strToFormat',['../classConfigurationUtils.html#a76d855bbc01fc0ac6aa5357b25e68ba7',1,'ConfigurationUtils']]],
+  ['strtomode_19',['strToMode',['../classConfigurationUtils.html#a453d766b19f800da4d660432aa7e0784',1,'ConfigurationUtils']]],
+  ['strtostrategy_20',['strToStrategy',['../classConfigurationUtils.html#aae62165ace9251613c350ac914d05fbb',1,'ConfigurationUtils']]],
+  ['syscallprofiler_21',['SyscallProfiler',['../classSyscallProfiler.html#a748a933c75b89ee43b4db91aea0c2cab',1,'SyscallProfiler']]]
 ];

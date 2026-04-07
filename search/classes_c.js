@@ -1,9 +1,10 @@
 var searchData=
 [
-  ['phasarhandlerpass_0',['PhasarHandlerPass',['../classPhasarHandlerPass.html',1,'']]],
-  ['profilehandler_1',['ProfileHandler',['../classProfileHandler.html',1,'']]],
-  ['profileoptions_2',['ProfileOptions',['../classProfileOptions.html',1,'']]],
-  ['profiler_3',['Profiler',['../classProfiler.html',1,'']]],
-  ['profilingconfiguration_4',['ProfilingConfiguration',['../structProfilingConfiguration.html',1,'']]],
-  ['programgraph_5',['ProgramGraph',['../classProgramGraph.html',1,'']]]
+  ['passutil_0',['PassUtil',['../classPassUtil.html',1,'']]],
+  ['phasarhandlerpass_1',['PhasarHandlerPass',['../classPhasarHandlerPass.html',1,'']]],
+  ['profilehandler_2',['ProfileHandler',['../classProfileHandler.html',1,'']]],
+  ['profileoptions_3',['ProfileOptions',['../classProfileOptions.html',1,'']]],
+  ['profiler_4',['Profiler',['../classProfiler.html',1,'']]],
+  ['profilingconfiguration_5',['ProfilingConfiguration',['../structProfilingConfiguration.html',1,'']]],
+  ['programgraph_6',['ProgramGraph',['../classProgramGraph.html',1,'']]]
 ];
