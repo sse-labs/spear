@@ -112,6 +112,7 @@ void PassUtil::collectCallNodeBindingsFromNestedNodes(
         HLAC::CallNodeBinding binding;
         binding.nodeIndex = topLevelNodeIndex;
         binding.calleeName = callNode->calledFunction->getName().str();
+        binding.reference = callNode;
 
         callNodeBindings.push_back(binding);
 

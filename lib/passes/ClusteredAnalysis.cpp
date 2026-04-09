@@ -42,7 +42,9 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
             if (cacheIterator != graph->FunctionEnergyCache.end()) {
                 funcNode->nodeEnergy[binding.nodeIndex] = cacheIterator->second;
             } else {
-                funcNode->nodeEnergy[binding.nodeIndex] = 0.0;
+                // If we dont know the function, we need to get the energy
+                double eng = binding.reference->getEnergy();
+                funcNode->nodeEnergy[binding.nodeIndex] = eng;
             }
         }
 

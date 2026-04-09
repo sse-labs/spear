@@ -226,8 +226,8 @@ bool CallNode::checkIfIsSyscall() {
 }
 
 double CallNode::getEnergy() {
-    std::cout << "Getting energy for call to " << this->calledFunction->getName().str() << std::endl;
-    std::cout << "\t" << this->isSyscall << " " << this->isLinkerFunction << " " << this->isDebugFunction << std::endl;
+    // std::cout << "Getting energy for call to " << this->calledFunction->getName().str() << std::endl;
+    // std::cout << "\t" << this->isSyscall << " " << this->isLinkerFunction << " " << this->isDebugFunction << std::endl;
 
     // If we encounter a syscall, we can just return the energy
     if (this->isSyscall) {
@@ -248,9 +248,9 @@ double CallNode::getEnergy() {
         std::ostringstream outputStream;
         outputStream << std::scientific << std::setprecision(8) << fallbackEnergy;
 
-        Logger::getInstance().log("CallNode " + this->calledFunction->getName().str() +
+        /*Logger::getInstance().log("CallNode " + this->calledFunction->getName().str() +
             " is a linker function. We do not have the body of the function and thus cannot analyze it. Returning energy " +
-            outputStream.str() + " J", LOGLEVEL::WARNING);
+            outputStream.str() + " J", LOGLEVEL::WARNING);*/
 
         return fallbackEnergy;
     }

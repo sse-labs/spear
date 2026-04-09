@@ -14,10 +14,10 @@
     }
   },
   "analysis": {
-    "type": "clustered",
+    "type": "comparison",
     "outputmode": "normal",
     "outputDirectory": "./output/normal",
-    "clusteredCacheEnabled": false,
+    "clusteredCacheEnabled": true,
     "feasibilityEnabled": true,
     "writeDotFiles": false,
     "legacyConfig": {
