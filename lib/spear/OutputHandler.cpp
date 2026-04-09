@@ -10,19 +10,11 @@
 #include "ConfigParser.h"
 
 void OutputHandler::writeJsonOutput(std::string filename, nlohmann::json content, bool writeMultiple) {
-    if (writeMultiple) {
-
-    } else {
-        writeJsonFile(filename + ".json", content);
-    }
+    writeJsonFile(filename + ".json", content);
 }
 
 void OutputHandler::writeELBOutput(std::string filename, std::unordered_map<std::string, double> content, bool writeMultiple) {
-    if (writeMultiple) {
-
-    } else {
-        writeELBFile(filename + ".elb", content);
-    }
+    writeELBFile(filename + ".elb", content);
 }
 
 void OutputHandler::writeELBFile(std::string filename, nlohmann::json content) {

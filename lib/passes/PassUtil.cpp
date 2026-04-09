@@ -262,7 +262,7 @@ json PassUtil::runClusteredOnModule(
     return ClusteredAnalysis::run(graph, SHOWTIMINGS);
 }
 
-json PassUtil::runComparisonAnalysesOnClonedModules(
+std::unordered_map<std::string, nlohmann::json> PassUtil::runComparisonAnalysesOnClonedModules(
     llvm::Module &module,
     llvm::ModuleAnalysisManager &moduleAnalysisManager,
     ResultRegistry &baseRegistry) {
@@ -286,7 +286,7 @@ json PassUtil::runComparisonAnalysesOnClonedModules(
     auto &clusteredFunctionAnalysisManager =
         moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*clusteredModule).getManager();
 
-    json output = {};
+    std::unordered_map<std::string, nlohmann::json> output = {};
 
     auto legacyOutput = legacyWrapper(*legacyModule, legacyFunctionAnalysisManager);
     auto monolithicOutput = runMonolithicOnModule(*monolithicModule, monolithicFunctionAnalysisManager, monolithicRegistry);

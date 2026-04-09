@@ -135,7 +135,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
     clusterCache.writeBackCache();
 
     nlohmann::json outputObject = nlohmann::json::object();
-    outputObject["analysis"] = "monolithic";
+    outputObject["analysis"] = "clustered";
     outputObject["duration"] = clusteredTotalDuration.count();
     outputObject["functions"] = {};
 

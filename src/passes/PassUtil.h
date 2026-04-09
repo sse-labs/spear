@@ -61,7 +61,7 @@ public:
         llvm::FunctionAnalysisManager &functionAnalysisManager,
         ResultRegistry &resultRegistry);
 
-    static nlohmann::json runComparisonAnalysesOnClonedModules(
+    static std::unordered_map<std::string, nlohmann::json> runComparisonAnalysesOnClonedModules(
         llvm::Module &module,
         llvm::ModuleAnalysisManager &moduleAnalysisManager,
         ResultRegistry &baseRegistry);

@@ -367,23 +367,23 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         auto &functionAnalysisManager =
             moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 
-        json output = {};
+        std::unordered_map<std::string, nlohmann::json> output = {};
         bool outputMultiple = false;
 
         switch (ConfigParser::getAnalysisConfiguration().analysisType) {
             case AnalysisType::LEGACY:
-                output = PassUtil::legacyWrapper(module, functionAnalysisManager);
+                output["legacy"] = PassUtil::legacyWrapper(module, functionAnalysisManager);
                 break;
 
             case AnalysisType::MONOLITHIC: {
                 ResultRegistry monolithicRegistry = this->resultRegistry;
-                output = PassUtil::runMonolithicOnModule(module, functionAnalysisManager, monolithicRegistry);
+                output["monolithic"] = PassUtil::runMonolithicOnModule(module, functionAnalysisManager, monolithicRegistry);
                 break;
             }
 
             case AnalysisType::CLUSTERED: {
                 ResultRegistry clusteredRegistry = this->resultRegistry;
-                output = PassUtil::runClusteredOnModule(module, functionAnalysisManager, clusteredRegistry);
+                output["clustered"] = PassUtil::runClusteredOnModule(module, functionAnalysisManager, clusteredRegistry);
                 break;
             }
 
@@ -397,32 +397,54 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 break;
         }
 
-        /**
-         * TODO Handle the output generated from the methods
-         */
-
         auto filename = PassUtil::extractFileNameWithoutExtension(module.getName().str());
+        const AnalysisOutputMode outputMode = ConfigParser::getAnalysisConfiguration().analysisOutputMode;
 
-        if (ConfigParser::getAnalysisConfiguration().analysisOutputMode == AnalysisOutputMode::NORMAL) {
-            OutputHandler::writeJsonOutput(filename, output, outputMultiple);
-        } else if (ConfigParser::getAnalysisConfiguration().analysisOutputMode == AnalysisOutputMode::ELB) {
-            std::unordered_map<std::string, double> content = {};
-
-            if (output.contains("functions") && output["functions"].is_object()) {
-                for (auto functionIterator = output["functions"].begin(); functionIterator != output["functions"].end(); ++functionIterator) {
-                    const std::string& functionName = functionIterator.key();
-                    const auto& functionObject = functionIterator.value();
-
-                    if (functionObject.contains("energy") && functionObject["energy"].is_number()) {
-                        content[functionName] = functionObject["energy"].get<double>();
-                    }
+        if (outputMode == AnalysisOutputMode::NORMAL) {
+            if (output.size() == 1) {
+                const auto& onlyEntry = *output.begin();
+                OutputHandler::writeJsonOutput(filename, onlyEntry.second, outputMultiple);
+            } else {
+                for (const auto& [analysisName, analysisOutput] : output) {
+                    OutputHandler::writeJsonOutput(filename + "_" + analysisName, analysisOutput, outputMultiple);
                 }
             }
+        } else if (outputMode == AnalysisOutputMode::ELB) {
+            if (output.size() == 1) {
+                const auto& onlyEntry = *output.begin();
+                const std::unordered_map<std::string, double> content = extractFunctionEnergyMap(onlyEntry.second);
 
-            OutputHandler::writeELBOutput(filename, content, outputMultiple);
+                OutputHandler::writeELBOutput(filename, content, outputMultiple);
+            } else {
+                for (const auto& [analysisName, analysisOutput] : output) {
+                    const std::unordered_map<std::string, double> content = extractFunctionEnergyMap(analysisOutput);
+
+                    OutputHandler::writeELBOutput(filename + "_" + analysisName, content, outputMultiple);
+                }
+            }
         } else {
             llvm::errs() << "Please provide a valid output mode: normal/elb\n";
         }
+    }
+
+    static std::unordered_map<std::string, double> extractFunctionEnergyMap(const nlohmann::json& analysisOutput) {
+        std::unordered_map<std::string, double> content;
+
+        if (analysisOutput.contains("functions") && analysisOutput["functions"].is_object()) {
+            for (auto functionIterator = analysisOutput["functions"].begin();
+                 functionIterator != analysisOutput["functions"].end();
+                 ++functionIterator) {
+
+                const std::string functionName = functionIterator.key();
+                const auto& functionObject = functionIterator.value();
+
+                if (functionObject.contains("energy") && functionObject["energy"].is_number()) {
+                    content[functionName] = functionObject["energy"].get<double>();
+                }
+            }
+        }
+
+        return content;
     }
 
     /**
