@@ -69,7 +69,7 @@ void PassUtil::prepareFunctionsForLegacyAnalysis(
     }
 }
 
-void PassUtil::legacyWrapper(
+json PassUtil::legacyWrapper(
     llvm::Module &module,
     llvm::FunctionAnalysisManager &functionAnalysisManager) {
 
@@ -98,7 +98,7 @@ void PassUtil::legacyWrapper(
         throw std::runtime_error("Could not construct FunctionTree: main function not found.");
     }
 
-    LegacyAnalysis::run(functionAnalysisManager, functionTree, SHOWTIMINGS);
+    return LegacyAnalysis::run(functionAnalysisManager, functionTree, SHOWTIMINGS);
 }
 
 void PassUtil::collectCallNodeBindingsFromNestedNodes(
@@ -235,7 +235,7 @@ std::shared_ptr<HLAC::hlac> PassUtil::buildInitializedGraph(
     return sharedGraph;
 }
 
-void PassUtil::runMonolithicOnModule(
+json PassUtil::runMonolithicOnModule(
     llvm::Module &module,
     llvm::FunctionAnalysisManager &functionAnalysisManager,
     ResultRegistry &resultRegistry) {
@@ -245,10 +245,10 @@ void PassUtil::runMonolithicOnModule(
         functionAnalysisManager,
         resultRegistry);
 
-    MonolithicAnalysis::run(graph, SHOWTIMINGS);
+    return MonolithicAnalysis::run(graph, SHOWTIMINGS);
 }
 
-void PassUtil::runClusteredOnModule(
+json PassUtil::runClusteredOnModule(
     llvm::Module &module,
     llvm::FunctionAnalysisManager &functionAnalysisManager,
     ResultRegistry &resultRegistry) {
@@ -258,14 +258,13 @@ void PassUtil::runClusteredOnModule(
         functionAnalysisManager,
         resultRegistry);
 
-    ClusteredAnalysis::run(graph, SHOWTIMINGS);
+    return ClusteredAnalysis::run(graph, SHOWTIMINGS);
 }
 
-void PassUtil::runComparisonAnalysesOnClonedModules(
+json PassUtil::runComparisonAnalysesOnClonedModules(
     llvm::Module &module,
     llvm::ModuleAnalysisManager &moduleAnalysisManager,
     ResultRegistry &baseRegistry) {
-
     // Clone the module once per analysis so IR mutations stay isolated
     std::unique_ptr<llvm::Module> legacyModule = llvm::CloneModule(module);
     std::unique_ptr<llvm::Module> monolithicModule = llvm::CloneModule(module);
@@ -286,7 +285,93 @@ void PassUtil::runComparisonAnalysesOnClonedModules(
     auto &clusteredFunctionAnalysisManager =
         moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*clusteredModule).getManager();
 
-    legacyWrapper(*legacyModule, legacyFunctionAnalysisManager);
-    runMonolithicOnModule(*monolithicModule, monolithicFunctionAnalysisManager, monolithicRegistry);
-    runClusteredOnModule(*clusteredModule, clusteredFunctionAnalysisManager, clusteredRegistry);
+    json output = {};
+
+    auto legacyOutput = legacyWrapper(*legacyModule, legacyFunctionAnalysisManager);
+    auto monolithicOutput = runMonolithicOnModule(*monolithicModule, monolithicFunctionAnalysisManager, monolithicRegistry);
+    auto clusteredOutput = runClusteredOnModule(*clusteredModule, clusteredFunctionAnalysisManager, clusteredRegistry);
+
+    output = {
+        {"legacy", legacyOutput},
+        {"monolithic", monolithicOutput},
+        {"clustered", clusteredOutput}
+    };
+
+    return output;
+}
+
+nlohmann::json PassUtil::appendGraphContent(nlohmann::json &baseOutput, HLAC::GenericNode *node) {
+    if (node->nodeType == HLAC::NodeType::CALLNODE) {
+        auto *callNode = static_cast<HLAC::CallNode *>(node);
+
+        const std::string nodeName = callNode->name;
+        const std::string calleeName = callNode->calledFunction->getName().str();
+
+        bool nodeAlreadyExists = false;
+
+        if (!baseOutput.contains("nodes") || !baseOutput["nodes"].is_array()) {
+            baseOutput["nodes"] = nlohmann::json::array();
+        }
+
+        // Check for existing node with same identifying properties
+        for (const auto &existingNode : baseOutput["nodes"]) {
+            if (existingNode.contains("name") && existingNode.contains("callee")) {
+                if (existingNode["name"] == nodeName &&
+                    existingNode["callee"] == calleeName) {
+                    nodeAlreadyExists = true;
+                    break;
+                    }
+            }
+        }
+
+        // Only insert if not already present
+        if (!nodeAlreadyExists) {
+            nlohmann::json callNodeJson = {
+                {"type", "call"},
+                {"name", nodeName},
+                {"callee", calleeName},
+                {"energy", callNode->getEnergy()}
+            };
+
+            baseOutput["nodes"].push_back(callNodeJson);
+        }
+    }
+
+    if (node->nodeType == HLAC::NodeType::LOOPNODE) {
+        auto *loopNode = static_cast<HLAC::LoopNode *>(node);
+
+        nlohmann::json loopNodeJson = {
+            {"type", "loop"},
+            {"name", loopNode->loop->getName().str()},
+            {"energy", loopNode->getEnergy()},
+        };
+
+        for (auto &nestedNode : loopNode->Nodes) {
+            appendGraphContent(loopNodeJson, nestedNode.get());
+        }
+
+        baseOutput["nodes"].push_back(loopNodeJson);
+    }
+
+    if (node->nodeType == HLAC::NodeType::NODE) {
+        auto *normalnode = static_cast<HLAC::Node *>(node);
+
+        nlohmann::json normalNodeJson = {
+            {"type", "node"},
+            {"name", normalnode->name},
+            {"energy", normalnode->getEnergy()},
+        };
+
+        baseOutput["nodes"].push_back(normalNodeJson);
+    }
+
+    return baseOutput;
+}
+
+// Extract filename without extension from a path
+std::string PassUtil::extractFileNameWithoutExtension(const std::string& filePath) {
+    std::filesystem::path pathObject(filePath);
+
+    // stem() returns filename without extension
+    return pathObject.stem().string();
 }

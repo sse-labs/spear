@@ -132,5 +132,21 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
     clusterCache.writeBackCache();
 
-    return json::object();
+    nlohmann::json outputObject = nlohmann::json::object();
+    outputObject["analysis"] = "monolithic";
+    outputObject["duration"] = clusteredTotalDuration.count();
+    outputObject["functions"] = {};
+
+    for (auto [funcname, energy] : graph->FunctionEnergyCache) {
+        outputObject["functions"][funcname] = {
+            {"energy", energy}
+        };
+
+        auto funcNode = graph->getFunctionByName(funcname);
+        for (auto &node : funcNode->Nodes ) {
+            PassUtil::appendGraphContent(outputObject["functions"][funcname], node.get());
+        }
+    }
+
+    return outputObject;
 }

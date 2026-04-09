@@ -33,7 +33,7 @@ public:
         llvm::Module &module,
         llvm::FunctionAnalysisManager &functionAnalysisManager);
 
-    static void legacyWrapper(
+    static nlohmann::json legacyWrapper(
         llvm::Module &module,
         llvm::FunctionAnalysisManager &functionAnalysisManager);
 
@@ -51,20 +51,24 @@ public:
         llvm::FunctionAnalysisManager &functionAnalysisManager,
         ResultRegistry &resultRegistry);
 
-    static void runMonolithicOnModule(
+    static nlohmann::json runMonolithicOnModule(
         llvm::Module &module,
         llvm::FunctionAnalysisManager &functionAnalysisManager,
         ResultRegistry &resultRegistry);
 
-    static void runClusteredOnModule(
+    static nlohmann::json runClusteredOnModule(
         llvm::Module &module,
         llvm::FunctionAnalysisManager &functionAnalysisManager,
         ResultRegistry &resultRegistry);
 
-    static void runComparisonAnalysesOnClonedModules(
+    static nlohmann::json runComparisonAnalysesOnClonedModules(
         llvm::Module &module,
         llvm::ModuleAnalysisManager &moduleAnalysisManager,
         ResultRegistry &baseRegistry);
+
+
+    static nlohmann::json appendGraphContent(nlohmann::json &baseOutput, HLAC::GenericNode *node);
+    static std::string extractFileNameWithoutExtension(const std::string &filePath);
 };
 
 #endif // SPEAR_PASSUTIL_H

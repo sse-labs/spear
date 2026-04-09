@@ -43,6 +43,14 @@ class ConfigurationUtils {
      * @return AnalysisType enum type
      */
     static AnalysisType strToAnalysisType(const std::string& str);
+
+    /**
+     * Convert a string to an analysis mode enum type
+     *
+     * @param str String to convert
+     * @return AnalysisMode enum type
+     */
+    static AnalysisOutputMode strToAnalysisOutputmode(const std::string& str);
 };
 
 #endif  // SRC_SPEAR_CONFIGURATION_CONFIGURATIONUTILS_H_

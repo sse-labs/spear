@@ -46,11 +46,13 @@ struct ProfilingConfiguration {
  */
 struct AnalysisConfiguration {
     AnalysisType analysisType;
+    AnalysisOutputMode analysisOutputMode;
+    std::string outputDirectory;
     bool cachingEnabled;
     bool feasibilityEnabled;
     bool writeDotFiles;
     LegacyAnalysisConfiguration legacyconfig;
-    std::map<std::string, int64_t> fallback;
+    std::unordered_map<std::string, std::unordered_map<std::string, double>> fallback;
 };
 
 #endif  // SRC_SPEAR_CONFIGURATION_CONFIGURATIONOBJECTS_H_

@@ -56,3 +56,13 @@ AnalysisType ConfigurationUtils::strToAnalysisType(const std::string& str) {
         return AnalysisType::UNDEFINED;
     }
 }
+
+AnalysisOutputMode ConfigurationUtils::strToAnalysisOutputmode(const std::string& str) {
+    if (str == "normal") {
+        return AnalysisOutputMode::NORMAL;
+    } else if (str == "elb") {
+        return AnalysisOutputMode::ELB;
+    } else {
+        return AnalysisOutputMode::UNDEFINED;
+    }
+}

@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "ConfigParser.h"
 #include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
@@ -225,6 +226,9 @@ bool CallNode::checkIfIsSyscall() {
 }
 
 double CallNode::getEnergy() {
+    std::cout << "Getting energy for call to " << this->calledFunction->getName().str() << std::endl;
+    std::cout << "\t" << this->isSyscall << " " << this->isLinkerFunction << " " << this->isDebugFunction << std::endl;
+
     // If we encounter a syscall, we can just return the energy
     if (this->isSyscall) {
         if (syscallId.has_value()) {
@@ -239,12 +243,16 @@ double CallNode::getEnergy() {
     // If we have a normal call we need to calculate the energy of the called function and return this as the energy of
     // the call
     if (isLinkerFunction) {
-        /*std::cout << "Warning: CallNode " << this->calledFunction->getName().str()
-                  << " is a linker function. We do not have the body of "
-                     "the function and thus cannot analyze it. Returning "
-                     "energy 0.0."
-                  << std::endl;*/
-        return 0.0;
+        double fallbackEnergy = static_cast<double>(ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"]);
+
+        std::ostringstream outputStream;
+        outputStream << std::scientific << std::setprecision(8) << fallbackEnergy;
+
+        Logger::getInstance().log("CallNode " + this->calledFunction->getName().str() +
+            " is a linker function. We do not have the body of the function and thus cannot analyze it. Returning energy " +
+            outputStream.str() + " J", LOGLEVEL::WARNING);
+
+        return fallbackEnergy;
     }
 
     // Assume the function has been analyzed beforehand, so we can just look up the energy in the cache of the parent

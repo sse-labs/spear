@@ -42,6 +42,7 @@
 #include "LegacyAnalysis.h"
 #include "Logger.h"
 #include "MonolithicAnalysis.h"
+#include "OutputHandler.h"
 #include "PassUtil.h"
 #include "analyses/ResultRegistry.h"
 
@@ -84,6 +85,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             stopwatch_end;
 
     ResultRegistry resultRegistry;
+
+    std::string filepath;
 
     /**
      * Constructor to run, when called from a method
@@ -364,25 +367,29 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         auto &functionAnalysisManager =
             moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 
+        json output = {};
+        bool outputMultiple = false;
+
         switch (ConfigParser::getAnalysisConfiguration().analysisType) {
             case AnalysisType::LEGACY:
-                PassUtil::legacyWrapper(module, functionAnalysisManager);
+                output = PassUtil::legacyWrapper(module, functionAnalysisManager);
                 break;
 
             case AnalysisType::MONOLITHIC: {
                 ResultRegistry monolithicRegistry = this->resultRegistry;
-                PassUtil::runMonolithicOnModule(module, functionAnalysisManager, monolithicRegistry);
+                output = PassUtil::runMonolithicOnModule(module, functionAnalysisManager, monolithicRegistry);
                 break;
             }
 
             case AnalysisType::CLUSTERED: {
                 ResultRegistry clusteredRegistry = this->resultRegistry;
-                PassUtil::runClusteredOnModule(module, functionAnalysisManager, clusteredRegistry);
+                output = PassUtil::runClusteredOnModule(module, functionAnalysisManager, clusteredRegistry);
                 break;
             }
 
             case AnalysisType::COMPARISON:
-                PassUtil::runComparisonAnalysesOnClonedModules(module, moduleAnalysisManager, this->resultRegistry);
+                outputMultiple = true;
+                output = PassUtil::runComparisonAnalysesOnClonedModules(module, moduleAnalysisManager, this->resultRegistry);
                 break;
 
             default:
@@ -393,6 +400,29 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         /**
          * TODO Handle the output generated from the methods
          */
+
+        auto filename = PassUtil::extractFileNameWithoutExtension(module.getName().str());
+
+        if (ConfigParser::getAnalysisConfiguration().analysisOutputMode == AnalysisOutputMode::NORMAL) {
+            OutputHandler::writeJsonOutput(filename, output, outputMultiple);
+        } else if (ConfigParser::getAnalysisConfiguration().analysisOutputMode == AnalysisOutputMode::ELB) {
+            std::unordered_map<std::string, double> content = {};
+
+            if (output.contains("functions") && output["functions"].is_object()) {
+                for (auto functionIterator = output["functions"].begin(); functionIterator != output["functions"].end(); ++functionIterator) {
+                    const std::string& functionName = functionIterator.key();
+                    const auto& functionObject = functionIterator.value();
+
+                    if (functionObject.contains("energy") && functionObject["energy"].is_number()) {
+                        content[functionName] = functionObject["energy"].get<double>();
+                    }
+                }
+            }
+
+            OutputHandler::writeELBOutput(filename, content, outputMultiple);
+        } else {
+            llvm::errs() << "Please provide a valid output mode: normal/elb\n";
+        }
     }
 
     /**

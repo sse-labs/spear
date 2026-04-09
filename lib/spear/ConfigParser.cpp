@@ -52,33 +52,57 @@ bool ConfigParser::configValid() {
 }
 
 bool ConfigParser::fallbackValid(json object) {
-    if (object.contains("fallback")) {
-        auto fallback = object["fallback"];
+    if (!object.contains("fallback")) {
+        std::cout << "Invalid analysis: missing fallback section." << std::endl;
+        return false;
+    }
 
-        if (!fallback.is_object()) {
-            std::cout << "Invalid analysis.fallback: not an object." << std::endl;
+    auto fallback = object["fallback"];
+
+    if (!fallback.is_object()) {
+        std::cout << "Invalid analysis.fallback: not an object." << std::endl;
+        return false;
+    }
+
+    if (!fallback.contains("calls") || !fallback["calls"].is_object()) {
+        std::cout << "Invalid analysis.fallback.calls: missing or not an object." << std::endl;
+        return false;
+    }
+
+    if (!fallback.contains("loops") || !fallback["loops"].is_object()) {
+        std::cout << "Invalid analysis.fallback.loops: missing or not an object." << std::endl;
+        return false;
+    }
+
+    auto callsFallback = fallback["calls"];
+    auto loopsFallback = fallback["loops"];
+
+    if (!callsFallback.contains("UNKNOWN_FUNCTION") ||
+        !callsFallback["UNKNOWN_FUNCTION"].is_number() ||
+        callsFallback["UNKNOWN_FUNCTION"].get<double>() <= 0.0) {
+            std::cout << "Invalid analysis.fallback.calls: missing or non-positive UNKNOWN_FUNCTION value." << std::endl;
             return false;
-        }
+    }
 
-        const std::vector<std::string> requiredKeys = {
-            "MALFORMED_LOOP", "SYMBOLIC_BOUND_LOOP", "NON_COUNTING_LOOP",
-            "NESTED_LOOP", "UNKNOWN_LOOP"
-        };
+    const std::vector<std::string> requiredLoopKeys = {
+        "MALFORMED_LOOP",
+        "SYMBOLIC_BOUND_LOOP",
+        "NON_COUNTING_LOOP",
+        "NESTED_LOOP",
+        "UNKNOWN_LOOP"
+    };
 
-        for (const auto& key : requiredKeys) {
-            if (!fallback.contains(key) ||
-                !fallback[key].is_number_unsigned() ||
-                fallback[key] <= 0) {
-                std::cout << "Invalid analysis.fallback: missing or "
-                          << "non-positive loop fallback values." << std::endl;
-                return false;
+    for (const auto& key : requiredLoopKeys) {
+        if (!loopsFallback.contains(key) ||
+            !loopsFallback[key].is_number() ||
+            loopsFallback[key].get<double>() <= 0.0) {
+            std::cout << "Invalid analysis.fallback.loops: missing or non-positive value for key '"
+                      << key << "'." << std::endl;
+            return false;
             }
-        }
-            return true;
-        }
+    }
 
-    std::cout << "Invalid analysis: missing fallback section." << std::endl;
-    return false;
+    return true;
 }
 
 bool ConfigParser::strategyValid(json object) {
@@ -240,15 +264,55 @@ bool ConfigParser::legacyValid(json object) {
     return false;
 }
 
+bool ConfigParser::outputDirValid(json object) {
+    if (!object.contains("outputDirectory") || !object["outputDirectory"].is_string()) {
+        return false;
+    }
+
+    const std::string outputDirectoryString = object["outputDirectory"];
+    const std::filesystem::path outputDirectoryPath(outputDirectoryString);
+
+    try {
+        // Path exists
+        if (std::filesystem::exists(outputDirectoryPath)) {
+            // Must be a directory
+            if (!std::filesystem::is_directory(outputDirectoryPath)) {
+                return false;
+            }
+        } else {
+            // Create directory (including parent directories)
+            if (!std::filesystem::create_directories(outputDirectoryPath)) {
+                return false;
+            }
+        }
+
+        const std::filesystem::path testFilePath = outputDirectoryPath / ".permission_test";
+        std::ofstream testFile(testFilePath.string());
+
+        if (!testFile.is_open()) {
+            return false;
+        }
+
+        testFile.close();
+        std::filesystem::remove(testFilePath);
+
+        return true;
+    }
+    catch (const std::filesystem::filesystem_error&) {
+        return false;
+    }
+}
+
 bool ConfigParser::analysisValid() {
     if (config.contains("analysis")) {
         auto analysis = config["analysis"];
 
         if (analysis.is_object()) {
+            bool outputDirOk = outputDirValid(analysis);
             bool fallbackOk = fallbackValid(analysis);
             bool legacyOk = legacyValid(analysis) || analysis["type"] != "legacy";
 
-            if (fallbackOk && legacyOk) {
+            if (outputDirOk && fallbackOk && legacyOk) {
                 return true;
             }
             std::cout << "Invalid analysis: one or more properties are invalid." << std::endl;
@@ -280,7 +344,11 @@ void ConfigParser::parse() {
         auto analysis = config["analysis"];
         auto legacyconfig = analysis["legacyConfig"];
 
-        analysisConfiguration.analysisType = ConfigurationUtils::strToAnalysisType(analysis["type"].get<std::string>());
+        analysisConfiguration.analysisType = ConfigurationUtils::strToAnalysisType(
+            analysis["type"].get<std::string>());
+        analysisConfiguration.analysisOutputMode = ConfigurationUtils::strToAnalysisOutputmode(
+            analysis["outputmode"].get<std::string>());
+        analysisConfiguration.outputDirectory = analysis["outputDirectory"].get<std::string>();
         analysisConfiguration.cachingEnabled = analysis["clusteredCacheEnabled"].get<bool>();
         analysisConfiguration.feasibilityEnabled = analysis["feasibilityEnabled"].get<bool>();
         analysisConfiguration.writeDotFiles = analysis["writeDotFiles"].get<bool>();
@@ -293,10 +361,27 @@ void ConfigParser::parse() {
             legacyconfig["strategy"].get<std::string>());
         analysisConfiguration.legacyconfig.deepcalls = false;
 
+        // Clear previous fallback configuration
         analysisConfiguration.fallback.clear();
+
         if (analysis.contains("fallback") && analysis["fallback"].is_object()) {
-            for (auto it = analysis["fallback"].begin(); it != analysis["fallback"].end(); ++it) {
-                analysisConfiguration.fallback[it.key()] = it.value().get<double>();
+            const auto& fallback = analysis["fallback"];
+
+            for (auto categoryIt = fallback.begin(); categoryIt != fallback.end(); ++categoryIt) {
+                const std::string& categoryName = categoryIt.key();
+                const auto& categoryObject = categoryIt.value();
+
+                // Ensure category is an object
+                if (!categoryObject.is_object()) {
+                    continue;
+                }
+
+                for (auto valueIt = categoryObject.begin(); valueIt != categoryObject.end(); ++valueIt) {
+                    const std::string& key = valueIt.key();
+                    double value = valueIt.value().get<double>();
+
+                    analysisConfiguration.fallback[categoryName][key] = value;
+                }
             }
         }
     }

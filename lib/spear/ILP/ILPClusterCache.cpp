@@ -54,7 +54,7 @@ ILPClusterCache::ILPClusterCache(std::string filename, bool enabled) {
         // Initialize internal cache state as empty
         cache = {};
     } else {
-        // File exists → read JSON
+        // File exists read JSON
         std::ifstream inputFile(cacheFile);
         if (!inputFile.is_open()) {
             throw std::runtime_error("Failed to open cache file: " + cacheFile);
