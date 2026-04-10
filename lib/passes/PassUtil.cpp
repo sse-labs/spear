@@ -331,9 +331,11 @@ nlohmann::json PassUtil::appendGraphContent(nlohmann::json &baseOutput, HLAC::Ge
                 {"type", "call"},
                 {"name", nodeName},
                 {"callee", calleeName},
+                {"isLinkerCall",callNode->isLinkerFunction},
+                {"isSystemCall",callNode->isSyscall},
+                {"isDebugFunction",callNode->isDebugFunction},
                 {"energy", callNode->getEnergy()}
             };
-
             baseOutput["nodes"].push_back(callNodeJson);
         }
     }
@@ -404,6 +406,9 @@ nlohmann::json PassUtil::appendGraphContent(nlohmann::json &baseOutput, HLAC::Ge
                 {"type", "call"},
                 {"name", nodeName},
                 {"callee", calleeName},
+                {"isLinkerCall",callNode->isLinkerFunction},
+                {"isSystemCall",callNode->isSyscall},
+                {"isDebugFunction",callNode->isDebugFunction},
                 {"energy", callNode->getEnergy()}
             };
 
