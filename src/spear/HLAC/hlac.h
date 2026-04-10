@@ -72,6 +72,11 @@ class GenericNode {
     std::string hash;
 
     /**
+     * Integer ID in the parent node
+     */
+    int globalId = -1;
+
+    /**
      * Nodetype
      */
     NodeType nodeType = NodeType::UNDEFINED;

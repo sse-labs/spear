@@ -89,7 +89,9 @@ FunctionNode::FunctionNode(llvm::Function *function,
         Feasibility::BlockFeasibilityMap blockMapping;
 
         if (ConfigParser::getAnalysisConfiguration().feasibilityEnabled) {
-            blockMapping = feasResult.at(this->name);
+            if (feasResult.contains(this->name)) {
+                blockMapping = feasResult.at(this->name);
+            }
         }
 
         // Create all Edges from the basic blocks
@@ -162,7 +164,8 @@ FunctionNode::FunctionNode(llvm::Function *function,
 
         // Set entry and exit indices
         for (int i = 0; i < this->Nodes.size(); ++i) {
-            auto &node = this->Nodes[i];;
+            auto &node = this->Nodes[i];
+            node->globalId = i;
 
             if (auto *virtualNode = dynamic_cast<VirtualNode *>(node.get())) {
                 if (virtualNode->isEntry) {
@@ -239,7 +242,9 @@ void FunctionNode::constructCallNodes(bool considerDebugFunctions) {
     // We shadow the list here to avoid dereferencing nodes while we are still working on them
     std::vector<GenericNode*> work;
     work.reserve(this->Nodes.size());
-    for (auto &up : this->Nodes) work.push_back(up.get());
+    for (auto &up : this->Nodes) {
+        work.push_back(up.get());
+    }
 
     for (GenericNode *base : work) {
         if (!base) continue;

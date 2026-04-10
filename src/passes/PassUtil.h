@@ -11,10 +11,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>
 
 #include "HLAC/hlac.h"
+#include "ProgramGraph.h"
 
 #define SHOWTIMINGS true
 
@@ -68,6 +68,9 @@ public:
 
 
     static nlohmann::json appendGraphContent(nlohmann::json &baseOutput, HLAC::GenericNode *node);
+
+    static nlohmann::json appendGraphContentLegacy(LLVMHandler handler, nlohmann::json &baseOutput, Node *node);
+
     static std::string extractFileNameWithoutExtension(const std::string &filePath);
 };
 

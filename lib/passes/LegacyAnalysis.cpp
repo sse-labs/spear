@@ -123,6 +123,19 @@ nlohmann::json LegacyAnalysis::run(
 
             json functionObject = json::object();
             functionObject["energy"] = energyFunction->energy;
+
+            functionObject["nodes"] = nlohmann::json::array();
+
+            if (energyFunction->programGraph != nullptr) {
+                for (auto node : energyFunction->programGraph->getNodes()) {
+
+                    auto nodeJson = PassUtil::appendGraphContentLegacy(handler, functionObject, node);
+                    functionObject = nodeJson;
+
+                }
+            }
+
+
             outputObject["functions"][fName] = functionObject;
         }
 

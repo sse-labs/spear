@@ -129,8 +129,11 @@ double hlac::getEnergyPerFunction(std::string functionName, bool isRecursive) {
             LOGLEVEL::WARNING);
         return 0.0;
     } else {
-        Logger::getInstance().log("Trying to get energy of " + functionName +
+        if (!Util::starts_with(functionName, "__psr")
+            && !Util::starts_with(functionName, "__clang")) {
+            Logger::getInstance().log("Trying to get energy of " + functionName +
             " which has not been analyzed yet!", LOGLEVEL::ERROR);
+        }
         return 0.0;
     }
 }

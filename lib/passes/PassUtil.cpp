@@ -340,11 +340,15 @@ nlohmann::json PassUtil::appendGraphContent(nlohmann::json &baseOutput, HLAC::Ge
 
     if (node->nodeType == HLAC::NodeType::LOOPNODE) {
         auto *loopNode = static_cast<HLAC::LoopNode *>(node);
+        auto repetitionsArray = nlohmann::json::array();
+        repetitionsArray.push_back(loopNode->bounds.getLowerBound());
+        repetitionsArray.push_back(loopNode->bounds.getUpperBound());
 
         nlohmann::json loopNodeJson = {
             {"type", "loop"},
             {"name", loopNode->loop->getName().str()},
             {"energy", loopNode->getEnergy()},
+            {"repetitions", repetitionsArray}
         };
 
         for (auto &nestedNode : loopNode->Nodes) {
@@ -366,6 +370,38 @@ nlohmann::json PassUtil::appendGraphContent(nlohmann::json &baseOutput, HLAC::Ge
         baseOutput["nodes"].push_back(normalNodeJson);
     }
 
+    return baseOutput;
+}
+
+nlohmann::json PassUtil::appendGraphContentLegacy(LLVMHandler handler, nlohmann::json &baseOutput, Node *node) {
+    if (auto loopNode = dynamic_cast<LoopNode *>(node)) {
+        auto repetitionsArray = nlohmann::json::array();
+        repetitionsArray.push_back(loopNode->loopTree->iterations);
+
+        nlohmann::json loopNodeJson = {
+            {"type", "loop"},
+            {"name", loopNode->loopTree->mainloop->getName().str()},
+            {"energy", loopNode->getNodeEnergy(&handler)},
+            {"repetitions", repetitionsArray}
+        };
+
+        for (auto &nestedGraphs : loopNode->subgraphs) {
+            for (auto &nestedNode : nestedGraphs->getNodes()) {
+                appendGraphContentLegacy(handler, loopNodeJson, nestedNode);
+            }
+        }
+
+        baseOutput["nodes"].push_back(loopNodeJson);
+        return baseOutput;
+    }
+
+    nlohmann::json normalNodeJson = {
+        {"type", "node"},
+        {"name", node->block->getName().str()},
+        {"energy", node->energy},
+    };
+
+    baseOutput["nodes"].push_back(normalNodeJson);
     return baseOutput;
 }
 
