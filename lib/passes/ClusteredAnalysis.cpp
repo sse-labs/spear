@@ -28,6 +28,8 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
     auto totalSolveDuration = std::chrono::microseconds::zero();
     auto totalDagDuration = std::chrono::microseconds::zero();
 
+    std::unordered_map<HLAC::FunctionNode *, ILPClusteredLoopResult> clusteredLoopResults;
+
     auto clusteredTotalStart = std::chrono::high_resolution_clock::now();
 
     // ================= Clustered ILP  =================
@@ -75,6 +77,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
             totalSolveDuration += clusteredSolveDuration;
 
             auto solvedResults = clusteredSolvedResults;
+            clusteredLoopResults[funcNode.get()] = solvedResults;
 
             auto dagStart = std::chrono::high_resolution_clock::now();
 
@@ -145,8 +148,10 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
         };
 
         auto funcNode = graph->getFunctionByName(funcname);
+        auto loopres = clusteredLoopResults[funcNode];
+
         for (auto &node : funcNode->Nodes ) {
-            PassUtil::appendGraphContent(outputObject["functions"][funcname], node.get());
+            PassUtil::appendGraphContent(outputObject["functions"][funcname], node.get(), loopres);
         }
     }
 

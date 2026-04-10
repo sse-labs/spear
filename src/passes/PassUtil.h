@@ -68,6 +68,8 @@ public:
 
 
     static nlohmann::json appendGraphContent(nlohmann::json &baseOutput, HLAC::GenericNode *node);
+    static nlohmann::json appendGraphContent(nlohmann::json &baseOutput, HLAC::GenericNode *node,
+                                      ILPClusteredLoopResult loopresult);
 
     static nlohmann::json appendGraphContentLegacy(LLVMHandler handler, nlohmann::json &baseOutput, Node *node);
 

@@ -347,7 +347,83 @@ nlohmann::json PassUtil::appendGraphContent(nlohmann::json &baseOutput, HLAC::Ge
         nlohmann::json loopNodeJson = {
             {"type", "loop"},
             {"name", loopNode->loop->getName().str()},
-            {"energy", loopNode->getEnergy()},
+            // For now lets assume loopnodes only have virtual energy for monolithic content
+            // {"energy", loopNode->getEnergy()},
+            {"repetitions", repetitionsArray}
+        };
+
+        for (auto &nestedNode : loopNode->Nodes) {
+            appendGraphContent(loopNodeJson, nestedNode.get());
+        }
+
+        baseOutput["nodes"].push_back(loopNodeJson);
+    }
+
+    if (node->nodeType == HLAC::NodeType::NODE) {
+        auto *normalnode = static_cast<HLAC::Node *>(node);
+
+        nlohmann::json normalNodeJson = {
+            {"type", "node"},
+            {"name", normalnode->name},
+            {"energy", normalnode->getEnergy()},
+        };
+
+        baseOutput["nodes"].push_back(normalNodeJson);
+    }
+
+    return baseOutput;
+}
+
+nlohmann::json PassUtil::appendGraphContent(nlohmann::json &baseOutput, HLAC::GenericNode *node, ILPClusteredLoopResult loopresult) {
+    if (node->nodeType == HLAC::NodeType::CALLNODE) {
+        auto *callNode = static_cast<HLAC::CallNode *>(node);
+
+        const std::string nodeName = callNode->name;
+        const std::string calleeName = callNode->calledFunction->getName().str();
+
+        bool nodeAlreadyExists = false;
+
+        if (!baseOutput.contains("nodes") || !baseOutput["nodes"].is_array()) {
+            baseOutput["nodes"] = nlohmann::json::array();
+        }
+
+        // Check for existing node with same identifying properties
+        for (const auto &existingNode : baseOutput["nodes"]) {
+            if (existingNode.contains("name") && existingNode.contains("callee")) {
+                if (existingNode["name"] == nodeName &&
+                    existingNode["callee"] == calleeName) {
+                    nodeAlreadyExists = true;
+                    break;
+                }
+            }
+        }
+
+        // Only insert if not already present
+        if (!nodeAlreadyExists) {
+            nlohmann::json callNodeJson = {
+                {"type", "call"},
+                {"name", nodeName},
+                {"callee", calleeName},
+                {"energy", callNode->getEnergy()}
+            };
+
+            baseOutput["nodes"].push_back(callNodeJson);
+        }
+    }
+
+    if (node->nodeType == HLAC::NodeType::LOOPNODE) {
+        auto *loopNode = static_cast<HLAC::LoopNode *>(node);
+        auto repetitionsArray = nlohmann::json::array();
+        repetitionsArray.push_back(loopNode->bounds.getLowerBound());
+        repetitionsArray.push_back(loopNode->bounds.getUpperBound());
+
+        auto ilpResult = loopresult[loopNode];
+        auto eng = ilpResult.optimalValue;
+
+        nlohmann::json loopNodeJson = {
+            {"type", "loop"},
+            {"name", loopNode->loop->getName().str()},
+            {"energy", eng},
             {"repetitions", repetitionsArray}
         };
 
