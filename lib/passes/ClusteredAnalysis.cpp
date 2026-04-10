@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 #include "ConfigParser.h"
 #include "ILP/ILPClusterCache.h"
@@ -28,6 +29,8 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
     auto totalSolveDuration = std::chrono::microseconds::zero();
     auto totalDagDuration = std::chrono::microseconds::zero();
 
+    std::unordered_map<HLAC::FunctionNode *, ILPClusteredLoopResult> clusteredLoopResults;
+
     auto clusteredTotalStart = std::chrono::high_resolution_clock::now();
 
     // ================= Clustered ILP  =================
@@ -42,7 +45,9 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
             if (cacheIterator != graph->FunctionEnergyCache.end()) {
                 funcNode->nodeEnergy[binding.nodeIndex] = cacheIterator->second;
             } else {
-                funcNode->nodeEnergy[binding.nodeIndex] = 0.0;
+                // If we dont know the function, we need to get the energy
+                double eng = binding.reference->getEnergy();
+                funcNode->nodeEnergy[binding.nodeIndex] = eng;
             }
         }
 
@@ -73,6 +78,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
             totalSolveDuration += clusteredSolveDuration;
 
             auto solvedResults = clusteredSolvedResults;
+            clusteredLoopResults[funcNode.get()] = solvedResults;
 
             auto dagStart = std::chrono::high_resolution_clock::now();
 
@@ -132,5 +138,23 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
     clusterCache.writeBackCache();
 
-    return json::object();
+    nlohmann::json outputObject = nlohmann::json::object();
+    outputObject["analysis"] = "clustered";
+    outputObject["duration"] = clusteredTotalDuration.count();
+    outputObject["functions"] = {};
+
+    for (auto [funcname, energy] : graph->FunctionEnergyCache) {
+        outputObject["functions"][funcname] = {
+            {"energy", energy}
+        };
+
+        auto funcNode = graph->getFunctionByName(funcname);
+        auto loopres = clusteredLoopResults[funcNode];
+
+        for ( auto &node : funcNode->Nodes ) {
+            PassUtil::appendGraphContent(outputObject["functions"][funcname], node.get(), loopres);
+        }
+    }
+
+    return outputObject;
 }

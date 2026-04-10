@@ -54,5 +54,11 @@ enum class AnalysisType {
     LEGACY
 };
 
+enum class AnalysisOutputMode {
+    UNDEFINED,
+    NORMAL,
+    ELB
+};
+
 
 #endif  // SRC_SPEAR_CONFIGURATION_VALUESPACE_H_

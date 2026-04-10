@@ -2,8 +2,9 @@
  * Copyright (c) 2026 Maximilian Krebs
  * All rights reserved.
  */
-
+#include <algorithm>
 #include <string>
+
 #include "configuration/configurationUtils.h"
 
 
@@ -55,4 +56,21 @@ AnalysisType ConfigurationUtils::strToAnalysisType(const std::string& str) {
     } else {
         return AnalysisType::UNDEFINED;
     }
+}
+
+AnalysisOutputMode ConfigurationUtils::strToAnalysisOutputmode(const std::string& str) {
+    if (str == "normal") {
+        return AnalysisOutputMode::NORMAL;
+    } else if (str == "elb") {
+        return AnalysisOutputMode::ELB;
+    } else {
+        return AnalysisOutputMode::UNDEFINED;
+    }
+}
+
+void ConfigurationUtils::convertStringToLowercase(std::string& inputString) {
+    std::transform(inputString.begin(), inputString.end(), inputString.begin(),
+                   [](unsigned char character) {
+                       return std::tolower(character);
+                   });
 }

@@ -111,6 +111,12 @@ class ConfigParser {
      * @return True if valid, otherwise false
      */
     bool formatValid(json object);
+
+    /**
+     *
+     * @param object
+     * @return
+     */
     bool analysisTypeValid(json object);
 
     /**
@@ -120,6 +126,13 @@ class ConfigParser {
      * @return True if valid, otherwise false
      */
     bool strategyValid(json object);
+
+    /**
+     *
+     * @param object
+     * @return
+     */
+    bool outputDirValid(json object);
 
     bool minProgramEnergy(json object);
     bool minInstructionEnergy(json object);

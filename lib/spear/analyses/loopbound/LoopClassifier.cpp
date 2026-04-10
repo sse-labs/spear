@@ -165,31 +165,31 @@ std::optional<LoopBound::DeltaInterval> LoopBound::LoopClassifier::calculateBoun
 
     // Handle fallback values for bounding first
     if (type == LoopBound::MALFORMED_LOOP) {
-        auto boundval = fallback["MALFORMED_LOOP"];
+        auto boundval = fallback["loops"]["MALFORMED_LOOP"];
         return LoopBound::DeltaInterval::interval(boundval,
             boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
     if (type == LoopBound::SYMBOLIC_BOUND_LOOP) {
-        auto boundval = fallback["SYMBOLIC_BOUND_LOOP"];
+        auto boundval = fallback["loops"]["SYMBOLIC_BOUND_LOOP"];
         return LoopBound::DeltaInterval::interval(boundval,
             boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
     if (type == LoopBound::NON_COUNTING_LOOP) {
-        auto boundval = fallback["NON_COUNTING_LOOP"];
+        auto boundval = fallback["loops"]["NON_COUNTING_LOOP"];
         return LoopBound::DeltaInterval::interval(boundval,
             boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
     if (type == LoopBound::NESTED_LOOP) {
-        auto boundval = fallback["NESTED_LOOP"];
+        auto boundval = fallback["loops"]["NESTED_LOOP"];
         return LoopBound::DeltaInterval::interval(boundval,
             boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
 
     if (type == LoopBound::UNKNOWN_LOOP) {
-        auto boundval = fallback["UNKNOWN_LOOP"];
+        auto boundval = fallback["loops"]["UNKNOWN_LOOP"];
         return LoopBound::DeltaInterval::interval(boundval,
             boundval, LoopBound::DeltaInterval::ValueType::FALLBACK);
     }
@@ -279,7 +279,7 @@ std::optional<LoopBound::DeltaInterval> LoopBound::LoopClassifier::calculateBoun
 
 
     // If the loop could not be classified we need to rely on our unknown fallback value...
-    auto boundval = fallback["UNKNOWN_LOOP"];
+    auto boundval = fallback["loops"]["UNKNOWN_LOOP"];
     return LoopBound::DeltaInterval::interval(boundval, boundval,
         LoopBound::DeltaInterval::ValueType::FALLBACK);
 }

@@ -6,6 +6,7 @@
 #include <llvm/IR/Dominators.h>
 
 #include <vector>
+#include <string>
 
 #include "ConfigParser.h"
 #include "DeMangler.h"
@@ -112,7 +113,31 @@ nlohmann::json LegacyAnalysis::run(
 
         // double duration = ms_double.count() / 1000;
 
-        return json::object();
+        nlohmann::json outputObject = nlohmann::json::object();
+        outputObject["analysis"] = "legacy";
+        outputObject["duration"] = legacyAnalysisDuration.count();
+        outputObject["functions"] = {};
+
+        for (int i = 0; i < functionTree->getPreOrderVector().size(); i++) {
+            auto energyFunction = &funcPool[i];
+            std::string fName = energyFunction->func->getName().str();
+
+            json functionObject = json::object();
+            functionObject["energy"] = energyFunction->energy;
+
+            functionObject["nodes"] = nlohmann::json::array();
+
+            if (energyFunction->programGraph != nullptr) {
+                for (auto node : energyFunction->programGraph->getNodes()) {
+                    auto nodeJson = PassUtil::appendGraphContentLegacy(handler, functionObject, node);
+                    functionObject = nodeJson;
+                }
+            }
+
+            outputObject["functions"][fName] = functionObject;
+        }
+
+        return outputObject;
     } else {
         Logger::getInstance().log("No function tree provided for legacy analysis!", LOGLEVEL::ERROR);
         return json::object();

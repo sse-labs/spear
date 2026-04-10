@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include "ConfigParser.h"
+#include "ELBs/ELPMapper.h"
 #include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
@@ -239,12 +241,28 @@ double CallNode::getEnergy() {
     // If we have a normal call we need to calculate the energy of the called function and return this as the energy of
     // the call
     if (isLinkerFunction) {
-        /*std::cout << "Warning: CallNode " << this->calledFunction->getName().str()
-                  << " is a linker function. We do not have the body of "
-                     "the function and thus cannot analyze it. Returning "
-                     "energy 0.0."
-                  << std::endl;*/
-        return 0.0;
+        // if we have a linker function first check if there is a ELB lookup
+        if (ConfigParser::getAnalysisConfiguration().elbMappingActivated) {
+            // Try to resolve the value through the ELBMapper
+            auto lookUpCandidate = ELBMapper::getInstance().lookup(this->calledFunction->getName().str());
+            if (lookUpCandidate.has_value()) {
+                // If we found a value return it
+                this->resolvedByELB = true;
+                return lookUpCandidate.value();
+            }
+        }
+
+        // If the linker function could not be resolved using the ELBMapper, we need to fallback to the config val
+        double fallbackEnergy = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
+
+        std::ostringstream outputStream;
+        outputStream << std::scientific << std::setprecision(8) << fallbackEnergy;
+
+        /*Logger::getInstance().log("CallNode " + this->calledFunction->getName().str() +
+            " is a linker function. We do not have the body of the function and thus cannot analyze it. Returning energy " +
+            outputStream.str() + " J", LOGLEVEL::WARNING);*/
+
+        return fallbackEnergy;
     }
 
     // Assume the function has been analyzed beforehand, so we can just look up the energy in the cache of the parent

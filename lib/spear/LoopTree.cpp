@@ -216,7 +216,7 @@ uint64_t LoopTree::iterationsFromLoopBound(std::optional<llvm::Loop::LoopBounds>
 
 uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
                                  llvm::ScalarEvolution *scalarEvolution) {
-    uint64_t boundValue = ConfigParser::getAnalysisConfiguration().fallback["UNKNOWN_LOOP"];
+    uint64_t boundValue = ConfigParser::getAnalysisConfiguration().fallback["loops"]["UNKNOWN_LOOP"];
 
     // Query the loopbound with scalar evolution
     auto loopBound = loop->getBounds(*scalarEvolution);
@@ -245,7 +245,7 @@ uint64_t LoopTree::getLoopUpperBound(llvm::Loop *loop,
     if (auto *c = llvm::dyn_cast<llvm::SCEVConstant>(tripCount)) {
         boundValue = c->getValue()->getSExtValue();
     } else {
-        boundValue = ConfigParser::getAnalysisConfiguration().fallback["UNKNOWN_LOOP"];
+        boundValue = ConfigParser::getAnalysisConfiguration().fallback["loops"]["UNKNOWN_LOOP"];
     }
 
     return boundValue;

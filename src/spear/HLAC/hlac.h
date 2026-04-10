@@ -31,6 +31,7 @@ class hlac;
 class FunctionNode;
 class GenericNode;
 class LoopNode;
+class CallNode;
 
 /**
  * Enum to determine the type of node
@@ -52,6 +53,7 @@ enum class NodeType {
 struct CallNodeBinding {
     std::size_t nodeIndex;
     std::string calleeName;
+    HLAC::CallNode *reference;
 };
 
 /**
@@ -68,6 +70,11 @@ class GenericNode {
      * Hash of the node
      */
     std::string hash;
+
+    /**
+     * Integer ID in the parent node
+     */
+    int globalId = -1;
 
     /**
      * Nodetype
@@ -600,6 +607,7 @@ class CallNode : public GenericNode {
     bool isLinkerFunction = false;
     bool isDebugFunction = false;
     bool isSyscall = false;
+    bool resolvedByELB = false;
 
     FunctionNode *parentFunctionNode = nullptr;
 

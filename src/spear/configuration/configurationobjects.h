@@ -7,7 +7,8 @@
 #ifndef SRC_SPEAR_CONFIGURATION_CONFIGURATIONOBJECTS_H_
 #define SRC_SPEAR_CONFIGURATION_CONFIGURATIONOBJECTS_H_
 
-#include <map>
+#include <vector>
+#include <unordered_map>
 #include <string>
 
 #include "configuration/valuespace.h"
@@ -46,11 +47,15 @@ struct ProfilingConfiguration {
  */
 struct AnalysisConfiguration {
     AnalysisType analysisType;
+    AnalysisOutputMode analysisOutputMode;
+    std::string outputDirectory;
     bool cachingEnabled;
     bool feasibilityEnabled;
     bool writeDotFiles;
+    bool elbMappingActivated;
     LegacyAnalysisConfiguration legacyconfig;
-    std::map<std::string, int64_t> fallback;
+    std::unordered_map<std::string, std::unordered_map<std::string, double>> fallback;
+    std::vector<std::string> elbfiles;
 };
 
 #endif  // SRC_SPEAR_CONFIGURATION_CONFIGURATIONOBJECTS_H_

@@ -15,20 +15,32 @@
   },
   "analysis": {
     "type": "comparison",
-    "clusteredCacheEnabled": false,
+    "outputmode": "normal",
+    "outputDirectory": "./output/normal",
+    "clusteredCacheEnabled": true,
     "feasibilityEnabled": true,
     "writeDotFiles": false,
+    "elbMappingActivated": true,
     "legacyConfig": {
       "mode": "program",
       "format": "json",
       "strategy": "worst"
     },
+    "ELBs": [
+      "./elbs/time.elb",
+      "./elbs/random.elb"
+    ],
     "fallback": {
-      "MALFORMED_LOOP":  1000,
-      "SYMBOLIC_BOUND_LOOP":  2000,
-      "NON_COUNTING_LOOP":  3000,
-      "NESTED_LOOP":  4000,
-      "UNKNOWN_LOOP": 5000
+      "calls": {
+        "UNKNOWN_FUNCTION": 3e-4
+      },
+      "loops": {
+        "MALFORMED_LOOP":  1000,
+        "SYMBOLIC_BOUND_LOOP":  2000,
+        "NON_COUNTING_LOOP":  3000,
+        "NESTED_LOOP":  4000,
+        "UNKNOWN_LOOP": 5000
+      }
     }
   }
 }

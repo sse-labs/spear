@@ -18,7 +18,7 @@ class ConfigurationUtils {
      * @param str String to convert
      * @return Mode enum type
      */
-    static Mode strToMode(const std::string& str);
+    static Mode strToMode(const std::string &str);
 
     /**
      * Convert a string to format enum type
@@ -26,7 +26,7 @@ class ConfigurationUtils {
      * @param str String to convert
      * @return Format enum type
      */
-    static Format strToFormat(const std::string& str);
+    static Format strToFormat(const std::string &str);
 
     /**
      * Convert a string to strategy enum type
@@ -34,7 +34,7 @@ class ConfigurationUtils {
      * @param str String to convert
      * @return Strategy enum type
      */
-    static Strategy strToStrategy(const std::string& str);
+    static Strategy strToStrategy(const std::string &str);
 
     /**
      * Convert a string to an analysis type enum type
@@ -42,7 +42,21 @@ class ConfigurationUtils {
      * @param str String to convert
      * @return AnalysisType enum type
      */
-    static AnalysisType strToAnalysisType(const std::string& str);
+    static AnalysisType strToAnalysisType(const std::string &str);
+
+    /**
+     * Convert a string to an analysis mode enum type
+     *
+     * @param str String to convert
+     * @return AnalysisMode enum type
+     */
+    static AnalysisOutputMode strToAnalysisOutputmode(const std::string &str);
+
+    /**
+     * Convert a given string to lower case format
+     * @param inputString
+     */
+    void convertStringToLowercase(std::string &inputString);
 };
 
 #endif  // SRC_SPEAR_CONFIGURATION_CONFIGURATIONUTILS_H_

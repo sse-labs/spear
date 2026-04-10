@@ -12,36 +12,27 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
-#include <llvm/Transforms/Scalar/IndVarSimplify.h>
 #include <llvm/Transforms/Scalar/LoopPassManager.h>
-#include <llvm/Transforms/Scalar/LoopRotation.h>
-#include <llvm/Transforms/Utils/InstructionNamer.h>
-#include <llvm/Transforms/Utils/Mem2Reg.h>
+
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include "ConfigParser.h"
 #include "DeMangler.h"
 #include "EnergyFunction.h"
-#include "FunctionTree.h"
 #include "HLAC/hlac.h"
-#include "HLAC/hlacwrapper.h"
-#include "LLVMHandler.h"
 #include "PhasarHandler.h"
 #include "ProfileHandler.h"
 #include "ProgramGraph.h"
 
 #include <nlohmann/json.hpp>
 
-#include "ClusteredAnalysis.h"
+#include "ELBs/ELPMapper.h"
 #include "HLAC/util.h"
-#include "ILP/ILPBuilder.h"
-#include "ILP/ILPClusterCache.h"
-#include "LegacyAnalysis.h"
-#include "Logger.h"
-#include "MonolithicAnalysis.h"
+#include "OutputHandler.h"
 #include "PassUtil.h"
 #include "analyses/ResultRegistry.h"
 
@@ -84,6 +75,8 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             stopwatch_end;
 
     ResultRegistry resultRegistry;
+
+    std::string filepath;
 
     /**
      * Constructor to run, when called from a method
@@ -364,25 +357,38 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         auto &functionAnalysisManager =
             moduleAnalysisManager.getResult<llvm::FunctionAnalysisManagerModuleProxy>(module).getManager();
 
+        std::unordered_map<std::string, nlohmann::json> output = {};
+        bool outputMultiple = false;
+
+        for (auto elbfile : ConfigParser::getAnalysisConfiguration().elbfiles) {
+            ELBMapper::getInstance().useMapping(elbfile);
+        }
+
+        auto mapping = ELBMapper::getInstance().getMapping();
+
         switch (ConfigParser::getAnalysisConfiguration().analysisType) {
             case AnalysisType::LEGACY:
-                PassUtil::legacyWrapper(module, functionAnalysisManager);
+                output["legacy"] = PassUtil::legacyWrapper(module, functionAnalysisManager);
                 break;
 
             case AnalysisType::MONOLITHIC: {
                 ResultRegistry monolithicRegistry = this->resultRegistry;
-                PassUtil::runMonolithicOnModule(module, functionAnalysisManager, monolithicRegistry);
+                output["monolithic"] = PassUtil::runMonolithicOnModule(module,
+                    functionAnalysisManager, monolithicRegistry);
                 break;
             }
 
             case AnalysisType::CLUSTERED: {
                 ResultRegistry clusteredRegistry = this->resultRegistry;
-                PassUtil::runClusteredOnModule(module, functionAnalysisManager, clusteredRegistry);
+                output["clustered"] = PassUtil::runClusteredOnModule(module,
+                    functionAnalysisManager, clusteredRegistry);
                 break;
             }
 
             case AnalysisType::COMPARISON:
-                PassUtil::runComparisonAnalysesOnClonedModules(module, moduleAnalysisManager, this->resultRegistry);
+                outputMultiple = true;
+                output = PassUtil::runComparisonAnalysesOnClonedModules(module,
+                    moduleAnalysisManager, this->resultRegistry);
                 break;
 
             default:
@@ -390,9 +396,53 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 break;
         }
 
-        /**
-         * TODO Handle the output generated from the methods
-         */
+        auto filename = PassUtil::extractFileNameWithoutExtension(module.getName().str());
+        const AnalysisOutputMode outputMode = ConfigParser::getAnalysisConfiguration().analysisOutputMode;
+
+        if (outputMode == AnalysisOutputMode::NORMAL) {
+            if (output.size() == 1) {
+                const auto& onlyEntry = *output.begin();
+                OutputHandler::writeJsonOutput(filename, onlyEntry.second, outputMultiple);
+            } else {
+                for (const auto& [analysisName, analysisOutput] : output) {
+                    OutputHandler::writeJsonOutput(filename + "_" + analysisName, analysisOutput, outputMultiple);
+                }
+            }
+        } else if (outputMode == AnalysisOutputMode::ELB) {
+            if (output.size() == 1) {
+                const auto& onlyEntry = *output.begin();
+                const std::unordered_map<std::string, double> content = extractFunctionEnergyMap(onlyEntry.second);
+
+                OutputHandler::writeELBOutput(filename, content, outputMultiple);
+            } else {
+                for (const auto& [analysisName, analysisOutput] : output) {
+                    const std::unordered_map<std::string, double> content = extractFunctionEnergyMap(analysisOutput);
+
+                    OutputHandler::writeELBOutput(filename + "_" + analysisName, content, outputMultiple);
+                }
+            }
+        } else {
+            llvm::errs() << "Please provide a valid output mode: normal/elb\n";
+        }
+    }
+
+    static std::unordered_map<std::string, double> extractFunctionEnergyMap(const nlohmann::json& analysisOutput) {
+        std::unordered_map<std::string, double> content;
+
+        if (analysisOutput.contains("functions") && analysisOutput["functions"].is_object()) {
+            for (auto functionIterator = analysisOutput["functions"].begin();
+                 functionIterator != analysisOutput["functions"].end();
+                 ++functionIterator) {
+                const std::string functionName = functionIterator.key();
+                const auto& functionObject = functionIterator.value();
+
+                if (functionObject.contains("energy") && functionObject["energy"].is_number()) {
+                    content[functionName] = functionObject["energy"].get<double>();
+                }
+            }
+        }
+
+        return content;
     }
 
     /**

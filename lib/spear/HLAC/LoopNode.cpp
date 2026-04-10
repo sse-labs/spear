@@ -295,8 +295,6 @@ std::string LoopNode::getAnchorDotName() {
 double LoopNode::getEnergy() {
     double energy = 0.0;
 
-    // Here we need to perform the local ILP solving later on for the DAG analysis
-
     return energy;
 }
 
