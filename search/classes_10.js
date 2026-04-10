@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['virtualnode_0',['VirtualNode',['../classHLAC_1_1VirtualNode.html',1,'HLAC']]]
+  ['util_0',['util',['../classFeasibility_1_1Util.html',1,'Feasibility::Util'],['../classHLAC_1_1Util.html',1,'HLAC::Util']]]
 ];

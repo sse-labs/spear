@@ -1,6 +1,10 @@
 var searchData=
 [
-  ['registerreader_0',['RegisterReader',['../classRegisterReader.html',1,'']]],
-  ['resultregistry_1',['ResultRegistry',['../classResultRegistry.html',1,'']]],
-  ['ringbufdeleter_2',['RingBufDeleter',['../structRingBufDeleter.html',1,'']]]
+  ['passutil_0',['PassUtil',['../classPassUtil.html',1,'']]],
+  ['phasarhandlerpass_1',['PhasarHandlerPass',['../classPhasarHandlerPass.html',1,'']]],
+  ['profilehandler_2',['ProfileHandler',['../classProfileHandler.html',1,'']]],
+  ['profileoptions_3',['ProfileOptions',['../classProfileOptions.html',1,'']]],
+  ['profiler_4',['Profiler',['../classProfiler.html',1,'']]],
+  ['profilingconfiguration_5',['ProfilingConfiguration',['../structProfilingConfiguration.html',1,'']]],
+  ['programgraph_6',['ProgramGraph',['../classProgramGraph.html',1,'']]]
 ];

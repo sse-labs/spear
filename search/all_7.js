@@ -16,12 +16,13 @@ var searchData=
   ['findedgesstartingatnode_13',['findEdgesStartingAtNode',['../classProgramGraph.html#acef8229424136eb7f7cf35038d831e59',1,'ProgramGraph']]],
   ['findloopcheckexpr_14',['findLoopCheckExpr',['../classLoopBound_1_1LoopBoundWrapper.html#a8d79267601928d46ce295549a58402c9',1,'LoopBound::LoopBoundWrapper']]],
   ['findtakenedges_15',['findTakenEdges',['../classHLAC_1_1Util.html#af0e6e094beca184bd525847ffbaf1cfb',1,'HLAC::Util']]],
-  ['func_16',['func',['../classFunctionTree.html#a9130c65e97bdf6bd10c3eea431809760',1,'FunctionTree']]],
-  ['function_17',['function',['../classHLAC_1_1FunctionNode.html#a1fd3644b55daa1d0d9b1ed431a830f70',1,'HLAC::FunctionNode']]],
-  ['functionenergy_18',['functionEnergy',['../classHLAC_1_1FunctionNode.html#adb0e8ff238214c2b52b9450088838b33',1,'HLAC::FunctionNode']]],
-  ['functionenergycache_19',['FunctionEnergyCache',['../classHLAC_1_1hlac.html#aa2d562623f4a0c9f37a3490d529fa46f',1,'HLAC::hlac']]],
-  ['functionfeasibilitymap_20',['FunctionFeasibilityMap',['../namespaceFeasibility.html#a0c683b51b80f49800479be328ea2454c',1,'Feasibility']]],
-  ['functionnode_21',['functionnode',['../classHLAC_1_1FunctionNode.html',1,'HLAC::FunctionNode'],['../classHLAC_1_1FunctionNode.html#ab2723cb9a98843aa0c387cd0deaef8f4',1,'HLAC::FunctionNode::FunctionNode()']]],
-  ['functions_22',['functions',['../classHLAC_1_1hlac.html#a014d3198371b32af5e8233b9c40c7cab',1,'HLAC::hlac']]],
-  ['functiontree_23',['functiontree',['../classFunctionTree.html#a53962ae644f6cbfa614728aa09f32c5a',1,'FunctionTree::FunctionTree()'],['../classFunctionTree.html',1,'FunctionTree']]]
+  ['formatscientific_16',['formatScientific',['../classPassUtil.html#a19476cf4feff1d7135ace5b43496f8de',1,'PassUtil']]],
+  ['func_17',['func',['../classFunctionTree.html#a9130c65e97bdf6bd10c3eea431809760',1,'FunctionTree']]],
+  ['function_18',['function',['../classHLAC_1_1FunctionNode.html#a1fd3644b55daa1d0d9b1ed431a830f70',1,'HLAC::FunctionNode']]],
+  ['functionenergy_19',['functionEnergy',['../classHLAC_1_1FunctionNode.html#adb0e8ff238214c2b52b9450088838b33',1,'HLAC::FunctionNode']]],
+  ['functionenergycache_20',['FunctionEnergyCache',['../classHLAC_1_1hlac.html#aa2d562623f4a0c9f37a3490d529fa46f',1,'HLAC::hlac']]],
+  ['functionfeasibilitymap_21',['FunctionFeasibilityMap',['../namespaceFeasibility.html#a0c683b51b80f49800479be328ea2454c',1,'Feasibility']]],
+  ['functionnode_22',['functionnode',['../classHLAC_1_1FunctionNode.html',1,'HLAC::FunctionNode'],['../classHLAC_1_1FunctionNode.html#ab2723cb9a98843aa0c387cd0deaef8f4',1,'HLAC::FunctionNode::FunctionNode()']]],
+  ['functions_23',['functions',['../classHLAC_1_1hlac.html#a014d3198371b32af5e8233b9c40c7cab',1,'HLAC::hlac']]],
+  ['functiontree_24',['functiontree',['../classFunctionTree.html#a53962ae644f6cbfa614728aa09f32c5a',1,'FunctionTree::FunctionTree()'],['../classFunctionTree.html',1,'FunctionTree']]]
 ];

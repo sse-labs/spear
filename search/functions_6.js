@@ -12,6 +12,7 @@ var searchData=
   ['findedgesstartingatnode_9',['findEdgesStartingAtNode',['../classProgramGraph.html#acef8229424136eb7f7cf35038d831e59',1,'ProgramGraph']]],
   ['findloopcheckexpr_10',['findLoopCheckExpr',['../classLoopBound_1_1LoopBoundWrapper.html#a8d79267601928d46ce295549a58402c9',1,'LoopBound::LoopBoundWrapper']]],
   ['findtakenedges_11',['findTakenEdges',['../classHLAC_1_1Util.html#af0e6e094beca184bd525847ffbaf1cfb',1,'HLAC::Util']]],
-  ['functionnode_12',['FunctionNode',['../classHLAC_1_1FunctionNode.html#ab2723cb9a98843aa0c387cd0deaef8f4',1,'HLAC::FunctionNode']]],
-  ['functiontree_13',['FunctionTree',['../classFunctionTree.html#a53962ae644f6cbfa614728aa09f32c5a',1,'FunctionTree']]]
+  ['formatscientific_12',['formatScientific',['../classPassUtil.html#a19476cf4feff1d7135ace5b43496f8de',1,'PassUtil']]],
+  ['functionnode_13',['FunctionNode',['../classHLAC_1_1FunctionNode.html#ab2723cb9a98843aa0c387cd0deaef8f4',1,'HLAC::FunctionNode']]],
+  ['functiontree_14',['FunctionTree',['../classFunctionTree.html#a53962ae644f6cbfa614728aa09f32c5a',1,'FunctionTree']]]
 ];

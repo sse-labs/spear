@@ -70,12 +70,18 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="classConfigurationUtils-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">ConfigurationUtils Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a9a8c963dd53b26c3b31a5b3ff6a96514" id="r_a9a8c963dd53b26c3b31a5b3ff6a96514"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfigurationUtils.html#a9a8c963dd53b26c3b31a5b3ff6a96514">convertStringToLowercase</a> (std::string &amp;inputString)</td></tr>
+<tr class="separator:a9a8c963dd53b26c3b31a5b3ff6a96514"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a453d766b19f800da4d660432aa7e0784" id="r_a453d766b19f800da4d660432aa7e0784"><td class="memItemLeft" align="right" valign="top">static Mode&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfigurationUtils.html#a453d766b19f800da4d660432aa7e0784">strToMode</a> (const std::string &amp;str)</td></tr>
@@ -86,8 +92,68 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:aae62165ace9251613c350ac914d05fbb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a933d91e83ebf0ecc2a1c09bfdac5dcc9" id="r_a933d91e83ebf0ecc2a1c09bfdac5dcc9"><td class="memItemLeft" align="right" valign="top">static AnalysisType&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfigurationUtils.html#a933d91e83ebf0ecc2a1c09bfdac5dcc9">strToAnalysisType</a> (const std::string &amp;str)</td></tr>
 <tr class="separator:a933d91e83ebf0ecc2a1c09bfdac5dcc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d04a4c8a4dc3b75054f2e05a231e075" id="r_a0d04a4c8a4dc3b75054f2e05a231e075"><td class="memItemLeft" align="right" valign="top">static AnalysisOutputMode&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfigurationUtils.html#a0d04a4c8a4dc3b75054f2e05a231e075">strToAnalysisOutputmode</a> (const std::string &amp;str)</td></tr>
+<tr class="separator:a0d04a4c8a4dc3b75054f2e05a231e075"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a9a8c963dd53b26c3b31a5b3ff6a96514" name="a9a8c963dd53b26c3b31a5b3ff6a96514"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9a8c963dd53b26c3b31a5b3ff6a96514">&#9670;&#160;</a></span>convertStringToLowercase()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConfigurationUtils::convertStringToLowercase </td>
+          <td>(</td>
+          <td class="paramtype">std::string &amp;&#160;</td>
+          <td class="paramname"><em>inputString</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Convert a given string to lower case format </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">inputString</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a0d04a4c8a4dc3b75054f2e05a231e075" name="a0d04a4c8a4dc3b75054f2e05a231e075"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0d04a4c8a4dc3b75054f2e05a231e075">&#9670;&#160;</a></span>strToAnalysisOutputmode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static AnalysisOutputMode ConfigurationUtils::strToAnalysisOutputmode </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>str</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Convert a string to an analysis mode enum type</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">str</td><td>String to convert </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>AnalysisMode enum type </dd></dl>
+
+</div>
+</div>
 <a id="a933d91e83ebf0ecc2a1c09bfdac5dcc9" name="a933d91e83ebf0ecc2a1c09bfdac5dcc9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a933d91e83ebf0ecc2a1c09bfdac5dcc9">&#9670;&#160;</a></span>strToAnalysisType()</h2>
 

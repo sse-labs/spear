@@ -1,14 +1,6 @@
 var searchData=
 [
-  ['icmp_0',['icmp',['../structFeasibility_1_1LazyAtom.html#a5f6839415d50ff9f2e555949756d2243',1,'Feasibility::LazyAtom']]],
-  ['id_1',['id',['../classHLAC_1_1Edge.html#a832d547bfd27f5401e7d28fde82fecd5',1,'HLAC::Edge']]],
-  ['ilpindex_2',['ilpIndex',['../classHLAC_1_1Edge.html#a2e8522303f2df1bc68f60db7265090d4',1,'HLAC::Edge']]],
-  ['isconstant_3',['isConstant',['../classLoopBound_1_1CheckExpr.html#ad474b71b8447762c275ee8b8ae94259e',1,'LoopBound::CheckExpr']]],
-  ['isentry_4',['isEntry',['../classHLAC_1_1VirtualNode.html#a89b216aa775db0332abbaeb28dd52405',1,'HLAC::VirtualNode']]],
-  ['isexit_5',['isExit',['../classHLAC_1_1VirtualNode.html#a04dbb9077a14c691d6b2df399ac67bce',1,'HLAC::VirtualNode']]],
-  ['islinkerfunction_6',['isLinkerFunction',['../classHLAC_1_1CallNode.html#afa5af8f2d1768c8aecd796c8695b054b',1,'HLAC::CallNode']]],
-  ['ismainfunction_7',['isMainFunction',['../classHLAC_1_1FunctionNode.html#a673464e3e0b865afd0e1af0e7e47482e',1,'HLAC::FunctionNode']]],
-  ['isrecursive_8',['isRecursive',['../classHLAC_1_1FunctionNode.html#a6d55873496ff491f4d85ece3e5e2b7f6',1,'HLAC::FunctionNode']]],
-  ['isunknown_9',['isUnknown',['../classLoopBound_1_1CheckExpr.html#a1fa07bcfcc9109d501592e0a0dbcd505',1,'LoopBound::CheckExpr']]],
-  ['iterations_10',['iterations',['../classLoopTree.html#af4addbd8bbbc207cb1d7735a785782e4',1,'LoopTree']]]
+  ['handler_0',['handler',['../classLoopTree.html#a15b900fb894985bdc881842d75bd5f9a',1,'LoopTree']]],
+  ['hash_1',['hash',['../classHLAC_1_1GenericNode.html#a03fa4fabdd5867de9b7cc369cf38a3a8',1,'HLAC::GenericNode']]],
+  ['hassubloops_2',['hasSubLoops',['../classHLAC_1_1LoopNode.html#a1e78eebcfa2ab5df5d43d64cc0e5a472',1,'HLAC::LoopNode']]]
 ];

@@ -14,5 +14,8 @@ var searchData=
   ['resultsty_11',['resultsty',['../namespaceFeasibility.html#a9242cb92ccea6fafa1f8f40d7228c188',1,'Feasibility::ResultsTy'],['../namespaceLoopBound.html#a0be9b3685c21940b21bb2661236f30b5',1,'LoopBound::ResultsTy']]],
   ['ringbufdeleter_12',['RingBufDeleter',['../structRingBufDeleter.html',1,'']]],
   ['run_13',['run',['../classPhasarHandlerPass.html#a195394de4d638f0045fde17c4f7038be',1,'PhasarHandlerPass']]],
-  ['runonmodule_14',['runOnModule',['../classPhasarHandlerPass.html#ae03895a260ad2eea6a74aad422169a7d',1,'PhasarHandlerPass']]]
+  ['runclusteredonmodule_14',['runClusteredOnModule',['../classPassUtil.html#a77ffae187ae72bbd92fab89700f77e0f',1,'PassUtil']]],
+  ['runcomparisonanalysesonclonedmodules_15',['runComparisonAnalysesOnClonedModules',['../classPassUtil.html#a433dbd0e312baaa31354de41fde52d19',1,'PassUtil']]],
+  ['runmonolithiconmodule_16',['runMonolithicOnModule',['../classPassUtil.html#a4afa2953750a346970c784c0704d00c8',1,'PassUtil']]],
+  ['runonmodule_17',['runOnModule',['../classPhasarHandlerPass.html#ae03895a260ad2eea6a74aad422169a7d',1,'PhasarHandlerPass']]]
 ];

@@ -10,5 +10,8 @@ var searchData=
   ['resolve_7',['resolve',['../classFeasibility_1_1FeasibilityAnalysisManager.html#a155d5e55952996e852ffa0dcfd117903',1,'Feasibility::FeasibilityAnalysisManager']]],
   ['resultregistry_8',['ResultRegistry',['../classResultRegistry.html#a1b2bdfbc32962d51a23fda354ab11cf3',1,'ResultRegistry']]],
   ['run_9',['run',['../classPhasarHandlerPass.html#a195394de4d638f0045fde17c4f7038be',1,'PhasarHandlerPass']]],
-  ['runonmodule_10',['runOnModule',['../classPhasarHandlerPass.html#ae03895a260ad2eea6a74aad422169a7d',1,'PhasarHandlerPass']]]
+  ['runclusteredonmodule_10',['runClusteredOnModule',['../classPassUtil.html#a77ffae187ae72bbd92fab89700f77e0f',1,'PassUtil']]],
+  ['runcomparisonanalysesonclonedmodules_11',['runComparisonAnalysesOnClonedModules',['../classPassUtil.html#a433dbd0e312baaa31354de41fde52d19',1,'PassUtil']]],
+  ['runmonolithiconmodule_12',['runMonolithicOnModule',['../classPassUtil.html#a4afa2953750a346970c784c0704d00c8',1,'PassUtil']]],
+  ['runonmodule_13',['runOnModule',['../classPhasarHandlerPass.html#ae03895a260ad2eea6a74aad422169a7d',1,'PhasarHandlerPass']]]
 ];

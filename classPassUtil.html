@@ -78,34 +78,641 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a19476cf4feff1d7135ace5b43496f8de" id="r_a19476cf4feff1d7135ace5b43496f8de"><td class="memItemLeft" align="right" valign="top"><a id="a19476cf4feff1d7135ace5b43496f8de" name="a19476cf4feff1d7135ace5b43496f8de"></a>
-static std::string&#160;</td><td class="memItemRight" valign="bottom"><b>formatScientific</b> (double value, int precision=12)</td></tr>
+<tr class="memitem:a19476cf4feff1d7135ace5b43496f8de" id="r_a19476cf4feff1d7135ace5b43496f8de"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#a19476cf4feff1d7135ace5b43496f8de">formatScientific</a> (double value, int precision=12)</td></tr>
 <tr class="separator:a19476cf4feff1d7135ace5b43496f8de"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7c20bbca751db76ebbf2bbb2e6b438ba" id="r_a7c20bbca751db76ebbf2bbb2e6b438ba"><td class="memItemLeft" align="right" valign="top"><a id="a7c20bbca751db76ebbf2bbb2e6b438ba" name="a7c20bbca751db76ebbf2bbb2e6b438ba"></a>
-static void&#160;</td><td class="memItemRight" valign="bottom"><b>prepareFunctionsForLegacyAnalysis</b> (llvm::Module &amp;module, llvm::FunctionAnalysisManager &amp;functionAnalysisManager)</td></tr>
+<tr class="memitem:a7c20bbca751db76ebbf2bbb2e6b438ba" id="r_a7c20bbca751db76ebbf2bbb2e6b438ba"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#a7c20bbca751db76ebbf2bbb2e6b438ba">prepareFunctionsForLegacyAnalysis</a> (llvm::Module &amp;module, llvm::FunctionAnalysisManager &amp;functionAnalysisManager)</td></tr>
 <tr class="separator:a7c20bbca751db76ebbf2bbb2e6b438ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a01308d325dd79587cf895df21638d75d" id="r_a01308d325dd79587cf895df21638d75d"><td class="memItemLeft" align="right" valign="top"><a id="a01308d325dd79587cf895df21638d75d" name="a01308d325dd79587cf895df21638d75d"></a>
-static void&#160;</td><td class="memItemRight" valign="bottom"><b>legacyWrapper</b> (llvm::Module &amp;module, llvm::FunctionAnalysisManager &amp;functionAnalysisManager)</td></tr>
-<tr class="separator:a01308d325dd79587cf895df21638d75d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a26bd2ce65f7408581eea0a0fb08a55df" id="r_a26bd2ce65f7408581eea0a0fb08a55df"><td class="memItemLeft" align="right" valign="top"><a id="a26bd2ce65f7408581eea0a0fb08a55df" name="a26bd2ce65f7408581eea0a0fb08a55df"></a>
-static void&#160;</td><td class="memItemRight" valign="bottom"><b>collectCallNodeBindingsFromNestedNodes</b> (<a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *currentNode, std::size_t topLevelNodeIndex, std::vector&lt; <a class="el" href="structHLAC_1_1CallNodeBinding.html">HLAC::CallNodeBinding</a> &gt; &amp;callNodeBindings)</td></tr>
+<tr class="memitem:ad15f4ff4bb3ee3607c5977d84bdfc3b3" id="r_ad15f4ff4bb3ee3607c5977d84bdfc3b3"><td class="memItemLeft" align="right" valign="top">static nlohmann::json&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#ad15f4ff4bb3ee3607c5977d84bdfc3b3">legacyWrapper</a> (llvm::Module &amp;module, llvm::FunctionAnalysisManager &amp;functionAnalysisManager)</td></tr>
+<tr class="separator:ad15f4ff4bb3ee3607c5977d84bdfc3b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a26bd2ce65f7408581eea0a0fb08a55df" id="r_a26bd2ce65f7408581eea0a0fb08a55df"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#a26bd2ce65f7408581eea0a0fb08a55df">collectCallNodeBindingsFromNestedNodes</a> (<a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *currentNode, std::size_t topLevelNodeIndex, std::vector&lt; <a class="el" href="structHLAC_1_1CallNodeBinding.html">HLAC::CallNodeBinding</a> &gt; &amp;callNodeBindings)</td></tr>
 <tr class="separator:a26bd2ce65f7408581eea0a0fb08a55df"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a78f357ea656282b30b5d37f5d7d5d03c" id="r_a78f357ea656282b30b5d37f5d7d5d03c"><td class="memItemLeft" align="right" valign="top"><a id="a78f357ea656282b30b5d37f5d7d5d03c" name="a78f357ea656282b30b5d37f5d7d5d03c"></a>
-static void&#160;</td><td class="memItemRight" valign="bottom"><b>cacheDirectNodeEnergies</b> (<a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *currentNode, std::unordered_map&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *, double &gt; &amp;directNodeEnergyCache)</td></tr>
+<tr class="memitem:a78f357ea656282b30b5d37f5d7d5d03c" id="r_a78f357ea656282b30b5d37f5d7d5d03c"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#a78f357ea656282b30b5d37f5d7d5d03c">cacheDirectNodeEnergies</a> (<a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *currentNode, std::unordered_map&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *, double &gt; &amp;directNodeEnergyCache)</td></tr>
 <tr class="separator:a78f357ea656282b30b5d37f5d7d5d03c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac924c8d6d212c7124dd68b7ffb0b63f7" id="r_ac924c8d6d212c7124dd68b7ffb0b63f7"><td class="memItemLeft" align="right" valign="top"><a id="ac924c8d6d212c7124dd68b7ffb0b63f7" name="ac924c8d6d212c7124dd68b7ffb0b63f7"></a>
-static std::shared_ptr&lt; <a class="el" href="classHLAC_1_1hlac.html">HLAC::hlac</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>buildInitializedGraph</b> (llvm::Module &amp;module, llvm::FunctionAnalysisManager &amp;functionAnalysisManager, <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;resultRegistry)</td></tr>
+<tr class="memitem:ac924c8d6d212c7124dd68b7ffb0b63f7" id="r_ac924c8d6d212c7124dd68b7ffb0b63f7"><td class="memItemLeft" align="right" valign="top">static std::shared_ptr&lt; <a class="el" href="classHLAC_1_1hlac.html">HLAC::hlac</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#ac924c8d6d212c7124dd68b7ffb0b63f7">buildInitializedGraph</a> (llvm::Module &amp;module, llvm::FunctionAnalysisManager &amp;functionAnalysisManager, <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;resultRegistry)</td></tr>
 <tr class="separator:ac924c8d6d212c7124dd68b7ffb0b63f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8efa3315d0b22a49e98790e665f53a54" id="r_a8efa3315d0b22a49e98790e665f53a54"><td class="memItemLeft" align="right" valign="top"><a id="a8efa3315d0b22a49e98790e665f53a54" name="a8efa3315d0b22a49e98790e665f53a54"></a>
-static void&#160;</td><td class="memItemRight" valign="bottom"><b>runMonolithicOnModule</b> (llvm::Module &amp;module, llvm::FunctionAnalysisManager &amp;functionAnalysisManager, <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;resultRegistry)</td></tr>
-<tr class="separator:a8efa3315d0b22a49e98790e665f53a54"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0ca6f487dd235180901d09072befd0b4" id="r_a0ca6f487dd235180901d09072befd0b4"><td class="memItemLeft" align="right" valign="top"><a id="a0ca6f487dd235180901d09072befd0b4" name="a0ca6f487dd235180901d09072befd0b4"></a>
-static void&#160;</td><td class="memItemRight" valign="bottom"><b>runClusteredOnModule</b> (llvm::Module &amp;module, llvm::FunctionAnalysisManager &amp;functionAnalysisManager, <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;resultRegistry)</td></tr>
-<tr class="separator:a0ca6f487dd235180901d09072befd0b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4e8ab401b7a437244f0172b2cc72be58" id="r_a4e8ab401b7a437244f0172b2cc72be58"><td class="memItemLeft" align="right" valign="top"><a id="a4e8ab401b7a437244f0172b2cc72be58" name="a4e8ab401b7a437244f0172b2cc72be58"></a>
-static void&#160;</td><td class="memItemRight" valign="bottom"><b>runComparisonAnalysesOnClonedModules</b> (llvm::Module &amp;module, llvm::ModuleAnalysisManager &amp;moduleAnalysisManager, <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;baseRegistry)</td></tr>
-<tr class="separator:a4e8ab401b7a437244f0172b2cc72be58"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4afa2953750a346970c784c0704d00c8" id="r_a4afa2953750a346970c784c0704d00c8"><td class="memItemLeft" align="right" valign="top">static nlohmann::json&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#a4afa2953750a346970c784c0704d00c8">runMonolithicOnModule</a> (llvm::Module &amp;module, llvm::FunctionAnalysisManager &amp;functionAnalysisManager, <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;resultRegistry)</td></tr>
+<tr class="separator:a4afa2953750a346970c784c0704d00c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77ffae187ae72bbd92fab89700f77e0f" id="r_a77ffae187ae72bbd92fab89700f77e0f"><td class="memItemLeft" align="right" valign="top">static nlohmann::json&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#a77ffae187ae72bbd92fab89700f77e0f">runClusteredOnModule</a> (llvm::Module &amp;module, llvm::FunctionAnalysisManager &amp;functionAnalysisManager, <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;resultRegistry)</td></tr>
+<tr class="separator:a77ffae187ae72bbd92fab89700f77e0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a433dbd0e312baaa31354de41fde52d19" id="r_a433dbd0e312baaa31354de41fde52d19"><td class="memItemLeft" align="right" valign="top">static std::unordered_map&lt; std::string, nlohmann::json &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#a433dbd0e312baaa31354de41fde52d19">runComparisonAnalysesOnClonedModules</a> (llvm::Module &amp;module, llvm::ModuleAnalysisManager &amp;moduleAnalysisManager, <a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;resultRegistry)</td></tr>
+<tr class="separator:a433dbd0e312baaa31354de41fde52d19"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adfd215a093fb1a2d68a8b97be91e275e" id="r_adfd215a093fb1a2d68a8b97be91e275e"><td class="memItemLeft" align="right" valign="top">static nlohmann::json&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#adfd215a093fb1a2d68a8b97be91e275e">appendGraphContent</a> (nlohmann::json &amp;baseOutput, <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *node)</td></tr>
+<tr class="separator:adfd215a093fb1a2d68a8b97be91e275e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acdf979975648ed4c27f276cde65493c9" id="r_acdf979975648ed4c27f276cde65493c9"><td class="memItemLeft" align="right" valign="top">static nlohmann::json&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#acdf979975648ed4c27f276cde65493c9">appendGraphContent</a> (nlohmann::json &amp;baseOutput, <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *node, ILPClusteredLoopResult loopresult)</td></tr>
+<tr class="separator:acdf979975648ed4c27f276cde65493c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6a0d6c01a5866c95f6f2c4d78b96ca1" id="r_af6a0d6c01a5866c95f6f2c4d78b96ca1"><td class="memItemLeft" align="right" valign="top">static nlohmann::json&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#af6a0d6c01a5866c95f6f2c4d78b96ca1">appendGraphContentLegacy</a> (<a class="el" href="classLLVMHandler.html">LLVMHandler</a> handler, nlohmann::json &amp;baseOutput, <a class="el" href="classNode.html">Node</a> *node)</td></tr>
+<tr class="separator:af6a0d6c01a5866c95f6f2c4d78b96ca1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd71d7e0928c056c5ee6c6eee382ee71" id="r_afd71d7e0928c056c5ee6c6eee382ee71"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassUtil.html#afd71d7e0928c056c5ee6c6eee382ee71">extractFileNameWithoutExtension</a> (const std::string &amp;filePath)</td></tr>
+<tr class="separator:afd71d7e0928c056c5ee6c6eee382ee71"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="adfd215a093fb1a2d68a8b97be91e275e" name="adfd215a093fb1a2d68a8b97be91e275e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adfd215a093fb1a2d68a8b97be91e275e">&#9670;&#160;</a></span>appendGraphContent() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static nlohmann::json PassUtil::appendGraphContent </td>
+          <td>(</td>
+          <td class="paramtype">nlohmann::json &amp;&#160;</td>
+          <td class="paramname"><em>baseOutput</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *&#160;</td>
+          <td class="paramname"><em>node</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Recursive function to append node energy content to the given json object </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">baseOutput</td><td>JSON object to append to </td></tr>
+    <tr><td class="paramname">node</td><td><a class="el" href="classNode.html">Node</a> to analyse for inner content </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>JSON output enriched with inner node content </dd></dl>
+
+</div>
+</div>
+<a id="acdf979975648ed4c27f276cde65493c9" name="acdf979975648ed4c27f276cde65493c9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acdf979975648ed4c27f276cde65493c9">&#9670;&#160;</a></span>appendGraphContent() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static nlohmann::json PassUtil::appendGraphContent </td>
+          <td>(</td>
+          <td class="paramtype">nlohmann::json &amp;&#160;</td>
+          <td class="paramname"><em>baseOutput</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *&#160;</td>
+          <td class="paramname"><em>node</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">ILPClusteredLoopResult&#160;</td>
+          <td class="paramname"><em>loopresult</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Recursive function to append node energy content to the given json object </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">baseOutput</td><td>JSON object to append to </td></tr>
+    <tr><td class="paramname">node</td><td><a class="el" href="classNode.html">Node</a> to analyse for inner content </td></tr>
+    <tr><td class="paramname">loopresult</td><td>Result of the previous executed ILP clustered loop analysis to enrich loopnode energy with vaues </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>JSON output enriched with inner node content </dd></dl>
+
+</div>
+</div>
+<a id="af6a0d6c01a5866c95f6f2c4d78b96ca1" name="af6a0d6c01a5866c95f6f2c4d78b96ca1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6a0d6c01a5866c95f6f2c4d78b96ca1">&#9670;&#160;</a></span>appendGraphContentLegacy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static nlohmann::json PassUtil::appendGraphContentLegacy </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classLLVMHandler.html">LLVMHandler</a>&#160;</td>
+          <td class="paramname"><em>handler</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">nlohmann::json &amp;&#160;</td>
+          <td class="paramname"><em>baseOutput</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classNode.html">Node</a> *&#160;</td>
+          <td class="paramname"><em>node</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Recursive function to append node energy content to the given json object based on the legacy programgraph </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handler</td><td><a class="el" href="classLLVMHandler.html">LLVMHandler</a> to deal with LLVM IR code </td></tr>
+    <tr><td class="paramname">baseOutput</td><td>JSON object to append to </td></tr>
+    <tr><td class="paramname">node</td><td><a class="el" href="classNode.html">Node</a> to analyse for inner content </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>JSON output enriched with inner node content </dd></dl>
+
+</div>
+</div>
+<a id="ac924c8d6d212c7124dd68b7ffb0b63f7" name="ac924c8d6d212c7124dd68b7ffb0b63f7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac924c8d6d212c7124dd68b7ffb0b63f7">&#9670;&#160;</a></span>buildInitializedGraph()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static std::shared_ptr&lt; <a class="el" href="classHLAC_1_1hlac.html">HLAC::hlac</a> &gt; PassUtil::buildInitializedGraph </td>
+          <td>(</td>
+          <td class="paramtype">llvm::Module &amp;&#160;</td>
+          <td class="paramname"><em>module</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">llvm::FunctionAnalysisManager &amp;&#160;</td>
+          <td class="paramname"><em>functionAnalysisManager</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;&#160;</td>
+          <td class="paramname"><em>resultRegistry</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Construct edited <a class="el" href="namespaceHLAC.html">HLAC</a> that can be used for monolithic or clustered analysis </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">module</td><td>Module the <a class="el" href="namespaceHLAC.html">HLAC</a> is based uppon </td></tr>
+    <tr><td class="paramname">functionAnalysisManager</td><td>FAM to base all calculations on </td></tr>
+    <tr><td class="paramname">resultRegistry</td><td>PHASAR result registry to use phasar based analyses </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Edited <a class="el" href="namespaceHLAC.html">HLAC</a> ready for analysis </dd></dl>
+
+</div>
+</div>
+<a id="a78f357ea656282b30b5d37f5d7d5d03c" name="a78f357ea656282b30b5d37f5d7d5d03c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a78f357ea656282b30b5d37f5d7d5d03c">&#9670;&#160;</a></span>cacheDirectNodeEnergies()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void PassUtil::cacheDirectNodeEnergies </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *&#160;</td>
+          <td class="paramname"><em>currentNode</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::unordered_map&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *, double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>directNodeEnergyCache</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Cache already calculated node energy values to mitigate recalculation of nodes down the line </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">currentNode</td><td><a class="el" href="classNode.html">Node</a> to cache energy for </td></tr>
+    <tr><td class="paramname">directNodeEnergyCache</td><td>Storage of the cached energy </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a26bd2ce65f7408581eea0a0fb08a55df" name="a26bd2ce65f7408581eea0a0fb08a55df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a26bd2ce65f7408581eea0a0fb08a55df">&#9670;&#160;</a></span>collectCallNodeBindingsFromNestedNodes()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void PassUtil::collectCallNodeBindingsFromNestedNodes </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *&#160;</td>
+          <td class="paramname"><em>currentNode</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t&#160;</td>
+          <td class="paramname"><em>topLevelNodeIndex</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="structHLAC_1_1CallNodeBinding.html">HLAC::CallNodeBinding</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>callNodeBindings</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Collect call CallNodeBindings from nodes contained in the given node. This function is used to resolve callnodes after they have been analyzed by the respective analysis. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">currentNode</td><td><a class="el" href="classNode.html">Node</a> to base the collection on </td></tr>
+    <tr><td class="paramname">topLevelNodeIndex</td><td>Index of the node we are executing the analysis on </td></tr>
+    <tr><td class="paramname">callNodeBindings</td><td>Vector where we store the found CallNodeBindings </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="afd71d7e0928c056c5ee6c6eee382ee71" name="afd71d7e0928c056c5ee6c6eee382ee71"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd71d7e0928c056c5ee6c6eee382ee71">&#9670;&#160;</a></span>extractFileNameWithoutExtension()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static std::string PassUtil::extractFileNameWithoutExtension </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>filePath</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Extract the filename from the given file path </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">filePath</td><td>Path to analyse </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Filename if it can be extracted </dd></dl>
+
+</div>
+</div>
+<a id="a19476cf4feff1d7135ace5b43496f8de" name="a19476cf4feff1d7135ace5b43496f8de"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a19476cf4feff1d7135ace5b43496f8de">&#9670;&#160;</a></span>formatScientific()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static std::string PassUtil::formatScientific </td>
+          <td>(</td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>value</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>precision</em> = <code>12</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Convert the given double value to a string with fixed precision </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">value</td><td>Value to convert </td></tr>
+    <tr><td class="paramname">precision</td><td>Precision of the value </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>String represnting the given double value with the specified precision </dd></dl>
+
+</div>
+</div>
+<a id="ad15f4ff4bb3ee3607c5977d84bdfc3b3" name="ad15f4ff4bb3ee3607c5977d84bdfc3b3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad15f4ff4bb3ee3607c5977d84bdfc3b3">&#9670;&#160;</a></span>legacyWrapper()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static nlohmann::json PassUtil::legacyWrapper </td>
+          <td>(</td>
+          <td class="paramtype">llvm::Module &amp;&#160;</td>
+          <td class="paramname"><em>module</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">llvm::FunctionAnalysisManager &amp;&#160;</td>
+          <td class="paramname"><em>functionAnalysisManager</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Calculate only legacy analysis relevant analysis steps and execute the legacy analysis afterward </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">module</td><td>Module to run the steps on </td></tr>
+    <tr><td class="paramname">functionAnalysisManager</td><td>FAM to base the underlying calculation on </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>JSON object with the result of the legacy analysis </dd></dl>
+
+</div>
+</div>
+<a id="a7c20bbca751db76ebbf2bbb2e6b438ba" name="a7c20bbca751db76ebbf2bbb2e6b438ba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7c20bbca751db76ebbf2bbb2e6b438ba">&#9670;&#160;</a></span>prepareFunctionsForLegacyAnalysis()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void PassUtil::prepareFunctionsForLegacyAnalysis </td>
+          <td>(</td>
+          <td class="paramtype">llvm::Module &amp;&#160;</td>
+          <td class="paramname"><em>module</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">llvm::FunctionAnalysisManager &amp;&#160;</td>
+          <td class="paramname"><em>functionAnalysisManager</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Execute the necessary passes of the legacy analysis on the given module </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">module</td><td>Module to run the passes on </td></tr>
+    <tr><td class="paramname">functionAnalysisManager</td><td>Underlying FunctionAnalysisManager to execute the passes with </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a77ffae187ae72bbd92fab89700f77e0f" name="a77ffae187ae72bbd92fab89700f77e0f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a77ffae187ae72bbd92fab89700f77e0f">&#9670;&#160;</a></span>runClusteredOnModule()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static nlohmann::json PassUtil::runClusteredOnModule </td>
+          <td>(</td>
+          <td class="paramtype">llvm::Module &amp;&#160;</td>
+          <td class="paramname"><em>module</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">llvm::FunctionAnalysisManager &amp;&#160;</td>
+          <td class="paramname"><em>functionAnalysisManager</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;&#160;</td>
+          <td class="paramname"><em>resultRegistry</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Execute the Clustered IPET analysis on the given module </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">module</td><td>Module to run the analysis on </td></tr>
+    <tr><td class="paramname">functionAnalysisManager</td><td>FAM used for calculations </td></tr>
+    <tr><td class="paramname">resultRegistry</td><td>PHASAR result registry to use phasar based analyses </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>JSON object with the analysis graph </dd></dl>
+
+</div>
+</div>
+<a id="a433dbd0e312baaa31354de41fde52d19" name="a433dbd0e312baaa31354de41fde52d19"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a433dbd0e312baaa31354de41fde52d19">&#9670;&#160;</a></span>runComparisonAnalysesOnClonedModules()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static std::unordered_map&lt; std::string, nlohmann::json &gt; PassUtil::runComparisonAnalysesOnClonedModules </td>
+          <td>(</td>
+          <td class="paramtype">llvm::Module &amp;&#160;</td>
+          <td class="paramname"><em>module</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">llvm::ModuleAnalysisManager &amp;&#160;</td>
+          <td class="paramname"><em>moduleAnalysisManager</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;&#160;</td>
+          <td class="paramname"><em>resultRegistry</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Execute Monolithic, Clustered and the legacy analysis on the given module </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">module</td><td>Module to run the analysis on </td></tr>
+    <tr><td class="paramname">moduleAnalysisManager</td><td>MAM used for calculations </td></tr>
+    <tr><td class="paramname">resultRegistry</td><td>PHASAR result registry to use phasar based analyses </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Mapping from analysis name to generated JSON output </dd></dl>
+
+</div>
+</div>
+<a id="a4afa2953750a346970c784c0704d00c8" name="a4afa2953750a346970c784c0704d00c8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4afa2953750a346970c784c0704d00c8">&#9670;&#160;</a></span>runMonolithicOnModule()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static nlohmann::json PassUtil::runMonolithicOnModule </td>
+          <td>(</td>
+          <td class="paramtype">llvm::Module &amp;&#160;</td>
+          <td class="paramname"><em>module</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">llvm::FunctionAnalysisManager &amp;&#160;</td>
+          <td class="paramname"><em>functionAnalysisManager</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classResultRegistry.html">ResultRegistry</a> &amp;&#160;</td>
+          <td class="paramname"><em>resultRegistry</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Execute the Monolithic IPET analysis on the given module </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">module</td><td>Module to run the analysis on </td></tr>
+    <tr><td class="paramname">functionAnalysisManager</td><td>FAM used for calculations </td></tr>
+    <tr><td class="paramname">resultRegistry</td><td>PHASAR result registry to use phasar based analyses </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>JSON object with the analysis graph </dd></dl>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>src/passes/<a class="el" href="PassUtil_8h_source.html">PassUtil.h</a></li>
 </ul>
