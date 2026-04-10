@@ -6,12 +6,13 @@
 #include "ELBs/ELBParser.h"
 
 #include <fstream>
+#include <string>
+#include <unordered_map>
 
 #include "Logger.h"
 #include "nlohmann/json.hpp"
 
 std::unordered_map<std::string, double> ELBParser::parseELBFile(const std::string &filename) {
-    // Initialize JSON container
     nlohmann::json parsedJsonData;
 
     // Open file stream
@@ -23,26 +24,25 @@ std::unordered_map<std::string, double> ELBParser::parseELBFile(const std::strin
         return {};
     }
 
-    // Parse JSON with error handling
+    // Parse JSON
     try {
         inputFileStream >> parsedJsonData;
     } catch (const nlohmann::json::parse_error &parseError) {
         Logger::getInstance().log(
             "JSON parse error in file " + filename + ": " + std::string(parseError.what()),
-            LOGLEVEL::WARNING
-        );
+            LOGLEVEL::WARNING);
         return {};
     }
 
-    // Validate JSON structure (must be object)
+    // Validate JSON structure
     if (!parsedJsonData.is_object()) {
         Logger::getInstance().log(
             "Invalid ELB file format (root is not object): " + filename,
-            LOGLEVEL::WARNING
-        );
+            LOGLEVEL::WARNING);
         return {};
     }
 
+    // Mapping we are trying to read
     std::unordered_map<std::string, double> extractedMapping;
 
     // Extract key-value pairs
@@ -50,13 +50,13 @@ std::unordered_map<std::string, double> ELBParser::parseELBFile(const std::strin
         if (!value.is_number()) {
             Logger::getInstance().log(
                 "Invalid value for key '" + key + "' in " + filename + " (expected number)",
-                LOGLEVEL::WARNING
-            );
+                LOGLEVEL::WARNING);
             continue;
         }
 
         extractedMapping[key] = value.get<double>();
     }
 
+    // Just return the parsed mapping
     return extractedMapping;
 }

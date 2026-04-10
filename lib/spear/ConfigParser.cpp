@@ -80,7 +80,8 @@ bool ConfigParser::fallbackValid(json object) {
     if (!callsFallback.contains("UNKNOWN_FUNCTION") ||
         !callsFallback["UNKNOWN_FUNCTION"].is_number() ||
         callsFallback["UNKNOWN_FUNCTION"].get<double>() <= 0.0) {
-            std::cout << "Invalid analysis.fallback.calls: missing or non-positive UNKNOWN_FUNCTION value." << std::endl;
+            std::cout << "Invalid analysis.fallback.calls: missing or non-positive UNKNOWN_FUNCTION value."
+            << std::endl;
             return false;
     }
 

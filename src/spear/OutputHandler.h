@@ -4,19 +4,30 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_OUTPUTHANDLER_H
-#define SPEAR_OUTPUTHANDLER_H
-#include <string>
+#ifndef SRC_SPEAR_OUTPUTHANDLER_H_
+#define SRC_SPEAR_OUTPUTHANDLER_H_
 
-#include "configuration/valuespace.h"
+#include <string>
+#include <unordered_map>
+
 #include "nlohmann/json.hpp"
 
 class OutputHandler {
  public:
+    /**
+     * Write the given content to a file with the given filename in JSON format.
+     * @param filename Name of the file that will be written
+     * @param content Content to write to the file
+     */
+    static void writeJsonOutput(std::string filename, nlohmann::json content);
 
-    static void writeJsonOutput(std::string filename, nlohmann::json content, bool writeMultiple);
-
-    static void writeELBOutput(std::string filename, std::unordered_map<std::string, double> content, bool writeMultiple);
+    /**
+     * Write the given content to a file with the given filename in the ELB format.
+     * The content is expected to be a mapping of function names to energy values.
+     * @param filename Name of the file that will be written
+     * @param content Content to write to the file
+     */
+    static void writeELBOutput(std::string filename, std::unordered_map<std::string, double> content);
 
  private:
     /**
@@ -32,13 +43,6 @@ class OutputHandler {
      * @param content Mapping to write to
      */
     static void writeELBFile(std::string filename, nlohmann::json content);
-
-    /**
-     *
-     * @param mode
-     * @return
-     */
-    static std::string getFileNameFromAnalysisType(AnalysisType type);
 };
 
-#endif  // SPEAR_OUTPUTHANDLER_H
+#endif  // SRC_SPEAR_OUTPUTHANDLER_H_

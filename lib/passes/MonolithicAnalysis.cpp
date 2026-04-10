@@ -120,7 +120,7 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
         };
 
         auto funcNode = graph->getFunctionByName(funcname);
-        for (auto &node : funcNode->Nodes ) {
+        for ( auto &node : funcNode->Nodes ) {
             PassUtil::appendGraphContent(outputObject["functions"][funcname], node.get());
         }
     }

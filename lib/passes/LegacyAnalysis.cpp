@@ -6,6 +6,7 @@
 #include <llvm/IR/Dominators.h>
 
 #include <vector>
+#include <string>
 
 #include "ConfigParser.h"
 #include "DeMangler.h"
@@ -128,13 +129,10 @@ nlohmann::json LegacyAnalysis::run(
 
             if (energyFunction->programGraph != nullptr) {
                 for (auto node : energyFunction->programGraph->getNodes()) {
-
                     auto nodeJson = PassUtil::appendGraphContentLegacy(handler, functionObject, node);
                     functionObject = nodeJson;
-
                 }
             }
-
 
             outputObject["functions"][fName] = functionObject;
         }

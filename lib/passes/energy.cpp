@@ -12,37 +12,26 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
-#include <llvm/Transforms/Scalar/IndVarSimplify.h>
 #include <llvm/Transforms/Scalar/LoopPassManager.h>
-#include <llvm/Transforms/Scalar/LoopRotation.h>
-#include <llvm/Transforms/Utils/InstructionNamer.h>
-#include <llvm/Transforms/Utils/Mem2Reg.h>
+
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include "ConfigParser.h"
 #include "DeMangler.h"
 #include "EnergyFunction.h"
-#include "FunctionTree.h"
 #include "HLAC/hlac.h"
-#include "HLAC/hlacwrapper.h"
-#include "LLVMHandler.h"
 #include "PhasarHandler.h"
 #include "ProfileHandler.h"
 #include "ProgramGraph.h"
 
 #include <nlohmann/json.hpp>
 
-#include "ClusteredAnalysis.h"
 #include "ELBs/ELPMapper.h"
 #include "HLAC/util.h"
-#include "ILP/ILPBuilder.h"
-#include "ILP/ILPClusterCache.h"
-#include "LegacyAnalysis.h"
-#include "Logger.h"
-#include "MonolithicAnalysis.h"
 #include "OutputHandler.h"
 #include "PassUtil.h"
 #include "analyses/ResultRegistry.h"
@@ -384,19 +373,22 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
             case AnalysisType::MONOLITHIC: {
                 ResultRegistry monolithicRegistry = this->resultRegistry;
-                output["monolithic"] = PassUtil::runMonolithicOnModule(module, functionAnalysisManager, monolithicRegistry);
+                output["monolithic"] = PassUtil::runMonolithicOnModule(module,
+                    functionAnalysisManager, monolithicRegistry);
                 break;
             }
 
             case AnalysisType::CLUSTERED: {
                 ResultRegistry clusteredRegistry = this->resultRegistry;
-                output["clustered"] = PassUtil::runClusteredOnModule(module, functionAnalysisManager, clusteredRegistry);
+                output["clustered"] = PassUtil::runClusteredOnModule(module,
+                    functionAnalysisManager, clusteredRegistry);
                 break;
             }
 
             case AnalysisType::COMPARISON:
                 outputMultiple = true;
-                output = PassUtil::runComparisonAnalysesOnClonedModules(module, moduleAnalysisManager, this->resultRegistry);
+                output = PassUtil::runComparisonAnalysesOnClonedModules(module,
+                    moduleAnalysisManager, this->resultRegistry);
                 break;
 
             default:
@@ -441,7 +433,6 @@ struct Energy : llvm::PassInfoMixin<Energy> {
             for (auto functionIterator = analysisOutput["functions"].begin();
                  functionIterator != analysisOutput["functions"].end();
                  ++functionIterator) {
-
                 const std::string functionName = functionIterator.key();
                 const auto& functionObject = functionIterator.value();
 

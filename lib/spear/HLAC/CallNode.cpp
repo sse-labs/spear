@@ -227,9 +227,6 @@ bool CallNode::checkIfIsSyscall() {
 }
 
 double CallNode::getEnergy() {
-    // std::cout << "Getting energy for call to " << this->calledFunction->getName().str() << std::endl;
-    // std::cout << "\t" << this->isSyscall << " " << this->isLinkerFunction << " " << this->isDebugFunction << std::endl;
-
     // If we encounter a syscall, we can just return the energy
     if (this->isSyscall) {
         if (syscallId.has_value()) {
@@ -244,14 +241,19 @@ double CallNode::getEnergy() {
     // If we have a normal call we need to calculate the energy of the called function and return this as the energy of
     // the call
     if (isLinkerFunction) {
-        auto mapping = ELBMapper::getInstance().getMapping();
-        auto lookUpCandidate = ELBMapper::getInstance().lookup(this->calledFunction->getName().str());
-        if (lookUpCandidate.has_value()) {
-            this->resolvedByELB = true;
-            return lookUpCandidate.value();
+        // if we have a linker function first check if there is a ELB lookup
+        if (ConfigParser::getAnalysisConfiguration().elbMappingActivated) {
+            // Try to resolve the value through the ELBMapper
+            auto lookUpCandidate = ELBMapper::getInstance().lookup(this->calledFunction->getName().str());
+            if (lookUpCandidate.has_value()) {
+                // If we found a value return it
+                this->resolvedByELB = true;
+                return lookUpCandidate.value();
+            }
         }
 
-        double fallbackEnergy = static_cast<double>(ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"]);
+        // If the linker function could not be resolved using the ELBMapper, we need to fallback to the config val
+        double fallbackEnergy = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
 
         std::ostringstream outputStream;
         outputStream << std::scientific << std::setprecision(8) << fallbackEnergy;

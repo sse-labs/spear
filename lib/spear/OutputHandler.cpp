@@ -6,14 +6,16 @@
 #include "OutputHandler.h"
 
 #include <fstream>
+#include <unordered_map>
+#include <string>
 
 #include "ConfigParser.h"
 
-void OutputHandler::writeJsonOutput(std::string filename, nlohmann::json content, bool writeMultiple) {
+void OutputHandler::writeJsonOutput(std::string filename, nlohmann::json content) {
     writeJsonFile(filename + ".json", content);
 }
 
-void OutputHandler::writeELBOutput(std::string filename, std::unordered_map<std::string, double> content, bool writeMultiple) {
+void OutputHandler::writeELBOutput(std::string filename, std::unordered_map<std::string, double> content) {
     writeELBFile(filename + ".elb", content);
 }
 
@@ -62,19 +64,5 @@ void OutputHandler::writeJsonFile(std::string filename, nlohmann::json content) 
     }
     catch (const std::exception& exception) {
         throw std::runtime_error(std::string("Error writing JSON file: ") + exception.what());
-    }
-}
-
-
-std::string OutputHandler::getFileNameFromAnalysisType(AnalysisType type) {
-    switch (type) {
-        case AnalysisType::MONOLITHIC:
-            return "monolithic";
-        case AnalysisType::CLUSTERED:
-            return "clustered";
-        case AnalysisType::LEGACY:
-            return "legacy";
-        default:
-            return "";
     }
 }

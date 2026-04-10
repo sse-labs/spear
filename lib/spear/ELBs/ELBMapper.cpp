@@ -3,6 +3,9 @@
  * All rights reserved.
  */
 
+#include <string>
+#include <unordered_map>
+
 #include "ELBs/ELBParser.h"
 #include "ELBs/ELPMapper.h"
 

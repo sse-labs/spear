@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 #include "ConfigParser.h"
 #include "ILP/ILPClusterCache.h"
@@ -150,7 +151,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
         auto funcNode = graph->getFunctionByName(funcname);
         auto loopres = clusteredLoopResults[funcNode];
 
-        for (auto &node : funcNode->Nodes ) {
+        for ( auto &node : funcNode->Nodes ) {
             PassUtil::appendGraphContent(outputObject["functions"][funcname], node.get(), loopres);
         }
     }

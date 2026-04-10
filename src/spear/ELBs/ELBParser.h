@@ -4,15 +4,26 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_ELBPARSER_H
-#define SPEAR_ELBPARSER_H
+#ifndef SRC_SPEAR_ELBS_ELBPARSER_H_
+#define SRC_SPEAR_ELBS_ELBPARSER_H_
 
 #include <string>
 #include <unordered_map>
 
+using ELBMapping = std::unordered_map<std::string, double>;
+
+/**
+ * ELBParser class.
+ * Parses ELB files and returns the stored content
+ */
 class ELBParser {
  public:
-    static std::unordered_map<std::string, double> parseELBFile(const std::string &filename);
+    /**
+     * Parse the ELBFile under the given path if possible
+     * @param filepath Path to parse the ELB file from
+     * @return Parsed ELBMapping. An empty mapping if an error occours
+     */
+    static ELBMapping parseELBFile(const std::string &filepath);
 };
 
-#endif  // SPEAR_ELBPARSER_H
+#endif  // SRC_SPEAR_ELBS_ELBPARSER_H_
