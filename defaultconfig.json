@@ -20,11 +20,16 @@
     "clusteredCacheEnabled": true,
     "feasibilityEnabled": true,
     "writeDotFiles": false,
+    "elbMappingActivated": true,
     "legacyConfig": {
       "mode": "program",
       "format": "json",
       "strategy": "worst"
     },
+    "ELBs": [
+      "./elbs/time.elb",
+      "./elbs/random.elb"
+    ],
     "fallback": {
       "calls": {
         "UNKNOWN_FUNCTION": 3e-4

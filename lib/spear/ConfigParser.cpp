@@ -352,6 +352,7 @@ void ConfigParser::parse() {
         analysisConfiguration.cachingEnabled = analysis["clusteredCacheEnabled"].get<bool>();
         analysisConfiguration.feasibilityEnabled = analysis["feasibilityEnabled"].get<bool>();
         analysisConfiguration.writeDotFiles = analysis["writeDotFiles"].get<bool>();
+        analysisConfiguration.elbMappingActivated = analysis["elbMappingActivated"].get<bool>();
 
         analysisConfiguration.legacyconfig.mode = ConfigurationUtils::strToMode(
             legacyconfig["mode"].get<std::string>());
@@ -381,6 +382,14 @@ void ConfigParser::parse() {
                     double value = valueIt.value().get<double>();
 
                     analysisConfiguration.fallback[categoryName][key] = value;
+                }
+            }
+        }
+
+        if (analysis.contains("ELBs") && analysis["ELBs"].is_array()) {
+            for (const auto& elbFile : analysis["ELBs"]) {
+                if (elbFile.is_string()) {
+                    analysisConfiguration.elbfiles.push_back(elbFile.get<std::string>());
                 }
             }
         }

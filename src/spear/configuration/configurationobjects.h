@@ -51,8 +51,10 @@ struct AnalysisConfiguration {
     bool cachingEnabled;
     bool feasibilityEnabled;
     bool writeDotFiles;
+    bool elbMappingActivated;
     LegacyAnalysisConfiguration legacyconfig;
     std::unordered_map<std::string, std::unordered_map<std::string, double>> fallback;
+    std::vector<std::string> elbfiles;
 };
 
 #endif  // SRC_SPEAR_CONFIGURATION_CONFIGURATIONOBJECTS_H_

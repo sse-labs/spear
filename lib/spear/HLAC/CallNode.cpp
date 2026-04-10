@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "ConfigParser.h"
+#include "ELBs/ELPMapper.h"
 #include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
@@ -243,6 +244,13 @@ double CallNode::getEnergy() {
     // If we have a normal call we need to calculate the energy of the called function and return this as the energy of
     // the call
     if (isLinkerFunction) {
+        auto mapping = ELBMapper::getInstance().getMapping();
+        auto lookUpCandidate = ELBMapper::getInstance().lookup(this->calledFunction->getName().str());
+        if (lookUpCandidate.has_value()) {
+            this->resolvedByELB = true;
+            return lookUpCandidate.value();
+        }
+
         double fallbackEnergy = static_cast<double>(ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"]);
 
         std::ostringstream outputStream;

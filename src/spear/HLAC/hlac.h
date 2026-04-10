@@ -607,6 +607,7 @@ class CallNode : public GenericNode {
     bool isLinkerFunction = false;
     bool isDebugFunction = false;
     bool isSyscall = false;
+    bool resolvedByELB = false;
 
     FunctionNode *parentFunctionNode = nullptr;
 

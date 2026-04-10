@@ -36,6 +36,7 @@
 #include <nlohmann/json.hpp>
 
 #include "ClusteredAnalysis.h"
+#include "ELBs/ELPMapper.h"
 #include "HLAC/util.h"
 #include "ILP/ILPBuilder.h"
 #include "ILP/ILPClusterCache.h"
@@ -369,6 +370,12 @@ struct Energy : llvm::PassInfoMixin<Energy> {
 
         std::unordered_map<std::string, nlohmann::json> output = {};
         bool outputMultiple = false;
+
+        for (auto elbfile : ConfigParser::getAnalysisConfiguration().elbfiles) {
+            ELBMapper::getInstance().useMapping(elbfile);
+        }
+
+        auto mapping = ELBMapper::getInstance().getMapping();
 
         switch (ConfigParser::getAnalysisConfiguration().analysisType) {
             case AnalysisType::LEGACY:
