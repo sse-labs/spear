@@ -2,8 +2,9 @@
  * Copyright (c) 2026 Maximilian Krebs
  * All rights reserved.
  */
-
+#include <algorithm>
 #include <string>
+
 #include "configuration/configurationUtils.h"
 
 
@@ -65,4 +66,11 @@ AnalysisOutputMode ConfigurationUtils::strToAnalysisOutputmode(const std::string
     } else {
         return AnalysisOutputMode::UNDEFINED;
     }
+}
+
+void ConfigurationUtils::convertStringToLowercase(std::string& inputString) {
+    std::transform(inputString.begin(), inputString.end(), inputString.begin(),
+                   [](unsigned char character) {
+                       return std::tolower(character);
+                   });
 }
