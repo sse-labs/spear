@@ -4,6 +4,9 @@ INSTALL_DIR="/usr/bin"
 RESSOURCE_DIR="/etc/spear"
 PROFILE_EXECTUON_COUNT=10000
 
+: "${C:=/usr/bin/clang-17}"
+: "${CXX:=/usr/bin/clang++-17}"
+
 # Check the user id of the executing user -> ensures privileged rights
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
@@ -46,7 +49,7 @@ mkdir -p build
 cd build || exit
 
 echo "[1/6] Compiling SPEAR"
-cmake ..
+cmake .. -DCMAKE_C_COMPILER="$C" -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld"
 make -j"$(nproc)"
 
 echo "[2/6] Copying spear to /usr/bin"
