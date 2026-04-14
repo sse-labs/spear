@@ -241,31 +241,35 @@ target_include_directories(SpearLib
 add_executable(spear main.cpp)
 target_link_libraries(spear PRIVATE SpearLib LLVM phasar bpf elf z)
 
-enable_testing()
+option(SPEAR_BUILD_TESTS "Build tests" OFF)
 
-# Tests
-file(GLOB_RECURSE SPEAR_TEST_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/test/*/*.cpp
-)
+if(SPEAR_BUILD_TESTS)
+    enable_testing()
 
-if(SPEAR_TEST_SOURCES)
-    add_executable(spear_tests
-            lib/test/main.cpp
-            ${SPEAR_TEST_SOURCES}
+    # Tests
+    file(GLOB_RECURSE SPEAR_TEST_SOURCES
+            ${CMAKE_CURRENT_SOURCE_DIR}/lib/test/*/*.cpp
     )
 
-    target_link_libraries(spear_tests PRIVATE SpearLib LLVM phasar Catch2)
+    if(SPEAR_TEST_SOURCES)
+        add_executable(spear_tests
+                lib/test/main.cpp
+                ${SPEAR_TEST_SOURCES}
+        )
 
-    target_include_directories(spear_tests PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/passes
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/spear
-            ${CMAKE_CURRENT_SOURCE_DIR}/lib/passes
-            ${CMAKE_CURRENT_SOURCE_DIR}/lib/test
-            ${CMAKE_CURRENT_BINARY_DIR}/generated
-    )
+        target_link_libraries(spear_tests PRIVATE SpearLib LLVM phasar Catch2)
 
-    target_compile_definitions(spear_tests PRIVATE TEST_INPUT_DIR="${CMAKE_SOURCE_DIR}")
-    add_test(NAME spear_tests COMMAND spear_tests)
-else()
-    message(STATUS "No test sources found under lib/test/*/*.cpp; skipping spear_tests target.")
+        target_include_directories(spear_tests PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/passes
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/spear
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/passes
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/test
+                ${CMAKE_CURRENT_BINARY_DIR}/generated
+        )
+
+        target_compile_definitions(spear_tests PRIVATE TEST_INPUT_DIR="${CMAKE_SOURCE_DIR}")
+        add_test(NAME spear_tests COMMAND spear_tests)
+    else()
+        message(STATUS "No test sources found under lib/test/*/*.cpp; skipping spear_tests target.")
+    endif()
 endif()
