@@ -9,14 +9,53 @@
 Welcome to SPEAR, the 
 **S**tatic **P**redictive **E**nergy **A**nalysis Tool based on Intel **R**APL.
 
-The tool will be developed for my bachelor-thesis
-**"Predictive, static energy consumption analysis based on experimentally determined energy models"**
 
+## Dependencies
+
+SPEAR depends on several components to work. Make sure the following components are installed on your system 
+before installing SPEAR.
+
+* **Intel RAPL Interface**
+  Required for energy profiling. Available on most modern Intel processors.
+  If your CPU does not support RAPL, SPEAR cannot be used.
+  Note: Support is limited to native systems. Behavior in containers or virtual machines is undefined.
+
+* **LLVM (version 17)**
+  SPEAR operates on LLVM IR and requires LLVM 17.
+  Install via your package manager or from the official LLVM website.
+  Using a different version may lead to undefined behavior.
+
+* **Phasar**
+  Used for static analysis of LLVM IR.
+  Follow the installation instructions in the official Phasar repository.
+
+* **Z3**
+  SMT solver used for analysis.
+  Install via your package manager or from the official Z3 repository.
+
+* **CMake**
+  Required to configure the build process.
+
+* **Make**
+  Used to compile the project.
+
+* **Python 3**
+  Required for auxiliary scripts.
+
+* **bpftool**
+  Used to profile system call behavior.
+  Install via your package manager.
+
+* **nlohmann-json**
+  Header-only C++ library used for JSON output.
+  Can be installed via a package manager or included manually.
+
+---
 
 ## Installation
 
 We added an installation script to automate the building and copying of the application. The script was designed to be run under Debian and uses the apt package manager.
-If you want to use the script on a different distribution adapt the installation script accordingly. Alternativly you could build SPEAR using the build commands, see section [building](#building) for further details.
+If you want to use the script on a different distribution adapt the installation script accordingly. Alternatively you could build SPEAR using the build commands, see section [building](#building) for further details.
 
 ⚠️ The installation script requires you to have elevated rights. Please execute it using sudo. The application will be installed for all users of the machine.
 
@@ -25,8 +64,6 @@ To run the script execute:
 chmod +x install.sh
 sudo ./install.sh
 ```
-
-
 
 ## Introduction
 
@@ -42,93 +79,119 @@ from the Intel RAPL Interface.
 
 ## Running the profiler
 
-Before running an analysis with spear, you have to profile your device with the built-in profiler.
+Before running an analysis with spear, you have to profile your device.
+Use the SPEAR `profile` command to generate a profile for your machine. The profile will be used to calculate the 
+energy consumption of instructions and functions.
 
-Run spear with the command `profile` and provide the number of iterations the profile gets averaged over as `<iterations>`.
-The parameter `<model>` expects the spear profile programs.
-Normally the profile model is found aftert the installation in the folder `/usr/share/spear/profile`
-
-You can compile the profile-scripts for your machine manually. We provided a shell-script to simplify this step.
-Run the script `utils/llvmToBinary/irToBinary.sh` and provide the path to the profile-folder e.g `../../profile/src`
-as argument to prepare the files. 
-
-The parameter `<savelocation>` specifies the location where the generated profile will be saved
-E.g.:
-
+```bash
+sudo spear profile \
+    --config /etc/spear/defaultconfig.json \
+    --model /etc/spear/profile/ \
+    --savelocation .
 ```
-spear profile --iterations <iterations>
-              --model <model>
-              --savelocation <savelocation>
-```
-Please execute the command above with elevated rights. Otherwise, Spear can not interfere the energy-values from the system,
-as the RAPL Interface is limited to elevated rights only.
+The profile command uses the configuration file specified with `--config` to determine specific settings for the profiling 
+process. The default config file is located in `/etc/spear/defaultconfig.json`. See the documentation for the config file
+for more information on the available settings.
 
-Choose the value used for averaging with respect to your setup.
-A larger count of iterations will increase the accuracy of the calculated model, but will also increase the time the profiler runs.
+The `--model` parameter specifies the location of the profile-scripts, which will be used to generate the profile.
+We generate a profile of size `10000` iterations by default, which should be sufficient for most use-cases.
+To generate a new model use the supplied profile generator script. See the additional documentation for information on
+how to generate a new model. 
 
-## Running an Analysis
+The generated profile is saved to the current directory by default, 
+but you can specify a different location with the `--savelocation` parameter.
 
-We implemented two ways to run the analysis. Before the analysis make sure, you compiled your program with the following
-script we provided:
+Make sure that you have the necessary permissions to run the profiler, as it usually requires elevated privileges to 
+access the RAPL interface.
 
-```
-util/llvmToBinary/cppToBinary.sh <path>
-```
+## Running the Analysis
 
-Where `<path>` is the path to your program files. The script will compile all `.cpp` files in the given path
-Please compile your source-files with this script,
-otherwise the behaviour of spear will be undefined or the analysis will crash.
+SPEAR provides the `analyze` command to statically estimate the energy consumption of a program based on a 
+previously generated profile.
 
-### Using Spear
+The command expects at least the following parameters:
 
-Spear provided a custom flag `analyze`, which expects the following parameters:
+* `--profile`  
+  Path to the machine-specific energy profile generated with `spear profile`.
 
-```
-spear analyze
-      --profile <profile> 
-      --mode <mode> 
-      --format <format> 
-      --strategy <strategy> 
-      --loopbound <loopbound> 
-      --withCalls <withcalls>
-      --program <llvmirpath>
-      --forFunction <function>
+* `--config`  
+  Path to the SPEAR configuration file. By default this is usually `/etc/spear/defaultconfig.json`.
+
+* `--program`  
+  Path to the LLVM IR file (`.ll`) that should be analyzed.
+
+Example:
+
+```bash
+spear analyze \
+    --profile profile.json \
+    --config /etc/spear/defaultconfig.json \
+    --program ../programs/loopbound/compiled/arrayReducer_forinfor.ll
 ```
 
-`<profile>`: Path to a profile calculated by spear with the `-p` flag
+To create a valid program file, you can compile your C/C++ code to LLVM IR using clang:
 
-`<mode>`: Mode the analysis should run on. Choose between the following options
-- `function` - Analyses every function by itself. Takes no respect to calls
-- `program` - Analyses the whole program with respect to calls.
-- `block`- Analyses the whole program but will output the nodes of the programgraph for each function. Denotes the nodes with their energy usage.
-- `instruction` - Analyses the whole program and will output a JSON representing the programgraph down to the used instructions of each node.
-- `graph`- Analyses the program and will print out a DOT graph to stdout.
+```bash
+clang++-17 -g -O0 -Xclang -disable-O0-optnone -fno-discard-value-names -S -emit-llvm -emit-llvm -o output.ll input.c
+```
 
-`<format>`: Outputformat to print after the calculation. Choose between the following options
-- `json` - json formatted output
-- `plain` - Human-readable plaintext
+Make sure to include the `-g` flag to preserve debug information, which is necessary for accurate analysis. 
+The `-O0` flag disables optimizations, and the additional flags ensure that the generated LLVM IR retains necessary 
+information for SPEAR to analyze effectively. Make sure that the version of clang you use matches the version of LLVM 
+that SPEAR is built against (LLVM 17 in this case) to avoid compatibility issues.
 
-`<strategy>`: Analysis-strategy to calculate. Choose between the following options
-- `worst` - Worst case analysis. During the calculation the paths with the most energy consumption, will be used
-- `best` - Best case analysis. During the calculation the paths with the most energy consumption, will be used
-- `average` - Average case analysis. Attempts to balance the number of energy efficient and energy inefficient paths
+## Results
 
-`<withcalls>`: Determines if the analysis should use analyse called functions.
+The analysis prints additional information about the analyzed program to the console, including the estimated energy 
+consumption of each function and instruction. Additionally by default a JSON file is generated in the current directory 
+with the name `<name of the programm>.json` which contains the same information in a structured format.
 
-`<loopbound>`: A positive integer defining a value, the iterations of loops will be approximated with, if spear can't interfere the iteration count trough llvm. E.g. in a while-loop
+See the documentation section TODO for more information about the structure of the generated JSON file.
 
-`<llvmirpath>` Path to a compiled llvm-ir file, the analysis should run on
+Example:
 
-`<function>`: Name of the function to analysed. Can be used if only a single function should be analyzed. (Currently only used for graph generation)
-
-## SPEAR-Viewer
-
-SPEAR now has a Visual Studio Code extension called "SPEAR-Viewer" which applies the algorithms directly on C/C++ code in the editor.
-Check out the project [here](https://github.com/printerboi/spear-viewer)
-
+```json
+{
+  "analysis": "monolithic",
+  "duration": 2628,
+  "functions": {
+    "main": {
+      "energy": 0.0011188347546023424,
+      "nodes": [
+        {
+          "energy": 4.226557849702381e-07,
+          "name": "entry",
+          "type": "node"
+        },
+        {
+          "callee": "_Z18benchmark_functioni",
+          "energy": 0.0005184120988173721,
+          "name": "Call to _Z18benchmark_functioni",
+          "type": "call"
+        },
+        {
+          "callee": "_ZNSolsEi",
+          "energy": 0.0003,
+          "name": "Call to _ZNSolsEi",
+          "type": "call"
+        },
+        {
+          "callee": "xyz",
+          "energy": 0.0003,
+          "name": "Call to xyz",
+          "type": "call"
+        }
+      ]
+    }
+  }
+}
+```
 
 ## Contribute
 
-Please feel free to open issues in this repository and create merge request if you like. Please respect, that I run this repository as side project and can only spend my time partly on developing SPEAR.
+Please feel free to open issues in this repository and create merge request if you like. Please respect, 
+that I run this repository as side project and can only spend my time partly on developing SPEAR.
 
-If you encounter a problem an want to create a issue, please describe your system and problem detailed as possible. A detailed explanation on how to reproduce the problem should be provided.
+If you encounter a problem and want to create an issue,
+please describe your system and problem detailed as possible. A detailed explanation on how to reproduce 
+the problem should be provided.

@@ -402,10 +402,10 @@ struct Energy : llvm::PassInfoMixin<Energy> {
         if (outputMode == AnalysisOutputMode::NORMAL) {
             if (output.size() == 1) {
                 const auto& onlyEntry = *output.begin();
-                OutputHandler::writeJsonOutput(filename, onlyEntry.second, outputMultiple);
+                OutputHandler::writeJsonOutput(filename, onlyEntry.second);
             } else {
                 for (const auto& [analysisName, analysisOutput] : output) {
-                    OutputHandler::writeJsonOutput(filename + "_" + analysisName, analysisOutput, outputMultiple);
+                    OutputHandler::writeJsonOutput(filename + "_" + analysisName, analysisOutput);
                 }
             }
         } else if (outputMode == AnalysisOutputMode::ELB) {
@@ -413,12 +413,12 @@ struct Energy : llvm::PassInfoMixin<Energy> {
                 const auto& onlyEntry = *output.begin();
                 const std::unordered_map<std::string, double> content = extractFunctionEnergyMap(onlyEntry.second);
 
-                OutputHandler::writeELBOutput(filename, content, outputMultiple);
+                OutputHandler::writeELBOutput(filename, content);
             } else {
                 for (const auto& [analysisName, analysisOutput] : output) {
                     const std::unordered_map<std::string, double> content = extractFunctionEnergyMap(analysisOutput);
 
-                    OutputHandler::writeELBOutput(filename + "_" + analysisName, content, outputMultiple);
+                    OutputHandler::writeELBOutput(filename + "_" + analysisName, content);
                 }
             }
         } else {

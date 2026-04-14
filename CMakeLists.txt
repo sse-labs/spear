@@ -24,7 +24,7 @@ include(AddLLVM)
 llvm_map_components_to_libnames(llvm_libs support core irreader passes)
 # ========= LLVM DANGER ZONE =========
 
-add_subdirectory(external)
+# add_subdirectory(external)
 
 set(Z3_TARGET "")
 set(Z3_RPATH_DIR "")
@@ -209,7 +209,6 @@ add_dependencies(SpearLib generate_bpf_artifacts generate_syscall_table)
 target_link_libraries(SpearLib
         PRIVATE
         LLVM
-        nlohmann_json
         phasar
         Cgl
         Cbc
@@ -240,7 +239,7 @@ target_include_directories(SpearLib
 
 # Executable
 add_executable(spear main.cpp)
-target_link_libraries(spear PRIVATE SpearLib LLVM nlohmann_json phasar bpf elf z)
+target_link_libraries(spear PRIVATE SpearLib LLVM phasar bpf elf z)
 
 enable_testing()
 
@@ -255,7 +254,7 @@ if(SPEAR_TEST_SOURCES)
             ${SPEAR_TEST_SOURCES}
     )
 
-    target_link_libraries(spear_tests PRIVATE SpearLib LLVM nlohmann_json phasar Catch2)
+    target_link_libraries(spear_tests PRIVATE SpearLib LLVM phasar Catch2)
 
     target_include_directories(spear_tests PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src/passes

@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# LLVM version
+LLVM_VERSION=17
+
+# Construct tool names dynamically
+LLVM_AS="llvm-as-${LLVM_VERSION}"
+LLC="llc-${LLVM_VERSION}"
+CLANGXX="clang++-${LLVM_VERSION}"
+
 function compileFile() {
   filename=$(basename -- "$1")
   path=$(dirname -- "$1")
@@ -12,10 +20,10 @@ function compileFile() {
   echo "Compiling $path/$filename.ll down to binary..."
 
   echo "Generating bytecode: $filename.bc"
-  llvm-as "$path/$filename.ll" -o "$path/compiled/$filename.bc"
+  "$LLVM_AS" "$path/$filename.ll" -o "$path/compiled/$filename.bc"
 
   echo "Generating object file: $filename.o"
-  llc \
+  "$LLC" \
     -O0 \
     -fast-isel \
     -regalloc=fast \
@@ -26,7 +34,7 @@ function compileFile() {
 
   echo "Generating final binary: $path/compiled/$filename"
 
-  clang++ \
+  "$CLANGXX" \
     -O0 \
     -g \
     -fno-builtin \

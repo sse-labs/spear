@@ -22,6 +22,7 @@
 
 #include "CLIHandler.h"
 #include "ConfigParser.h"
+#include "Logger.h"
 #include "analyses/ResultRegistry.h"
 #include "profilers/CPUProfiler.h"
 #include "profilers/MetaProfiler.h"
