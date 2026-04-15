@@ -14,6 +14,7 @@
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
 #include "PassUtil.h"
+#include "ProfileHandler.h"
 
 nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings, bool showAllTimings) {
     Logger::getInstance().log("Running Clustered ILP Analysis for Energy", LOGLEVEL::INFO);
@@ -106,6 +107,14 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
                 auto funcName = funcNode->function->getName().str();
                 auto funcEnergy = resultPair.WCEC;
+
+                // If we encounter the main function add the additional program start offset cost to it!
+                if (funcName == "main") {
+                    auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
+                    if (offsetCost.has_value()) {
+                        funcEnergy += offsetCost.value();
+                    }
+                }
 
                 graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
 
