@@ -14,6 +14,7 @@
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
 #include "PassUtil.h"
+#include "ProfileHandler.h"
 #include "nlohmann/json.hpp"
 
 nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings, bool showAllTimings) {
@@ -78,8 +79,16 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
             if (solvedResults.has_value()) {
                 auto resultPair = solvedResults.value();
 
-
                 auto funcEnergy = resultPair.optimalValue;
+
+                // If we encounter the main function add the additional program start offset cost to it!
+                if (funcName == "main") {
+                    auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
+                    if (offsetCost.has_value()) {
+                        funcEnergy += offsetCost.value();
+                    }
+                }
+
                 graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
 
                 Logger::getInstance().log(
