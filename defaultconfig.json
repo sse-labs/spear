@@ -3,7 +3,7 @@
     "min_program_energy": 1e-8,
     "min_instruction_energy": 1e-8,
     "cpu_regression": {
-      "limit": 1000,
+      "limit": 2000,
       "step": 150,
       "offset": 300
     },
