@@ -32,6 +32,23 @@
 
 #define SKIP_CPU_PROFILING false
 
+// Check if path exists
+bool pathExists(const std::string& path) {
+    struct stat info;
+    return stat(path.c_str(), &info) == 0;
+}
+
+// Check if directory
+bool isDirectory(const std::string& path) {
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) return false;
+    return (info.st_mode & S_IFDIR) != 0;
+}
+
+// Create directory (single level!)
+bool createDirectory(const std::string& path) {
+    return mkdir(path.c_str(), 0755) == 0 || errno == EEXIST;
+}
 
 void runProfileRoutine(CLIOptions opts) {
     auto proflingConfig = ConfigParser::getProfilingConfiguration();

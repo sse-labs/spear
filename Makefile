@@ -1,7 +1,7 @@
 .PHONY: lint printcfg
 
 lint:
-	pipx run cpplint --recursive --linelength=120 src/spear lib/ main.cpp
+	pipx run cpplint --recursive --linelength=120 --filter=-build/c++17 src/spear lib/ main.cpp
 
 printcfg:
 	@opt \

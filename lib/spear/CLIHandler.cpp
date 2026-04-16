@@ -7,9 +7,12 @@
 #include "CLIHandler.h"
 
 #include <unistd.h>
+
+#include <filesystem>
+#include <iostream>
 #include <stdexcept>
-#include <vector>
 #include <string>
+#include <vector>
 
 CLIOptions CLIHandler::parseCLI(int argc, char **argv) {
     // Pack the given parameters into a vector, so we can access them smartly
@@ -72,6 +75,17 @@ CLIOptions CLIHandler::parseCLI(int argc, char **argv) {
 
                         if (CLIHandler::exists(saveLocationString.data())) {
                             savePath = saveLocationString;
+                        } else {
+                            try {
+                                auto loc = saveLocationString.data();
+                                savePath = saveLocationString;
+
+                                if (!std::filesystem::create_directories(loc)) {
+                                    std::cerr << "Error: Could not create save location: " << loc << std::endl;
+                                }
+                            } catch (const std::filesystem::filesystem_error& exception) {
+                                std::cerr << "Error creating directory: " << exception.what() << std::endl;
+                            }
                         }
                     }
                 }
