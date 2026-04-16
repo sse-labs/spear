@@ -95,8 +95,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:adb33d464c5c84c54e18c06db472d4ec8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a13a2b6b5e195ee90099dce26c2111fee" id="r_a13a2b6b5e195ee90099dce26c2111fee"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCPUProfiler.html#a13a2b6b5e195ee90099dce26c2111fee">_mean</a> (std::vector&lt; double &gt; v)</td></tr>
 <tr class="separator:a13a2b6b5e195ee90099dce26c2111fee"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6d0611f4d60f7d1fde12b54e1130a702" id="r_a6d0611f4d60f7d1fde12b54e1130a702"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, std::pair&lt; double, double &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCPUProfiler.html#a6d0611f4d60f7d1fde12b54e1130a702">_regression</a> (std::vector&lt; std::map&lt; std::string, double &gt; &gt; results)</td></tr>
-<tr class="separator:a6d0611f4d60f7d1fde12b54e1130a702"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9c1a868916e4f8bf125c8d1f9720f2f1" id="r_a9c1a868916e4f8bf125c8d1f9720f2f1"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, std::pair&lt; double, double &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCPUProfiler.html#a9c1a868916e4f8bf125c8d1f9720f2f1">_regression</a> (const std::vector&lt; std::map&lt; std::string, double &gt; &gt; &amp;results, const std::vector&lt; int &gt; &amp;ks)</td></tr>
+<tr class="separator:a9c1a868916e4f8bf125c8d1f9720f2f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac6db47ff8d35ee789ed3703c96b14097" id="r_ac6db47ff8d35ee789ed3703c96b14097"><td class="memItemLeft" align="right" valign="top">json&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classCPUProfiler.html#ac6db47ff8d35ee789ed3703c96b14097">profile</a> () override</td></tr>
 <tr class="separator:ac6db47ff8d35ee789ed3703c96b14097"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classProfiler"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classProfiler')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classProfiler.html">Profiler</a></td></tr>
@@ -203,8 +203,8 @@ const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b><
 
 </div>
 </div>
-<a id="a6d0611f4d60f7d1fde12b54e1130a702" name="a6d0611f4d60f7d1fde12b54e1130a702"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6d0611f4d60f7d1fde12b54e1130a702">&#9670;&#160;</a></span>_regression()</h2>
+<a id="a9c1a868916e4f8bf125c8d1f9720f2f1" name="a9c1a868916e4f8bf125c8d1f9720f2f1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9c1a868916e4f8bf125c8d1f9720f2f1">&#9670;&#160;</a></span>_regression()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -212,9 +212,19 @@ const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b><
         <tr>
           <td class="memname">std::map&lt; std::string, std::pair&lt; double, double &gt; &gt; CPUProfiler::_regression </td>
           <td>(</td>
-          <td class="paramtype">std::vector&lt; std::map&lt; std::string, double &gt; &gt;&#160;</td>
-          <td class="paramname"><em>results</em></td><td>)</td>
+          <td class="paramtype">const std::vector&lt; std::map&lt; std::string, double &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>results</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">const std::vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ks</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
