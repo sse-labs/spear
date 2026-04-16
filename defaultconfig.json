@@ -4,7 +4,7 @@
     "min_instruction_energy": 1e-8,
     "cpu_regression": {
       "limit": 1000,
-      "step": 50,
+      "step": 150,
       "offset": 300
     },
     "syscalls": {

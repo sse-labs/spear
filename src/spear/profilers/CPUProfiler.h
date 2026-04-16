@@ -102,7 +102,8 @@ class CPUProfiler : public Profiler {
      * @return Mapping between instruction name and pair(slope, intercept) representing the regression coefficients
      * for each instruction
      */
-    std::map<std::string, std::pair<double, double>> _regression(std::vector<std::map<std::string, double>> results);
+    std::map<std::string, std::pair<double, double>> _regression(
+        const std::vector<std::map<std::string, double>>& results, const std::vector<int>& ks);
 
     /**
      * Profiles the system and gathers information about the energy usage of the CPU components

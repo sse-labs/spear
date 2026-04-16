@@ -43,7 +43,7 @@ double CPUProfiler::_mean(std::vector<double> v) {
 
 
 std::map<std::string, std::pair<double, double>>
-CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
+CPUProfiler::_regression(const std::vector<std::map<std::string, double>>& results, const std::vector<int>& ks) {
     std::map<std::string, std::vector<std::pair<double, double>>> series;
 
     double MIN_PROG_ENERGY = ConfigParser::getProfilingConfiguration().min_program_energy;
@@ -55,19 +55,22 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
      *
      * y = m * x + b
      * - y is the measured energy consumption of the program
-     * - x is the number of iterations of the instruction in the program (our k value)
-     * - m is the slope, which represents the per-instruction energy estimate (we need to divide this later on through the number of iterations to get the per-instruction energy estimate)
+     * - x is the number of repetitions of the instruction test program (our k value)
+     * - m is the slope, which represents the energy increase per k step
      * - b is the intercept, which represents the base energy consumption of the program without any iterations of the instruction
-     *
      *
      * See "An Introduction to Statistical Learning" by Gareth James, Daniela Witten, Trevor Hastie and Robert
      * Tibshirani for more information about linear
      * regression and the formulas used in this function.
      */
 
+    if (results.size() != ks.size()) {
+        throw std::runtime_error("CPUProfiler::_regression received mismatching results and ks sizes");
+    }
+
     // Create the mapping k => energy for each instruction
     for (size_t runIdx = 0; runIdx < results.size(); ++runIdx) {
-        const double x = static_cast<double>(runIdx + 1);
+        const double x = static_cast<double>(ks[runIdx]);
 
         for (const auto& [instr, value] : results[runIdx]) {
             series[instr].push_back({x, value});
@@ -85,13 +88,15 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
 
         std::vector<double> xs;
         std::vector<double> ys;
+        xs.reserve(points.size());
         ys.reserve(points.size());
+
         for (const auto& [x, y] : points) {
             xs.push_back(x);
             ys.push_back(y);
         }
 
-        // find a median of the y values to mitigate potential outliers
+        // Find a median of the y values to mitigate potential outliers
         const double robustLevel = std::max(_median(ys), MIN_PROG_ENERGY);
 
         if (points.size() == 1) {
@@ -102,15 +107,13 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
             continue;
         }
 
-        const double n = static_cast<double>(points.size());
-
         double x_bar = _mean(xs);
         double y_bar = _mean(ys);
 
         /**
          * We calculate the slope using the formula:
          *
-         * \beta_1 = covariance/variance  -> slope
+         * \beta_1 = covariance / variance  -> slope
          * \beta_0 = y_bar - \beta_1 * x_bar  -> intercept
          *
          */
@@ -126,7 +129,7 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
         double slope = 0.0;
         double intercept = robustLevel;
 
-        if (std::abs(variance) > 0.0) {
+        if (variance > 0.0) {
             slope = covariance / variance;
             intercept = y_bar - slope * x_bar;
         }
@@ -138,8 +141,8 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
         if (slope <= MIN_INST_ENERGY) {
             slope = MIN_INST_ENERGY;
         } else {
-            // We need to divide the slope by the number of iterations to get the per-instruction energy estimate,
-            // since each point corresponds to a program with a different number of iterations of the same instruction.
+            // We need to divide the slope by the number of iterations in the benchmark body
+            // to get the per-instruction energy estimate.
             slope = slope / this->programiterations;
         }
 
@@ -223,7 +226,7 @@ json CPUProfiler::profile() {
     }
 
     // Calculate regression parameters for each instruction based on the measurements
-    auto regressions = _regression(allResults);
+    auto regressions = _regression(allResults, ks);
 
 
     // Collect the slope and intercept for each instruction and store them in the final profile mapping.
@@ -268,21 +271,14 @@ std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data,
 
 std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t runtime) const {
     std::vector<double> results;
-    results.reserve(runtime * number_of_cores);
+    results.reserve(runtime);
 
-    #ifdef __linux__
+#ifdef __linux__
     RegisterReader powReader(0);
-
-    // Shared memory for initial energy values of each child
-    double* sharedEnergyBefore = reinterpret_cast<double*>(mmap(nullptr,
-                                                number_of_cores * sizeof(double),
-                                                PROT_READ | PROT_WRITE,
-                                                MAP_SHARED | MAP_ANONYMOUS,
-                                                -1, 0));
 
     char* args[] = { const_cast<char*>(file.c_str()), nullptr };
 
-    uint64_t iters = runtime;
+    uint64_t iterations = runtime;
 
     // Pin parent to a dedicated core
     cpu_set_t parentMask;
@@ -293,66 +289,150 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
         exit(1);
     }
 
-    for (uint64_t it = 0; it < iters; /* manual increment inside */) {
-        std::vector<pid_t> pids(number_of_cores);
-        bool validIteration = true;  // assume good; flip to false on invalid diff
+    for (uint64_t iteration = 0; iteration < iterations; ++iteration) {
+        std::vector<pid_t> childProcessIds(number_of_cores, -1);
+        std::vector<std::array<int, 2>> readyPipes(number_of_cores);
+        std::vector<std::array<int, 2>> startPipes(number_of_cores);
 
-        // Launch processes: one on each core
-        for (int core = 0; core < number_of_cores; core++) {
-            pid_t pid = fork();
+        for (int core = 0; core < number_of_cores; ++core) {
+            if (pipe(readyPipes[core].data()) == -1) {
+                perror("pipe (ready)");
+                exit(1);
+            }
 
-            if (pid == 0) {
-                cpu_set_t mask;
-                CPU_ZERO(&mask);
-                CPU_SET(core, &mask);
+            if (pipe(startPipes[core].data()) == -1) {
+                perror("pipe (start)");
+                exit(1);
+            }
+        }
 
-                if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
+        // Launch one process per core
+        for (int core = 0; core < number_of_cores; ++core) {
+            pid_t childProcessId = fork();
+
+            if (childProcessId == 0) {
+                // Child process
+
+                // Close unused pipe ends in the child
+                close(readyPipes[core][0]);
+                close(startPipes[core][1]);
+
+                for (int otherCore = 0; otherCore < number_of_cores; ++otherCore) {
+                    if (otherCore == core) {
+                        continue;
+                    }
+
+                    close(readyPipes[otherCore][0]);
+                    close(readyPipes[otherCore][1]);
+                    close(startPipes[otherCore][0]);
+                    close(startPipes[otherCore][1]);
+                }
+
+                cpu_set_t childMask;
+                CPU_ZERO(&childMask);
+                CPU_SET(core, &childMask);
+
+                if (sched_setaffinity(0, sizeof(childMask), &childMask) == -1) {
                     perror("sched_setaffinity (child)");
                     exit(1);
                 }
 
-                sharedEnergyBefore[core] = powReader.getEnergy();
+                // Signal to the parent that this child is pinned and ready
+                char readySignal = 'R';
+                ssize_t readyWriteResult = write(readyPipes[core][1], &readySignal, 1);
+                if (readyWriteResult != 1) {
+                    perror("write (ready)");
+                    exit(1);
+                }
+
+                close(readyPipes[core][1]);
+
+                // Wait for the parent to release all children at nearly the same time
+                char startSignal = 0;
+                ssize_t startReadResult = read(startPipes[core][0], &startSignal, 1);
+                if (startReadResult != 1) {
+                    perror("read (start)");
+                    exit(1);
+                }
+
+                close(startPipes[core][0]);
 
                 if (execv(file.c_str(), args) == -1) {
                     perror("execv");
                     exit(1);
                 }
-            } else if (pid > 0) {
-                pids[core] = pid;
+
+                exit(1);
+            } else if (childProcessId > 0) {
+                // Parent process
+                childProcessIds[core] = childProcessId;
+
+                // Close unused pipe ends in the parent
+                close(readyPipes[core][1]);
+                close(startPipes[core][0]);
             } else {
                 perror("fork");
                 exit(1);
             }
         }
 
-        std::vector<double> iterationResults(number_of_cores);
-
-        for (int core = 0; core < number_of_cores; core++) {
-            waitpid(pids[core], nullptr, 0);
-
-            double after = powReader.getEnergy();
-            double before = sharedEnergyBefore[core];
-            double diff = after - before;
-
-            if (diff <= 0) {
-                validIteration = false;
+        // Wait until all children are pinned and ready
+        for (int core = 0; core < number_of_cores; ++core) {
+            char readySignal = 0;
+            ssize_t readyReadResult = read(readyPipes[core][0], &readySignal, 1);
+            if (readyReadResult != 1) {
+                perror("read (ready)");
+                exit(1);
             }
 
-            iterationResults[core] = diff / number_of_cores;
+            close(readyPipes[core][0]);
         }
+
+        // Start the measurement window only after all children are ready
+        double energyBefore = powReader.getEnergy();
+
+        // Release all children as closely together as possible
+        for (int core = 0; core < number_of_cores; ++core) {
+            char startSignal = 'S';
+            ssize_t startWriteResult = write(startPipes[core][1], &startSignal, 1);
+            if (startWriteResult != 1) {
+                perror("write (start)");
+                exit(1);
+            }
+
+            close(startPipes[core][1]);
+        }
+
+        bool validIteration = true;
+
+        for (int core = 0; core < number_of_cores; ++core) {
+            int childStatus = 0;
+            if (waitpid(childProcessIds[core], &childStatus, 0) == -1) {
+                perror("waitpid");
+                exit(1);
+            }
+
+            if (!WIFEXITED(childStatus) || WEXITSTATUS(childStatus) != 0) {
+                validIteration = false;
+            }
+        }
+
+        double energyAfter = powReader.getEnergy();
+        double energyDifference = energyAfter - energyBefore;
 
         if (!validIteration) {
             continue;
         }
 
-        for (int core = 0; core < number_of_cores; core++) {
-            results.push_back(iterationResults[core]);
+        if (energyDifference <= 0.0) {
+            continue;
         }
 
-        it++;
+        // Store the average batch energy per child as one sample
+        results.push_back(energyDifference / static_cast<double>(number_of_cores));
     }
 
-    #endif
+#endif
 
     return results;
 }
