@@ -6,16 +6,20 @@
 #include "MonolithicAnalysis.h"
 
 #include <vector>
+#include <string>
+#include <unordered_map>
 
 #include "ConfigParser.h"
 #include "HLAC/hlac.h"
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
 #include "PassUtil.h"
+#include "ProfileHandler.h"
 #include "nlohmann/json.hpp"
 
 nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings, bool showAllTimings) {
     Logger::getInstance().log("Running Monolithic ILP Analysis for Energy", LOGLEVEL::INFO);
+    std::unordered_map<std::string, std::optional<ILPModel>> functionILPCache;
 
     // ================= Monolithic ILP =================
 
@@ -55,9 +59,12 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
         totalBuildDuration += monoBuildDuration;
 
         if (ilp.has_value()) {
+            auto funcName = funcNode->function->getName().str();
             auto monoSolveStart = std::chrono::high_resolution_clock::now();
 
             // ILPUtil::printILPModelHumanReadable(funcNode->function->getName().str(), ilp.value());
+
+            functionILPCache[funcName] = ilp;
 
             auto solvedResults = graph->solveMonolithicIlp(ilp.value());
 
@@ -71,9 +78,17 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
 
             if (solvedResults.has_value()) {
                 auto resultPair = solvedResults.value();
-                auto funcName = funcNode->function->getName().str();
 
                 auto funcEnergy = resultPair.optimalValue;
+
+                // If we encounter the main function add the additional program start offset cost to it!
+                if (funcName == "main") {
+                    auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
+                    if (offsetCost.has_value()) {
+                        funcEnergy += offsetCost.value();
+                    }
+                }
+
                 graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
 
                 Logger::getInstance().log(
@@ -115,8 +130,18 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
     outputObject["functions"] = {};
 
     for (auto [funcname, energy] : graph->FunctionEnergyCache) {
+        auto ilp = functionILPCache[funcname];
+        auto ilpArr = nlohmann::json::array();
+        auto ilpObj = nlohmann::json::object();
+
+        ilpObj["numVariables"] = ilp.value().col_lb.size();
+        ilpObj["numConstrains"] = ilp.value().row_lb.size();
+
+        ilpArr.push_back(ilpObj);
+
         outputObject["functions"][funcname] = {
-            {"energy", energy}
+            {"energy", energy},
+            {"ILPS", ilpArr}
         };
 
         auto funcNode = graph->getFunctionByName(funcname);

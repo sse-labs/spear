@@ -14,9 +14,12 @@
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
 #include "PassUtil.h"
+#include "ProfileHandler.h"
 
 nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings, bool showAllTimings) {
     Logger::getInstance().log("Running Clustered ILP Analysis for Energy", LOGLEVEL::INFO);
+
+    std::unordered_map<std::string, std::vector<ILPModel>> functionILPCache;
 
     std::string cacheActiveStr = (ConfigParser::getAnalysisConfiguration().cachingEnabled ? "enabled" : "disabled");
     Logger::getInstance().log("Cluster cache is " + cacheActiveStr, LOGLEVEL::INFO);
@@ -67,23 +70,28 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
         totalBuildDuration += clusteredBuildDuration;
 
         if (clusteredILPs.has_value()) {
+            for (const auto& ilp : clusteredILPs.value()) {
+                auto funcName = funcNode->function->getName().str();
+                functionILPCache[funcName].push_back(ilp.second);
+            }
+
             auto clusteredSolveStart = std::chrono::high_resolution_clock::now();
 
             // Solve the clustered ILPs of the program
-            auto clusteredSolvedResults = graph->solveClusteredIlps(clusteredILPs.value());
+            auto clusteredSolvedResults = HLAC::hlac::solveClusteredIlps(clusteredILPs.value());
 
             auto clusteredSolveEnd = std::chrono::high_resolution_clock::now();
             auto clusteredSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
                 clusteredSolveEnd - clusteredSolveStart);
             totalSolveDuration += clusteredSolveDuration;
 
-            auto solvedResults = clusteredSolvedResults;
+            const auto& solvedResults = clusteredSolvedResults;
             clusteredLoopResults[funcNode.get()] = solvedResults;
 
             auto dagStart = std::chrono::high_resolution_clock::now();
 
             // Calculate the longest path (= most expensive path) from the clustered results
-            auto dagResults = graph->DAGLongestPath(funcNode.get(), solvedResults);
+            auto dagResults = HLAC::hlac::DAGLongestPath(funcNode.get(), solvedResults);
 
             auto dagEnd = std::chrono::high_resolution_clock::now();
             auto dagDuration = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -99,6 +107,14 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
                 auto funcName = funcNode->function->getName().str();
                 auto funcEnergy = resultPair.WCEC;
+
+                // If we encounter the main function add the additional program start offset cost to it!
+                if (funcName == "main") {
+                    auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
+                    if (offsetCost.has_value()) {
+                        funcEnergy += offsetCost.value();
+                    }
+                }
 
                 graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
 
@@ -144,8 +160,21 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
     outputObject["functions"] = {};
 
     for (auto [funcname, energy] : graph->FunctionEnergyCache) {
+        auto ilpVec = functionILPCache[funcname];
+        auto ilpArr = nlohmann::json::array();
+
+        for (const auto& ilp : ilpVec) {
+            auto ilpObj = nlohmann::json::object();
+
+            ilpObj["numVariables"] = ilp.col_lb.size();
+            ilpObj["numConstrains"] = ilp.row_lb.size();
+
+            ilpArr.push_back(ilpObj);
+        }
+
         outputObject["functions"][funcname] = {
-            {"energy", energy}
+            {"energy", energy},
+            {"ILPS", ilpArr}
         };
 
         auto funcNode = graph->getFunctionByName(funcname);

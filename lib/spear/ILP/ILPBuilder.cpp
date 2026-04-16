@@ -306,6 +306,10 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
     // The loop is part of a function graph whose edges already carry stable global ids.
     // Therefore we must not renumber the loop edges locally here.
     const int maxEdgeIndex = ILPUtil::getMaxEdgeIndex(loop);
+
+    /**
+     * The Invocation col is the artificial variable we are introducing
+     */
     const int invocationCol = maxEdgeIndex + 1;
     const int numVars = invocationCol + 1;
 
