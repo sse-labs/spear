@@ -16,38 +16,193 @@
 #include <utility>
 #include <algorithm>
 
+#include <numeric>
+#include <cmath>
+#include <stdexcept>
+
 #include "ConfigParser.h"
 #include "RegisterReader.h"
 
-
-
-double CPUProfiler::_median(std::vector<double> v) {
-    std::sort(v.begin(), v.end());
-
-    size_t n = v.size();
-
-    if (n % 2 == 0) {
-        return (v[n/2 - 1] + v[n/2]) / 2.0;
-    } else {
-        return v[n/2];
+double CPUProfiler::_median(std::vector<double> values) {
+    if (values.empty()) {
+        return 0.0;
     }
+
+    std::sort(values.begin(), values.end());
+
+    const size_t numberOfValues = values.size();
+
+    if (numberOfValues % 2 == 0) {
+        return (values[numberOfValues / 2 - 1] + values[numberOfValues / 2]) / 2.0;
+    }
+
+    return values[numberOfValues / 2];
 }
 
-double CPUProfiler::_mean(std::vector<double> v) {
+double CPUProfiler::_mean(const std::vector<double>& values) {
+    if (values.empty()) {
+        return 0.0;
+    }
+
     double sum = 0.0;
-    for (double value : v) {
+    for (double value : values) {
         sum += value;
     }
-    return sum / static_cast<double>(v.size());
+
+    return sum / static_cast<double>(values.size());
 }
 
+double CPUProfiler::computeMedianAbsoluteDeviation(const std::vector<double>& values, double center) {
+    if (values.empty()) {
+        return 0.0;
+    }
+
+    std::vector<double> absoluteDeviations;
+    absoluteDeviations.reserve(values.size());
+
+    for (double value : values) {
+        absoluteDeviations.push_back(std::fabs(value - center));
+    }
+
+    return _median(absoluteDeviations);
+}
+
+CPUProfiler::LinearRegressionParameters CPUProfiler::solveWeightedLeastSquares(
+    const std::vector<double>& xValues,
+    const std::vector<double>& yValues,
+    const std::vector<double>& weights) {
+
+    LinearRegressionParameters regressionParameters;
+
+    if (xValues.size() != yValues.size() || xValues.size() != weights.size() || xValues.empty()) {
+        return regressionParameters;
+    }
+
+    double weightSum = 0.0;
+    double weightedXSum = 0.0;
+    double weightedYSum = 0.0;
+
+    for (size_t index = 0; index < xValues.size(); ++index) {
+        weightSum += weights[index];
+        weightedXSum += weights[index] * xValues[index];
+        weightedYSum += weights[index] * yValues[index];
+    }
+
+    if (weightSum <= 0.0) {
+        return regressionParameters;
+    }
+
+    const double xMean = weightedXSum / weightSum;
+    const double yMean = weightedYSum / weightSum;
+
+    double weightedCovariance = 0.0;
+    double weightedVariance = 0.0;
+
+    for (size_t index = 0; index < xValues.size(); ++index) {
+        const double centeredX = xValues[index] - xMean;
+        const double centeredY = yValues[index] - yMean;
+
+        weightedCovariance += weights[index] * centeredX * centeredY;
+        weightedVariance += weights[index] * centeredX * centeredX;
+    }
+
+    if (weightedVariance <= 0.0) {
+        regressionParameters.slope = 0.0;
+        regressionParameters.intercept = yMean;
+        regressionParameters.valid = true;
+        return regressionParameters;
+    }
+
+    regressionParameters.slope = weightedCovariance / weightedVariance;
+    regressionParameters.intercept = yMean - regressionParameters.slope * xMean;
+    regressionParameters.valid = true;
+
+    return regressionParameters;
+}
+
+CPUProfiler::LinearRegressionParameters CPUProfiler::solveOrdinaryLeastSquares(
+    const std::vector<double>& xValues,
+    const std::vector<double>& yValues) {
+
+    std::vector<double> unitWeights(xValues.size(), 1.0);
+    return solveWeightedLeastSquares(xValues, yValues, unitWeights);
+}
+
+CPUProfiler::LinearRegressionParameters CPUProfiler::solveHuberRegression(
+    const std::vector<double>& xValues,
+    const std::vector<double>& yValues,
+    double huberDelta,
+    int maximumIterations,
+    double convergenceTolerance) {
+
+    LinearRegressionParameters regressionParameters = solveOrdinaryLeastSquares(xValues, yValues);
+
+    if (!regressionParameters.valid || xValues.size() < 2) {
+        return regressionParameters;
+    }
+
+    std::vector<double> residuals;
+    residuals.reserve(xValues.size());
+
+    std::vector<double> weights(xValues.size(), 1.0);
+
+    for (int iteration = 0; iteration < maximumIterations; ++iteration) {
+        residuals.clear();
+
+        for (size_t index = 0; index < xValues.size(); ++index) {
+            const double prediction =
+                regressionParameters.slope * xValues[index] + regressionParameters.intercept;
+            residuals.push_back(yValues[index] - prediction);
+        }
+
+        const double residualMedian = _median(residuals);
+        double robustScale = computeMedianAbsoluteDeviation(residuals, residualMedian);
+
+        // Convert MAD to an estimate of the standard deviation for normally distributed noise.
+        robustScale *= 1.4826;
+
+        if (robustScale < 1e-12) {
+            robustScale = 1e-12;
+        }
+
+        for (size_t index = 0; index < residuals.size(); ++index) {
+            const double standardizedResidual = std::fabs(residuals[index]) / robustScale;
+
+            if (standardizedResidual <= huberDelta) {
+                weights[index] = 1.0;
+            } else {
+                weights[index] = huberDelta / standardizedResidual;
+            }
+        }
+
+        LinearRegressionParameters updatedRegressionParameters =
+            solveWeightedLeastSquares(xValues, yValues, weights);
+
+        if (!updatedRegressionParameters.valid) {
+            break;
+        }
+
+        const double slopeChange =
+            std::fabs(updatedRegressionParameters.slope - regressionParameters.slope);
+        const double interceptChange =
+            std::fabs(updatedRegressionParameters.intercept - regressionParameters.intercept);
+
+        regressionParameters = updatedRegressionParameters;
+
+        if (slopeChange < convergenceTolerance && interceptChange < convergenceTolerance) {
+            break;
+        }
+    }
+
+    return regressionParameters;
+}
 
 std::map<std::string, std::pair<double, double>>
 CPUProfiler::_regression(const std::vector<std::map<std::string, double>>& results, const std::vector<int>& ks) {
     std::map<std::string, std::vector<std::pair<double, double>>> series;
 
-    double MIN_PROG_ENERGY = ConfigParser::getProfilingConfiguration().min_program_energy;
-    double MIN_INST_ENERGY = ConfigParser::getProfilingConfiguration().min_instruction_energy;
+    double minimumProgramEnergy = ConfigParser::getProfilingConfiguration().min_program_energy;
+    double minimumInstructionEnergy = ConfigParser::getProfilingConfiguration().min_instruction_energy;
 
     /**
      * Calculates a regression for each instruction based on the results of the measurements.
@@ -69,84 +224,80 @@ CPUProfiler::_regression(const std::vector<std::map<std::string, double>>& resul
     }
 
     // Create the mapping k => energy for each instruction
-    for (size_t runIdx = 0; runIdx < results.size(); ++runIdx) {
-        const double x = static_cast<double>(ks[runIdx]);
+    for (size_t runIndex = 0; runIndex < results.size(); ++runIndex) {
+        const double x = static_cast<double>(ks[runIndex]);
 
-        for (const auto& [instr, value] : results[runIdx]) {
-            series[instr].push_back({x, value});
+        for (const auto& [instruction, value] : results[runIndex]) {
+            series[instruction].push_back({x, value});
         }
     }
 
     std::map<std::string, std::pair<double, double>> regressions;
 
-    for (const auto& [instr, points] : series) {
+    for (const auto& [instruction, points] : series) {
         if (points.empty()) {
             // Default the regression to the minimum values defined by the user
-            regressions[instr] = {MIN_INST_ENERGY, MIN_PROG_ENERGY};
+            regressions[instruction] = {minimumInstructionEnergy, minimumProgramEnergy};
             continue;
         }
 
-        std::vector<double> xs;
-        std::vector<double> ys;
-        xs.reserve(points.size());
-        ys.reserve(points.size());
+        std::vector<double> xValues;
+        std::vector<double> yValues;
+        xValues.reserve(points.size());
+        yValues.reserve(points.size());
 
         for (const auto& [x, y] : points) {
-            xs.push_back(x);
-            ys.push_back(y);
+            xValues.push_back(x);
+            yValues.push_back(y);
         }
 
         // Find a median of the y values to mitigate potential outliers
-        const double robustLevel = std::max(_median(ys), MIN_PROG_ENERGY);
+        const double robustLevel = std::max(_median(yValues), minimumProgramEnergy);
 
         if (points.size() == 1) {
             // Default the intercept to the robust level and the slope to 0, since we cannot calculate a slope
             // with only one point. This means that we assume that all energy consumption is due to the base
             // energy of the program, and the instruction itself does not contribute to the energy consumption.
-            regressions[instr] = {0.0, robustLevel};
+            regressions[instruction] = {0.0, robustLevel};
             continue;
         }
 
-        double x_bar = _mean(xs);
-        double y_bar = _mean(ys);
-
         /**
-         * We calculate the slope using the formula:
+         * We calculate the slope using a robust Huber regression.
          *
-         * \beta_1 = covariance / variance  -> slope
-         * \beta_0 = y_bar - \beta_1 * x_bar  -> intercept
-         *
+         * For small residuals, Huber behaves like ordinary least squares.
+         * For large residuals, points are down-weighted so that outliers
+         * influence the regression less strongly.
          */
 
-        double covariance = 0.0;
-        double variance = 0.0;
+        constexpr double huberDelta = 1.345;
+        constexpr int maximumIterations = 50;
+        constexpr double convergenceTolerance = 1e-9;
 
-        for (const auto& [x, y] : points) {
-            covariance += (x - x_bar) * (y - y_bar);
-            variance += (x - x_bar) * (x - x_bar);
-        }
+        LinearRegressionParameters regressionParameters =
+            solveHuberRegression(xValues, yValues, huberDelta, maximumIterations, convergenceTolerance);
 
         double slope = 0.0;
         double intercept = robustLevel;
 
-        if (variance > 0.0) {
-            slope = covariance / variance;
-            intercept = y_bar - slope * x_bar;
+        if (regressionParameters.valid) {
+            slope = regressionParameters.slope;
+            intercept = regressionParameters.intercept;
         }
 
         // Do not allow negative or zero intercepts, as they are not physically meaningful in this context
-        intercept = std::max(intercept, MIN_PROG_ENERGY);
-        slope = std::max(slope, MIN_INST_ENERGY);
+        intercept = std::max(intercept, minimumProgramEnergy);
+        slope = std::max(slope, minimumInstructionEnergy);
 
-        if (slope <= MIN_INST_ENERGY) {
-            slope = MIN_INST_ENERGY;
+        if (slope <= minimumInstructionEnergy) {
+            slope = minimumInstructionEnergy;
         } else {
             // We need to divide the slope by the number of iterations in the benchmark body
             // to get the per-instruction energy estimate.
             slope = slope / this->programiterations;
         }
 
-        regressions[instr] = {slope, intercept};
+        regressions[instruction] = {slope, intercept};
     }
 
     return regressions;
@@ -157,12 +308,12 @@ json CPUProfiler::profile() {
 
     std::vector<int> ks;
 
-    auto cpuregression = ConfigParser::getProfilingConfiguration().cpuregression;
+    auto cpuRegressionConfiguration = ConfigParser::getProfilingConfiguration().cpuregression;
 
     // Create k values for regression-based analysis.
-    int limit = cpuregression.limit;  // maximum k value to test
-    int step = cpuregression.step;  // step size for k values
-    int offset = cpuregression.offset;  // start with k=1 to have a baseline point for regression
+    int limit = cpuRegressionConfiguration.limit;  // maximum k value to test
+    int step = cpuRegressionConfiguration.step;  // step size for k values
+    int offset = cpuRegressionConfiguration.offset;  // start with k=1 to have a baseline point for regression
 
     this->log("Profile programs contain " + std::to_string(this->programiterations) +
         " iterations of the underlying instruction.");
@@ -175,7 +326,7 @@ json CPUProfiler::profile() {
         ks.push_back(k);
     }
 
-    json profmapping = json::object();
+    json profileMapping = json::object();
     std::vector<std::map<std::string, double>> allResults;
 
     // Perform a single measurement for each instruction to estimate runtime.
@@ -186,31 +337,32 @@ json CPUProfiler::profile() {
     }
 
     auto estimateEnd = std::chrono::steady_clock::now();
-    auto measuredMs = std::chrono::duration_cast<std::chrono::milliseconds>(estimateEnd - estimateStart).count();
+    auto measuredMilliseconds =
+        std::chrono::duration_cast<std::chrono::milliseconds>(estimateEnd - estimateStart).count();
 
     // The estimate run used k = 5 for each profiled file.
     constexpr double baselineK = 5.0;
-    const double perKMs = static_cast<double>(measuredMs) / baselineK;
+    const double millisecondsPerK = static_cast<double>(measuredMilliseconds) / baselineK;
 
-    int64_t estimatedTotalMs = 0;
+    int64_t estimatedTotalMilliseconds = 0;
     for (int k : ks) {
-        estimatedTotalMs += static_cast<int64_t>(perKMs * k);
+        estimatedTotalMilliseconds += static_cast<int64_t>(millisecondsPerK * k);
     }
 
-    const auto estimatedSeconds = estimatedTotalMs / 1000.0;
+    const auto estimatedSeconds = estimatedTotalMilliseconds / 1000.0;
     this->log("Profiling will take approximately " + std::to_string(estimatedSeconds) + " seconds.");
 
     auto finishTime = std::chrono::system_clock::now() +
-                      std::chrono::milliseconds(estimatedTotalMs);
-    std::time_t finishTimeT = std::chrono::system_clock::to_time_t(finishTime);
+                      std::chrono::milliseconds(estimatedTotalMilliseconds);
+    std::time_t finishTimeValue = std::chrono::system_clock::to_time_t(finishTime);
 
-    this->log("Estimated finish time: " + std::string(std::ctime(&finishTimeT)));
+    this->log("Estimated finish time: " + std::string(std::ctime(&finishTimeValue)));
 
-    for (int i = 0; i < ks.size(); i++) {
-        int iterations = ks[i];
+    for (size_t index = 0; index < ks.size(); ++index) {
+        int iterations = ks[index];
 
         std::map<std::string, double> results;
-        std::map<std::string, std::vector<double>> measurements = std::map<std::string, std::vector<double>>();
+        std::map<std::string, std::vector<double>> measurements;
 
         for (const auto& [key, value] : _profileCode) {
             std::vector<double> measuredEnergy = this->_measureFile(value, iterations);
@@ -228,32 +380,30 @@ json CPUProfiler::profile() {
     // Calculate regression parameters for each instruction based on the measurements
     auto regressions = _regression(allResults, ks);
 
-
     // Collect the slope and intercept for each instruction and store them in the final profile mapping.
     // We also calculate a constant offset for the program energy based on the intercepts of all instructions,
     // as they all include the base energy of the program. We use the median of the intercepts to mitigate
     // potential outliers.
     std::vector<double> intercepts;
-    for (const auto& [instr, coeff] : regressions) {
-        profmapping[instr] = coeff.first;
-        intercepts.push_back(coeff.second);
+    for (const auto& [instruction, coefficients] : regressions) {
+        profileMapping[instruction] = coefficients.first;
+        intercepts.push_back(coefficients.second);
     }
 
     // Store the constant offset in the profile mapping under a special key.
     // This offset represents the base energy consumption of the program
-    double constanteOffset = _median(intercepts);
-    profmapping["_programoffset"] = constanteOffset;
-    profmapping["_unknown_cost"] = ConfigParser::getProfilingConfiguration().min_instruction_energy;
+    double constantOffset = _median(intercepts);
+    profileMapping["_programoffset"] = constantOffset;
+    profileMapping["_unknown_cost"] = ConfigParser::getProfilingConfiguration().min_instruction_energy;
 
     this->log("CPU profiling finished!");
-    return profmapping;
+    return profileMapping;
 }
-
 
 std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data, int windowSize) {
     std::vector<double> result;
 
-    if (windowSize <= 0 || data.size() < windowSize) {
+    if (windowSize <= 0 || data.size() < static_cast<size_t>(windowSize)) {
         std::cerr << "Invalid window size. " << data.size() << std::endl;
         return result;
     }
@@ -261,8 +411,8 @@ std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data,
     double sum = std::accumulate(data.begin(), data.begin() + windowSize, 0.0);
     result.push_back(sum / windowSize);
 
-    for (size_t i = windowSize; i < data.size(); ++i) {
-        sum += data[i] - data[i - windowSize];
+    for (size_t index = windowSize; index < data.size(); ++index) {
+        sum += data[index] - data[index - windowSize];
         result.push_back(sum / windowSize);
     }
 
@@ -274,9 +424,9 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
     results.reserve(runtime);
 
 #ifdef __linux__
-    RegisterReader powReader(0);
+    RegisterReader powerReader(0);
 
-    char* args[] = { const_cast<char*>(file.c_str()), nullptr };
+    char* args[] = {const_cast<char*>(file.c_str()), nullptr};
 
     uint64_t iterations = runtime;
 
@@ -389,7 +539,7 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
         }
 
         // Start the measurement window only after all children are ready
-        double energyBefore = powReader.getEnergy();
+        double energyBefore = powerReader.getEnergy();
 
         // Release all children as closely together as possible
         for (int core = 0; core < number_of_cores; ++core) {
@@ -417,7 +567,7 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
             }
         }
 
-        double energyAfter = powReader.getEnergy();
+        double energyAfter = powerReader.getEnergy();
         double energyDifference = energyAfter - energyBefore;
 
         if (!validIteration) {
@@ -437,38 +587,40 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
     return results;
 }
 
-
 double CPUProfiler::huberMean(const std::vector<double>& data, double delta, int maxIterations, double tolerance) {
-    if (data.empty())
+    if (data.empty()) {
         return std::numeric_limits<double>::quiet_NaN();
+    }
 
     // --- Initial estimate: ordinary mean ---
-    double mu = std::accumulate(data.begin(), data.end(), 0.0) / data.size();
+    double mu = std::accumulate(data.begin(), data.end(), 0.0) / static_cast<double>(data.size());
 
-    for (int iter = 0; iter < maxIterations; ++iter) {
+    for (int iteration = 0; iteration < maxIterations; ++iteration) {
         double numerator = 0.0;
         double denominator = 0.0;
 
-        for (double x : data) {
-            double r = x - mu;  // residual
+        for (double value : data) {
+            double residual = value - mu;
 
-            double w;
-            double abs_r = std::fabs(r);
+            double weight;
+            double absoluteResidual = std::fabs(residual);
 
-            if (abs_r <= delta)
-                w = 1.0;   // full weight
-            else
-                w = delta / abs_r;  // down-weight outliers
+            if (absoluteResidual <= delta) {
+                weight = 1.0;   // full weight
+            } else {
+                weight = delta / absoluteResidual;  // down-weight outliers
+            }
 
-            numerator   += w * x;
-            denominator += w;
+            numerator += weight * value;
+            denominator += weight;
         }
 
         double newMu = numerator / denominator;
 
         // check convergence
-        if (std::fabs(newMu - mu) < tolerance)
+        if (std::fabs(newMu - mu) < tolerance) {
             return newMu;
+        }
 
         mu = newMu;  // update estimate
     }
@@ -476,17 +628,18 @@ double CPUProfiler::huberMean(const std::vector<double>& data, double delta, int
     return mu;  // return after maxIterations if not converged
 }
 
+double CPUProfiler::standard_deviation(const std::vector<double>& values) {
+    if (values.size() < 2) {
+        return 0.0;
+    }
 
-double CPUProfiler::standard_deviation(const std::vector<double>& v) {
-    if (v.size() < 2) return 0.0;
+    double mean = std::accumulate(values.begin(), values.end(), 0.0) / static_cast<double>(values.size());
 
-    double mean = std::accumulate(v.begin(), v.end(), 0.0) / v.size();
+    double squaredSum = 0.0;
+    for (double value : values) {
+        double difference = value - mean;
+        squaredSum += difference * difference;
+    }
 
-    double sq_sum = std::accumulate(
-        v.begin(), v.end(), 0.0,
-        [mean](double acc, double x) {
-            return acc + (x - mean) * (x - mean);
-        });
-
-    return std::sqrt(sq_sum / (v.size() - 1));  // sample stdev
+    return std::sqrt(squaredSum / static_cast<double>(values.size() - 1));  // sample stdev
 }

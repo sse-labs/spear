@@ -3,8 +3,8 @@
     "min_program_energy": 1e-8,
     "min_instruction_energy": 1e-8,
     "cpu_regression": {
-      "limit": 2000,
-      "step": 150,
+      "limit": 1000,
+      "step": 50,
       "offset": 300
     },
     "syscalls": {

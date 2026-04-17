@@ -71,7 +71,7 @@ class CPUProfiler : public Profiler {
       * @param v vector of values to calculate the median on
       * @return median of the given vector
       */
-    double _median(std::vector<double> v);
+    static double _median(std::vector<double> v);
 
     /**
      * Calculates the mean of the given vector
@@ -149,6 +149,32 @@ class CPUProfiler : public Profiler {
         double tolerance = 1e-6);
 
     double standard_deviation(const std::vector<double>& v);
+
+    struct LinearRegressionParameters {
+        double slope = 0.0;
+        double intercept = 0.0;
+        bool valid = false;
+    };
+
+    static double computeMedianAbsoluteDeviation(const std::vector<double>& values, double center);
+
+    static LinearRegressionParameters solveWeightedLeastSquares(
+        const std::vector<double>& xValues,
+        const std::vector<double>& yValues,
+        const std::vector<double>& weights);
+
+    static LinearRegressionParameters solveOrdinaryLeastSquares(
+        const std::vector<double>& xValues,
+        const std::vector<double>& yValues);
+
+    static LinearRegressionParameters solveHuberRegression(
+        const std::vector<double>& xValues,
+        const std::vector<double>& yValues,
+        double huberDelta,
+        int maximumIterations,
+        double convergenceTolerance);
+
+    static double _mean(const std::vector<double>& values);
 };
 
 #endif  // SRC_SPEAR_PROFILERS_CPUPROFILER_H_
