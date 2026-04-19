@@ -1,12 +1,8 @@
 {
   "profiling": {
-    "min_program_energy": 1e-8,
-    "min_instruction_energy": 1e-8,
-    "cpu_regression": {
-      "limit": 1000,
-      "step": 50,
-      "offset": 300
-    },
+    "min_program_energy": 1e-6,
+    "min_instruction_energy": 1e-11,
+    "cpu_regression": [300, 700, 1500, 3200],
     "syscalls": {
       "runtime": 60,
       "default_energy": 1e-6,

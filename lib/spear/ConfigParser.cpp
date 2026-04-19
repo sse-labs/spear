@@ -197,15 +197,26 @@ bool ConfigParser::minInstructionEnergy(json object) {
 }
 
 bool ConfigParser::CPURegressionValid(json object) {
-    if (object.contains("cpu_regression") && object["cpu_regression"].is_object()) {
+    if (object.contains("cpu_regression") && object["cpu_regression"].is_array()) {
         auto cpuregression = object["cpu_regression"];
 
-        if (cpuregression.contains("limit") && cpuregression["limit"].is_number_unsigned() &&
-            cpuregression.contains("step") && cpuregression["step"].is_number_unsigned() &&
-            cpuregression.contains("offset") && cpuregression["offset"].is_number_unsigned()) {
+        bool allVal = true;
+        int lastDigit = 0;
+        for (const auto& value : cpuregression) {
+            if (!value.is_number_integer() || value.get<int>() <= 0 || value < lastDigit) {
+                allVal = false;
+                break;
+            }
+
+            lastDigit = value.get<int>();
+        }
+
+        if (allVal) {
             return true;
         }
-        std::cout << "Invalid profiling.cpu_regression: missing or invalid properties." << std::endl;
+
+        std::cout << "Invalid profiling.cpu_regression: CPU regression is malformed. Make sure all values are positive "
+                     "integers and represent an increasing set of numbers" << std::endl;
         return false;
     }
 
@@ -401,9 +412,7 @@ void ConfigParser::parse() {
         profilingConfiguration.min_program_energy   = profiling["min_program_energy"].get<double>();
         profilingConfiguration.min_instruction_energy = profiling["min_instruction_energy"].get<double>();
 
-        profilingConfiguration.cpuregression.limit = profiling["cpu_regression"]["limit"].get<int>();
-        profilingConfiguration.cpuregression.step = profiling["cpu_regression"]["step"].get<int>();
-        profilingConfiguration.cpuregression.offset = profiling["cpu_regression"]["offset"].get<int>();
+        profilingConfiguration.cpuregression = profiling["cpu_regression"].get<std::vector<int>>();
 
         profilingConfiguration.syscallconfig.runtime = profiling["syscalls"]["runtime"].get<int>();
         profilingConfiguration.syscallconfig.defaultEnergy = profiling["syscalls"]["default_energy"].get<double>();

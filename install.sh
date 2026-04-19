@@ -2,7 +2,7 @@
 
 INSTALL_DIR="/usr/bin"
 RESSOURCE_DIR="/etc/spear"
-PROFILE_EXECTUON_COUNT=10000
+PROFILE_EXECTUON_COUNT=100000
 
 : "${C:=/usr/bin/clang-17}"
 : "${CXX:=/usr/bin/clang++-17}"

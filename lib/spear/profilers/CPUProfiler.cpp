@@ -8,7 +8,6 @@
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include <vector>
-#include <limits>
 #include <cstdio>
 #include <string>
 #include <map>
@@ -16,10 +15,175 @@
 #include <utility>
 #include <algorithm>
 
+#include "CPU_vendor.h"
 #include "ConfigParser.h"
+#include "Logger.h"
 #include "RegisterReader.h"
 
+#define RETRYFACTOR 1.25
 
+bool CPUPowerManager::writeToFile(const std::string& path, const std::string& value) {
+    std::ofstream file(path);
+
+    if (!file.is_open()) {
+        Logger::getInstance().log("Failed to open file: " + path, LOGLEVEL::WARNING);
+        return false;
+    }
+
+    file << value;
+
+    if (!file.good()) {
+        Logger::getInstance().log("Failed to write value '" + value + "' to " + path, LOGLEVEL::WARNING);
+        return false;
+    }
+
+    return true;
+}
+
+bool CPUPowerManager::enablePerformanceMode() {
+    Logger::getInstance().log("Enabling CPU performance mode (performance governor, turbo off)", LOGLEVEL::INFO);
+
+    bool success = true;
+
+    const std::string cpuBasePath = "/sys/devices/system/cpu/";
+
+    for (const auto& entry : std::filesystem::directory_iterator(cpuBasePath)) {
+        const std::string cpuPath = entry.path().string();
+
+        if (cpuPath.find("cpu") == std::string::npos) {
+            continue;
+        }
+
+        const std::string governorPath = cpuPath + "/cpufreq/scaling_governor";
+
+        if (std::filesystem::exists(governorPath)) {
+            if (!writeToFile(governorPath, "performance")) {
+                success = false;
+            }
+        }
+    }
+
+    // Get the vendor at runtime
+    int vendor = cpu_vendor_runtime();
+
+    // Check if we are on an intel CPU
+    if (vendor == CPU_VENDOR_INTEL) {
+        const std::string turboPath = "/sys/devices/system/cpu/intel_pstate/no_turbo";
+
+        if (std::filesystem::exists(turboPath)) {
+            if (!writeToFile(turboPath, "1")) {
+                success = false;
+            }
+        } else {
+            Logger::getInstance().log("Intel turbo control not available (intel_pstate missing?)", LOGLEVEL::WARNING);
+        }
+    } else if (vendor == CPU_VENDOR_AMD) {
+        // Deal with AMD CPUs
+        bool foundBoostControl = false;
+
+        for (const auto& entry : std::filesystem::directory_iterator(cpuBasePath)) {
+            const std::string cpuPath = entry.path().string();
+
+            if (cpuPath.find("cpu") == std::string::npos) {
+                continue;
+            }
+
+            const std::string boostPath = cpuPath + "/cpufreq/boost";
+
+            if (std::filesystem::exists(boostPath)) {
+                foundBoostControl = true;
+
+                if (!writeToFile(boostPath, "0")) {
+                    success = false;
+                }
+            }
+        }
+
+        if (!foundBoostControl) {
+            Logger::getInstance().log("AMD boost control not available", LOGLEVEL::WARNING);
+        }
+    } else {
+        Logger::getInstance().log("Unknown CPU vendor, skipping turbo / boost configuration", LOGLEVEL::WARNING);
+    }
+
+    if (!success) {
+        Logger::getInstance().log("Performance mode activation incomplete (missing permissions?)", LOGLEVEL::WARNING);
+    }
+
+    return success;
+}
+
+bool CPUPowerManager::disablePerformanceMode() {
+    Logger::getInstance().log("Restoring CPU default mode (powersave governor, turbo on)", LOGLEVEL::INFO);
+
+    bool success = true;
+    const std::string cpuBasePath = "/sys/devices/system/cpu/";
+
+    for (const auto& entry : std::filesystem::directory_iterator(cpuBasePath)) {
+        const std::string cpuPath = entry.path().string();
+
+        if (cpuPath.find("cpu") == std::string::npos) {
+            continue;
+        }
+
+        const std::string governorPath = cpuPath + "/cpufreq/scaling_governor";
+
+        if (std::filesystem::exists(governorPath)) {
+            if (!writeToFile(governorPath, "powersave")) {
+                success = false;
+            }
+        }
+    }
+
+    // Get the cpu vendor at runtime
+    int vendor = cpu_vendor_runtime();
+
+    // Check if we are on an intel CPU
+    if (vendor == CPU_VENDOR_INTEL) {
+        const std::string turboPath = "/sys/devices/system/cpu/intel_pstate/no_turbo";
+
+        if (std::filesystem::exists(turboPath)) {
+            if (!writeToFile(turboPath, "0")) {
+                success = false;
+            }
+        } else {
+            Logger::getInstance().log("Intel turbo control not available (intel_pstate missing?)", LOGLEVEL::WARNING);
+        }
+    } else if (vendor == CPU_VENDOR_AMD) {
+        // Disable the performance mode for AMD CPUs by re-enabling boost
+        bool foundBoostControl = false;
+
+        for (const auto& entry : std::filesystem::directory_iterator(cpuBasePath)) {
+            const std::string cpuPath = entry.path().string();
+
+            if (cpuPath.find("cpu") == std::string::npos) {
+                continue;
+            }
+
+            const std::string boostPath = cpuPath + "/cpufreq/boost";
+
+            if (std::filesystem::exists(boostPath)) {
+                foundBoostControl = true;
+
+                if (!writeToFile(boostPath, "1")) {
+                    success = false;
+                }
+            }
+        }
+
+        if (!foundBoostControl) {
+            Logger::getInstance().log("AMD boost control not available", LOGLEVEL::WARNING);
+        }
+    } else {
+        Logger::getInstance().log("Unknown CPU vendor, skipping turbo / boost restoration", LOGLEVEL::WARNING);
+    }
+
+    if (!success) {
+        Logger::getInstance().log("Restoring CPU mode incomplete", LOGLEVEL::WARNING);
+    }
+
+    return success;
+}
 
 double CPUProfiler::_median(std::vector<double> v) {
     std::sort(v.begin(), v.end());
@@ -43,7 +207,7 @@ double CPUProfiler::_mean(std::vector<double> v) {
 
 
 std::map<std::string, std::pair<double, double>>
-CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
+CPUProfiler::_regression(const std::vector<std::map<std::string, double>>& results, const std::vector<int>& ks) {
     std::map<std::string, std::vector<std::pair<double, double>>> series;
 
     double MIN_PROG_ENERGY = ConfigParser::getProfilingConfiguration().min_program_energy;
@@ -55,19 +219,22 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
      *
      * y = m * x + b
      * - y is the measured energy consumption of the program
-     * - x is the number of iterations of the instruction in the program (our k value)
-     * - m is the slope, which represents the per-instruction energy estimate (we need to divide this later on through the number of iterations to get the per-instruction energy estimate)
+     * - x is the number of repetitions of the instruction test program (our k value)
+     * - m is the slope, which represents the energy increase per k step
      * - b is the intercept, which represents the base energy consumption of the program without any iterations of the instruction
-     *
      *
      * See "An Introduction to Statistical Learning" by Gareth James, Daniela Witten, Trevor Hastie and Robert
      * Tibshirani for more information about linear
      * regression and the formulas used in this function.
      */
 
+    if (results.size() != ks.size()) {
+        throw std::runtime_error("CPUProfiler::_regression received mismatching results and ks sizes");
+    }
+
     // Create the mapping k => energy for each instruction
     for (size_t runIdx = 0; runIdx < results.size(); ++runIdx) {
-        const double x = static_cast<double>(runIdx + 1);
+        const double x = static_cast<double>(ks[runIdx]);
 
         for (const auto& [instr, value] : results[runIdx]) {
             series[instr].push_back({x, value});
@@ -85,13 +252,15 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
 
         std::vector<double> xs;
         std::vector<double> ys;
+        xs.reserve(points.size());
         ys.reserve(points.size());
+
         for (const auto& [x, y] : points) {
             xs.push_back(x);
             ys.push_back(y);
         }
 
-        // find a median of the y values to mitigate potential outliers
+        // Find a median of the y values to mitigate potential outliers
         const double robustLevel = std::max(_median(ys), MIN_PROG_ENERGY);
 
         if (points.size() == 1) {
@@ -102,15 +271,13 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
             continue;
         }
 
-        const double n = static_cast<double>(points.size());
-
         double x_bar = _mean(xs);
         double y_bar = _mean(ys);
 
         /**
          * We calculate the slope using the formula:
          *
-         * \beta_1 = covariance/variance  -> slope
+         * \beta_1 = covariance / variance  -> slope
          * \beta_0 = y_bar - \beta_1 * x_bar  -> intercept
          *
          */
@@ -126,7 +293,7 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
         double slope = 0.0;
         double intercept = robustLevel;
 
-        if (std::abs(variance) > 0.0) {
+        if (variance > 0.0) {
             slope = covariance / variance;
             intercept = y_bar - slope * x_bar;
         }
@@ -138,8 +305,8 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
         if (slope <= MIN_INST_ENERGY) {
             slope = MIN_INST_ENERGY;
         } else {
-            // We need to divide the slope by the number of iterations to get the per-instruction energy estimate,
-            // since each point corresponds to a program with a different number of iterations of the same instruction.
+            // We need to divide the slope by the number of iterations in the benchmark body
+            // to get the per-instruction energy estimate.
             slope = slope / this->programiterations;
         }
 
@@ -151,26 +318,22 @@ CPUProfiler::_regression(std::vector<std::map<std::string, double>> results) {
 
 json CPUProfiler::profile() {
     this->log("Starting CPU profiling. This may take a while. Grab a coffee!");
+    CPUPowerGuard guard;
 
-    std::vector<int> ks;
 
     auto cpuregression = ConfigParser::getProfilingConfiguration().cpuregression;
-
-    // Create k values for regression-based analysis.
-    int limit = cpuregression.limit;  // maximum k value to test
-    int step = cpuregression.step;  // step size for k values
-    int offset = cpuregression.offset;  // start with k=1 to have a baseline point for regression
 
     this->log("Profile programs contain " + std::to_string(this->programiterations) +
         " iterations of the underlying instruction.");
 
-    this->log("Generating k values for regression: limit=" + std::to_string(limit) +
-              ", step=" + std::to_string(step) +
-              ", offset=" + std::to_string(offset));
+    std::vector<int> ks = cpuregression;
 
-    for (int k = offset; k <= limit; k += step) {
-        ks.push_back(k);
+    std::string regressionValues;
+    for (auto k : ks) {
+        regressionValues += std::to_string(k) + " ";
     }
+    this->log("Profiling will be performed for the following k values: " + regressionValues);
+
 
     json profmapping = json::object();
     std::vector<std::map<std::string, double>> allResults;
@@ -194,7 +357,9 @@ json CPUProfiler::profile() {
         estimatedTotalMs += static_cast<int64_t>(perKMs * k);
     }
 
-    const auto estimatedSeconds = estimatedTotalMs / 1000.0;
+    // Calculate the estimated amount of ms via the retryfactor and assume a timely overhead
+    const auto estimatedSeconds = (estimatedTotalMs / 1000.0) * RETRYFACTOR;
+
     this->log("Profiling will take approximately " + std::to_string(estimatedSeconds) + " seconds.");
 
     auto finishTime = std::chrono::system_clock::now() +
@@ -223,7 +388,7 @@ json CPUProfiler::profile() {
     }
 
     // Calculate regression parameters for each instruction based on the measurements
-    auto regressions = _regression(allResults);
+    auto regressions = _regression(allResults, ks);
 
 
     // Collect the slope and intercept for each instruction and store them in the final profile mapping.
@@ -357,56 +522,3 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
     return results;
 }
 
-
-double CPUProfiler::huberMean(const std::vector<double>& data, double delta, int maxIterations, double tolerance) {
-    if (data.empty())
-        return std::numeric_limits<double>::quiet_NaN();
-
-    // --- Initial estimate: ordinary mean ---
-    double mu = std::accumulate(data.begin(), data.end(), 0.0) / data.size();
-
-    for (int iter = 0; iter < maxIterations; ++iter) {
-        double numerator = 0.0;
-        double denominator = 0.0;
-
-        for (double x : data) {
-            double r = x - mu;  // residual
-
-            double w;
-            double abs_r = std::fabs(r);
-
-            if (abs_r <= delta)
-                w = 1.0;   // full weight
-            else
-                w = delta / abs_r;  // down-weight outliers
-
-            numerator   += w * x;
-            denominator += w;
-        }
-
-        double newMu = numerator / denominator;
-
-        // check convergence
-        if (std::fabs(newMu - mu) < tolerance)
-            return newMu;
-
-        mu = newMu;  // update estimate
-    }
-
-    return mu;  // return after maxIterations if not converged
-}
-
-
-double CPUProfiler::standard_deviation(const std::vector<double>& v) {
-    if (v.size() < 2) return 0.0;
-
-    double mean = std::accumulate(v.begin(), v.end(), 0.0) / v.size();
-
-    double sq_sum = std::accumulate(
-        v.begin(), v.end(), 0.0,
-        [mean](double acc, double x) {
-            return acc + (x - mean) * (x - mean);
-        });
-
-    return std::sqrt(sq_sum / (v.size() - 1));  // sample stdev
-}

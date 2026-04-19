@@ -17,6 +17,56 @@
 using json = nlohmann::json;
 
 /**
+ * Helper class to deal with performance mode of the CPU. It provides functions to enable and disable performance mode,
+ * which is used to ensure that the CPU runs at maximum performance during profiling,
+ * and to restore the default power settings after profiling is done.
+ */
+class CPUPowerManager {
+ public:
+    /**
+     * Enable the performance mode
+     * @return true if successful, false otherwise
+     */
+    static bool enablePerformanceMode();
+
+    /**
+     * Disable the performance mode
+     * @return true if successful, false otherwise
+     */
+    static bool disablePerformanceMode();
+
+ private:
+    /**
+     * Write a given value to a given file
+     * @param path File to write to
+     * @param value Value to write
+     * @return true if successfull, false otherwise
+     */
+    static bool writeToFile(const std::string& path, const std::string& value);
+};
+
+/**
+ * RAII Guard to ensure that the CPU performance mode is enabled during profiling and disabled afterwards, even if
+ * an error occurs. The constructor enables the performance mode and the destructor disables it,
+ * ensuring that the CPU settings are properly restored after profiling is done.
+ */
+class CPUPowerGuard {
+ public:
+    CPUPowerGuard() {
+        enabled = CPUPowerManager::enablePerformanceMode();
+    }
+
+    ~CPUPowerGuard() {
+        if (enabled) {
+            CPUPowerManager::disablePerformanceMode();
+        }
+    }
+
+ private:
+    bool enabled = false;
+};
+
+/**
  * Component to profile the systems CPU using the profiler architecture
  */
 class CPUProfiler : public Profiler {
@@ -102,7 +152,8 @@ class CPUProfiler : public Profiler {
      * @return Mapping between instruction name and pair(slope, intercept) representing the regression coefficients
      * for each instruction
      */
-    std::map<std::string, std::pair<double, double>> _regression(std::vector<std::map<std::string, double>> results);
+    std::map<std::string, std::pair<double, double>> _regression(
+        const std::vector<std::map<std::string, double>>& results, const std::vector<int>& ks);
 
     /**
      * Profiles the system and gathers information about the energy usage of the CPU components
@@ -140,14 +191,6 @@ class CPUProfiler : public Profiler {
      * @return Vector containing the moving averages of the raw data
      */
     std::vector<double> _movingAverage(const std::vector<double>& data, int windowSize);
-
-    double huberMean(
-        const std::vector<double>& data,
-        double delta = 1.0,
-        int maxIterations = 50,
-        double tolerance = 1e-6);
-
-    double standard_deviation(const std::vector<double>& v);
 };
 
 #endif  // SRC_SPEAR_PROFILERS_CPUPROFILER_H_
