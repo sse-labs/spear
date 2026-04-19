@@ -16,7 +16,7 @@ var searchData=
   ['loopboundideanalysis_13',['loopboundideanalysis',['../classLoopBound_1_1LoopBoundIDEAnalysis.html',1,'LoopBound::LoopBoundIDEAnalysis'],['../classLoopBound_1_1LoopBoundIDEAnalysis.html#aed923a837a3dfda02ecdcbc2d8efed2e',1,'LoopBound::LoopBoundIDEAnalysis::LoopBoundIDEAnalysis()']]],
   ['loopboundincrementinstance_14',['LoopBoundIncrementInstance',['../structLoopBound_1_1LoopBoundIncrementInstance.html',1,'LoopBound']]],
   ['loopboundproblem_15',['loopboundProblem',['../classPhasarHandlerPass.html#a858f853c8a8a2cb1de3b01b0751e68df',1,'PhasarHandlerPass']]],
-  ['loopboundwrapper_16',['loopboundwrapper',['../classLoopBound_1_1LoopBoundWrapper.html',1,'LoopBound::LoopBoundWrapper'],['../classLoopBound_1_1LoopBoundWrapper.html#ae01be73945b898ee1ff855aa1cde4c52',1,'LoopBound::LoopBoundWrapper::LoopBoundWrapper()'],['../classPhasarHandlerPass.html#a4654fc5d8fa5c0699bb8847eaca16185',1,'PhasarHandlerPass::loopboundwrapper']]],
+  ['loopboundwrapper_16',['loopboundwrapper',['../classLoopBound_1_1LoopBoundWrapper.html',1,'LoopBound::LoopBoundWrapper'],['../classPhasarHandlerPass.html#a4654fc5d8fa5c0699bb8847eaca16185',1,'PhasarHandlerPass::loopboundwrapper'],['../classLoopBound_1_1LoopBoundWrapper.html#ae01be73945b898ee1ff855aa1cde4c52',1,'LoopBound::LoopBoundWrapper::LoopBoundWrapper()']]],
   ['loopcache_17',['LoopCache',['../structLoopBound_1_1LoopCache.html',1,'LoopBound']]],
   ['loopclassifier_18',['loopclassifier',['../classLoopBound_1_1LoopClassifier.html',1,'LoopBound::LoopClassifier'],['../classLoopBound_1_1LoopClassifier.html#aebb04d9b81c2fc5a0544b85dcc2b5455',1,'LoopBound::LoopClassifier::LoopClassifier()']]],
   ['loopcountericmp_19',['LoopCounterICMP',['../structLoopBound_1_1LoopCounterICMP.html',1,'LoopBound']]],

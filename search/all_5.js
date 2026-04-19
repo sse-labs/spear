@@ -14,13 +14,14 @@ var searchData=
   ['destination_11',['destination',['../classHLAC_1_1Edge.html#ad1faa86198ea2c3131b2251619c6ae5c',1,'HLAC::Edge']]],
   ['directnodeenergycache_12',['directNodeEnergyCache',['../classHLAC_1_1FunctionNode.html#a8ddf2592de7237ea25f9b652cbeb79ed',1,'HLAC::FunctionNode']]],
   ['directnodeenergycacheinitialized_13',['directNodeEnergyCacheInitialized',['../classHLAC_1_1FunctionNode.html#a078019e069d71dd18dbf210caf0030eb',1,'HLAC::FunctionNode']]],
-  ['divby_14',['DivBy',['../classLoopBound_1_1CheckExpr.html#a7992c7d7f1af2a7b1727659bff22b52d',1,'LoopBound::CheckExpr']]],
-  ['dotrecordescape_15',['dotRecordEscape',['../classHLAC_1_1Util.html#a2722bb68a02b31332994854d3be41115',1,'HLAC::Util']]],
-  ['dotsafedemangledname_16',['dotSafeDemangledName',['../classHLAC_1_1Util.html#a5a6384c0f393dc6f444551736264745b',1,'HLAC::Util']]],
-  ['dramprofiler_17',['DRAMProfiler',['../classDRAMProfiler.html',1,'']]],
-  ['dropreturntype_18',['dropReturnType',['../classHLAC_1_1Util.html#af81b37b4049d0b36f2ad62c019dbc0cc',1,'HLAC::Util']]],
-  ['dumpef_19',['dumpEF',['../classFeasibility_1_1Util.html#a89ac1af711afd9fb7524c1ac90b033a9',1,'Feasibility::Util']]],
-  ['dumpefkind_20',['dumpEFKind',['../classFeasibility_1_1Util.html#a2e3b7eb987026712ba56bd19900aca6d',1,'Feasibility::Util']]],
-  ['dumpfact_21',['dumpFact',['../classFeasibility_1_1Util.html#a77ba339dbe8f2fd640b5175cbb354166',1,'Feasibility::Util']]],
-  ['dumpinst_22',['dumpInst',['../classFeasibility_1_1Util.html#a444758bb687e96d4e3f8af49d85f7f88',1,'Feasibility::Util']]]
+  ['disableperformancemode_14',['disablePerformanceMode',['../classCPUPowerManager.html#ab159cce69309cf449f8d13f5318f1460',1,'CPUPowerManager']]],
+  ['divby_15',['DivBy',['../classLoopBound_1_1CheckExpr.html#a7992c7d7f1af2a7b1727659bff22b52d',1,'LoopBound::CheckExpr']]],
+  ['dotrecordescape_16',['dotRecordEscape',['../classHLAC_1_1Util.html#a2722bb68a02b31332994854d3be41115',1,'HLAC::Util']]],
+  ['dotsafedemangledname_17',['dotSafeDemangledName',['../classHLAC_1_1Util.html#a5a6384c0f393dc6f444551736264745b',1,'HLAC::Util']]],
+  ['dramprofiler_18',['DRAMProfiler',['../classDRAMProfiler.html',1,'']]],
+  ['dropreturntype_19',['dropReturnType',['../classHLAC_1_1Util.html#af81b37b4049d0b36f2ad62c019dbc0cc',1,'HLAC::Util']]],
+  ['dumpef_20',['dumpEF',['../classFeasibility_1_1Util.html#a89ac1af711afd9fb7524c1ac90b033a9',1,'Feasibility::Util']]],
+  ['dumpefkind_21',['dumpEFKind',['../classFeasibility_1_1Util.html#a2e3b7eb987026712ba56bd19900aca6d',1,'Feasibility::Util']]],
+  ['dumpfact_22',['dumpFact',['../classFeasibility_1_1Util.html#a77ba339dbe8f2fd640b5175cbb354166',1,'Feasibility::Util']]],
+  ['dumpinst_23',['dumpInst',['../classFeasibility_1_1Util.html#a444758bb687e96d4e3f8af49d85f7f88',1,'Feasibility::Util']]]
 ];
