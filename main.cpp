@@ -75,7 +75,7 @@ void runProfileRoutine(CLIOptions opts) {
         phandler.write(outputpath);
 
         std::cout << "Profiling finished!" << std::endl;
-        delete outputpath;
+        delete[] outputpath;
     } catch(std::invalid_argument &ia) {
         std::cerr << "Execution of profile code failed..." << "\n";
     }
