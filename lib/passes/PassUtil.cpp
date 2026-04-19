@@ -168,15 +168,6 @@ std::shared_ptr<HLAC::hlac> PassUtil::buildInitializedGraph(llvm::Module &module
         "HLAC construction took: " + std::to_string(constructionTime.count()) + " µs",
         LOGLEVEL::INFO);*/
 
-    auto dotWritingStart = std::chrono::high_resolution_clock::now();
-    sharedGraph->printDotRepresentation();
-    auto dotWritingEnd = std::chrono::high_resolution_clock::now();
-
-    auto dotTime = std::chrono::duration_cast<std::chrono::microseconds>(dotWritingEnd - dotWritingStart);
-    /*Logger::getInstance().log(
-        "DOT writing took: " + std::to_string(dotTime.count()) + " µs",
-        LOGLEVEL::INFO);*/
-
     // Iterate over the function nodes
     for (auto &functionNode : sharedGraph->functions) {
         auto &sortedNodeList = functionNode->topologicalSortedRepresentationOfNodes;
