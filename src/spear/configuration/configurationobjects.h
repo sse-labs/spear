@@ -20,12 +20,6 @@ struct LegacyAnalysisConfiguration {
     bool deepcalls;
 };
 
-struct CPURegressionConfig {
-    int limit;
-    int step;
-    int offset;
-};
-
 struct SyscallProfilingConfig {
     int runtime;
     double defaultEnergy;
@@ -38,7 +32,7 @@ struct SyscallProfilingConfig {
 struct ProfilingConfiguration {
     double min_program_energy;
     double min_instruction_energy;
-    CPURegressionConfig cpuregression;
+    std::vector<int> cpuregression;
     SyscallProfilingConfig syscallconfig;
 };
 

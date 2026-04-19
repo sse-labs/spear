@@ -8,7 +8,6 @@
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include <vector>
-#include <limits>
 #include <cstdio>
 #include <string>
 #include <map>
@@ -16,10 +15,175 @@
 #include <utility>
 #include <algorithm>
 
+#include "CPU_vendor.h"
 #include "ConfigParser.h"
+#include "Logger.h"
 #include "RegisterReader.h"
 
+#define RETRYFACTOR 1.25
 
+bool CPUPowerManager::writeToFile(const std::string& path, const std::string& value) {
+    std::ofstream file(path);
+
+    if (!file.is_open()) {
+        Logger::getInstance().log("Failed to open file: " + path, LOGLEVEL::WARNING);
+        return false;
+    }
+
+    file << value;
+
+    if (!file.good()) {
+        Logger::getInstance().log("Failed to write value '" + value + "' to " + path, LOGLEVEL::WARNING);
+        return false;
+    }
+
+    return true;
+}
+
+bool CPUPowerManager::enablePerformanceMode() {
+    Logger::getInstance().log("Enabling CPU performance mode (performance governor, turbo off)", LOGLEVEL::INFO);
+
+    bool success = true;
+
+    const std::string cpuBasePath = "/sys/devices/system/cpu/";
+
+    for (const auto& entry : std::filesystem::directory_iterator(cpuBasePath)) {
+        const std::string cpuPath = entry.path().string();
+
+        if (cpuPath.find("cpu") == std::string::npos) {
+            continue;
+        }
+
+        const std::string governorPath = cpuPath + "/cpufreq/scaling_governor";
+
+        if (std::filesystem::exists(governorPath)) {
+            if (!writeToFile(governorPath, "performance")) {
+                success = false;
+            }
+        }
+    }
+
+    // Get the vendor at runtime
+    int vendor = cpu_vendor_runtime();
+
+    // Check if we are on an intel CPU
+    if (vendor == CPU_VENDOR_INTEL) {
+        const std::string turboPath = "/sys/devices/system/cpu/intel_pstate/no_turbo";
+
+        if (std::filesystem::exists(turboPath)) {
+            if (!writeToFile(turboPath, "1")) {
+                success = false;
+            }
+        } else {
+            Logger::getInstance().log("Intel turbo control not available (intel_pstate missing?)", LOGLEVEL::WARNING);
+        }
+    } else if (vendor == CPU_VENDOR_AMD) {
+        // Deal with AMD CPUs
+        bool foundBoostControl = false;
+
+        for (const auto& entry : std::filesystem::directory_iterator(cpuBasePath)) {
+            const std::string cpuPath = entry.path().string();
+
+            if (cpuPath.find("cpu") == std::string::npos) {
+                continue;
+            }
+
+            const std::string boostPath = cpuPath + "/cpufreq/boost";
+
+            if (std::filesystem::exists(boostPath)) {
+                foundBoostControl = true;
+
+                if (!writeToFile(boostPath, "0")) {
+                    success = false;
+                }
+            }
+        }
+
+        if (!foundBoostControl) {
+            Logger::getInstance().log("AMD boost control not available", LOGLEVEL::WARNING);
+        }
+    } else {
+        Logger::getInstance().log("Unknown CPU vendor, skipping turbo / boost configuration", LOGLEVEL::WARNING);
+    }
+
+    if (!success) {
+        Logger::getInstance().log("Performance mode activation incomplete (missing permissions?)", LOGLEVEL::WARNING);
+    }
+
+    return success;
+}
+
+bool CPUPowerManager::disablePerformanceMode() {
+    Logger::getInstance().log("Restoring CPU default mode (powersave governor, turbo on)", LOGLEVEL::INFO);
+
+    bool success = true;
+    const std::string cpuBasePath = "/sys/devices/system/cpu/";
+
+    for (const auto& entry : std::filesystem::directory_iterator(cpuBasePath)) {
+        const std::string cpuPath = entry.path().string();
+
+        if (cpuPath.find("cpu") == std::string::npos) {
+            continue;
+        }
+
+        const std::string governorPath = cpuPath + "/cpufreq/scaling_governor";
+
+        if (std::filesystem::exists(governorPath)) {
+            if (!writeToFile(governorPath, "powersave")) {
+                success = false;
+            }
+        }
+    }
+
+    // Get the cpu vendor at runtime
+    int vendor = cpu_vendor_runtime();
+
+    // Check if we are on an intel CPU
+    if (vendor == CPU_VENDOR_INTEL) {
+        const std::string turboPath = "/sys/devices/system/cpu/intel_pstate/no_turbo";
+
+        if (std::filesystem::exists(turboPath)) {
+            if (!writeToFile(turboPath, "0")) {
+                success = false;
+            }
+        } else {
+            Logger::getInstance().log("Intel turbo control not available (intel_pstate missing?)", LOGLEVEL::WARNING);
+        }
+    } else if (vendor == CPU_VENDOR_AMD) {
+        // Disable the performance mode for AMD CPUs by re-enabling boost
+        bool foundBoostControl = false;
+
+        for (const auto& entry : std::filesystem::directory_iterator(cpuBasePath)) {
+            const std::string cpuPath = entry.path().string();
+
+            if (cpuPath.find("cpu") == std::string::npos) {
+                continue;
+            }
+
+            const std::string boostPath = cpuPath + "/cpufreq/boost";
+
+            if (std::filesystem::exists(boostPath)) {
+                foundBoostControl = true;
+
+                if (!writeToFile(boostPath, "1")) {
+                    success = false;
+                }
+            }
+        }
+
+        if (!foundBoostControl) {
+            Logger::getInstance().log("AMD boost control not available", LOGLEVEL::WARNING);
+        }
+    } else {
+        Logger::getInstance().log("Unknown CPU vendor, skipping turbo / boost restoration", LOGLEVEL::WARNING);
+    }
+
+    if (!success) {
+        Logger::getInstance().log("Restoring CPU mode incomplete", LOGLEVEL::WARNING);
+    }
+
+    return success;
+}
 
 double CPUProfiler::_median(std::vector<double> v) {
     std::sort(v.begin(), v.end());
@@ -154,26 +318,22 @@ CPUProfiler::_regression(const std::vector<std::map<std::string, double>>& resul
 
 json CPUProfiler::profile() {
     this->log("Starting CPU profiling. This may take a while. Grab a coffee!");
+    CPUPowerGuard guard;
 
-    std::vector<int> ks;
 
     auto cpuregression = ConfigParser::getProfilingConfiguration().cpuregression;
-
-    // Create k values for regression-based analysis.
-    int limit = cpuregression.limit;  // maximum k value to test
-    int step = cpuregression.step;  // step size for k values
-    int offset = cpuregression.offset;  // start with k=1 to have a baseline point for regression
 
     this->log("Profile programs contain " + std::to_string(this->programiterations) +
         " iterations of the underlying instruction.");
 
-    this->log("Generating k values for regression: limit=" + std::to_string(limit) +
-              ", step=" + std::to_string(step) +
-              ", offset=" + std::to_string(offset));
+    std::vector<int> ks = cpuregression;
 
-    for (int k = offset; k <= limit; k += step) {
-        ks.push_back(k);
+    std::string regressionValues;
+    for (auto k : ks) {
+        regressionValues += std::to_string(k) + " ";
     }
+    this->log("Profiling will be performed for the following k values: " + regressionValues);
+
 
     json profmapping = json::object();
     std::vector<std::map<std::string, double>> allResults;
@@ -197,7 +357,9 @@ json CPUProfiler::profile() {
         estimatedTotalMs += static_cast<int64_t>(perKMs * k);
     }
 
-    const auto estimatedSeconds = estimatedTotalMs / 1000.0;
+    // Calculate the estimated amount of ms via the retryfactor and assume a timely overhead
+    const auto estimatedSeconds = (estimatedTotalMs / 1000.0) * RETRYFACTOR;
+
     this->log("Profiling will take approximately " + std::to_string(estimatedSeconds) + " seconds.");
 
     auto finishTime = std::chrono::system_clock::now() +
@@ -271,14 +433,21 @@ std::vector<double> CPUProfiler::_movingAverage(const std::vector<double>& data,
 
 std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t runtime) const {
     std::vector<double> results;
-    results.reserve(runtime);
+    results.reserve(runtime * number_of_cores);
 
-#ifdef __linux__
+    #ifdef __linux__
     RegisterReader powReader(0);
+
+    // Shared memory for initial energy values of each child
+    double* sharedEnergyBefore = reinterpret_cast<double*>(mmap(nullptr,
+                                                number_of_cores * sizeof(double),
+                                                PROT_READ | PROT_WRITE,
+                                                MAP_SHARED | MAP_ANONYMOUS,
+                                                -1, 0));
 
     char* args[] = { const_cast<char*>(file.c_str()), nullptr };
 
-    uint64_t iterations = runtime;
+    uint64_t iters = runtime;
 
     // Pin parent to a dedicated core
     cpu_set_t parentMask;
@@ -289,204 +458,67 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
         exit(1);
     }
 
-    for (uint64_t iteration = 0; iteration < iterations; ++iteration) {
-        std::vector<pid_t> childProcessIds(number_of_cores, -1);
-        std::vector<std::array<int, 2>> readyPipes(number_of_cores);
-        std::vector<std::array<int, 2>> startPipes(number_of_cores);
+    for (uint64_t it = 0; it < iters; /* manual increment inside */) {
+        std::vector<pid_t> pids(number_of_cores);
+        bool validIteration = true;  // assume good; flip to false on invalid diff
 
-        for (int core = 0; core < number_of_cores; ++core) {
-            if (pipe(readyPipes[core].data()) == -1) {
-                perror("pipe (ready)");
-                exit(1);
-            }
+        // Launch processes: one on each core
+        for (int core = 0; core < number_of_cores; core++) {
+            pid_t pid = fork();
 
-            if (pipe(startPipes[core].data()) == -1) {
-                perror("pipe (start)");
-                exit(1);
-            }
-        }
+            if (pid == 0) {
+                cpu_set_t mask;
+                CPU_ZERO(&mask);
+                CPU_SET(core, &mask);
 
-        // Launch one process per core
-        for (int core = 0; core < number_of_cores; ++core) {
-            pid_t childProcessId = fork();
-
-            if (childProcessId == 0) {
-                // Child process
-
-                // Close unused pipe ends in the child
-                close(readyPipes[core][0]);
-                close(startPipes[core][1]);
-
-                for (int otherCore = 0; otherCore < number_of_cores; ++otherCore) {
-                    if (otherCore == core) {
-                        continue;
-                    }
-
-                    close(readyPipes[otherCore][0]);
-                    close(readyPipes[otherCore][1]);
-                    close(startPipes[otherCore][0]);
-                    close(startPipes[otherCore][1]);
-                }
-
-                cpu_set_t childMask;
-                CPU_ZERO(&childMask);
-                CPU_SET(core, &childMask);
-
-                if (sched_setaffinity(0, sizeof(childMask), &childMask) == -1) {
+                if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
                     perror("sched_setaffinity (child)");
                     exit(1);
                 }
 
-                // Signal to the parent that this child is pinned and ready
-                char readySignal = 'R';
-                ssize_t readyWriteResult = write(readyPipes[core][1], &readySignal, 1);
-                if (readyWriteResult != 1) {
-                    perror("write (ready)");
-                    exit(1);
-                }
-
-                close(readyPipes[core][1]);
-
-                // Wait for the parent to release all children at nearly the same time
-                char startSignal = 0;
-                ssize_t startReadResult = read(startPipes[core][0], &startSignal, 1);
-                if (startReadResult != 1) {
-                    perror("read (start)");
-                    exit(1);
-                }
-
-                close(startPipes[core][0]);
+                sharedEnergyBefore[core] = powReader.getEnergy();
 
                 if (execv(file.c_str(), args) == -1) {
                     perror("execv");
                     exit(1);
                 }
-
-                exit(1);
-            } else if (childProcessId > 0) {
-                // Parent process
-                childProcessIds[core] = childProcessId;
-
-                // Close unused pipe ends in the parent
-                close(readyPipes[core][1]);
-                close(startPipes[core][0]);
+            } else if (pid > 0) {
+                pids[core] = pid;
             } else {
                 perror("fork");
                 exit(1);
             }
         }
 
-        // Wait until all children are pinned and ready
-        for (int core = 0; core < number_of_cores; ++core) {
-            char readySignal = 0;
-            ssize_t readyReadResult = read(readyPipes[core][0], &readySignal, 1);
-            if (readyReadResult != 1) {
-                perror("read (ready)");
-                exit(1);
-            }
+        std::vector<double> iterationResults(number_of_cores);
 
-            close(readyPipes[core][0]);
-        }
+        for (int core = 0; core < number_of_cores; core++) {
+            waitpid(pids[core], nullptr, 0);
 
-        // Start the measurement window only after all children are ready
-        double energyBefore = powReader.getEnergy();
+            double after = powReader.getEnergy();
+            double before = sharedEnergyBefore[core];
+            double diff = after - before;
 
-        // Release all children as closely together as possible
-        for (int core = 0; core < number_of_cores; ++core) {
-            char startSignal = 'S';
-            ssize_t startWriteResult = write(startPipes[core][1], &startSignal, 1);
-            if (startWriteResult != 1) {
-                perror("write (start)");
-                exit(1);
-            }
-
-            close(startPipes[core][1]);
-        }
-
-        bool validIteration = true;
-
-        for (int core = 0; core < number_of_cores; ++core) {
-            int childStatus = 0;
-            if (waitpid(childProcessIds[core], &childStatus, 0) == -1) {
-                perror("waitpid");
-                exit(1);
-            }
-
-            if (!WIFEXITED(childStatus) || WEXITSTATUS(childStatus) != 0) {
+            if (diff <= 0) {
                 validIteration = false;
             }
-        }
 
-        double energyAfter = powReader.getEnergy();
-        double energyDifference = energyAfter - energyBefore;
+            iterationResults[core] = diff / number_of_cores;
+        }
 
         if (!validIteration) {
             continue;
         }
 
-        if (energyDifference <= 0.0) {
-            continue;
+        for (int core = 0; core < number_of_cores; core++) {
+            results.push_back(iterationResults[core]);
         }
 
-        // Store the average batch energy per child as one sample
-        results.push_back(energyDifference / static_cast<double>(number_of_cores));
+        it++;
     }
 
-#endif
+    #endif
 
     return results;
 }
 
-
-double CPUProfiler::huberMean(const std::vector<double>& data, double delta, int maxIterations, double tolerance) {
-    if (data.empty())
-        return std::numeric_limits<double>::quiet_NaN();
-
-    // --- Initial estimate: ordinary mean ---
-    double mu = std::accumulate(data.begin(), data.end(), 0.0) / data.size();
-
-    for (int iter = 0; iter < maxIterations; ++iter) {
-        double numerator = 0.0;
-        double denominator = 0.0;
-
-        for (double x : data) {
-            double r = x - mu;  // residual
-
-            double w;
-            double abs_r = std::fabs(r);
-
-            if (abs_r <= delta)
-                w = 1.0;   // full weight
-            else
-                w = delta / abs_r;  // down-weight outliers
-
-            numerator   += w * x;
-            denominator += w;
-        }
-
-        double newMu = numerator / denominator;
-
-        // check convergence
-        if (std::fabs(newMu - mu) < tolerance)
-            return newMu;
-
-        mu = newMu;  // update estimate
-    }
-
-    return mu;  // return after maxIterations if not converged
-}
-
-
-double CPUProfiler::standard_deviation(const std::vector<double>& v) {
-    if (v.size() < 2) return 0.0;
-
-    double mean = std::accumulate(v.begin(), v.end(), 0.0) / v.size();
-
-    double sq_sum = std::accumulate(
-        v.begin(), v.end(), 0.0,
-        [mean](double acc, double x) {
-            return acc + (x - mean) * (x - mean);
-        });
-
-    return std::sqrt(sq_sum / (v.size() - 1));  // sample stdev
-}
