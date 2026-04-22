@@ -11,6 +11,7 @@
 
 #include "ConfigParser.h"
 #include "HLAC/hlac.h"
+#include "ILP/ILPBuilder.h"
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
 #include "PassUtil.h"
