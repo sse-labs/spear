@@ -9,37 +9,35 @@
 
 #include "ILP/ILPSolver.h"
 
+constexpr double objectiveScalingFactor = 1.0e12;
+
 ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutionModel(nullptr) {
-    // Create a new solver instance
     OsiClpSolverInterface solver;
-    // Limit the log level of the solver to 0 to not get freacking spammed with log messages from the underlying solver.
     solver.getModelPtr()->setLogLevel(0);
 
-    // Inser the given ILP-Model into the solver
-    solver.loadProblem(underlyingILPModel.matrix,
-        underlyingILPModel.col_lb.data(),
-        underlyingILPModel.col_ub.data(),
-        underlyingILPModel.obj.data(),
-        underlyingILPModel.row_lb.data(),
-        underlyingILPModel.row_ub.data());
-
-    // Maximize objective
-    solver.setObjSense(-1.0);
-
-    // Mark all columns as integer
-    const int numCols = underlyingILPModel.matrix.getNumCols();
-    for (int c = 0; c < numCols; ++c) {
-        solver.setInteger(c);
+    std::vector<double> scaledObjective = underlyingILPModel.obj;
+    for (double &objectiveCoefficient : scaledObjective) {
+        objectiveCoefficient *= objectiveScalingFactor;
     }
 
-    // Create a solution instance
+    solver.loadProblem(
+        underlyingILPModel.matrix,
+        underlyingILPModel.col_lb.data(),
+        underlyingILPModel.col_ub.data(),
+        scaledObjective.data(),
+        underlyingILPModel.row_lb.data(),
+        underlyingILPModel.row_ub.data()
+    );
+
+    solver.setObjSense(-1.0);
+
+    const int numberOfColumns = underlyingILPModel.matrix.getNumCols();
+    for (int columnIndex = 0; columnIndex < numberOfColumns; ++columnIndex) {
+        solver.setInteger(columnIndex);
+    }
+
     solutionModel = std::make_unique<CbcModel>(solver);
     solutionModel->setLogLevel(0);
-
-    // Pre-solve
-    solutionModel->initialSolve();
-
-    // PERFORM THE ACTUAL SOLVING
     solutionModel->branchAndBound();
 }
 
@@ -56,7 +54,7 @@ std::optional<double> ILPSolver::getSolvedModelValue() const {
         return std::nullopt;
     }
 
-    return solutionModel->getObjValue();
+    return solutionModel->getObjValue() / objectiveScalingFactor;
 }
 
 std::optional<std::vector<double>> ILPSolver::getSolvedSolution() const {

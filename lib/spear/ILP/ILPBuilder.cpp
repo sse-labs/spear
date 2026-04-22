@@ -17,6 +17,82 @@
 #include "Logger.h"
 #include "PassUtil.h"
 
+void ILPBuilder::debugDumpILPModel(
+    const ILPModel &model,
+    const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
+    const std::string &name) {
+
+    Logger::getInstance().log("========== ILP DUMP BEGIN: " + name + " ==========", LOGLEVEL::INFO);
+
+    const int numberOfColumns = model.matrix.getNumCols();
+    const int numberOfRows = model.matrix.getNumRows();
+
+    Logger::getInstance().log("Variables:", LOGLEVEL::INFO);
+    for (int columnIndex = 0; columnIndex < numberOfColumns; ++columnIndex) {
+        std::string edgeInfo = "<no-edge>";
+
+        for (const auto &edgeUP : edges) {
+            const auto *edge = edgeUP.get();
+            if (edge != nullptr && edge->ilpIndex == columnIndex) {
+                edgeInfo = debugEdgeToString(edge);
+                break;
+            }
+        }
+
+        Logger::getInstance().log(
+            "  x" + std::to_string(columnIndex) +
+            " lb=" + formatBound(model.col_lb[columnIndex]) +
+            " ub=" + formatBound(model.col_ub[columnIndex]) +
+            " obj=" + formatCoefficient(model.obj[columnIndex]) +
+            " :: " + edgeInfo,
+            LOGLEVEL::INFO);
+    }
+
+    Logger::getInstance().log("Constraints:", LOGLEVEL::INFO);
+
+    const CoinPackedMatrix *matrixToRead = &model.matrix;
+    CoinPackedMatrix rowOrderedCopy;
+
+    // We want to iterate rows. If the matrix is column-ordered, create a row-ordered copy first.
+    if (model.matrix.isColOrdered()) {
+        rowOrderedCopy.reverseOrderedCopyOf(model.matrix);
+        matrixToRead = &rowOrderedCopy;
+    }
+
+    const int *vectorStarts = matrixToRead->getVectorStarts();
+    const int *vectorLengths = matrixToRead->getVectorLengths();
+    const int *indices = matrixToRead->getIndices();
+    const double *elements = matrixToRead->getElements();
+
+    if (vectorStarts == nullptr || vectorLengths == nullptr || indices == nullptr || elements == nullptr) {
+        Logger::getInstance().log("  <failed to access matrix storage>", LOGLEVEL::ERROR);
+        Logger::getInstance().log("========== ILP DUMP END: " + name + " ==========", LOGLEVEL::INFO);
+        return;
+    }
+
+    for (int rowIndex = 0; rowIndex < numberOfRows; ++rowIndex) {
+        std::string rowString = "  row[" + std::to_string(rowIndex) + "]: ";
+
+        const int startOffset = vectorStarts[rowIndex];
+        const int rowLength = vectorLengths[rowIndex];
+
+        for (int elementOffset = 0; elementOffset < rowLength; ++elementOffset) {
+            const int storageIndex = startOffset + elementOffset;
+            const int columnIndex = indices[storageIndex];
+            const double coefficient = elements[storageIndex];
+
+            rowString += "(" + std::to_string(coefficient) + " * x" + std::to_string(columnIndex) + ") ";
+        }
+
+        rowString += "in [" + std::to_string(model.row_lb[rowIndex]) +
+                     ", " + std::to_string(model.row_ub[rowIndex]) + "]";
+
+        Logger::getInstance().log(rowString, LOGLEVEL::INFO);
+    }
+
+    Logger::getInstance().log("========== ILP DUMP END: " + name + " ==========", LOGLEVEL::INFO);
+}
+
 void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode *func) {
     // Iterate over the edges in the function node
     for (auto &edgeUP : func->Edges) {
@@ -92,8 +168,8 @@ void ILPBuilder::appendGraphConstraints(
     const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
     const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
     const std::vector<int> *invocationCols) {
-    std::unordered_map<HLAC::GenericNode*, std::vector<int>> incomingEdgesPerNode;
-    std::unordered_map<HLAC::GenericNode*, std::vector<int>> outgoingEdgesPerNode;
+    std::unordered_map<HLAC::GenericNode *, std::vector<int>> incomingEdgesPerNode;
+    std::unordered_map<HLAC::GenericNode *, std::vector<int>> outgoingEdgesPerNode;
 
     // Build the indices for all contained edges
     ILPUtil::buildIncidenceMaps(
@@ -113,14 +189,19 @@ void ILPBuilder::appendGraphConstraints(
         CoinPackedVector row;
         std::unordered_set<int> usedCols;
 
+        const std::vector<int> incomingEdges =
+            incomingEdgesPerNode.contains(node) ? incomingEdgesPerNode[node] : std::vector<int>{};
+        const std::vector<int> outgoingEdges =
+            outgoingEdgesPerNode.contains(node) ? outgoingEdgesPerNode[node] : std::vector<int>{};
+
         /**
          * Additionally, we need to handle our virtual nodes that represent entry and exit points of functions and loops.
          * For these nodes, we need to add the constraint that they will be executed at least once.
          *
          */
-        if (auto *virtualNode = dynamic_cast<HLAC::VirtualNode*>(node)) {
+        if (auto *virtualNode = dynamic_cast<HLAC::VirtualNode *>(node)) {
             if (virtualNode->isEntry) {
-                for (int col : outgoingEdgesPerNode[node]) {
+                for (int col : outgoingEdges) {
                     ILPUtil::insertUnique(row, usedCols, col, 1.0);
                 }
 
@@ -139,7 +220,7 @@ void ILPBuilder::appendGraphConstraints(
             }
 
             if (virtualNode->isExit) {
-                for (int col : incomingEdgesPerNode[node]) {
+                for (int col : incomingEdges) {
                     ILPUtil::insertUnique(row, usedCols, col, 1.0);
                 }
 
@@ -170,110 +251,34 @@ void ILPBuilder::appendGraphConstraints(
          *
          *
          */
-        for (int col : incomingEdgesPerNode[node]) {
+        for (int col : incomingEdges) {
             ILPUtil::insertUnique(row, usedCols, col, 1.0);
         }
 
-        for (int col : outgoingEdgesPerNode[node]) {
+        for (int col : outgoingEdges) {
             ILPUtil::insertUnique(row, usedCols, col, -1.0);
         }
 
         // Each edge constraint has to equal 0, as the amount of incoming flow has to equal the amount of outgoing flow
         ILPUtil::appendRow(model, row, 0.0, 0.0);
 
-
-        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(node)) {
             const std::vector<int> outerIncoming = incomingEdgesPerNode[node];
+
+            Logger::getInstance().log(
+                "  Descending into loop node with incoming cols " + integerVectorToString(outerIncoming),
+                LOGLEVEL::INFO);
 
             // Add all internal flow constraints of the loop.
             appendGraphConstraints(model, loopNode->Nodes, loopNode->Edges, &outerIncoming);
-
-            /*Logger::getInstance().log(
-                "Loop " + loopNode->getDotName() +
-                " bounds = [" + std::to_string(loopNode->bounds.getLowerBound()) +
-                ", " + std::to_string(loopNode->bounds.getUpperBound()) + "]",
-                LOGLEVEL::INFO
-            );*/
 
             // Add bound constraint for the loop.
             appendLoopBoundConstraint(model, loopNode, outerIncoming);
         }
     }
+
+    Logger::getInstance().log("========== GRAPH CONSTRAINT DEBUG END ==========", LOGLEVEL::INFO);
 }
-
-namespace {
-
-std::string basicBlockToDebugString(const llvm::BasicBlock *basicBlock) {
-    if (basicBlock == nullptr) {
-        return "<null>";
-    }
-
-    std::string output;
-    llvm::raw_string_ostream outputStream(output);
-    basicBlock->printAsOperand(outputStream, false);
-    return outputStream.str();
-}
-
-std::string genericNodeToDebugString(const HLAC::GenericNode *genericNode) {
-    if (genericNode == nullptr) {
-        return "<null>";
-    }
-
-    std::ostringstream outputStream;
-
-    if (const auto *normalNode = dynamic_cast<const HLAC::Node *>(genericNode)) {
-        outputStream << "Node(" << basicBlockToDebugString(normalNode->block) << ")";
-        return outputStream.str();
-    }
-
-    if (dynamic_cast<const HLAC::CallNode *>(genericNode) != nullptr) {
-        outputStream << "CallNode";
-        return outputStream.str();
-    }
-
-    if (dynamic_cast<const HLAC::VirtualNode *>(genericNode) != nullptr) {
-        outputStream << "VirtualNode";
-        return outputStream.str();
-    }
-
-    if (dynamic_cast<const HLAC::LoopNode *>(genericNode) != nullptr) {
-        outputStream << "LoopNode";
-        return outputStream.str();
-    }
-
-    outputStream << "GenericNode";
-    return outputStream.str();
-}
-
-std::string edgeToDebugString(const HLAC::Edge *edge) {
-    if (edge == nullptr) {
-        return "<null-edge>";
-    }
-
-    std::ostringstream outputStream;
-    outputStream << genericNodeToDebugString(edge->soure)
-                 << " -> "
-                 << genericNodeToDebugString(edge->destination)
-                 << " [col=" << edge->ilpIndex << "]";
-    return outputStream.str();
-}
-
-std::string integerVectorToString(const std::vector<int> &values) {
-    std::ostringstream outputStream;
-    outputStream << "[";
-
-    for (std::size_t index = 0; index < values.size(); ++index) {
-        if (index != 0) {
-            outputStream << ", ";
-        }
-        outputStream << values[index];
-    }
-
-    outputStream << "]";
-    return outputStream.str();
-}
-
-}  // namespace
 
 void ILPBuilder::appendLoopBoundConstraint(
     ILPModel &model,
@@ -301,19 +306,6 @@ void ILPBuilder::appendLoopBoundConstraint(
     const auto lowerBound = loopNode->bounds.getLowerBound();
     const auto upperBound = loopNode->bounds.getUpperBound();
 
-    Logger::getInstance().log(
-        "Loop bound debug for function " + functionName +
-        ", loop " + loopNode->getDotName() +
-        ", header=" + headerName +
-        ", bounds=[" + std::to_string(lowerBound) + ", " + std::to_string(upperBound) + "]",
-        LOGLEVEL::INFO
-    );
-
-    Logger::getInstance().log(
-        "Loop bound debug: invocation columns = " + integerVectorToString(invocationCols),
-        LOGLEVEL::INFO
-    );
-
     if (loopNode->backEdges.empty()) {
         Logger::getInstance().log(
             "Loop bound debug: no backedges found for loop " + loopNode->getDotName(),
@@ -324,11 +316,6 @@ void ILPBuilder::appendLoopBoundConstraint(
 
     for (std::size_t backEdgeIndex = 0; backEdgeIndex < loopNode->backEdges.size(); ++backEdgeIndex) {
         HLAC::Edge *backEdge = loopNode->backEdges[backEdgeIndex];
-
-        Logger::getInstance().log(
-            "Loop bound debug: backedge[" + std::to_string(backEdgeIndex) + "] = " + edgeToDebugString(backEdge),
-            LOGLEVEL::INFO
-        );
     }
 
     const double lowerBoundAsDouble = static_cast<double>(lowerBound);
@@ -349,36 +336,6 @@ void ILPBuilder::appendLoopBoundConstraint(
         ILPUtil::insertUnique(upperBoundRow, upperBoundUsedColumns, invocationColumn, -upperBoundAsDouble);
     }
 
-    {
-        std::ostringstream debugEquation;
-        debugEquation << "Loop bound debug upper row: ";
-
-        bool isFirstTerm = true;
-        for (HLAC::Edge *backEdge : loopNode->backEdges) {
-            if (backEdge == nullptr) {
-                continue;
-            }
-
-            if (!isFirstTerm) {
-                debugEquation << " + ";
-            }
-            debugEquation << "x" << backEdge->ilpIndex;
-            isFirstTerm = false;
-        }
-
-        for (int invocationColumn : invocationCols) {
-            if (!isFirstTerm) {
-                debugEquation << " ";
-            }
-            debugEquation << "- " << upperBoundAsDouble << "*x" << invocationColumn;
-            isFirstTerm = false;
-        }
-
-        debugEquation << " <= 0";
-
-        Logger::getInstance().log(debugEquation.str(), LOGLEVEL::INFO);
-    }
-
     ILPUtil::appendRow(model, upperBoundRow, -COIN_DBL_MAX, 0.0);
 
     CoinPackedVector lowerBoundRow;
@@ -394,36 +351,6 @@ void ILPBuilder::appendLoopBoundConstraint(
 
     for (int invocationColumn : invocationCols) {
         ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedColumns, invocationColumn, -lowerBoundAsDouble);
-    }
-
-    {
-        std::ostringstream debugEquation;
-        debugEquation << "Loop bound debug lower row: ";
-
-        bool isFirstTerm = true;
-        for (HLAC::Edge *backEdge : loopNode->backEdges) {
-            if (backEdge == nullptr) {
-                continue;
-            }
-
-            if (!isFirstTerm) {
-                debugEquation << " + ";
-            }
-            debugEquation << "x" << backEdge->ilpIndex;
-            isFirstTerm = false;
-        }
-
-        for (int invocationColumn : invocationCols) {
-            if (!isFirstTerm) {
-                debugEquation << " ";
-            }
-            debugEquation << "- " << lowerBoundAsDouble << "*x" << invocationColumn;
-            isFirstTerm = false;
-        }
-
-        debugEquation << " >= 0";
-
-        Logger::getInstance().log(debugEquation.str(), LOGLEVEL::INFO);
     }
 
     ILPUtil::appendRow(model, lowerBoundRow, 0.0, COIN_DBL_MAX);
