@@ -298,7 +298,7 @@ class LoopNode : public GenericNode {
     /**
      * Backedge of the loop
      */
-    HLAC::Edge *backEdge = nullptr;
+    std::vector<Edge*> backEdges;
 
     /**
      * List of contained Nodes
@@ -353,7 +353,7 @@ class LoopNode : public GenericNode {
      */
     void collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList);
     void debugDumpEdges() const;
-    void refreshBackEdge();
+    void refreshBackEdges();
 
     /**
      * Construct CallNodes from calls contained within this LoopNode

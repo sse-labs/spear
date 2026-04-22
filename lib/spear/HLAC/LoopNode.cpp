@@ -17,6 +17,7 @@
 #include "analyses/loopbound/LoopBoundEdgeFunction.h"
 
 namespace HLAC {
+
 LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry,
                    FunctionNode *parentFunctionNode) {
     // Store the LLVM loop
@@ -24,7 +25,7 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
     this->loop = loop;
     this->hasSubLoops = !loop->getSubLoops().empty();
     auto unknownLoopValue = static_cast<long>(ConfigParser::getAnalysisConfiguration().fallback["loops"]["UNKNOWN_LOOP"]);
-    this->bounds = LoopBound::DeltaInterval::interval(unknownLoopValue,unknownLoopValue, LoopBound::DeltaInterval::ValueType::Additive);
+    this->bounds = LoopBound::DeltaInterval::interval(0,unknownLoopValue, LoopBound::DeltaInterval::ValueType::Additive);
     this->parentFunction = parentFunctionNode;
     this->nodeType = NodeType::LOOPNODE;
 
@@ -176,7 +177,7 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
         ++it;
     }
 
-    this->refreshBackEdge();
+    this->refreshBackEdges();
 }
 
 static std::string basicBlockToString(const llvm::BasicBlock* basicBlock) {
@@ -243,12 +244,13 @@ void LoopNode::debugDumpEdges() const {
     }
 }
 
-void LoopNode::refreshBackEdge() {
-    this->backEdge = nullptr;
+void LoopNode::refreshBackEdges() {
+    this->backEdges.clear();
 
     llvm::BasicBlock* loopHeader = this->loop->getHeader();
-
-    // debugDumpEdges();
+    if (loopHeader == nullptr) {
+        return;
+    }
 
     for (auto& edgeUniquePointer : this->Edges) {
         Edge* edge = edgeUniquePointer.get();
@@ -270,8 +272,7 @@ void LoopNode::refreshBackEdge() {
             continue;
         }
 
-        this->backEdge = edge;
-        return;
+        this->backEdges.push_back(edge);
     }
 }
 
@@ -322,7 +323,7 @@ void LoopNode::constructCallNodes(bool considerDebugFunctions) {
 
     // Call construction may split, replace or remove edges.
     // Therefore the previously cached backedge pointer may be stale now.
-    this->refreshBackEdge();
+    this->refreshBackEdges();
 }
 
 std::unique_ptr<LoopNode> LoopNode::makeNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry,

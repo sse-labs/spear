@@ -10,7 +10,7 @@
     }
   },
   "analysis": {
-    "type": "comparison",
+    "type": "clustered",
     "outputmode": "normal",
     "outputDirectory": "./output/hmmm",
     "clusteredCacheEnabled": false,

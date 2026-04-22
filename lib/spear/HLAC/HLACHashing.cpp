@@ -101,7 +101,7 @@ std::string Hasher::getHashForNormalNode(Node * node) {
     return Hasher::getBasicBlockToHexString(node->block);
 }
 
-std::string Hasher::getHashForLoopNode(LoopNode * node) {
+std::string Hasher::getHashForLoopNode(LoopNode *node) {
     std::ostringstream signatureStream;
 
     signatureStream << "kind=loop_node;";
@@ -117,10 +117,6 @@ std::string Hasher::getHashForLoopNode(LoopNode * node) {
     signatureStream << "has_sub_loops=" << (node->hasSubLoops ? "1" : "0") << ";";
     signatureStream << "bounds=[" << node->bounds.getLowerBound() << "," << node->bounds.getUpperBound() << "];";
 
-    /**
-     * First collect all contained child nodes together with their recursive hashes.
-     * We sort them canonically and assign stable local IDs afterwards.
-     */
     struct ChildNodeEntry {
         GenericNode *node = nullptr;
         std::string kind;
@@ -167,11 +163,19 @@ std::string Hasher::getHashForLoopNode(LoopNode * node) {
     }
     signatureStream << "];";
 
-    /**
-     * Serialize all edges in canonical order using the previously assigned local node IDs.
-     */
+    std::unordered_set<const Edge *> backEdgeSet;
+    backEdgeSet.reserve(node->backEdges.size());
+    for (const Edge *backEdge : node->backEdges) {
+        if (backEdge != nullptr) {
+            backEdgeSet.insert(backEdge);
+        }
+    }
+
     std::vector<std::string> edgeDescriptions;
     edgeDescriptions.reserve(node->Edges.size());
+
+    std::vector<std::string> explicitBackEdgeDescriptions;
+    explicitBackEdgeDescriptions.reserve(node->backEdges.size());
 
     for (const auto &edgeUniquePtr : node->Edges) {
         const Edge *edge = edgeUniquePtr.get();
@@ -194,14 +198,21 @@ std::string Hasher::getHashForLoopNode(LoopNode * node) {
                    << ":feasible="
                    << (edge->feasibility ? "1" : "0");
 
-        if (node->backEdge == edge) {
+        if (backEdgeSet.contains(edge)) {
             edgeStream << ":backedge=1";
+
+            std::ostringstream backEdgeDescriptionStream;
+            backEdgeDescriptionStream << sourceIterator->second
+                                      << "->"
+                                      << destinationIterator->second;
+            explicitBackEdgeDescriptions.push_back(backEdgeDescriptionStream.str());
         }
 
         edgeDescriptions.push_back(edgeStream.str());
     }
 
     std::sort(edgeDescriptions.begin(), edgeDescriptions.end());
+    std::sort(explicitBackEdgeDescriptions.begin(), explicitBackEdgeDescriptions.end());
 
     signatureStream << "edges=[";
     for (const std::string &edgeDescription : edgeDescriptions) {
@@ -209,25 +220,11 @@ std::string Hasher::getHashForLoopNode(LoopNode * node) {
     }
     signatureStream << "];";
 
-    /**
-     * Also store the local ID of the backedge explicitly so that loops with identical
-     * edge sets but different designated backedges remain distinguishable.
-     */
-    if (node->backEdge != nullptr && node->backEdge->soure != nullptr && node->backEdge->destination != nullptr) {
-        auto sourceIterator = localNodeIds.find(node->backEdge->soure);
-        auto destinationIterator = localNodeIds.find(node->backEdge->destination);
-
-        if (sourceIterator != localNodeIds.end() && destinationIterator != localNodeIds.end()) {
-            signatureStream << "explicit_backedge="
-                            << sourceIterator->second
-                            << "->"
-                            << destinationIterator->second
-                            << ";";
-        }
+    signatureStream << "explicit_backedges=[";
+    for (const std::string &backEdgeDescription : explicitBackEdgeDescriptions) {
+        signatureStream << backEdgeDescription << ";";
     }
-
-    // std::cout << "Hash for loop " << node->loop->getHeader()->getName().str() << " "
-    // << signatureStream.str() << std::endl;
+    signatureStream << "];";
 
     return signatureStream.str();
 }

@@ -72,3 +72,36 @@ std::optional<std::vector<double>> ILPSolver::getSolvedSolution() const {
     const int size = underlyingILPModel.matrix.getNumCols();
     return std::vector<double>(solution, solution + size);
 }
+
+
+ILPSolverStatus ILPSolver::getStatus() const {
+    if (!solutionModel) {
+        return ILPSolverStatus::INFEASIBLE; // or some other default status
+    }
+
+    int cbcStatus = solutionModel->status();
+
+    switch (cbcStatus) {
+        case 0: return ILPSolverStatus::INFEASIBLE;
+        case 1: return ILPSolverStatus::UNBOUNDED;
+        case 2: return ILPSolverStatus::TIME_LIMIT;
+        case 3: return ILPSolverStatus::NUMERICAL_ISSUES;
+        default: return ILPSolverStatus::INFEASIBLE; // or some other default status
+    }
+}
+
+std::string ILPSolver::getStatusString() const {
+    if (!solutionModel) {
+        return "No solution model available";
+    }
+
+    int cbcStatus = solutionModel->status();
+
+    switch (cbcStatus) {
+        case 0: return "Infeasible";
+        case 1: return "Unbounded";
+        case 2: return "Time limit reached";
+        case 3: return "Numerical issues";
+        default: return "Unknown status";
+    }
+}

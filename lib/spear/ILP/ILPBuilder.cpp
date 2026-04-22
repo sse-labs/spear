@@ -201,42 +201,182 @@ void ILPBuilder::appendGraphConstraints(
     }
 }
 
+namespace {
+
+std::string basicBlockToDebugString(const llvm::BasicBlock *basicBlock) {
+    if (basicBlock == nullptr) {
+        return "<null>";
+    }
+
+    std::string output;
+    llvm::raw_string_ostream outputStream(output);
+    basicBlock->printAsOperand(outputStream, false);
+    return outputStream.str();
+}
+
+std::string genericNodeToDebugString(const HLAC::GenericNode *genericNode) {
+    if (genericNode == nullptr) {
+        return "<null>";
+    }
+
+    std::ostringstream outputStream;
+
+    if (const auto *normalNode = dynamic_cast<const HLAC::Node *>(genericNode)) {
+        outputStream << "Node(" << basicBlockToDebugString(normalNode->block) << ")";
+        return outputStream.str();
+    }
+
+    if (dynamic_cast<const HLAC::CallNode *>(genericNode) != nullptr) {
+        outputStream << "CallNode";
+        return outputStream.str();
+    }
+
+    if (dynamic_cast<const HLAC::VirtualNode *>(genericNode) != nullptr) {
+        outputStream << "VirtualNode";
+        return outputStream.str();
+    }
+
+    if (dynamic_cast<const HLAC::LoopNode *>(genericNode) != nullptr) {
+        outputStream << "LoopNode";
+        return outputStream.str();
+    }
+
+    outputStream << "GenericNode";
+    return outputStream.str();
+}
+
+std::string edgeToDebugString(const HLAC::Edge *edge) {
+    if (edge == nullptr) {
+        return "<null-edge>";
+    }
+
+    std::ostringstream outputStream;
+    outputStream << genericNodeToDebugString(edge->soure)
+                 << " -> "
+                 << genericNodeToDebugString(edge->destination)
+                 << " [col=" << edge->ilpIndex << "]";
+    return outputStream.str();
+}
+
+std::string integerVectorToString(const std::vector<int> &values) {
+    std::ostringstream outputStream;
+    outputStream << "[";
+
+    for (std::size_t index = 0; index < values.size(); ++index) {
+        if (index != 0) {
+            outputStream << ", ";
+        }
+        outputStream << values[index];
+    }
+
+    outputStream << "]";
+    return outputStream.str();
+}
+
+}  // namespace
+
 void ILPBuilder::appendLoopBoundConstraint(
-    ILPModel &model, HLAC::LoopNode *loopNode,
+    ILPModel &model,
+    HLAC::LoopNode *loopNode,
     const std::vector<int> &invocationCols) {
-    if (loopNode->backEdge == nullptr) {
+
+    const std::string functionName =
+        (loopNode != nullptr && loopNode->parentFunction != nullptr && loopNode->parentFunction->function != nullptr)
+            ? loopNode->parentFunction->function->getName().str()
+            : "<unknown-function>";
+
+    const std::string headerName =
+        (loopNode != nullptr && loopNode->loop != nullptr)
+            ? basicBlockToDebugString(loopNode->loop->getHeader())
+            : "<unknown-header>";
+
+    if (loopNode == nullptr) {
         Logger::getInstance().log(
-            "Warning: Loop " + loopNode->getDotName() + " has no backedge, skipping loop bound constraint.",
-            LOGLEVEL::ERROR);
+            "Loop bound debug: loopNode is null.",
+            LOGLEVEL::ERROR
+        );
         return;
     }
 
     const auto lowerBound = loopNode->bounds.getLowerBound();
     const auto upperBound = loopNode->bounds.getUpperBound();
 
-    const bool lowerBoundLooksInvalid = (lowerBound == std::numeric_limits<long long>::min());
-    const bool upperBoundLooksInvalid = (upperBound == std::numeric_limits<long long>::max());
+    Logger::getInstance().log(
+        "Loop bound debug for function " + functionName +
+        ", loop " + loopNode->getDotName() +
+        ", header=" + headerName +
+        ", bounds=[" + std::to_string(lowerBound) + ", " + std::to_string(upperBound) + "]",
+        LOGLEVEL::INFO
+    );
 
-    if (lowerBoundLooksInvalid || upperBoundLooksInvalid) {
+    Logger::getInstance().log(
+        "Loop bound debug: invocation columns = " + integerVectorToString(invocationCols),
+        LOGLEVEL::INFO
+    );
+
+    if (loopNode->backEdges.empty()) {
         Logger::getInstance().log(
-            "Warning: Loop " + loopNode->getDotName() +
-            " has invalid default bounds [" + std::to_string(lowerBound) + ", " + std::to_string(upperBound) +
-            "], skipping loop bound constraint.",
-            LOGLEVEL::WARNING);
+            "Loop bound debug: no backedges found for loop " + loopNode->getDotName(),
+            LOGLEVEL::ERROR
+        );
         return;
     }
 
-    const int backColumnIndex = loopNode->backEdge->ilpIndex;
+    for (std::size_t backEdgeIndex = 0; backEdgeIndex < loopNode->backEdges.size(); ++backEdgeIndex) {
+        HLAC::Edge *backEdge = loopNode->backEdges[backEdgeIndex];
+
+        Logger::getInstance().log(
+            "Loop bound debug: backedge[" + std::to_string(backEdgeIndex) + "] = " + edgeToDebugString(backEdge),
+            LOGLEVEL::INFO
+        );
+    }
+
     const double lowerBoundAsDouble = static_cast<double>(lowerBound);
     const double upperBoundAsDouble = static_cast<double>(upperBound);
 
     CoinPackedVector upperBoundRow;
     std::unordered_set<int> upperBoundUsedColumns;
 
-    ILPUtil::insertUnique(upperBoundRow, upperBoundUsedColumns, backColumnIndex, 1.0);
+    for (HLAC::Edge *backEdge : loopNode->backEdges) {
+        if (backEdge == nullptr) {
+            continue;
+        }
 
-    for (int invocationColumnIndex : invocationCols) {
-        ILPUtil::insertUnique(upperBoundRow, upperBoundUsedColumns, invocationColumnIndex, -upperBoundAsDouble);
+        ILPUtil::insertUnique(upperBoundRow, upperBoundUsedColumns, backEdge->ilpIndex, 1.0);
+    }
+
+    for (int invocationColumn : invocationCols) {
+        ILPUtil::insertUnique(upperBoundRow, upperBoundUsedColumns, invocationColumn, -upperBoundAsDouble);
+    }
+
+    {
+        std::ostringstream debugEquation;
+        debugEquation << "Loop bound debug upper row: ";
+
+        bool isFirstTerm = true;
+        for (HLAC::Edge *backEdge : loopNode->backEdges) {
+            if (backEdge == nullptr) {
+                continue;
+            }
+
+            if (!isFirstTerm) {
+                debugEquation << " + ";
+            }
+            debugEquation << "x" << backEdge->ilpIndex;
+            isFirstTerm = false;
+        }
+
+        for (int invocationColumn : invocationCols) {
+            if (!isFirstTerm) {
+                debugEquation << " ";
+            }
+            debugEquation << "- " << upperBoundAsDouble << "*x" << invocationColumn;
+            isFirstTerm = false;
+        }
+
+        debugEquation << " <= 0";
+
+        Logger::getInstance().log(debugEquation.str(), LOGLEVEL::INFO);
     }
 
     ILPUtil::appendRow(model, upperBoundRow, -COIN_DBL_MAX, 0.0);
@@ -244,10 +384,46 @@ void ILPBuilder::appendLoopBoundConstraint(
     CoinPackedVector lowerBoundRow;
     std::unordered_set<int> lowerBoundUsedColumns;
 
-    ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedColumns, backColumnIndex, 1.0);
+    for (HLAC::Edge *backEdge : loopNode->backEdges) {
+        if (backEdge == nullptr) {
+            continue;
+        }
 
-    for (int invocationColumnIndex : invocationCols) {
-        ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedColumns, invocationColumnIndex, -lowerBoundAsDouble);
+        ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedColumns, backEdge->ilpIndex, 1.0);
+    }
+
+    for (int invocationColumn : invocationCols) {
+        ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedColumns, invocationColumn, -lowerBoundAsDouble);
+    }
+
+    {
+        std::ostringstream debugEquation;
+        debugEquation << "Loop bound debug lower row: ";
+
+        bool isFirstTerm = true;
+        for (HLAC::Edge *backEdge : loopNode->backEdges) {
+            if (backEdge == nullptr) {
+                continue;
+            }
+
+            if (!isFirstTerm) {
+                debugEquation << " + ";
+            }
+            debugEquation << "x" << backEdge->ilpIndex;
+            isFirstTerm = false;
+        }
+
+        for (int invocationColumn : invocationCols) {
+            if (!isFirstTerm) {
+                debugEquation << " ";
+            }
+            debugEquation << "- " << lowerBoundAsDouble << "*x" << invocationColumn;
+            isFirstTerm = false;
+        }
+
+        debugEquation << " >= 0";
+
+        Logger::getInstance().log(debugEquation.str(), LOGLEVEL::INFO);
     }
 
     ILPUtil::appendRow(model, lowerBoundRow, 0.0, COIN_DBL_MAX);
@@ -296,13 +472,37 @@ std::optional<ILPResult> ILPBuilder::solveModel(const ILPModel& ilpModel) {
     // Create a new solver on the model
     ILPSolver modelSolver(ilpModel);
 
-    // Solve the model and query optimal solution and path
+    // Solve the model
     auto optimalSolution = modelSolver.getSolvedModelValue();
     auto optimalPath = modelSolver.getSolvedSolution();
 
-    // Validate that the solver found a solution...
+    // Check if a valid solution exists
     if (optimalPath.has_value() && optimalSolution.has_value()) {
         return std::make_optional<ILPResult>(optimalSolution.value(), optimalPath.value());
+    }
+
+    // --- Failure handling and logging ---
+
+    auto solverStatus = modelSolver.getStatus();
+    auto statusString = modelSolver.getStatusString();
+
+    std::cout << "[ILP ERROR] Solver failed.\n";
+    std::cout << "  Status: " << statusString << "\n";
+
+    // Optional: more diagnostics
+    std::cout << "  Variables: " << ilpModel.matrix.getNumCols() << "\n";
+    std::cout << "  Constraints: " << ilpModel.matrix.getNumRows() << "\n";
+
+    if (solverStatus == ILPSolverStatus::INFEASIBLE) {
+        std::cout << "  Reason: Model is infeasible (constraints contradict each other).\n";
+    } else if (solverStatus == ILPSolverStatus::UNBOUNDED) {
+        std::cout << "  Reason: Model is unbounded (objective can grow indefinitely).\n";
+    } else if (solverStatus == ILPSolverStatus::TIME_LIMIT) {
+        std::cout << "  Reason: Solver hit time limit.\n";
+    } else if (solverStatus == ILPSolverStatus::NUMERICAL_ISSUES) {
+        std::cout << "  Reason: Numerical instability detected.\n";
+    } else {
+        std::cerr << "  Reason: Unknown solver failure.\n";
     }
 
     return std::nullopt;
