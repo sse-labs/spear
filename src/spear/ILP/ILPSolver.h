@@ -18,7 +18,9 @@ enum ILPSolverStatus {
     INFEASIBLE,
     UNBOUNDED,
     TIME_LIMIT,
-    NUMERICAL_ISSUES
+    NUMERICAL_ISSUES,
+    OPTIMAL,
+    UNKNOWN
 };
 
 /**

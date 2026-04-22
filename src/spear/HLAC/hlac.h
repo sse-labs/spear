@@ -330,6 +330,8 @@ class LoopNode : public GenericNode {
      */
     bool hasSubLoops = false;
 
+    int invocationIlpIndex = -1;
+
     /**
      * Constructor to create a new LoopNode
      * @param loop loop that should be represented by the LoopNOde
@@ -824,7 +826,7 @@ class hlac {
      * @param model Constructed monolithic model
      * @return Mapping of function name to monolithic ILP result
      */
-    std::optional<ILPResult> solveMonolithicIlp(ILPModel &model);
+    std::optional<ILPResult> solveMonolithicIlp(ILPModel &model, std::string fname="");
 
     /**
      * Solve the clustered models of the contained functions

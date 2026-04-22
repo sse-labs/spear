@@ -52,7 +52,7 @@ class ILPBuilder {
      * @return Optional over ILPResult. Contains the ILPResult if the model could be solved successfully, std::nullopt
      * otherwise
      */
-    static std::optional<ILPResult> solveModel(const ILPModel& ilpModel);
+    static std::optional<ILPResult> solveModel(const ILPModel &ilpModel, const std::string &debugLabel = "");
 
  private:
     /**
@@ -90,7 +90,11 @@ class ILPBuilder {
         ILPModel &model,
         const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
         const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
-        const std::vector<int> *invocationCols);
+        int invocationCol);
+
+
+    static std::vector<int> getInvocationColumnsForLoopNode(HLAC::LoopNode *loopNode,
+                                                     const std::vector<std::unique_ptr<HLAC::Edge>> &scopeEdges);
 
 
     /**
@@ -119,9 +123,11 @@ class ILPBuilder {
      * @param invocationCols ILP column indices representing how often the loop is entered
      * from the surrounding graph
      */
-    static void appendLoopBoundConstraint(ILPModel &model,
+    static void appendLoopBoundConstraint(
+        ILPModel &model,
         HLAC::LoopNode *loopNode,
-        const std::vector<int> &invocationCols);
+        int invocationCol);
+
 
     /**
      * Append the synthetic constraint that guarantees that all toplevel loops are assumed to be entered exactly once.
@@ -149,6 +155,9 @@ class ILPBuilder {
      * @param loopNode LoopNode to extract the energy values from
      */
     static void fillObjectiveFunction(ILPModel &model, HLAC::LoopNode *loopNode);
+
+    static int assignLoopInvocationIndices(HLAC::FunctionNode *functionNode, int nextColumn);
+    static int assignLoopInvocationIndices(HLAC::LoopNode *loopNode, int nextColumn);
 };
 
 #endif  // SRC_SPEAR_ILP_ILPBUILDER_H_

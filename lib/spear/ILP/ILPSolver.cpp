@@ -9,6 +9,111 @@
 
 #include "ILP/ILPSolver.h"
 
+#include <sstream>
+
+#include "Logger.h"
+
+namespace {
+
+std::string boundToString(double value, bool isLowerBound) {
+    if (isLowerBound && value <= -COIN_DBL_MAX / 2.0) {
+        return "-inf";
+    }
+
+    if (!isLowerBound && value >= COIN_DBL_MAX / 2.0) {
+        return "+inf";
+    }
+
+    std::ostringstream outputStream;
+    outputStream << value;
+    return outputStream.str();
+}
+
+std::string packedVectorToString(const CoinPackedVector &rowVector) {
+    std::ostringstream outputStream;
+
+    const int numberOfElements = rowVector.getNumElements();
+    const int *indices = rowVector.getIndices();
+    const double *elements = rowVector.getElements();
+
+    if (numberOfElements == 0) {
+        return "0";
+    }
+
+    for (int elementIndex = 0; elementIndex < numberOfElements; ++elementIndex) {
+        const double coefficient = elements[elementIndex];
+        const int columnIndex = indices[elementIndex];
+
+        if (elementIndex > 0) {
+            outputStream << (coefficient >= 0.0 ? " + " : " - ");
+        } else if (coefficient < 0.0) {
+            outputStream << "-";
+        }
+
+        outputStream << std::abs(coefficient) << "*x" << columnIndex;
+    }
+
+    return outputStream.str();
+}
+
+void dumpOsiModel(const OsiSolverInterface &solverInterface, const std::string &label) {
+    Logger::getInstance().log("========== OSI MODEL DUMP BEGIN: " + label + " ==========", LOGLEVEL::INFO);
+
+    const int numberOfColumns = solverInterface.getNumCols();
+    const int numberOfRows = solverInterface.getNumRows();
+
+    Logger::getInstance().log(
+        "OSI summary: variables=" + std::to_string(numberOfColumns) +
+        ", constraints=" + std::to_string(numberOfRows),
+        LOGLEVEL::INFO);
+
+    const double *columnLowerBounds = solverInterface.getColLower();
+    const double *columnUpperBounds = solverInterface.getColUpper();
+    const double *objectiveCoefficients = solverInterface.getObjCoefficients();
+    const double *rowLowerBounds = solverInterface.getRowLower();
+    const double *rowUpperBounds = solverInterface.getRowUpper();
+
+    Logger::getInstance().log("OSI Variables:", LOGLEVEL::INFO);
+    for (int columnIndex = 0; columnIndex < numberOfColumns; ++columnIndex) {
+        std::ostringstream outputStream;
+        outputStream << "  x" << columnIndex
+                     << ": bounds=["
+                     << boundToString(columnLowerBounds[columnIndex], true)
+                     << ", "
+                     << boundToString(columnUpperBounds[columnIndex], false)
+                     << "], obj=" << objectiveCoefficients[columnIndex]
+                     << ", integer=" << solverInterface.isInteger(columnIndex);
+        Logger::getInstance().log(outputStream.str(), LOGLEVEL::INFO);
+    }
+
+    const CoinPackedMatrix *matrixByRow = solverInterface.getMatrixByRow();
+
+    Logger::getInstance().log("OSI Constraints:", LOGLEVEL::INFO);
+    for (int rowIndex = 0; rowIndex < numberOfRows; ++rowIndex) {
+        const CoinPackedVector rowVector = matrixByRow->getVector(rowIndex);
+
+        std::ostringstream outputStream;
+        outputStream << "  c" << rowIndex << ": ";
+
+        const double lowerBound = rowLowerBounds[rowIndex];
+        const double upperBound = rowUpperBounds[rowIndex];
+
+        if (lowerBound <= -COIN_DBL_MAX / 2.0 && upperBound < COIN_DBL_MAX / 2.0) {
+            outputStream << packedVectorToString(rowVector) << " <= " << upperBound;
+        } else if (upperBound >= COIN_DBL_MAX / 2.0 && lowerBound > -COIN_DBL_MAX / 2.0) {
+            outputStream << packedVectorToString(rowVector) << " >= " << lowerBound;
+        } else {
+            outputStream << lowerBound << " <= " << packedVectorToString(rowVector) << " <= " << upperBound;
+        }
+
+        Logger::getInstance().log(outputStream.str(), LOGLEVEL::INFO);
+    }
+
+    Logger::getInstance().log("========== OSI MODEL DUMP END: " + label + " ==========", LOGLEVEL::INFO);
+}
+
+}  // namespace
+
 ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutionModel(nullptr) {
     // Create a new solver instance
     OsiClpSolverInterface solver;
@@ -32,15 +137,27 @@ ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutio
         solver.setInteger(c);
     }
 
+    dumpOsiModel(solver, "after loadProblem + setInteger");
+
     // Create a solution instance
     solutionModel = std::make_unique<CbcModel>(solver);
     solutionModel->setLogLevel(0);
 
+    dumpOsiModel(*solutionModel->solver(), "after CbcModel copy, before solve");
+
     // Pre-solve
-    solutionModel->initialSolve();
+    //solutionModel->initialSolve();
 
     // PERFORM THE ACTUAL SOLVING
     solutionModel->branchAndBound();
+
+    Logger::getInstance().log(
+        "CBC status debug: provenOptimal=" + std::to_string(solutionModel->isProvenOptimal()) +
+        ", provenInfeasible=" + std::to_string(solutionModel->isProvenInfeasible()) +
+        ", secondsLimitReached=" + std::to_string(solutionModel->isSecondsLimitReached()) +
+        ", abandoned=" + std::to_string(solutionModel->isAbandoned()) +
+        ", bestSolution=" + std::to_string(solutionModel->bestSolution() != nullptr),
+        LOGLEVEL::INFO);
 }
 
 bool ILPSolver::solutionExists() const {
@@ -48,7 +165,7 @@ bool ILPSolver::solutionExists() const {
         return false;
     }
 
-    return solutionModel->isProvenOptimal();
+    return solutionModel->bestSolution() != nullptr;
 }
 
 std::optional<double> ILPSolver::getSolvedModelValue() const {
@@ -76,18 +193,26 @@ std::optional<std::vector<double>> ILPSolver::getSolvedSolution() const {
 
 ILPSolverStatus ILPSolver::getStatus() const {
     if (!solutionModel) {
-        return ILPSolverStatus::INFEASIBLE; // or some other default status
+        return ILPSolverStatus::NUMERICAL_ISSUES;
     }
 
-    int cbcStatus = solutionModel->status();
-
-    switch (cbcStatus) {
-        case 0: return ILPSolverStatus::INFEASIBLE;
-        case 1: return ILPSolverStatus::UNBOUNDED;
-        case 2: return ILPSolverStatus::TIME_LIMIT;
-        case 3: return ILPSolverStatus::NUMERICAL_ISSUES;
-        default: return ILPSolverStatus::INFEASIBLE; // or some other default status
+    if (solutionModel->isProvenOptimal()) {
+        return ILPSolverStatus::OPTIMAL;
     }
+
+    if (solutionModel->isProvenInfeasible()) {
+        return ILPSolverStatus::INFEASIBLE;
+    }
+
+    if (solutionModel->isSecondsLimitReached()) {
+        return ILPSolverStatus::TIME_LIMIT;
+    }
+
+    if (solutionModel->isAbandoned()) {
+        return ILPSolverStatus::NUMERICAL_ISSUES;
+    }
+
+    return ILPSolverStatus::UNKNOWN;
 }
 
 std::string ILPSolver::getStatusString() const {
@@ -95,13 +220,21 @@ std::string ILPSolver::getStatusString() const {
         return "No solution model available";
     }
 
-    int cbcStatus = solutionModel->status();
-
-    switch (cbcStatus) {
-        case 0: return "Infeasible";
-        case 1: return "Unbounded";
-        case 2: return "Time limit reached";
-        case 3: return "Numerical issues";
-        default: return "Unknown status";
+    if (solutionModel->isProvenOptimal()) {
+        return "Optimal";
     }
+
+    if (solutionModel->isProvenInfeasible()) {
+        return "Infeasible";
+    }
+
+    if (solutionModel->isSecondsLimitReached()) {
+        return "Time limit reached";
+    }
+
+    if (solutionModel->isAbandoned()) {
+        return "Abandoned / numerical issues";
+    }
+
+    return "Unknown status";
 }

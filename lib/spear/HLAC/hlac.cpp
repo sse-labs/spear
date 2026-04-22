@@ -165,8 +165,8 @@ std::optional<ClusteredILPModel> hlac::buildClusteredILPS(FunctionNode *function
 }
 
 
-std::optional<ILPResult> hlac::solveMonolithicIlp(ILPModel &model) {
-    auto solvedModel = ILPBuilder::solveModel(model);
+std::optional<ILPResult> hlac::solveMonolithicIlp(ILPModel &model, std::string fname) {
+    auto solvedModel = ILPBuilder::solveModel(model, fname);
 
     return solvedModel;
 }

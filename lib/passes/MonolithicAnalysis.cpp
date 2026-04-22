@@ -76,7 +76,7 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
 
             functionILPCache[funcName] = ilp;
 
-            auto solvedResults = graph->solveMonolithicIlp(ilp.value());
+            auto solvedResults = graph->solveMonolithicIlp(ilp.value(), funcName);
 
             if (!solvedResults.has_value()) {
                 Logger::getInstance().log(
