@@ -24,7 +24,7 @@ class ILPSolver {
      * Create a new solver for the given ILPModel
      * @param model Model to construct the solver for
      */
-    explicit ILPSolver(ILPModel model);
+    explicit ILPSolver(const ILPModel& model);
 
     /**
      * Check if a solution for the solved model was found

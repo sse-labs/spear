@@ -384,31 +384,30 @@ int ILPUtil::assignEdgeIndicesLoop(HLAC::LoopNode *loopNode, int nextIndex) {
 }
 
 void ILPUtil::buildIncidenceMaps(
-    const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
-    std::unordered_map<HLAC::GenericNode*, std::vector<int>> &incoming,
-    std::unordered_map<HLAC::GenericNode*, std::vector<int>> &outgoing) {
-    // Check that all incoming and outgoing vectors are empty
+    const std::vector<std::unique_ptr<HLAC::Edge>>& edges,
+    std::unordered_map<HLAC::GenericNode*, std::vector<int>>& incoming,
+    std::unordered_map<HLAC::GenericNode*, std::vector<int>>& outgoing,
+    int numberOfVariables) {
     incoming.clear();
     outgoing.clear();
 
-    // Check each edge contained in this scope
-    for (const auto &edgeUP : edges) {
-        // Get the current edge
-        auto *edge = edgeUP.get();
+    for (const auto& edgeUP : edges) {
+        HLAC::Edge* edge = edgeUP.get();
 
-        if (!edge) {
+        if (edge == nullptr) {
             continue;
         }
 
-        // Check that the index of the edge is valid
-        if (edge->ilpIndex < 0) {
-            Logger::getInstance().log(
-                "Error: edge without valid ilpIndex encountered.",
-                LOGLEVEL::ERROR);
-            continue;
+        if (edge->ilpIndex < 0 || edge->ilpIndex >= numberOfVariables) {
+            throw std::runtime_error(
+                "Invalid edge ilpIndex " + std::to_string(edge->ilpIndex) +
+                " for model with " + std::to_string(numberOfVariables) + " variables.");
         }
 
-        // Add the nodes to the respective vectors
+        if (edge->destination == nullptr || edge->soure == nullptr) {
+            throw std::runtime_error("Edge with null source or destination encountered.");
+        }
+
         incoming[edge->destination].push_back(edge->ilpIndex);
         outgoing[edge->soure].push_back(edge->ilpIndex);
     }

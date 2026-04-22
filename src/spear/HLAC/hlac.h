@@ -352,6 +352,8 @@ class LoopNode : public GenericNode {
      * @param edgeList List of edges from the node, this loop node is contained in
      */
     void collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList);
+    void debugDumpEdges() const;
+    void refreshBackEdge();
 
     /**
      * Construct CallNodes from calls contained within this LoopNode

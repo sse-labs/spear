@@ -10,9 +10,9 @@
     }
   },
   "analysis": {
-    "type": "comparison",
+    "type": "monolithic",
     "outputmode": "normal",
-    "outputDirectory": "./output/normal",
+    "outputDirectory": "./output/hmmm",
     "clusteredCacheEnabled": true,
     "feasibilityEnabled": true,
     "writeDotFiles": false,

@@ -52,7 +52,7 @@ class ILPBuilder {
      * @return Optional over ILPResult. Contains the ILPResult if the model could be solved successfully, std::nullopt
      * otherwise
      */
-    static std::optional<ILPResult> solveModel(ILPModel model);
+    static std::optional<ILPResult> solveModel(const ILPModel& ilpModel);
 
  private:
     /**

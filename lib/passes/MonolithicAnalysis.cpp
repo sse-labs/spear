@@ -53,6 +53,24 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
         // Build one big ILP for the program under analysis
         auto ilp = graph->buildMonolithicILP(funcNode.get());
 
+        if (!ilp.has_value()) {
+            Logger::getInstance().log(
+                "Failed to build monolithic ILP for function " + funcNode->name,
+                LOGLEVEL::ERROR
+            );
+            continue;
+        }
+
+        auto solvedResults = graph->solveMonolithicIlp(ilp.value());
+
+        if (!solvedResults.has_value()) {
+            Logger::getInstance().log(
+                "Failed to solve monolithic ILP for function " + funcNode->name,
+                LOGLEVEL::ERROR
+            );
+            continue;
+        }
+
         auto monoBuildEnd = std::chrono::high_resolution_clock::now();
         auto monoBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
             monoBuildEnd - monoBuildStart);

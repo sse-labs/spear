@@ -271,15 +271,17 @@ void FunctionNode::constructCallNodes(bool considerDebugFunctions) {
                 llvm::Function *calleeFunction = callbase->getCaller();
 
                 // Construct the CallNode
-                if ( !calledFunction->getName().starts_with("__psr")
+                if (calledFunction) {
+                    if ( !calledFunction->getName().starts_with("__psr")
                     && !calleeFunction->getName().starts_with("__psr") ) {
-                    auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this);
-                    CallNode *callNode = callNodeUP.get();
+                        auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this);
+                        CallNode *callNode = callNodeUP.get();
 
-                    if (!callNode->isDebugFunction || !considerDebugFunctions) {
-                        // Add the CallNode to the list of Nodes and rewrite the edges of this FunctionNode
-                        this->Nodes.emplace_back(std::move(callNodeUP));
-                        callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                        if (!callNode->isDebugFunction || !considerDebugFunctions) {
+                            // Add the CallNode to the list of Nodes and rewrite the edges of this FunctionNode
+                            this->Nodes.emplace_back(std::move(callNodeUP));
+                            callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                        }
                     }
                 }
             }

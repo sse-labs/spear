@@ -56,9 +56,10 @@ class ILPUtil {
      * @param outgoing unordered_map used to store the mapping from nodes to their outgoing edge indices.
      */
     static void buildIncidenceMaps(
-        const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
-        std::unordered_map<HLAC::GenericNode *, std::vector<int>> &incoming,
-        std::unordered_map<HLAC::GenericNode *, std::vector<int>> &outgoing);
+        const std::vector<std::unique_ptr<HLAC::Edge>>& edges,
+        std::unordered_map<HLAC::GenericNode*, std::vector<int>>& incoming,
+        std::unordered_map<HLAC::GenericNode*, std::vector<int>>& outgoing,
+        int numberOfVariables);
 
     /**
      * Iterate over the edges in the function and assign them a unique ID, which we call the ILPIndex

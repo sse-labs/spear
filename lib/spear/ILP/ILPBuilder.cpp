@@ -96,7 +96,11 @@ void ILPBuilder::appendGraphConstraints(
     std::unordered_map<HLAC::GenericNode*, std::vector<int>> outgoingEdgesPerNode;
 
     // Build the indices for all contained edges
-    ILPUtil::buildIncidenceMaps(edges, incomingEdgesPerNode, outgoingEdgesPerNode);
+    ILPUtil::buildIncidenceMaps(
+        edges,
+        incomingEdgesPerNode,
+        outgoingEdgesPerNode,
+        static_cast<int>(model.col_lb.size()));
 
     /**
      * We need to add constraints for all nodes in this scope.
@@ -184,6 +188,13 @@ void ILPBuilder::appendGraphConstraints(
             // Add all internal flow constraints of the loop.
             appendGraphConstraints(model, loopNode->Nodes, loopNode->Edges, &outerIncoming);
 
+            /*Logger::getInstance().log(
+                "Loop " + loopNode->getDotName() +
+                " bounds = [" + std::to_string(loopNode->bounds.getLowerBound()) +
+                ", " + std::to_string(loopNode->bounds.getUpperBound()) + "]",
+                LOGLEVEL::INFO
+            );*/
+
             // Add bound constraint for the loop.
             appendLoopBoundConstraint(model, loopNode, outerIncoming);
         }
@@ -193,11 +204,6 @@ void ILPBuilder::appendGraphConstraints(
 void ILPBuilder::appendLoopBoundConstraint(
     ILPModel &model, HLAC::LoopNode *loopNode,
     const std::vector<int> &invocationCols) {
-    // Create an empty row
-    CoinPackedVector row;
-    // Where we store the columns used by the loop
-    std::unordered_set<int> usedCols;
-
     if (loopNode->backEdge == nullptr) {
         Logger::getInstance().log(
             "Warning: Loop " + loopNode->getDotName() + " has no backedge, skipping loop bound constraint.",
@@ -205,32 +211,43 @@ void ILPBuilder::appendLoopBoundConstraint(
         return;
     }
 
-    const int backCol = loopNode->backEdge->ilpIndex;
-    const auto lb = static_cast<double>(loopNode->bounds.getLowerBound());
-    const auto ub = static_cast<double>(loopNode->bounds.getUpperBound());
+    const auto lowerBound = loopNode->bounds.getLowerBound();
+    const auto upperBound = loopNode->bounds.getUpperBound();
 
-    // Upper bound:
-    // x_back - ub * sum(invocations) <= 0
+    const bool lowerBoundLooksInvalid = (lowerBound == std::numeric_limits<long long>::min());
+    const bool upperBoundLooksInvalid = (upperBound == std::numeric_limits<long long>::max());
+
+    if (lowerBoundLooksInvalid || upperBoundLooksInvalid) {
+        Logger::getInstance().log(
+            "Warning: Loop " + loopNode->getDotName() +
+            " has invalid default bounds [" + std::to_string(lowerBound) + ", " + std::to_string(upperBound) +
+            "], skipping loop bound constraint.",
+            LOGLEVEL::WARNING);
+        return;
+    }
+
+    const int backColumnIndex = loopNode->backEdge->ilpIndex;
+    const double lowerBoundAsDouble = static_cast<double>(lowerBound);
+    const double upperBoundAsDouble = static_cast<double>(upperBound);
+
     CoinPackedVector upperBoundRow;
-    std::unordered_set<int> upperBoundUsedCols;
+    std::unordered_set<int> upperBoundUsedColumns;
 
-    ILPUtil::insertUnique(upperBoundRow, upperBoundUsedCols, backCol, 1.0);
+    ILPUtil::insertUnique(upperBoundRow, upperBoundUsedColumns, backColumnIndex, 1.0);
 
-    for (int col : invocationCols) {
-        ILPUtil::insertUnique(upperBoundRow, upperBoundUsedCols, col, -ub);
+    for (int invocationColumnIndex : invocationCols) {
+        ILPUtil::insertUnique(upperBoundRow, upperBoundUsedColumns, invocationColumnIndex, -upperBoundAsDouble);
     }
 
     ILPUtil::appendRow(model, upperBoundRow, -COIN_DBL_MAX, 0.0);
 
-    // Lower bound:
-    // x_back - lb * sum(invocations) >= 0
     CoinPackedVector lowerBoundRow;
-    std::unordered_set<int> lowerBoundUsedCols;
+    std::unordered_set<int> lowerBoundUsedColumns;
 
-    ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedCols, backCol, 1.0);
+    ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedColumns, backColumnIndex, 1.0);
 
-    for (int col : invocationCols) {
-        ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedCols, col, -lb);
+    for (int invocationColumnIndex : invocationCols) {
+        ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedColumns, invocationColumnIndex, -lowerBoundAsDouble);
     }
 
     ILPUtil::appendRow(model, lowerBoundRow, 0.0, COIN_DBL_MAX);
@@ -275,9 +292,9 @@ void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::LoopNode *loopNode
 }
 
 
-std::optional<ILPResult> ILPBuilder::solveModel(ILPModel ilpModel) {
+std::optional<ILPResult> ILPBuilder::solveModel(const ILPModel& ilpModel) {
     // Create a new solver on the model
-    ILPSolver modelSolver(std::move(ilpModel));
+    ILPSolver modelSolver(ilpModel);
 
     // Solve the model and query optimal solution and path
     auto optimalSolution = modelSolver.getSolvedModelValue();
@@ -331,6 +348,13 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
 
     // Append all flow and loop constraints recursively.
     appendGraphConstraints(model, loop->Nodes, loop->Edges, &invocationCols);
+
+    /*Logger::getInstance().log(
+        "Loop " + loop->getDotName() +
+        " bounds = [" + std::to_string(loop->bounds.getLowerBound()) +
+        ", " + std::to_string(loop->bounds.getUpperBound()) + "]",
+        LOGLEVEL::INFO
+    );*/
 
     // As we are already in a loop, we need to append all loop bound constrains right here
     // We calculate loop constrains via the scale of how often the loopnode will be entered,

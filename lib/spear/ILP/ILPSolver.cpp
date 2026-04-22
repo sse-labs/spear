@@ -9,7 +9,7 @@
 
 #include "ILP/ILPSolver.h"
 
-ILPSolver::ILPSolver(ILPModel model) : underlyingILPModel(std::move(model)), solutionModel(nullptr) {
+ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutionModel(nullptr) {
     // Create a new solver instance
     OsiClpSolverInterface solver;
     // Limit the log level of the solver to 0 to not get freacking spammed with log messages from the underlying solver.

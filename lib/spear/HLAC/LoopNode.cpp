@@ -9,9 +9,11 @@
 #include <utility>
 #include <vector>
 
+#include "ConfigParser.h"
 #include "HLAC/HLACHashing.h"
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
+#include "Logger.h"
 #include "analyses/loopbound/LoopBoundEdgeFunction.h"
 
 namespace HLAC {
@@ -21,7 +23,8 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
     this->registry = registry;
     this->loop = loop;
     this->hasSubLoops = !loop->getSubLoops().empty();
-    this->bounds = LoopBound::DeltaInterval();
+    auto unknownLoopValue = static_cast<long>(ConfigParser::getAnalysisConfiguration().fallback["loops"]["UNKNOWN_LOOP"]);
+    this->bounds = LoopBound::DeltaInterval::interval(unknownLoopValue,unknownLoopValue, LoopBound::DeltaInterval::ValueType::Additive);
     this->parentFunction = parentFunctionNode;
     this->nodeType = NodeType::LOOPNODE;
 
@@ -173,17 +176,105 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
         ++it;
     }
 
-    for (auto &e : this->Edges) {
-        auto srcNode = dynamic_cast<Node *>(e->soure);
-        auto dstNode = dynamic_cast<Node *>(e->destination);
+    this->refreshBackEdge();
+}
 
-        if (srcNode && dstNode) {
-            bool fromIsLatch = this->loop->isLoopLatch(srcNode->block);
-            bool toIsExiting = this->loop->isLoopExiting(dstNode->block);
+static std::string basicBlockToString(const llvm::BasicBlock* basicBlock) {
+    if (basicBlock == nullptr) {
+        return "<null>";
+    }
 
-            if (fromIsLatch && toIsExiting) {
-                this->backEdge = e.get();
-            }
+    std::string output;
+    llvm::raw_string_ostream stream(output);
+    basicBlock->printAsOperand(stream, false);
+    return stream.str();
+}
+
+static std::string genericNodeTypeToString(const HLAC::GenericNode* genericNode) {
+    if (dynamic_cast<const HLAC::Node*>(genericNode) != nullptr) {
+        return "Node";
+    }
+    if (dynamic_cast<const HLAC::LoopNode*>(genericNode) != nullptr) {
+        return "LoopNode";
+    }
+    if (dynamic_cast<const HLAC::VirtualNode*>(genericNode) != nullptr) {
+        return "VirtualNode";
+    }
+    if (dynamic_cast<const HLAC::CallNode*>(genericNode) != nullptr) {
+        return "CallNode";
+    }
+    return "GenericNode";
+}
+
+void LoopNode::debugDumpEdges() const {
+    llvm::BasicBlock* headerBlock = this->loop->getHeader();
+
+    llvm::SmallVector<llvm::BasicBlock*, 8> latchBlocks;
+    this->loop->getLoopLatches(latchBlocks);
+
+    Logger::getInstance().log("Loop dump for function: " + this->parentFunction->name, LOGLEVEL::INFO);
+    Logger::getInstance().log("Header: " + basicBlockToString(headerBlock), LOGLEVEL::INFO);
+
+    for (llvm::BasicBlock* latchBlock : latchBlocks) {
+        Logger::getInstance().log("Latch: " + basicBlockToString(latchBlock), LOGLEVEL::INFO);
+    }
+
+    for (const auto& edgeUniquePointer : this->Edges) {
+        const Edge* edge = edgeUniquePointer.get();
+        if (edge == nullptr) {
+            continue;
+        }
+
+        std::string sourceDescription = genericNodeTypeToString(edge->soure);
+        std::string destinationDescription = genericNodeTypeToString(edge->destination);
+
+        if (auto* sourceNode = dynamic_cast<HLAC::Node*>(edge->soure)) {
+            sourceDescription += " " + basicBlockToString(sourceNode->block);
+        }
+
+        if (auto* destinationNode = dynamic_cast<HLAC::Node*>(edge->destination)) {
+            destinationDescription += " " + basicBlockToString(destinationNode->block);
+        }
+
+        Logger::getInstance().log(
+            "Edge: " + sourceDescription + " -> " + destinationDescription,
+            LOGLEVEL::INFO
+        );
+    }
+}
+
+void LoopNode::refreshBackEdge() {
+    this->backEdge = nullptr;
+
+    llvm::BasicBlock* loopHeader = this->loop->getHeader();
+
+    debugDumpEdges();
+
+    for (auto& edgeUP : this->Edges) {
+        Edge* edge = edgeUP.get();
+        if (edge == nullptr) {
+            continue;
+        }
+
+        auto* sourceNode = dynamic_cast<Node*>(edge->soure);
+        auto* destinationNode = dynamic_cast<Node*>(edge->destination);
+
+        if (sourceNode == nullptr || destinationNode == nullptr) {
+            continue;
+        }
+
+        llvm::SmallVector<llvm::BasicBlock*, 8> loopLatches;
+        this->loop->getLoopLatches(loopLatches);
+
+        auto isLatchBlock = [&](llvm::BasicBlock* basicBlock) {
+            return std::find(loopLatches.begin(), loopLatches.end(), basicBlock) != loopLatches.end();
+        };
+
+        const bool destinationIsHeader = (destinationNode->block == loopHeader);
+
+        if (isLatchBlock(sourceNode->block) && destinationIsHeader) {
+            this->backEdge = edge;
+            return;
         }
     }
 }
@@ -217,19 +308,25 @@ void LoopNode::constructCallNodes(bool considerDebugFunctions) {
                 }
 
                 llvm::Function *calledFunction = callbase->getCalledFunction();
-                auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this->parentFunction);
+                if (calledFunction) {
+                    auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this->parentFunction);
 
-                CallNode *callNode = callNodeUP.get();
-                if (!callNode->isDebugFunction || !considerDebugFunctions) {
-                    this->Nodes.emplace_back(std::move(callNodeUP));
-                    callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                    CallNode *callNode = callNodeUP.get();
+                    if (!callNode->isDebugFunction || !considerDebugFunctions) {
+                        this->Nodes.emplace_back(std::move(callNodeUP));
+                        callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                    }
                 }
             }
 
         } else if (auto *loopNode = dynamic_cast<LoopNode *>(base)) {
-            loopNode->constructCallNodes();
+            loopNode->constructCallNodes(considerDebugFunctions);
         }
     }
+
+    // Call construction may split, replace or remove edges.
+    // Therefore the previously cached backedge pointer may be stale now.
+    this->refreshBackEdge();
 }
 
 std::unique_ptr<LoopNode> LoopNode::makeNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry,
