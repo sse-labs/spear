@@ -61,15 +61,7 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
             continue;
         }
 
-        auto solvedResults = graph->solveMonolithicIlp(ilp.value());
-
-        if (!solvedResults.has_value()) {
-            Logger::getInstance().log(
-                "Failed to solve monolithic ILP for function " + funcNode->name,
-                LOGLEVEL::ERROR
-            );
-            continue;
-        }
+        // auto solvedResults = graph->solveMonolithicIlp(ilp.value());
 
         auto monoBuildEnd = std::chrono::high_resolution_clock::now();
         auto monoBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -85,6 +77,15 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
             functionILPCache[funcName] = ilp;
 
             auto solvedResults = graph->solveMonolithicIlp(ilp.value());
+
+            if (!solvedResults.has_value()) {
+                Logger::getInstance().log(
+                    "Failed to solve monolithic ILP for function " + funcNode->name,
+                    LOGLEVEL::ERROR
+                );
+                auto hmmm = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
+                graph->FunctionEnergyCache[funcNode->name] = hmmm;
+            }
 
             auto monoSolveEnd = std::chrono::high_resolution_clock::now();
             auto monoSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -147,24 +148,32 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
     outputObject["duration"] = monoTotalDuration.count();
     outputObject["functions"] = {};
 
-    for (auto [funcname, energy] : graph->FunctionEnergyCache) {
-        auto ilp = functionILPCache[funcname];
+    for (const auto& [functionName, energy] : graph->FunctionEnergyCache) {
         auto ilpArr = nlohmann::json::array();
         auto ilpObj = nlohmann::json::object();
 
-        ilpObj["numVariables"] = ilp.value().col_lb.size();
-        ilpObj["numConstrains"] = ilp.value().row_lb.size();
+        auto ilpIterator = functionILPCache.find(functionName);
+        if (ilpIterator != functionILPCache.end() && ilpIterator->second.has_value()) {
+            const auto& ilpModel = ilpIterator->second.value();
+            ilpObj["numVariables"] = ilpModel.col_lb.size();
+            ilpObj["numConstrains"] = ilpModel.row_lb.size();
+            ilpObj["status"] = "solved";
+        } else {
+            ilpObj["numVariables"] = 0;
+            ilpObj["numConstrains"] = 0;
+            ilpObj["status"] = "fallback";
+        }
 
         ilpArr.push_back(ilpObj);
 
-        outputObject["functions"][funcname] = {
+        outputObject["functions"][functionName] = {
             {"energy", energy},
             {"ILPS", ilpArr}
         };
 
-        auto funcNode = graph->getFunctionByName(funcname);
-        for ( auto &node : funcNode->Nodes ) {
-            PassUtil::appendGraphContent(outputObject["functions"][funcname], node.get());
+        auto functionNode = graph->getFunctionByName(functionName);
+        for (auto& node : functionNode->Nodes) {
+            PassUtil::appendGraphContent(outputObject["functions"][functionName], node.get());
         }
     }
 

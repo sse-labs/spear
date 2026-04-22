@@ -248,34 +248,30 @@ void LoopNode::refreshBackEdge() {
 
     llvm::BasicBlock* loopHeader = this->loop->getHeader();
 
-    debugDumpEdges();
+    // debugDumpEdges();
 
-    for (auto& edgeUP : this->Edges) {
-        Edge* edge = edgeUP.get();
+    for (auto& edgeUniquePointer : this->Edges) {
+        Edge* edge = edgeUniquePointer.get();
         if (edge == nullptr) {
             continue;
         }
 
-        auto* sourceNode = dynamic_cast<Node*>(edge->soure);
         auto* destinationNode = dynamic_cast<Node*>(edge->destination);
-
-        if (sourceNode == nullptr || destinationNode == nullptr) {
+        if (destinationNode == nullptr) {
             continue;
         }
 
-        llvm::SmallVector<llvm::BasicBlock*, 8> loopLatches;
-        this->loop->getLoopLatches(loopLatches);
-
-        auto isLatchBlock = [&](llvm::BasicBlock* basicBlock) {
-            return std::find(loopLatches.begin(), loopLatches.end(), basicBlock) != loopLatches.end();
-        };
-
-        const bool destinationIsHeader = (destinationNode->block == loopHeader);
-
-        if (isLatchBlock(sourceNode->block) && destinationIsHeader) {
-            this->backEdge = edge;
-            return;
+        if (destinationNode->block != loopHeader) {
+            continue;
         }
+
+        // Ignore artificial loop entry edge
+        if (dynamic_cast<VirtualNode*>(edge->soure) != nullptr) {
+            continue;
+        }
+
+        this->backEdge = edge;
+        return;
     }
 }
 
