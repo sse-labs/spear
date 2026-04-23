@@ -826,7 +826,7 @@ class hlac {
      * @param model Constructed monolithic model
      * @return Mapping of function name to monolithic ILP result
      */
-    std::optional<ILPResult> solveMonolithicIlp(ILPModel &model, std::string fname="");
+    std::optional<ILPResult> solveMonolithicIlp(ILPModel &model, std::string fname = "");
 
     /**
      * Solve the clustered models of the contained functions
