@@ -4,16 +4,9 @@
  * All rights reserved.
  */
 
-#ifndef SPEAR_ILPDEBUG_H
-#define SPEAR_ILPDEBUG_H
+#ifndef SRC_SPEAR_ILP_ILPDEBUG_H_
+#define SRC_SPEAR_ILP_ILPDEBUG_H_
 
-/*
- * Copyright (c) 2026 Maximilian Krebs
- * All rights reserved.
- */
-
-#ifndef ILP_ILPDEBUG_H
-#define ILP_ILPDEBUG_H
 
 #include <memory>
 #include <string>
@@ -106,6 +99,4 @@ class ILPDebug {
         const std::string &name);
 };
 
-#endif
-
-#endif //SPEAR_ILPDEBUG_H
+#endif  // SRC_SPEAR_ILP_ILPDEBUG_H_

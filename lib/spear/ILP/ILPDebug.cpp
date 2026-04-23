@@ -4,6 +4,10 @@
  */
 
 #include "ILP/ILPDebug.h"
+#include "Logger.h"
+
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include <iomanip>
 #include <limits>
@@ -11,11 +15,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <llvm/IR/BasicBlock.h>
-#include <llvm/Support/raw_ostream.h>
-
-#include "Logger.h"
 
 std::string ILPDebug::basicBlockToDebugString(const llvm::BasicBlock *basicBlock) {
     if (basicBlock == nullptr) {

@@ -24,8 +24,10 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
     this->registry = registry;
     this->loop = loop;
     this->hasSubLoops = !loop->getSubLoops().empty();
-    auto unknownLoopValue = static_cast<long>(ConfigParser::getAnalysisConfiguration().fallback["loops"]["UNKNOWN_LOOP"]);
-    this->bounds = LoopBound::DeltaInterval::interval(0,unknownLoopValue, LoopBound::DeltaInterval::ValueType::Additive);
+    auto unknownLoopValue = static_cast<int64_t>(
+        ConfigParser::getAnalysisConfiguration().fallback["loops"]["UNKNOWN_LOOP"]);
+    this->bounds = LoopBound::DeltaInterval::interval(0, unknownLoopValue,
+        LoopBound::DeltaInterval::ValueType::Additive);
     this->parentFunction = parentFunctionNode;
     this->nodeType = NodeType::LOOPNODE;
 
@@ -239,8 +241,7 @@ void LoopNode::debugDumpEdges() const {
 
         Logger::getInstance().log(
             "Edge: " + sourceDescription + " -> " + destinationDescription,
-            LOGLEVEL::INFO
-        );
+            LOGLEVEL::INFO);
     }
 }
 

@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <string>
 
 #include <CbcModel.hpp>
 #include <OsiClpSolverInterface.hpp>

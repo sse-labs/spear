@@ -5,7 +5,7 @@
 
 #include <vector>
 #include <memory>
-#include <utility>
+#include <string>
 
 #include "ILP/ILPSolver.h"
 
@@ -26,8 +26,7 @@ ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutio
         underlyingILPModel.col_ub.data(),
         scaledObjective.data(),
         underlyingILPModel.row_lb.data(),
-        underlyingILPModel.row_ub.data()
-    );
+        underlyingILPModel.row_ub.data());
 
     solver.setObjSense(-1.0);
 
@@ -74,7 +73,7 @@ std::optional<std::vector<double>> ILPSolver::getSolvedSolution() const {
 
 ILPSolverStatus ILPSolver::getStatus() const {
     if (!solutionModel) {
-        return ILPSolverStatus::INFEASIBLE; // or some other default status
+        return ILPSolverStatus::INFEASIBLE;
     }
 
     int cbcStatus = solutionModel->status();
@@ -84,7 +83,7 @@ ILPSolverStatus ILPSolver::getStatus() const {
         case 1: return ILPSolverStatus::UNBOUNDED;
         case 2: return ILPSolverStatus::TIME_LIMIT;
         case 3: return ILPSolverStatus::NUMERICAL_ISSUES;
-        default: return ILPSolverStatus::INFEASIBLE; // or some other default status
+        default: return ILPSolverStatus::INFEASIBLE;
     }
 }
 
