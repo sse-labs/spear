@@ -52,7 +52,7 @@ class ILPBuilder {
      * @return Optional over ILPResult. Contains the ILPResult if the model could be solved successfully, std::nullopt
      * otherwise
      */
-    static std::optional<ILPResult> solveModel(const ILPModel &ilpModel, const std::string &debugLabel = "");
+    static std::optional<ILPResult> solveModel(const ILPModel &ilpModel);
 
     static void debugDumpILPModel(const ILPModel &model, const std::vector<std::unique_ptr<HLAC::Edge>> &edges, const std::string &name);
 
@@ -93,7 +93,7 @@ class ILPBuilder {
         ILPModel &model,
         const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
         const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
-        int invocationCol);
+        const std::vector<int> *invocationCols);
 
 
     static std::vector<int> getInvocationColumnsForLoopNode(HLAC::LoopNode *loopNode,
@@ -129,7 +129,7 @@ class ILPBuilder {
     static void appendLoopBoundConstraint(
         ILPModel &model,
         HLAC::LoopNode *loopNode,
-        int invocationCol);
+        const std::vector<int> &invocationCols);
 
 
     /**
