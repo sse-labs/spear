@@ -11,6 +11,7 @@
 
 #include "ConfigParser.h"
 #include "HLAC/hlac.h"
+#include "HLAC/util.h"
 #include "ILP/ILPBuilder.h"
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
@@ -55,10 +56,12 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
         auto ilp = graph->buildMonolithicILP(funcNode.get());
 
         if (!ilp.has_value()) {
-            Logger::getInstance().log(
+            if (!HLAC::Util::starts_with(funcNode->name, "__psr")
+                && !HLAC::Util::starts_with(funcNode->name, "__clang")) {
+                Logger::getInstance().log(
                 "Failed to build monolithic ILP for function " + funcNode->name,
-                LOGLEVEL::ERROR
-            );
+                LOGLEVEL::ERROR);
+            }
             continue;
         }
 
@@ -82,8 +85,8 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
             if (!solvedResults.has_value()) {
                 Logger::getInstance().log(
                     "Failed to solve monolithic ILP for function " + funcNode->name,
-                    LOGLEVEL::ERROR
-                );
+                    LOGLEVEL::ERROR);
+
                 auto hmmm = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
                 graph->FunctionEnergyCache[funcNode->name] = hmmm;
             }

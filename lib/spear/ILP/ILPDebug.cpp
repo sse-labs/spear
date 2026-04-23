@@ -4,6 +4,10 @@
  */
 
 #include "ILP/ILPDebug.h"
+#include "Logger.h"
+
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include <iomanip>
 #include <limits>
@@ -11,11 +15,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <llvm/IR/BasicBlock.h>
-#include <llvm/Support/raw_ostream.h>
-
-#include "Logger.h"
 
 std::string ILPDebug::basicBlockToDebugString(const llvm::BasicBlock *basicBlock) {
     if (basicBlock == nullptr) {
@@ -59,41 +58,6 @@ std::string ILPDebug::genericNodeToDebugString(const HLAC::GenericNode *genericN
     return outputStream.str();
 }
 
-std::string ILPDebug::debugGenericNodeToString(const HLAC::GenericNode *genericNode) {
-    if (genericNode == nullptr) {
-        return "<null>";
-    }
-
-    if (const auto *normalNode = dynamic_cast<const HLAC::Node *>(genericNode)) {
-        return basicBlockToDebugString(normalNode->block);
-    }
-
-    if (const auto *callNode = dynamic_cast<const HLAC::CallNode *>(genericNode)) {
-        if (callNode->parentFunctionNode != nullptr &&
-            callNode->parentFunctionNode->function != nullptr &&
-            callNode->calledFunction != nullptr) {
-            return "Call(" + callNode->calledFunction->getName().str() + ")";
-        }
-        return "CallNode";
-    }
-
-    if (const auto *virtualNode = dynamic_cast<const HLAC::VirtualNode *>(genericNode)) {
-        if (virtualNode->isEntry) {
-            return "VEntry";
-        }
-        if (virtualNode->isExit) {
-            return "VExit";
-        }
-        return "VirtualNode";
-    }
-
-    if (dynamic_cast<const HLAC::LoopNode *>(genericNode) != nullptr) {
-        return "LoopNode";
-    }
-
-    return "GenericNode";
-}
-
 std::string ILPDebug::edgeToDebugString(const HLAC::Edge *edge) {
     if (edge == nullptr) {
         return "<null-edge>";
@@ -104,23 +68,6 @@ std::string ILPDebug::edgeToDebugString(const HLAC::Edge *edge) {
                  << " -> "
                  << genericNodeToDebugString(edge->destination)
                  << " [col=" << edge->ilpIndex << "]";
-    return outputStream.str();
-}
-
-std::string ILPDebug::debugEdgeToString(const HLAC::Edge *edge) {
-    if (edge == nullptr) {
-        return "<null-edge>";
-    }
-
-    const auto *sourceNode = edge->soure;
-    const auto *destinationNode = edge->destination;
-
-    std::ostringstream outputStream;
-    outputStream << (sourceNode != nullptr ? sourceNode->getDotName() : "null")
-                 << " -> "
-                 << (destinationNode != nullptr ? destinationNode->getDotName() : "null")
-                 << " [col=" << edge->ilpIndex << "]";
-
     return outputStream.str();
 }
 
@@ -212,7 +159,7 @@ void ILPDebug::dumpILPModel(
         for (const auto &edgePointer : edges) {
             const auto *edge = edgePointer.get();
             if (edge != nullptr && edge->ilpIndex == columnIndex) {
-                edgeInfo = debugEdgeToString(edge);
+                edgeInfo = edgeToDebugString(edge);
                 break;
             }
         }

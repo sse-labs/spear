@@ -10,10 +10,10 @@
     }
   },
   "analysis": {
-    "type": "clustered",
+    "type": "comparison",
     "outputmode": "normal",
     "outputDirectory": "./output/hmmm",
-    "clusteredCacheEnabled": false,
+    "clusteredCacheEnabled": true,
     "feasibilityEnabled": true,
     "writeDotFiles": false,
     "elbMappingActivated": true,

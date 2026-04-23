@@ -83,7 +83,7 @@ json PassUtil::legacyWrapper(llvm::Module &module, llvm::FunctionAnalysisManager
     FunctionTree *functionTree = nullptr;
     for (llvm::Function &function : module) {
         if (function.getName() == "main") {
-            functionTree = FunctionTree::construct(&function);
+            functionTree = FunctionTree::construct(&function, {});
             break;
         }
     }

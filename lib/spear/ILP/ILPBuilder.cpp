@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 #include <iostream>
+#include <string>
 
 #include "ILP/ILPBuilder.h"
 
@@ -234,8 +235,7 @@ void ILPBuilder::appendLoopBoundConstraint(
     if (loopNode == nullptr) {
         Logger::getInstance().log(
             "Loop bound debug: loopNode is null.",
-            LOGLEVEL::ERROR
-        );
+            LOGLEVEL::ERROR);
         return;
     }
 
@@ -245,13 +245,8 @@ void ILPBuilder::appendLoopBoundConstraint(
     if (loopNode->backEdges.empty()) {
         Logger::getInstance().log(
             "Loop bound debug: no backedges found for loop " + loopNode->getDotName(),
-            LOGLEVEL::ERROR
-        );
+            LOGLEVEL::ERROR);
         return;
-    }
-
-    for (std::size_t backEdgeIndex = 0; backEdgeIndex < loopNode->backEdges.size(); ++backEdgeIndex) {
-        HLAC::Edge *backEdge = loopNode->backEdges[backEdgeIndex];
     }
 
     const double lowerBoundAsDouble = static_cast<double>(lowerBound);

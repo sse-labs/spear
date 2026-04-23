@@ -18,36 +18,16 @@
 
 namespace HLAC {
 
-namespace {
-
-bool nodeBelongsToLoopScope(const llvm::Loop *owningLoop, const GenericNode *genericNode) {
-    if (owningLoop == nullptr || genericNode == nullptr) {
-        return false;
-    }
-
-    if (const auto *normalNode = dynamic_cast<const Node *>(genericNode)) {
-        return normalNode->block != nullptr && owningLoop->contains(normalNode->block);
-    }
-
-    if (const auto *loopNode = dynamic_cast<const LoopNode *>(genericNode)) {
-        return loopNode->loop != nullptr &&
-               loopNode->loop->getHeader() != nullptr &&
-               owningLoop->contains(loopNode->loop->getHeader());
-    }
-
-    return false;
-}
-
-}  // namespace
-
 LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry,
                    FunctionNode *parentFunctionNode) {
     // Store the LLVM loop
     this->registry = registry;
     this->loop = loop;
     this->hasSubLoops = !loop->getSubLoops().empty();
-    auto unknownLoopValue = static_cast<long>(ConfigParser::getAnalysisConfiguration().fallback["loops"]["UNKNOWN_LOOP"]);
-    this->bounds = LoopBound::DeltaInterval::interval(0, unknownLoopValue, LoopBound::DeltaInterval::ValueType::Additive);
+    auto unknownLoopValue = static_cast<int64_t>(
+        ConfigParser::getAnalysisConfiguration().fallback["loops"]["UNKNOWN_LOOP"]);
+    this->bounds = LoopBound::DeltaInterval::interval(0, unknownLoopValue,
+        LoopBound::DeltaInterval::ValueType::Additive);
     this->parentFunction = parentFunctionNode;
     this->nodeType = NodeType::LOOPNODE;
 
@@ -95,29 +75,111 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
         }
     }
 
-    // Move all edges that semantically belong to this loop scope into this->Edges.
-    // This must include edges whose endpoints are normal nodes inside nested subloops,
-    // because child loop collapsing will later work on this scope-local edge container.
-    for (auto functionEdgeIterator = function_node->Edges.begin();
-         functionEdgeIterator != function_node->Edges.end();) {
-        Edge *edge = functionEdgeIterator->get();
-        if (edge == nullptr) {
-            ++functionEdgeIterator;
-            continue;
-        }
+    // Build pointer set of nodes now owned by the loop
+    std::unordered_set<GenericNode *> inLoop;
+    inLoop.reserve(this->Nodes.size());
+    for (auto &nup : this->Nodes) {
+        inLoop.insert(nup.get());
+    }
 
-        const bool sourceBelongsToLoopScope = nodeBelongsToLoopScope(this->loop, edge->soure);
-        const bool destinationBelongsToLoopScope = nodeBelongsToLoopScope(this->loop, edge->destination);
+    // Move all edges contained entirely inside the loop into the loop node
+    for (auto it = function_node->Edges.begin(); it != function_node->Edges.end();) {
+        Edge *edge = it->get();
+        bool srcIn = (inLoop.count(edge->soure) != 0);
+        bool dstIn = (inLoop.count(edge->destination) != 0);
 
-        if (sourceBelongsToLoopScope && destinationBelongsToLoopScope) {
-            this->Edges.push_back(std::move(*functionEdgeIterator));
-            functionEdgeIterator = function_node->Edges.erase(functionEdgeIterator);
+        if (srcIn && dstIn) {
+            this->Edges.push_back(std::move(*it));
+            it = function_node->Edges.erase(it);
         } else {
-            ++functionEdgeIterator;
+            ++it;
         }
     }
 
     this->hash = LoopNode::calculateHash();
+}
+
+void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
+    // Collapse subloops first, while edges still reference their internal nodes.
+    for (auto &nodeUP : this->Nodes) {
+        if (auto *childLoop = dynamic_cast<LoopNode *>(nodeUP.get())) {
+            childLoop->collapseLoop(edgeList);
+        }
+    }
+
+    // Build set of nodes directly contained in this loop scope.
+    std::unordered_set<GenericNode *> inLoop;
+    inLoop.reserve(this->Nodes.size());
+
+    int entryIndex = -1;
+    int exitIndex = -1;
+
+    for (int i=0; i < this->Nodes.size(); i++) {
+        auto &nup = this->Nodes[i];
+        if (auto *normalNup = dynamic_cast<Node *>(nup.get())) {
+            if (this->loop->isLoopLatch(normalNup->block)) {
+                exitIndex = i;
+            }
+
+            if (this->loop->isLoopExiting(normalNup->block)) {
+                entryIndex = i;
+            }
+        }
+        inLoop.insert(nup.get());
+    }
+
+    auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
+    auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
+
+    this->Nodes.push_back(std::move(entryNode));
+
+    int virtEntryIndex = this->Nodes.size() - 1;
+
+    this->Nodes.push_back(std::move(exitNode));
+
+    int virtExitIndex = this->Nodes.size() - 1;
+
+    auto entryEdge = std::make_unique<Edge>(
+        Edge(this->Nodes[virtEntryIndex].get(), this->Nodes[entryIndex].get()));
+
+    auto exitEdge = std::make_unique<Edge>(
+        Edge(this->Nodes[exitIndex].get(), this->Nodes[virtExitIndex].get()));
+
+    this->Edges.push_back(std::move(entryEdge));
+    this->Edges.push_back(std::move(exitEdge));
+
+    // Collapse this loop:
+    //    - move edges fully inside this loop into this->Edges
+    //    - redirect boundary edges to use this as endpoint
+    for (auto it = edgeList.begin(); it != edgeList.end();) {
+        Edge *e = it->get();
+        if (!e) {
+            ++it;
+            continue;
+        }
+
+        bool srcIn = (inLoop.count(e->soure) != 0);
+        bool dstIn = (inLoop.count(e->destination) != 0);
+
+        // Edge completely inside this loop: move it into this->Edges
+        if (srcIn && dstIn) {
+            this->Edges.push_back(std::move(*it));
+            it = edgeList.erase(it);
+            continue;
+        }
+
+        // Boundary edge: redirect endpoints that touch nodes inside this loop
+        if (srcIn) {
+            e->soure = this;
+        }
+        if (dstIn) {
+            e->destination = this;
+        }
+
+        ++it;
+    }
+
+    this->refreshBackEdges();
 }
 
 static std::string basicBlockToString(const llvm::BasicBlock* basicBlock) {
@@ -127,277 +189,24 @@ static std::string basicBlockToString(const llvm::BasicBlock* basicBlock) {
 
     std::string output;
     llvm::raw_string_ostream stream(output);
-
-    // Print block as operand (e.g. %34 instead of full body)
     basicBlock->printAsOperand(stream, false);
-
     return stream.str();
 }
 
 static std::string genericNodeTypeToString(const HLAC::GenericNode* genericNode) {
-    if (genericNode == nullptr) {
-        return "<null>";
-    }
-
     if (dynamic_cast<const HLAC::Node*>(genericNode) != nullptr) {
         return "Node";
     }
-
     if (dynamic_cast<const HLAC::LoopNode*>(genericNode) != nullptr) {
         return "LoopNode";
     }
-
     if (dynamic_cast<const HLAC::VirtualNode*>(genericNode) != nullptr) {
-        const auto* virtualNode = dynamic_cast<const HLAC::VirtualNode*>(genericNode);
-
-        if (virtualNode->isEntry) {
-            return "VirtualEntry";
-        }
-
-        if (virtualNode->isExit) {
-            return "VirtualExit";
-        }
-
         return "VirtualNode";
     }
-
     if (dynamic_cast<const HLAC::CallNode*>(genericNode) != nullptr) {
         return "CallNode";
     }
-
-    if (dynamic_cast<const HLAC::FunctionNode*>(genericNode) != nullptr) {
-        return "FunctionNode";
-    }
-
     return "GenericNode";
-}
-
-void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
-    // Collapse subloops first against this loop scope.
-    // Child loops must not inspect an outer edge container.
-    for (auto &nodeUniquePointer : this->Nodes) {
-        if (auto *childLoopNode = dynamic_cast<LoopNode *>(nodeUniquePointer.get())) {
-            childLoopNode->collapseLoop(this->Edges);
-        }
-    }
-
-    Logger::getInstance().log(
-        "Collapse loop debug for function: " + this->parentFunction->name,
-        LOGLEVEL::INFO
-    );
-    Logger::getInstance().log(
-        "Collapse loop debug: loop node = " + this->getDotName(),
-        LOGLEVEL::INFO
-    );
-    Logger::getInstance().log(
-        "Collapse loop debug: header = " + basicBlockToString(this->loop->getHeader()),
-        LOGLEVEL::INFO
-    );
-
-    llvm::SmallVector<llvm::BasicBlock *, 8> latchBlocks;
-    this->loop->getLoopLatches(latchBlocks);
-    for (llvm::BasicBlock *latchBlock : latchBlocks) {
-        Logger::getInstance().log(
-            "Collapse loop debug: latch = " + basicBlockToString(latchBlock),
-            LOGLEVEL::INFO
-        );
-    }
-
-    llvm::SmallVector<llvm::BasicBlock *, 8> exitingBlocks;
-    this->loop->getExitingBlocks(exitingBlocks);
-    for (llvm::BasicBlock *exitingBlock : exitingBlocks) {
-        Logger::getInstance().log(
-            "Collapse loop debug: exiting = " + basicBlockToString(exitingBlock),
-            LOGLEVEL::INFO
-        );
-    }
-
-    // Build the set of nodes directly contained in this loop scope.
-    std::unordered_set<GenericNode *> nodesInsideLoop;
-    nodesInsideLoop.reserve(this->Nodes.size());
-
-    for (int nodeIndex = 0; nodeIndex < static_cast<int>(this->Nodes.size()); ++nodeIndex) {
-        auto &nodeUniquePointer = this->Nodes[nodeIndex];
-
-        if (auto *normalNode = dynamic_cast<Node *>(nodeUniquePointer.get())) {
-            const bool isHeader = (normalNode->block == this->loop->getHeader());
-            const bool isLatch = this->loop->isLoopLatch(normalNode->block);
-            const bool isExiting = this->loop->isLoopExiting(normalNode->block);
-
-            Logger::getInstance().log(
-                "Collapse loop debug: node[" + std::to_string(nodeIndex) + "] = Node(" +
-                basicBlockToString(normalNode->block) + ") {header=" + std::to_string(isHeader ? 1 : 0) +
-                ", latch=" + std::to_string(isLatch ? 1 : 0) +
-                ", exiting=" + std::to_string(isExiting ? 1 : 0) + "}",
-                LOGLEVEL::INFO
-            );
-        } else if (dynamic_cast<LoopNode *>(nodeUniquePointer.get()) != nullptr) {
-            Logger::getInstance().log(
-                "Collapse loop debug: node[" + std::to_string(nodeIndex) + "] = LoopNode",
-                LOGLEVEL::INFO
-            );
-        } else if (dynamic_cast<VirtualNode *>(nodeUniquePointer.get()) != nullptr) {
-            Logger::getInstance().log(
-                "Collapse loop debug: node[" + std::to_string(nodeIndex) + "] = VirtualNode",
-                LOGLEVEL::INFO
-            );
-        } else if (dynamic_cast<CallNode *>(nodeUniquePointer.get()) != nullptr) {
-            Logger::getInstance().log(
-                "Collapse loop debug: node[" + std::to_string(nodeIndex) + "] = CallNode",
-                LOGLEVEL::INFO
-            );
-        } else {
-            Logger::getInstance().log(
-                "Collapse loop debug: node[" + std::to_string(nodeIndex) + "] = GenericNode",
-                LOGLEVEL::INFO
-            );
-        }
-
-        nodesInsideLoop.insert(nodeUniquePointer.get());
-    }
-
-    auto virtualEntryNode = VirtualNode::makeVirtualPoint(true, false, this);
-    auto virtualExitNode = VirtualNode::makeVirtualPoint(false, true, this);
-
-    this->Nodes.push_back(std::move(virtualEntryNode));
-    const int virtualEntryIndex = static_cast<int>(this->Nodes.size()) - 1;
-
-    this->Nodes.push_back(std::move(virtualExitNode));
-    const int virtualExitIndex = static_cast<int>(this->Nodes.size()) - 1;
-
-    VirtualNode *virtualEntry = dynamic_cast<VirtualNode *>(this->Nodes[virtualEntryIndex].get());
-    VirtualNode *virtualExit = dynamic_cast<VirtualNode *>(this->Nodes[virtualExitIndex].get());
-
-    if (virtualEntry == nullptr || virtualExit == nullptr) {
-        Logger::getInstance().log(
-            "Collapse loop debug: failed to create virtual entry/exit nodes for loop " + this->getDotName(),
-            LOGLEVEL::ERROR
-        );
-        return;
-    }
-
-    // Collapse this loop:
-    //    - move edges fully inside this loop into this->Edges
-    //    - redirect boundary edges to use this as endpoint
-    //    - create internal virtual entry/exit edges from the REAL boundary edges
-    for (auto edgeIterator = edgeList.begin(); edgeIterator != edgeList.end();) {
-        Edge *edge = edgeIterator->get();
-        if (edge == nullptr) {
-            ++edgeIterator;
-            continue;
-        }
-
-        const bool sourceIsInsideLoop = (nodesInsideLoop.count(edge->soure) != 0);
-        const bool destinationIsInsideLoop = (nodesInsideLoop.count(edge->destination) != 0);
-
-        std::string sourceDescription = genericNodeTypeToString(edge->soure);
-        std::string destinationDescription = genericNodeTypeToString(edge->destination);
-
-        if (auto *sourceNode = dynamic_cast<Node *>(edge->soure)) {
-            sourceDescription += "(" + basicBlockToString(sourceNode->block) + ")";
-        }
-
-        if (auto *destinationNode = dynamic_cast<Node *>(edge->destination)) {
-            destinationDescription += "(" + basicBlockToString(destinationNode->block) + ")";
-        }
-
-        Logger::getInstance().log(
-            "Collapse loop debug: inspect edge " + sourceDescription + " -> " + destinationDescription +
-            " {srcIn=" + std::to_string(sourceIsInsideLoop ? 1 : 0) +
-            ", dstIn=" + std::to_string(destinationIsInsideLoop ? 1 : 0) + "}",
-            LOGLEVEL::INFO
-        );
-
-        // Edge completely inside this loop: move it into this->Edges unchanged.
-        if (sourceIsInsideLoop && destinationIsInsideLoop) {
-            Logger::getInstance().log(
-                "Collapse loop debug: moving internal edge into loop",
-                LOGLEVEL::INFO
-            );
-            this->Edges.push_back(std::move(*edgeIterator));
-            edgeIterator = edgeList.erase(edgeIterator);
-            continue;
-        }
-
-        // Boundary edge entering the loop:
-        //   outside -> inside
-        // Redirect the parent edge to outside -> LoopNode
-        // and create the internal edge VirtualEntry -> originalInsideDestination.
-        if (!sourceIsInsideLoop && destinationIsInsideLoop) {
-            Logger::getInstance().log(
-                "Collapse loop debug: creating virtual entry edge VirtualEntry -> " + destinationDescription,
-                LOGLEVEL::INFO
-            );
-
-            auto internalEntryEdge = std::make_unique<Edge>(virtualEntry, edge->destination);
-            this->Edges.push_back(std::move(internalEntryEdge));
-
-            Logger::getInstance().log(
-                "Collapse loop debug: redirecting edge destination from " + destinationDescription + " to LoopNode",
-                LOGLEVEL::INFO
-            );
-            edge->destination = this;
-
-            ++edgeIterator;
-            continue;
-        }
-
-        // Boundary edge leaving the loop:
-        //   inside -> outside
-        // Redirect the parent edge to LoopNode -> outside
-        // and create the internal edge originalInsideSource -> VirtualExit.
-        if (sourceIsInsideLoop && !destinationIsInsideLoop) {
-            Logger::getInstance().log(
-                "Collapse loop debug: creating virtual exit edge " + sourceDescription + " -> VirtualExit",
-                LOGLEVEL::INFO
-            );
-
-            auto internalExitEdge = std::make_unique<Edge>(edge->soure, virtualExit);
-            this->Edges.push_back(std::move(internalExitEdge));
-
-            Logger::getInstance().log(
-                "Collapse loop debug: redirecting edge source from " + sourceDescription + " to LoopNode",
-                LOGLEVEL::INFO
-            );
-            edge->soure = this;
-
-            ++edgeIterator;
-            continue;
-        }
-
-        // Edge completely outside this loop.
-        ++edgeIterator;
-    }
-
-    Logger::getInstance().log(
-        "Collapse loop debug: final internal edge set for loop " + this->getDotName(),
-        LOGLEVEL::INFO
-    );
-
-    for (const auto &edgeUniquePointer : this->Edges) {
-        const Edge *edge = edgeUniquePointer.get();
-        if (edge == nullptr) {
-            continue;
-        }
-
-        std::string sourceDescription = genericNodeTypeToString(edge->soure);
-        std::string destinationDescription = genericNodeTypeToString(edge->destination);
-
-        if (auto *sourceNode = dynamic_cast<Node *>(edge->soure)) {
-            sourceDescription += "(" + basicBlockToString(sourceNode->block) + ")";
-        }
-
-        if (auto *destinationNode = dynamic_cast<Node *>(edge->destination)) {
-            destinationDescription += "(" + basicBlockToString(destinationNode->block) + ")";
-        }
-
-        Logger::getInstance().log(
-            "Collapse loop debug: internal edge " + sourceDescription + " -> " + destinationDescription,
-            LOGLEVEL::INFO
-        );
-    }
-
-    this->refreshBackEdges();
 }
 
 void LoopNode::debugDumpEdges() const {
@@ -432,8 +241,7 @@ void LoopNode::debugDumpEdges() const {
 
         Logger::getInstance().log(
             "Edge: " + sourceDescription + " -> " + destinationDescription,
-            LOGLEVEL::INFO
-        );
+            LOGLEVEL::INFO);
     }
 }
 
@@ -527,9 +335,7 @@ std::unique_ptr<LoopNode> LoopNode::makeNode(llvm::Loop *loop, FunctionNode *fun
 
 void LoopNode::printDotRepresentation(std::ostream &os) {
     os << "subgraph \"" << this->getDotName() << "\" {\n";
-    os << "style=filled;";
-    os << "fillcolor=\"#FFFFFF\";";
-    os << "color=\"#2B2B2B\";";
+    os << "style=filled;", os << "fillcolor=\"#FFFFFF\";", os << "color=\"#2B2B2B\";";
     os << "penwidth=2;";
     os << "style=\"rounded,filled\";";
     os << "fontname=\"Courier\";";
@@ -552,9 +358,7 @@ void LoopNode::printDotRepresentation(std::ostream &os) {
 
 void LoopNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> solution) {
     os << "subgraph \"" << this->getDotName() << "\" {\n";
-    os << "style=filled;";
-    os << "fillcolor=\"#FFFFFF\";";
-    os << "color=\"#2B2B2B\";";
+    os << "style=filled;", os << "fillcolor=\"#FFFFFF\";", os << "color=\"#2B2B2B\";";
     os << "penwidth=2;";
     os << "style=\"rounded,filled\";";
     os << "fontname=\"Courier\";";
@@ -592,5 +396,6 @@ double LoopNode::getEnergy() {
 std::string LoopNode::calculateHash() {
     return Hasher::getHashForNode(this);
 }
+
 
 }  // namespace HLAC

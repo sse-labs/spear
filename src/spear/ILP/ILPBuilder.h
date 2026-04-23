@@ -22,7 +22,7 @@ class ILPBuilder {
     /**
      * Empty dummy constructor
      */
-    ILPBuilder() {}
+    ILPBuilder() = default;
 
      /**
       * Construct a monolithic ILP from the given functionNode pointer
@@ -54,10 +54,7 @@ class ILPBuilder {
      */
     static std::optional<ILPResult> solveModel(const ILPModel &ilpModel);
 
-    static void debugDumpILPModel(const ILPModel &model, const std::vector<std::unique_ptr<HLAC::Edge>> &edges, const std::string &name);
-
  private:
-
     /**
      * Insert feasibility information contained in the given functionNode to the given model.
      * Encodes the feasibility via bounds on the respective edge variables. If an edge is infeasible we set the upper
