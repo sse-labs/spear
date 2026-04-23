@@ -23,7 +23,7 @@ var searchData=
   ['getfunctionbyname_20',['getFunctionByName',['../classHLAC_1_1hlac.html#a8f4dc5f70ce3ed49b249e1eda06c8ba0',1,'HLAC::hlac']]],
   ['gethashfornode_21',['getHashForNode',['../classHLAC_1_1Hasher.html#aea85f10b8d58261a020de14fce917df0',1,'HLAC::Hasher']]],
   ['gethashvalue_22',['getHashValue',['../structSetSatnessKeyInfo.html#a3fd512762045e9c3200e04d71e68639a',1,'SetSatnessKeyInfo']]],
-  ['getinstance_23',['getinstance',['../classELBMapper.html#a8a91802306543fc7992e0190e5bc24ac',1,'ELBMapper::getInstance()'],['../classILPClusterCache.html#ac62fb985129eeebf1e6cd676dc4bd99c',1,'ILPClusterCache::getInstance()']]],
+  ['getinstance_23',['getinstance',['../classILPClusterCache.html#ac62fb985129eeebf1e6cd676dc4bd99c',1,'ILPClusterCache::getInstance()'],['../classELBMapper.html#a8a91802306543fc7992e0190e5bc24ac',1,'ELBMapper::getInstance()']]],
   ['getkind_24',['getKind',['../classFeasibility_1_1FeasibilityElement.html#a9b50459e7bb44039ae21ef98bd94b549',1,'Feasibility::FeasibilityElement']]],
   ['getlatches_25',['getLatches',['../classLoopTree.html#a5bbe89a53070d2ca8c76a1cccdd221fa',1,'LoopTree']]],
   ['getlazycallgraphpostorder_26',['getLazyCallGraphPostOrder',['../classHLAC_1_1Util.html#a5610fb3c30c200c11f4f93e3fd480798',1,'HLAC::Util']]],
@@ -51,9 +51,11 @@ var searchData=
   ['getsolvedmodelvalue_48',['getSolvedModelValue',['../classILPSolver.html#a4cf7d139be712fd7e0125442d1346ec3',1,'ILPSolver']]],
   ['getsolvedsolution_49',['getSolvedSolution',['../classILPSolver.html#a15002219a6be6d91803277287dd22d9b',1,'ILPSolver']]],
   ['getsolver_50',['getSolver',['../classFeasibility_1_1FeasibilityAnalysisManager.html#ac927e38047adc4acf3ef7216365aed64',1,'Feasibility::FeasibilityAnalysisManager']]],
-  ['gettombstonekey_51',['getTombstoneKey',['../structSetSatnessKeyInfo.html#af3eb6c56aff3e29480ba94f594d35a3a',1,'SetSatnessKeyInfo']]],
-  ['getunknowncost_52',['getUnknownCost',['../classProfileHandler.html#aa4209f2865309b654e5b64222f731ecb',1,'ProfileHandler']]],
-  ['getupperbound_53',['getUpperBound',['../classLoopBound_1_1DeltaInterval.html#a6973e1122100293315a192dc0812b7b0',1,'LoopBound::DeltaInterval']]],
-  ['getvaluetypeasstr_54',['getValueTypeAsStr',['../classLoopBound_1_1DeltaInterval.html#adc5150018674204477f1b07419839b38',1,'LoopBound::DeltaInterval']]],
-  ['greatestlowerbound_55',['greatestLowerBound',['../classLoopBound_1_1DeltaInterval.html#ac085cf1b44949f4de822d85d5d33fff8',1,'LoopBound::DeltaInterval']]]
+  ['getstatus_51',['getStatus',['../classILPSolver.html#a7ecd8051f3539f6af5e5606c533ef3bb',1,'ILPSolver']]],
+  ['getstatusstring_52',['getStatusString',['../classILPSolver.html#aad09d3957a9ba66c834be10b21ddfc7b',1,'ILPSolver']]],
+  ['gettombstonekey_53',['getTombstoneKey',['../structSetSatnessKeyInfo.html#af3eb6c56aff3e29480ba94f594d35a3a',1,'SetSatnessKeyInfo']]],
+  ['getunknowncost_54',['getUnknownCost',['../classProfileHandler.html#aa4209f2865309b654e5b64222f731ecb',1,'ProfileHandler']]],
+  ['getupperbound_55',['getUpperBound',['../classLoopBound_1_1DeltaInterval.html#a6973e1122100293315a192dc0812b7b0',1,'LoopBound::DeltaInterval']]],
+  ['getvaluetypeasstr_56',['getValueTypeAsStr',['../classLoopBound_1_1DeltaInterval.html#adc5150018674204477f1b07419839b38',1,'LoopBound::DeltaInterval']]],
+  ['greatestlowerbound_57',['greatestLowerBound',['../classLoopBound_1_1DeltaInterval.html#ac085cf1b44949f4de822d85d5d33fff8',1,'LoopBound::DeltaInterval']]]
 ];

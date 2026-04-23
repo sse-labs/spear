@@ -92,8 +92,11 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:a8de779f762e52ff1b7aee41cc09e7caf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4ed98f015aadc726de85dae743757d71" id="r_a4ed98f015aadc726de85dae743757d71"><td class="memItemLeft" align="right" valign="top">static ClusteredILPModel&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPBuilder.html#a4ed98f015aadc726de85dae743757d71">buildClusteredILP</a> (<a class="el" href="classHLAC_1_1FunctionNode.html">HLAC::FunctionNode</a> *func)</td></tr>
 <tr class="separator:a4ed98f015aadc726de85dae743757d71"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa12b9967d0349f1a25c6c09d648c104e" id="r_aa12b9967d0349f1a25c6c09d648c104e"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPBuilder.html#aa12b9967d0349f1a25c6c09d648c104e">solveModel</a> (<a class="el" href="structILPModel.html">ILPModel</a> model)</td></tr>
-<tr class="separator:aa12b9967d0349f1a25c6c09d648c104e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a39cbc4a3fc87a290c1c7a1ef83b1b012" id="r_a39cbc4a3fc87a290c1c7a1ef83b1b012"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPBuilder.html#a39cbc4a3fc87a290c1c7a1ef83b1b012">solveModel</a> (const <a class="el" href="structILPModel.html">ILPModel</a> &amp;ilpModel)</td></tr>
+<tr class="separator:a39cbc4a3fc87a290c1c7a1ef83b1b012"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17340fe08fb3a7566a77fddc9a9c3388" id="r_a17340fe08fb3a7566a77fddc9a9c3388"><td class="memItemLeft" align="right" valign="top"><a id="a17340fe08fb3a7566a77fddc9a9c3388" name="a17340fe08fb3a7566a77fddc9a9c3388"></a>
+static void&#160;</td><td class="memItemRight" valign="bottom"><b>debugDumpILPModel</b> (const <a class="el" href="structILPModel.html">ILPModel</a> &amp;model, const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> &gt; &gt; &amp;edges, const std::string &amp;name)</td></tr>
+<tr class="separator:a17340fe08fb3a7566a77fddc9a9c3388"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classILPBuilder.html">ILPBuilder</a> class that provides static methods to build ILP models from <a class="el" href="namespaceHLAC.html">HLAC</a> function and loop nodes. </p>
@@ -224,8 +227,8 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="aa12b9967d0349f1a25c6c09d648c104e" name="aa12b9967d0349f1a25c6c09d648c104e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa12b9967d0349f1a25c6c09d648c104e">&#9670;&#160;</a></span>solveModel()</h2>
+<a id="a39cbc4a3fc87a290c1c7a1ef83b1b012" name="a39cbc4a3fc87a290c1c7a1ef83b1b012"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a39cbc4a3fc87a290c1c7a1ef83b1b012">&#9670;&#160;</a></span>solveModel()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -236,8 +239,8 @@ Static Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">static std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a> &gt; ILPBuilder::solveModel </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="structILPModel.html">ILPModel</a>&#160;</td>
-          <td class="paramname"><em>model</em></td><td>)</td>
+          <td class="paramtype">const <a class="el" href="structILPModel.html">ILPModel</a> &amp;&#160;</td>
+          <td class="paramname"><em>ilpModel</em></td><td>)</td>
           <td></td>
         </tr>
       </table>

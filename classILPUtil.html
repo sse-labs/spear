@@ -86,8 +86,8 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:aa2530a80d05c00e38dad584ba896ba8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6dc86f9af2110d24a9c144e841791961" id="r_a6dc86f9af2110d24a9c144e841791961"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="structILPLongestPathDAGSolution.html">ILPLongestPathDAGSolution</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPUtil.html#a6dc86f9af2110d24a9c144e841791961">longestPathDAG</a> (<a class="el" href="classHLAC_1_1FunctionNode.html">HLAC::FunctionNode</a> *func, const ILPClusteredLoopResult &amp;loopMapping)</td></tr>
 <tr class="separator:a6dc86f9af2110d24a9c144e841791961"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a06fe48e36b6e6f81084d10d5efba826f" id="r_a06fe48e36b6e6f81084d10d5efba826f"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPUtil.html#a06fe48e36b6e6f81084d10d5efba826f">buildIncidenceMaps</a> (const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> &gt; &gt; &amp;edges, std::unordered_map&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *, std::vector&lt; int &gt; &gt; &amp;incoming, std::unordered_map&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *, std::vector&lt; int &gt; &gt; &amp;outgoing)</td></tr>
-<tr class="separator:a06fe48e36b6e6f81084d10d5efba826f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad024bad75ff3cd7c43e61a21686284dc" id="r_ad024bad75ff3cd7c43e61a21686284dc"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPUtil.html#ad024bad75ff3cd7c43e61a21686284dc">buildIncidenceMaps</a> (const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> &gt; &gt; &amp;edges, std::unordered_map&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *, std::vector&lt; int &gt; &gt; &amp;incoming, std::unordered_map&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *, std::vector&lt; int &gt; &gt; &amp;outgoing, int numberOfVariables)</td></tr>
+<tr class="separator:ad024bad75ff3cd7c43e61a21686284dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a731bc7d612ab65ada424d38746811a7b" id="r_a731bc7d612ab65ada424d38746811a7b"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPUtil.html#a731bc7d612ab65ada424d38746811a7b">assignEdgeIndicesFunction</a> (<a class="el" href="classHLAC_1_1FunctionNode.html">HLAC::FunctionNode</a> *func, int nextIndex)</td></tr>
 <tr class="separator:a731bc7d612ab65ada424d38746811a7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a815ab3bb390da5904c624e44d422b44a" id="r_a815ab3bb390da5904c624e44d422b44a"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPUtil.html#a815ab3bb390da5904c624e44d422b44a">assignEdgeIndicesLoop</a> (<a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loopNode, int nextIndex)</td></tr>
@@ -247,8 +247,8 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a06fe48e36b6e6f81084d10d5efba826f" name="a06fe48e36b6e6f81084d10d5efba826f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a06fe48e36b6e6f81084d10d5efba826f">&#9670;&#160;</a></span>buildIncidenceMaps()</h2>
+<a id="ad024bad75ff3cd7c43e61a21686284dc" name="ad024bad75ff3cd7c43e61a21686284dc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad024bad75ff3cd7c43e61a21686284dc">&#9670;&#160;</a></span>buildIncidenceMaps()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -272,7 +272,13 @@ Static Public Member Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">std::unordered_map&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *, std::vector&lt; int &gt; &gt; &amp;&#160;</td>
-          <td class="paramname"><em>outgoing</em>&#160;</td>
+          <td class="paramname"><em>outgoing</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>numberOfVariables</em>&#160;</td>
         </tr>
         <tr>
           <td></td>

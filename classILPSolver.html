@@ -80,20 +80,24 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a536ac5cc07a14458f7f5b3ef8ec8fdab" id="r_a536ac5cc07a14458f7f5b3ef8ec8fdab"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPSolver.html#a536ac5cc07a14458f7f5b3ef8ec8fdab">ILPSolver</a> (<a class="el" href="structILPModel.html">ILPModel</a> model)</td></tr>
-<tr class="separator:a536ac5cc07a14458f7f5b3ef8ec8fdab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aef998e8961a28fe5d9fe2eed613d59df" id="r_aef998e8961a28fe5d9fe2eed613d59df"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPSolver.html#aef998e8961a28fe5d9fe2eed613d59df">ILPSolver</a> (const <a class="el" href="structILPModel.html">ILPModel</a> &amp;model)</td></tr>
+<tr class="separator:aef998e8961a28fe5d9fe2eed613d59df"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a467f45a7c1b72ed0ccdab36478bd7f57" id="r_a467f45a7c1b72ed0ccdab36478bd7f57"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPSolver.html#a467f45a7c1b72ed0ccdab36478bd7f57">solutionExists</a> () const</td></tr>
 <tr class="separator:a467f45a7c1b72ed0ccdab36478bd7f57"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4cf7d139be712fd7e0125442d1346ec3" id="r_a4cf7d139be712fd7e0125442d1346ec3"><td class="memItemLeft" align="right" valign="top">std::optional&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPSolver.html#a4cf7d139be712fd7e0125442d1346ec3">getSolvedModelValue</a> () const</td></tr>
 <tr class="separator:a4cf7d139be712fd7e0125442d1346ec3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a15002219a6be6d91803277287dd22d9b" id="r_a15002219a6be6d91803277287dd22d9b"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::vector&lt; double &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPSolver.html#a15002219a6be6d91803277287dd22d9b">getSolvedSolution</a> () const</td></tr>
 <tr class="separator:a15002219a6be6d91803277287dd22d9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7ecd8051f3539f6af5e5606c533ef3bb" id="r_a7ecd8051f3539f6af5e5606c533ef3bb"><td class="memItemLeft" align="right" valign="top">ILPSolverStatus&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPSolver.html#a7ecd8051f3539f6af5e5606c533ef3bb">getStatus</a> () const</td></tr>
+<tr class="separator:a7ecd8051f3539f6af5e5606c533ef3bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad09d3957a9ba66c834be10b21ddfc7b" id="r_aad09d3957a9ba66c834be10b21ddfc7b"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPSolver.html#aad09d3957a9ba66c834be10b21ddfc7b">getStatusString</a> () const</td></tr>
+<tr class="separator:aad09d3957a9ba66c834be10b21ddfc7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classILPSolver.html">ILPSolver</a> class. Handles the solving of CBC ILP models with the underlying solver API exposed by CBC </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a536ac5cc07a14458f7f5b3ef8ec8fdab" name="a536ac5cc07a14458f7f5b3ef8ec8fdab"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a536ac5cc07a14458f7f5b3ef8ec8fdab">&#9670;&#160;</a></span>ILPSolver()</h2>
+<a id="aef998e8961a28fe5d9fe2eed613d59df" name="aef998e8961a28fe5d9fe2eed613d59df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aef998e8961a28fe5d9fe2eed613d59df">&#9670;&#160;</a></span>ILPSolver()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -104,7 +108,7 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">ILPSolver::ILPSolver </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="structILPModel.html">ILPModel</a>&#160;</td>
+          <td class="paramtype">const <a class="el" href="structILPModel.html">ILPModel</a> &amp;&#160;</td>
           <td class="paramname"><em>model</em></td><td>)</td>
           <td></td>
         </tr>
@@ -158,6 +162,42 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Query the solver for the values of the variables in the optimal solution of the solved model </p><dl class="section return"><dt>Returns</dt><dd>Returns the values of the variables as double vector, if a solution was found. std::nullopt otherwise </dd></dl>
+
+</div>
+</div>
+<a id="a7ecd8051f3539f6af5e5606c533ef3bb" name="a7ecd8051f3539f6af5e5606c533ef3bb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7ecd8051f3539f6af5e5606c533ef3bb">&#9670;&#160;</a></span>getStatus()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">ILPSolverStatus ILPSolver::getStatus </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Get the status of the solver after solving the model </p><dl class="section return"><dt>Returns</dt><dd>Status of the solver as ILPSolverStatus enum value </dd></dl>
+
+</div>
+</div>
+<a id="aad09d3957a9ba66c834be10b21ddfc7b" name="aad09d3957a9ba66c834be10b21ddfc7b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad09d3957a9ba66c834be10b21ddfc7b">&#9670;&#160;</a></span>getStatusString()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string ILPSolver::getStatusString </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="section return"><dt>Returns</dt><dd></dd></dl>
 
 </div>
 </div>

@@ -99,6 +99,12 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:aefd4946443ad84de28252f5be9bdc518"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0bcef023b44e0728df391e081256b715" id="r_a0bcef023b44e0728df391e081256b715"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a0bcef023b44e0728df391e081256b715">collapseLoop</a> (std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt; &amp;edgeList)</td></tr>
 <tr class="separator:a0bcef023b44e0728df391e081256b715"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af3b33474621488943efed79ec86e59f7" id="r_af3b33474621488943efed79ec86e59f7"><td class="memItemLeft" align="right" valign="top"><a id="af3b33474621488943efed79ec86e59f7" name="af3b33474621488943efed79ec86e59f7"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>debugDumpEdges</b> () const</td></tr>
+<tr class="separator:af3b33474621488943efed79ec86e59f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a22bb1864c95138035f9af355cc916720" id="r_a22bb1864c95138035f9af355cc916720"><td class="memItemLeft" align="right" valign="top"><a id="a22bb1864c95138035f9af355cc916720" name="a22bb1864c95138035f9af355cc916720"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>refreshBackEdges</b> ()</td></tr>
+<tr class="separator:a22bb1864c95138035f9af355cc916720"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab27886c6add0a7a5ebafdb4e720eaaa3" id="r_ab27886c6add0a7a5ebafdb4e720eaaa3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#ab27886c6add0a7a5ebafdb4e720eaaa3">constructCallNodes</a> (bool considerDebugFunctions=false)</td></tr>
 <tr class="separator:ab27886c6add0a7a5ebafdb4e720eaaa3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0a69ade38fae2481e37591f5f8ba3caa" id="r_a0a69ade38fae2481e37591f5f8ba3caa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a0a69ade38fae2481e37591f5f8ba3caa">printDotRepresentation</a> (std::ostream &amp;os) override</td></tr>
@@ -128,8 +134,8 @@ Static Public Member Functions</h2></td></tr>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a6c4ea6af2c93c79ea3698b6d1269fd92" id="r_a6c4ea6af2c93c79ea3698b6d1269fd92"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classResultRegistry.html">ResultRegistry</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a6c4ea6af2c93c79ea3698b6d1269fd92">registry</a></td></tr>
 <tr class="separator:a6c4ea6af2c93c79ea3698b6d1269fd92"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a30f79cf836d331581aa75679f19ba61b" id="r_a30f79cf836d331581aa75679f19ba61b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a30f79cf836d331581aa75679f19ba61b">backEdge</a> = nullptr</td></tr>
-<tr class="separator:a30f79cf836d331581aa75679f19ba61b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad63377d0bb4935f735a0df08499411a6" id="r_ad63377d0bb4935f735a0df08499411a6"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#ad63377d0bb4935f735a0df08499411a6">backEdges</a></td></tr>
+<tr class="separator:ad63377d0bb4935f735a0df08499411a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a506b9bd038d5a4a2914e67018dedb3cb" id="r_a506b9bd038d5a4a2914e67018dedb3cb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a506b9bd038d5a4a2914e67018dedb3cb">Nodes</a></td></tr>
 <tr class="separator:a506b9bd038d5a4a2914e67018dedb3cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a87e48274d72b2143ee6d24b7dc926d03" id="r_a87e48274d72b2143ee6d24b7dc926d03"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a87e48274d72b2143ee6d24b7dc926d03">Edges</a></td></tr>
@@ -142,6 +148,9 @@ Public Attributes</h2></td></tr>
 <tr class="separator:af357fc78be2a8817cea044fb7847d831"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1e78eebcfa2ab5df5d43d64cc0e5a472" id="r_a1e78eebcfa2ab5df5d43d64cc0e5a472"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a1e78eebcfa2ab5df5d43d64cc0e5a472">hasSubLoops</a> = false</td></tr>
 <tr class="separator:a1e78eebcfa2ab5df5d43d64cc0e5a472"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a930e93ea991bef59636e8168703a9f1b" id="r_a930e93ea991bef59636e8168703a9f1b"><td class="memItemLeft" align="right" valign="top"><a id="a930e93ea991bef59636e8168703a9f1b" name="a930e93ea991bef59636e8168703a9f1b"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>invocationIlpIndex</b> = -1</td></tr>
+<tr class="separator:a930e93ea991bef59636e8168703a9f1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_attribs_classHLAC_1_1GenericNode"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classHLAC_1_1GenericNode')"><img src="closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a></td></tr>
 <tr class="memitem:a0846161d75459a69951eb59cb73a69b7 inherit pub_attribs_classHLAC_1_1GenericNode" id="r_a0846161d75459a69951eb59cb73a69b7"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1GenericNode.html#a0846161d75459a69951eb59cb73a69b7">name</a></td></tr>
 <tr class="separator:a0846161d75459a69951eb59cb73a69b7 inherit pub_attribs_classHLAC_1_1GenericNode"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -489,14 +498,14 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
-<a id="a30f79cf836d331581aa75679f19ba61b" name="a30f79cf836d331581aa75679f19ba61b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a30f79cf836d331581aa75679f19ba61b">&#9670;&#160;</a></span>backEdge</h2>
+<a id="ad63377d0bb4935f735a0df08499411a6" name="ad63377d0bb4935f735a0df08499411a6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad63377d0bb4935f735a0df08499411a6">&#9670;&#160;</a></span>backEdges</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a>* HLAC::LoopNode::backEdge = nullptr</td>
+          <td class="memname">std::vector&lt;<a class="el" href="classHLAC_1_1Edge.html">Edge</a>*&gt; HLAC::LoopNode::backEdges</td>
         </tr>
       </table>
 </div><div class="memdoc">

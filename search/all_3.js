@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['backedge_0',['backEdge',['../classHLAC_1_1LoopNode.html#a30f79cf836d331581aa75679f19ba61b',1,'HLAC::LoopNode']]],
+  ['backedges_0',['backEdges',['../classHLAC_1_1LoopNode.html#ad63377d0bb4935f735a0df08499411a6',1,'HLAC::LoopNode']]],
   ['base_1',['base',['../structFeasibility_1_1EnvKey.html#a1de20fbe6211c937c54c58b7de96819e',1,'Feasibility::EnvKey::Base'],['../classLoopBound_1_1CheckExpr.html#a484c295c27ceecd446739d2d18259945',1,'LoopBound::CheckExpr::Base']]],
   ['base_5ft_2',['base_t',['../classFeasibility_1_1FeasibilityAnalysis.html#a90bc81435461878a760f94f66aa5007c',1,'Feasibility::FeasibilityAnalysis::base_t'],['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a72d294eebc8976ac1cbf912280e0da7b',1,'LoopBound::LoopBoundIDEAnalysis::base_t']]],
   ['baseload_3',['BaseLoad',['../classLoopBound_1_1CheckExpr.html#abdd9f5dceb36096d21989f8f47c1a7c4',1,'LoopBound::CheckExpr']]],
@@ -15,7 +15,7 @@ var searchData=
   ['bounds_12',['bounds',['../classHLAC_1_1LoopNode.html#af282524d59b494bf5413e33d04666624',1,'HLAC::LoopNode']]],
   ['buildclusteredilp_13',['buildClusteredILP',['../classILPBuilder.html#a4ed98f015aadc726de85dae743757d71',1,'ILPBuilder']]],
   ['buildclusteredilps_14',['buildClusteredILPS',['../classHLAC_1_1hlac.html#a4c205ef75e555de110594861f78a532a',1,'HLAC::hlac']]],
-  ['buildincidencemaps_15',['buildIncidenceMaps',['../classILPUtil.html#a06fe48e36b6e6f81084d10d5efba826f',1,'ILPUtil']]],
+  ['buildincidencemaps_15',['buildIncidenceMaps',['../classILPUtil.html#ad024bad75ff3cd7c43e61a21686284dc',1,'ILPUtil']]],
   ['buildinitializedgraph_16',['buildInitializedGraph',['../classPassUtil.html#ac924c8d6d212c7124dd68b7ffb0b63f7',1,'PassUtil']]],
   ['buildmonolithicilp_17',['buildmonolithicilp',['../classHLAC_1_1hlac.html#aafdc51bc1fb6ca6abd87c7b765683092',1,'HLAC::hlac::buildMonolithicILP()'],['../classILPBuilder.html#ae10aa5fc73640e399fa0b9e7505a234d',1,'ILPBuilder::buildMonolithicILP(HLAC::FunctionNode *func)'],['../classILPBuilder.html#a8de779f762e52ff1b7aee41cc09e7caf',1,'ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop)']]]
 ];
