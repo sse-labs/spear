@@ -87,61 +87,61 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="comment"> * All rights reserved.</span></div>
 <div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="comment"> */</span></div>
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span> </div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#ifndef SPEAR_ILPDEBUG_H</span></div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#define SPEAR_ILPDEBUG_H</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#ifndef SRC_SPEAR_ILP_ILPDEBUG_H_</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#define SRC_SPEAR_ILP_ILPDEBUG_H_</span></div>
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="comment">/*</span></div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="comment"> * Copyright (c) 2026 Maximilian Krebs</span></div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="comment"> * All rights reserved.</span></div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &lt;string&gt;</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#ifndef ILP_ILPDEBUG_H</span></div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#define ILP_ILPDEBUG_H</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &lt;coin/CoinPackedMatrix.hpp&gt;</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#include &lt;coin/CoinPackedVector.hpp&gt;</span></div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;string&gt;</span></div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#include &lt;coin/CoinPackedMatrix.hpp&gt;</span></div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &lt;coin/CoinPackedVector.hpp&gt;</span></div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="preprocessor">#include &quot;HLAC/hlac.h&quot;</span></div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="preprocessor">#include &quot;ILP/ILPModel.h&quot;</span></div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
-<div class="foldopen" id="foldopen00028" data-start="{" data-end="};">
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno"><a class="line" href="classILPDebug.html">   28</a></span><span class="keyword">class </span><a class="code hl_class" href="classILPDebug.html">ILPDebug</a> {</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    <span class="keyword">static</span> std::string basicBlockToDebugString(<span class="keyword">const</span> llvm::BasicBlock *basicBlock);</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keyword">static</span> std::string genericNodeToDebugString(<span class="keyword">const</span> <a class="code hl_class" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *genericNode);</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="keyword">static</span> std::string debugGenericNodeToString(<span class="keyword">const</span> <a class="code hl_class" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *genericNode);</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <span class="keyword">static</span> std::string edgeToDebugString(<span class="keyword">const</span> <a class="code hl_class" href="classHLAC_1_1Edge.html">HLAC::Edge</a> *edge);</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keyword">static</span> std::string debugEdgeToString(<span class="keyword">const</span> <a class="code hl_class" href="classHLAC_1_1Edge.html">HLAC::Edge</a> *edge);</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keyword">static</span> std::string integerVectorToString(<span class="keyword">const</span> std::vector&lt;int&gt; &amp;values);</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keyword">static</span> std::string debugRowToString(</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>        <span class="keyword">const</span> CoinPackedVector &amp;row,</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        <span class="keywordtype">double</span> lowerBound,</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        <span class="keywordtype">double</span> upperBound,</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        <span class="keyword">const</span> std::vector&lt;std::unique_ptr&lt;HLAC::Edge&gt;&gt; &amp;edges);</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    <span class="keyword">static</span> std::string formatBound(<span class="keywordtype">double</span> boundValue);</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keyword">static</span> std::string formatCoefficient(<span class="keywordtype">double</span> coefficientValue);</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keyword">static</span> <span class="keyword">const</span> <a class="code hl_class" href="classHLAC_1_1Edge.html">HLAC::Edge</a> *findEdgeByIlpIndex(</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>        <span class="keyword">const</span> std::vector&lt;std::unique_ptr&lt;HLAC::Edge&gt;&gt; &amp;edges,</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>        <span class="keywordtype">int</span> ilpIndex);</div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &quot;HLAC/hlac.h&quot;</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
+<div class="foldopen" id="foldopen00025" data-start="{" data-end="};">
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno"><a class="line" href="classILPDebug.html">   25</a></span><span class="keyword">class </span><a class="code hl_class" href="classILPDebug.html">ILPDebug</a> {</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno"><a class="line" href="classILPDebug.html#a299e93e6ecd635cea2fd9da215c37b24">   32</a></span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="classILPDebug.html#a299e93e6ecd635cea2fd9da215c37b24">basicBlockToDebugString</a>(<span class="keyword">const</span> llvm::BasicBlock *basicBlock);</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span> </div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="classILPDebug.html#a91735b3a02478cd17fe2a7a65665cf5c">   39</a></span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="classILPDebug.html#a91735b3a02478cd17fe2a7a65665cf5c">genericNodeToDebugString</a>(<span class="keyword">const</span> <a class="code hl_class" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> *genericNode);</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno"><a class="line" href="classILPDebug.html#a5836abbf1388ba20d98dd7a4802139ef">   46</a></span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="classILPDebug.html#a5836abbf1388ba20d98dd7a4802139ef">edgeToDebugString</a>(<span class="keyword">const</span> <a class="code hl_class" href="classHLAC_1_1Edge.html">HLAC::Edge</a> *edge);</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="keyword">static</span> <span class="keywordtype">void</span> dumpILPModel(</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        <span class="keyword">const</span> <a class="code hl_struct" href="structILPModel.html">ILPModel</a> &amp;model,</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        <span class="keyword">const</span> std::vector&lt;std::unique_ptr&lt;HLAC::Edge&gt;&gt; &amp;edges,</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        <span class="keyword">const</span> std::string &amp;name);</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>};</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno"><a class="line" href="classILPDebug.html#af949f7a9e63cb7b13b9a1acdcabb9f2d">   53</a></span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="classILPDebug.html#af949f7a9e63cb7b13b9a1acdcabb9f2d">integerVectorToString</a>(<span class="keyword">const</span> std::vector&lt;int&gt; &amp;values);</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno"><a class="line" href="classILPDebug.html#a6aaf7dc06fd2e7219f246f386eca4257">   63</a></span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="classILPDebug.html#a6aaf7dc06fd2e7219f246f386eca4257">debugRowToString</a>(<span class="keyword">const</span> CoinPackedVector &amp;row, <span class="keywordtype">double</span> lowerBound, <span class="keywordtype">double</span> upperBound,</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>        <span class="keyword">const</span> std::vector&lt;std::unique_ptr&lt;HLAC::Edge&gt;&gt; &amp;edges);</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno"><a class="line" href="classILPDebug.html#a4d6c0cdfa075d5f8f8614036fc14531f">   71</a></span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="classILPDebug.html#a4d6c0cdfa075d5f8f8614036fc14531f">formatBound</a>(<span class="keywordtype">double</span> boundValue);</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span> </div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno"><a class="line" href="classILPDebug.html#a409f5ba29703aacb73b11dbb0895ddc8">   78</a></span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="classILPDebug.html#a409f5ba29703aacb73b11dbb0895ddc8">formatCoefficient</a>(<span class="keywordtype">double</span> coefficientValue);</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno"><a class="line" href="classILPDebug.html#a402cb9606d84da5968bb9b36a772acde">   86</a></span>    <span class="keyword">static</span> <span class="keyword">const</span> <a class="code hl_class" href="classHLAC_1_1Edge.html">HLAC::Edge</a> *<a class="code hl_function" href="classILPDebug.html#a402cb9606d84da5968bb9b36a772acde">findEdgeByIlpIndex</a>(</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>        <span class="keyword">const</span> std::vector&lt;std::unique_ptr&lt;HLAC::Edge&gt;&gt; &amp;edges,</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>        <span class="keywordtype">int</span> ilpIndex);</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> </div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno"><a class="line" href="classILPDebug.html#a485e072157f62213d42dd3326acdaa89">   96</a></span>    <span class="keyword">static</span> <span class="keywordtype">void</span> <a class="code hl_function" href="classILPDebug.html#a485e072157f62213d42dd3326acdaa89">dumpILPModel</a>(</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>        <span class="keyword">const</span> <a class="code hl_struct" href="structILPModel.html">ILPModel</a> &amp;model,</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>        <span class="keyword">const</span> std::vector&lt;std::unique_ptr&lt;HLAC::Edge&gt;&gt; &amp;edges,</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>        <span class="keyword">const</span> std::string &amp;name);</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>};</div>
 </div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><span class="preprocessor">#endif </span><span class="comment">//SPEAR_ILPDEBUG_H</span></div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span> </div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span><span class="preprocessor">#endif  </span><span class="comment">// SRC_SPEAR_ILP_ILPDEBUG_H_</span></div>
 <div class="ttc" id="aclassHLAC_1_1Edge_html"><div class="ttname"><a href="classHLAC_1_1Edge.html">HLAC::Edge</a></div><div class="ttdef"><b>Definition</b> hlac.h:184</div></div>
 <div class="ttc" id="aclassHLAC_1_1GenericNode_html"><div class="ttname"><a href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a></div><div class="ttdef"><b>Definition</b> hlac.h:62</div></div>
-<div class="ttc" id="aclassILPDebug_html"><div class="ttname"><a href="classILPDebug.html">ILPDebug</a></div><div class="ttdef"><b>Definition</b> ILPDebug.h:28</div></div>
+<div class="ttc" id="aclassILPDebug_html"><div class="ttname"><a href="classILPDebug.html">ILPDebug</a></div><div class="ttdef"><b>Definition</b> ILPDebug.h:25</div></div>
+<div class="ttc" id="aclassILPDebug_html_a299e93e6ecd635cea2fd9da215c37b24"><div class="ttname"><a href="classILPDebug.html#a299e93e6ecd635cea2fd9da215c37b24">ILPDebug::basicBlockToDebugString</a></div><div class="ttdeci">static std::string basicBlockToDebugString(const llvm::BasicBlock *basicBlock)</div></div>
+<div class="ttc" id="aclassILPDebug_html_a402cb9606d84da5968bb9b36a772acde"><div class="ttname"><a href="classILPDebug.html#a402cb9606d84da5968bb9b36a772acde">ILPDebug::findEdgeByIlpIndex</a></div><div class="ttdeci">static const HLAC::Edge * findEdgeByIlpIndex(const std::vector&lt; std::unique_ptr&lt; HLAC::Edge &gt; &gt; &amp;edges, int ilpIndex)</div></div>
+<div class="ttc" id="aclassILPDebug_html_a409f5ba29703aacb73b11dbb0895ddc8"><div class="ttname"><a href="classILPDebug.html#a409f5ba29703aacb73b11dbb0895ddc8">ILPDebug::formatCoefficient</a></div><div class="ttdeci">static std::string formatCoefficient(double coefficientValue)</div></div>
+<div class="ttc" id="aclassILPDebug_html_a485e072157f62213d42dd3326acdaa89"><div class="ttname"><a href="classILPDebug.html#a485e072157f62213d42dd3326acdaa89">ILPDebug::dumpILPModel</a></div><div class="ttdeci">static void dumpILPModel(const ILPModel &amp;model, const std::vector&lt; std::unique_ptr&lt; HLAC::Edge &gt; &gt; &amp;edges, const std::string &amp;name)</div></div>
+<div class="ttc" id="aclassILPDebug_html_a4d6c0cdfa075d5f8f8614036fc14531f"><div class="ttname"><a href="classILPDebug.html#a4d6c0cdfa075d5f8f8614036fc14531f">ILPDebug::formatBound</a></div><div class="ttdeci">static std::string formatBound(double boundValue)</div></div>
+<div class="ttc" id="aclassILPDebug_html_a5836abbf1388ba20d98dd7a4802139ef"><div class="ttname"><a href="classILPDebug.html#a5836abbf1388ba20d98dd7a4802139ef">ILPDebug::edgeToDebugString</a></div><div class="ttdeci">static std::string edgeToDebugString(const HLAC::Edge *edge)</div></div>
+<div class="ttc" id="aclassILPDebug_html_a6aaf7dc06fd2e7219f246f386eca4257"><div class="ttname"><a href="classILPDebug.html#a6aaf7dc06fd2e7219f246f386eca4257">ILPDebug::debugRowToString</a></div><div class="ttdeci">static std::string debugRowToString(const CoinPackedVector &amp;row, double lowerBound, double upperBound, const std::vector&lt; std::unique_ptr&lt; HLAC::Edge &gt; &gt; &amp;edges)</div></div>
+<div class="ttc" id="aclassILPDebug_html_a91735b3a02478cd17fe2a7a65665cf5c"><div class="ttname"><a href="classILPDebug.html#a91735b3a02478cd17fe2a7a65665cf5c">ILPDebug::genericNodeToDebugString</a></div><div class="ttdeci">static std::string genericNodeToDebugString(const HLAC::GenericNode *genericNode)</div></div>
+<div class="ttc" id="aclassILPDebug_html_af949f7a9e63cb7b13b9a1acdcabb9f2d"><div class="ttname"><a href="classILPDebug.html#af949f7a9e63cb7b13b9a1acdcabb9f2d">ILPDebug::integerVectorToString</a></div><div class="ttdeci">static std::string integerVectorToString(const std::vector&lt; int &gt; &amp;values)</div></div>
 <div class="ttc" id="astructILPModel_html"><div class="ttname"><a href="structILPModel.html">ILPModel</a></div><div class="ttdef"><b>Definition</b> ILPTypes.h:31</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

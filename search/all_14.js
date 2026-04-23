@@ -25,7 +25,7 @@ var searchData=
   ['stoptime_22',['stopTime',['../classMetaProfiler.html#a2e815749d86ee9b5f0cbec8d5db67f1e',1,'MetaProfiler']]],
   ['storefeasibilityresults_23',['storeFeasibilityResults',['../classResultRegistry.html#a46a2c636e6c4933aac039bf35397978f',1,'ResultRegistry']]],
   ['storeloopboundresults_24',['storeLoopBoundResults',['../classResultRegistry.html#a446ef83be281ca6cd7b3fee6d569e6c7',1,'ResultRegistry']]],
-  ['strategy_25',['strategy',['../classAnalysisStrategy.html#a4f55ee7abd18085d3a94537512fb673b',1,'AnalysisStrategy::Strategy'],['../classNode.html#aab149ed1099b53c3f3954d20718f511e',1,'Node::strategy']]],
+  ['strategy_25',['strategy',['../classNode.html#aab149ed1099b53c3f3954d20718f511e',1,'Node::strategy'],['../classAnalysisStrategy.html#a4f55ee7abd18085d3a94537512fb673b',1,'AnalysisStrategy::Strategy']]],
   ['stripparameters_26',['stripParameters',['../classHLAC_1_1Util.html#a79ee9e15c5d8b16851825a381071e908',1,'HLAC::Util']]],
   ['strtoanalysisoutputmode_27',['strToAnalysisOutputmode',['../classConfigurationUtils.html#a0d04a4c8a4dc3b75054f2e05a231e075',1,'ConfigurationUtils']]],
   ['strtoanalysistype_28',['strToAnalysisType',['../classConfigurationUtils.html#a933d91e83ebf0ecc2a1c09bfdac5dcc9',1,'ConfigurationUtils']]],
