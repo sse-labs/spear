@@ -43,7 +43,7 @@ class FunctionTree {
      * @param function Reference to a llvm::Function
      * @return Returns the built FunctionTree with all subgraphs
      */
-    static FunctionTree* construct(llvm::Function * function);
+    static FunctionTree* construct(llvm::Function * function, std::vector<std::string> callhist);
 
     /**
      * Prints the FunctionTree in a preorder fashion

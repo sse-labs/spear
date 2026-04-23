@@ -4,6 +4,8 @@
 */
 
 #include "FunctionTree.h"
+
+#include <iostream>
 #include <llvm/IR/Instructions.h>
 
 #include <vector>
@@ -16,7 +18,7 @@ FunctionTree::FunctionTree(llvm::Function *func) {
 }
 
 // Construct a Functiontree from a given function
-FunctionTree* FunctionTree::construct(llvm::Function *func) {
+FunctionTree* FunctionTree::construct(llvm::Function *func, std::vector<std::string> callhist) {
     // Init the tree
     auto *functionTree = new FunctionTree(func);
     // Get the called functions, so we can generate the subgraphs
@@ -28,9 +30,11 @@ FunctionTree* FunctionTree::construct(llvm::Function *func) {
         for (auto &function : calls) {
             // If we have a function that isn't the function we started at...
             if (function != functionTree->func) {
-                if (function != nullptr) {
+                if (function != nullptr && std::find(callhist.begin(), callhist.end(), function->getName().str()) == callhist.end()) {
+                    // std::cout << "Handling call to" << function->getName().str() << std::endl;
+                    callhist.push_back(function->getName().str());
                     // Call construct recursively, as there might be further calls in the called functions
-                    auto subFunctionTree = construct(function);
+                    auto subFunctionTree = construct(function,callhist);
                     // Add the constructed tree to the subgraphs list
                     functionTree->subtrees.push_back(subFunctionTree);
                 }
