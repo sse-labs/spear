@@ -23,7 +23,6 @@
 #include <coin/CoinPackedVector.hpp>
 
 #include "HLAC/hlac.h"
-#include "ILP/ILPModel.h"
 
 class ILPDebug {
 public:

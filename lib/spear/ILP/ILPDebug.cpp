@@ -112,8 +112,8 @@ std::string ILPDebug::debugEdgeToString(const HLAC::Edge *edge) {
         return "<null-edge>";
     }
 
-    const auto *sourceNode = edge->soure;
-    const auto *destinationNode = edge->destination;
+    auto *sourceNode = edge->soure;
+    auto *destinationNode = edge->destination;
 
     std::ostringstream outputStream;
     outputStream << (sourceNode != nullptr ? sourceNode->getDotName() : "null")
