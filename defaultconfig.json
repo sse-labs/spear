@@ -13,7 +13,7 @@
     "type": "comparison",
     "outputmode": "normal",
     "outputDirectory": "./output/hmmm",
-    "clusteredCacheEnabled": true,
+    "clusteredCacheEnabled": false,
     "feasibilityEnabled": true,
     "writeDotFiles": false,
     "elbMappingActivated": true,

@@ -13,6 +13,7 @@
 #include "HLAC/hlac.h"
 #include "HLAC/util.h"
 #include "ILP/ILPBuilder.h"
+#include "ILP/ILPDebug.h"
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
 #include "PassUtil.h"
@@ -30,6 +31,8 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
     auto totalGetEnergyInitDuration = std::chrono::microseconds::zero();
     auto totalBuildDuration = std::chrono::microseconds::zero();
     auto totalSolveDuration = std::chrono::microseconds::zero();
+
+    graph->printDotRepresentation();
 
     for (auto &funcNode : graph->functions) {
         auto getEnergyInitStart = std::chrono::high_resolution_clock::now();
@@ -83,9 +86,12 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
             auto solvedResults = graph->solveMonolithicIlp(ilp.value(), funcName);
 
             if (!solvedResults.has_value()) {
+                auto model = ilp;
                 Logger::getInstance().log(
                     "Failed to solve monolithic ILP for function " + funcNode->name,
                     LOGLEVEL::ERROR);
+
+                ILPDebug::dumpILPModel(ilp.value(), funcNode->Edges, funcNode->name + "_monolithic.lp");
 
                 auto hmmm = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
                 graph->FunctionEnergyCache[funcNode->name] = hmmm;

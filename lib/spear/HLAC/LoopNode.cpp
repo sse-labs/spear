@@ -42,6 +42,10 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
         }
     }
 
+    if (function_node->function->getName().str() == "_ZL19stbi_write_jpg_coreP19stbi__write_contextiiiPKvi") {
+        std::cout << "Loop " << loop->getName().str() << " bound: " << this->bounds << std::endl;
+    }
+
     // Create loop nodes recursively for subloops
     for (llvm::Loop *sub : loop->getSubLoops()) {
         auto subLN = LoopNode::makeNode(sub, function_node, registry, function_node);
@@ -101,82 +105,94 @@ LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry
 
 void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
     // Collapse subloops first, while edges still reference their internal nodes.
-    for (auto &nodeUP : this->Nodes) {
-        if (auto *childLoop = dynamic_cast<LoopNode *>(nodeUP.get())) {
+    for (auto &nodeUniquePointer : this->Nodes) {
+        if (auto *childLoop = dynamic_cast<LoopNode *>(nodeUniquePointer.get())) {
             childLoop->collapseLoop(edgeList);
         }
     }
 
-    // Build set of nodes directly contained in this loop scope.
-    std::unordered_set<GenericNode *> inLoop;
-    inLoop.reserve(this->Nodes.size());
+    std::unordered_set<GenericNode *> nodesInsideLoop;
+    nodesInsideLoop.reserve(this->Nodes.size());
 
-    int entryIndex = -1;
-    int exitIndex = -1;
+    int headerIndex = -1;
+    std::vector<int> exitingBlockIndices;
 
-    for (int i=0; i < this->Nodes.size(); i++) {
-        auto &nup = this->Nodes[i];
-        if (auto *normalNup = dynamic_cast<Node *>(nup.get())) {
-            if (this->loop->isLoopLatch(normalNup->block)) {
-                exitIndex = i;
-            }
+    llvm::BasicBlock *loopHeader = this->loop->getHeader();
 
-            if (this->loop->isLoopExiting(normalNup->block)) {
-                entryIndex = i;
-            }
+    for (int nodeIndex = 0; nodeIndex < static_cast<int>(this->Nodes.size()); ++nodeIndex) {
+        GenericNode *genericNode = this->Nodes[nodeIndex].get();
+        nodesInsideLoop.insert(genericNode);
+
+        auto *normalNode = dynamic_cast<Node *>(genericNode);
+        if (normalNode == nullptr) {
+            continue;
         }
-        inLoop.insert(nup.get());
+
+        if (normalNode->block == loopHeader) {
+            headerIndex = nodeIndex;
+        }
+
+        if (this->loop->isLoopExiting(normalNode->block)) {
+            exitingBlockIndices.push_back(nodeIndex);
+        }
     }
 
-    auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
-    auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
+    if (headerIndex < 0) {
+        Logger::getInstance().log(
+            "Loop collapse failed: could not find loop header node.",
+            LOGLEVEL::ERROR);
+        return;
+    }
 
-    this->Nodes.push_back(std::move(entryNode));
+    if (exitingBlockIndices.empty()) {
+        Logger::getInstance().log(
+            "Loop collapse failed: could not find loop exiting block.",
+            LOGLEVEL::ERROR);
+        return;
+    }
 
-    int virtEntryIndex = this->Nodes.size() - 1;
+    auto virtualEntryNode = VirtualNode::makeVirtualPoint(true, false, this);
+    auto virtualExitNode = VirtualNode::makeVirtualPoint(false, true, this);
 
-    this->Nodes.push_back(std::move(exitNode));
+    this->Nodes.push_back(std::move(virtualEntryNode));
+    const int virtualEntryIndex = static_cast<int>(this->Nodes.size()) - 1;
 
-    int virtExitIndex = this->Nodes.size() - 1;
+    this->Nodes.push_back(std::move(virtualExitNode));
+    const int virtualExitIndex = static_cast<int>(this->Nodes.size()) - 1;
 
-    auto entryEdge = std::make_unique<Edge>(
-        Edge(this->Nodes[virtEntryIndex].get(), this->Nodes[entryIndex].get()));
+    this->Edges.push_back(std::make_unique<Edge>(
+        Edge(this->Nodes[virtualEntryIndex].get(), this->Nodes[headerIndex].get())));
 
-    auto exitEdge = std::make_unique<Edge>(
-        Edge(this->Nodes[exitIndex].get(), this->Nodes[virtExitIndex].get()));
+    for (int exitingBlockIndex : exitingBlockIndices) {
+        this->Edges.push_back(std::make_unique<Edge>(
+            Edge(this->Nodes[exitingBlockIndex].get(), this->Nodes[virtualExitIndex].get())));
+    }
 
-    this->Edges.push_back(std::move(entryEdge));
-    this->Edges.push_back(std::move(exitEdge));
-
-    // Collapse this loop:
-    //    - move edges fully inside this loop into this->Edges
-    //    - redirect boundary edges to use this as endpoint
-    for (auto it = edgeList.begin(); it != edgeList.end();) {
-        Edge *e = it->get();
-        if (!e) {
-            ++it;
+    for (auto edgeIterator = edgeList.begin(); edgeIterator != edgeList.end();) {
+        Edge *edge = edgeIterator->get();
+        if (edge == nullptr) {
+            ++edgeIterator;
             continue;
         }
 
-        bool srcIn = (inLoop.count(e->soure) != 0);
-        bool dstIn = (inLoop.count(e->destination) != 0);
+        const bool sourceInsideLoop = nodesInsideLoop.count(edge->soure) != 0;
+        const bool destinationInsideLoop = nodesInsideLoop.count(edge->destination) != 0;
 
-        // Edge completely inside this loop: move it into this->Edges
-        if (srcIn && dstIn) {
-            this->Edges.push_back(std::move(*it));
-            it = edgeList.erase(it);
+        if (sourceInsideLoop && destinationInsideLoop) {
+            this->Edges.push_back(std::move(*edgeIterator));
+            edgeIterator = edgeList.erase(edgeIterator);
             continue;
         }
 
-        // Boundary edge: redirect endpoints that touch nodes inside this loop
-        if (srcIn) {
-            e->soure = this;
-        }
-        if (dstIn) {
-            e->destination = this;
+        if (sourceInsideLoop) {
+            edge->soure = this;
         }
 
-        ++it;
+        if (destinationInsideLoop) {
+            edge->destination = this;
+        }
+
+        ++edgeIterator;
     }
 
     this->refreshBackEdges();

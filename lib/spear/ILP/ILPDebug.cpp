@@ -121,7 +121,7 @@ std::string ILPDebug::debugRowToString(
                      << ")";
     }
 
-    outputStream << " in [" << lowerBound << ", " << upperBound << "]";
+    outputStream << " in [" << formatBound(lowerBound) << ", " << formatBound(upperBound) << "]";
     return outputStream.str();
 }
 
@@ -209,8 +209,8 @@ void ILPDebug::dumpILPModel(
             rowString += "(" + std::to_string(coefficient) + " * x" + std::to_string(columnIndex) + ") ";
         }
 
-        rowString += "in [" + std::to_string(model.row_lb[rowIndex]) +
-                     ", " + std::to_string(model.row_ub[rowIndex]) + "]";
+        rowString += "in [" + formatBound(model.row_lb[rowIndex]) +
+                     ", " + formatBound(model.row_ub[rowIndex]) + "]";
 
         Logger::getInstance().log(rowString, LOGLEVEL::INFO);
     }
