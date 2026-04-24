@@ -110,6 +110,11 @@ std::map<std::string, double> hlac::getEnergy() {
 }
 
 double hlac::getEnergyPerFunction(std::string functionName, bool isRecursive) {
+    if (Util::starts_with(functionName, "__psr") || Util::starts_with(functionName, "__clang")) {
+        // We return 0.0 for phasar hooks, as they are not relevant for our analysis and we do not want to log them
+        return 0.0;
+    }
+
     if (FunctionEnergyCache.contains(functionName)) {
         return FunctionEnergyCache[functionName];
     }

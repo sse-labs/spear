@@ -18,171 +18,7 @@
 
 namespace HLAC {
 
-LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry,
-                   FunctionNode *parentFunctionNode) {
-    // Store the LLVM loop
-    this->registry = registry;
-    this->loop = loop;
-    this->hasSubLoops = !loop->getSubLoops().empty();
-    auto unknownLoopValue = static_cast<int64_t>(
-        ConfigParser::getAnalysisConfiguration().fallback["loops"]["UNKNOWN_LOOP"]);
-    this->bounds = LoopBound::DeltaInterval::interval(0, unknownLoopValue,
-        LoopBound::DeltaInterval::ValueType::Additive);
-    this->parentFunction = parentFunctionNode;
-    this->nodeType = NodeType::LOOPNODE;
-
-    auto fName = function_node->function->getName().str();
-    auto loopName = loop->getName().str();
-
-    auto loopRegistry = registry.getLoopBoundResults();
-    if (loopRegistry.contains(fName)) {
-        auto functionLoopRegistry = loopRegistry.at(fName);
-        if (functionLoopRegistry.contains(loopName)) {
-            this->bounds = functionLoopRegistry.at(loopName);
-        }
-    }
-
-    // Create loop nodes recursively for subloops
-    for (llvm::Loop *sub : loop->getSubLoops()) {
-        auto subLN = LoopNode::makeNode(sub, function_node, registry, function_node);
-        this->Nodes.emplace_back(std::move(subLN));  // store as GenericNode
-    }
-
-    // Collect all basicblocks that are contained within our loop
-    std::unordered_set<const llvm::BasicBlock *> loop_basic_blocks;
-    loop_basic_blocks.reserve(loop->getBlocks().size());
-    for (auto *basic_block : loop->getBlocks()) {
-        loop_basic_blocks.insert(basic_block);
-    }
-    this->Nodes.reserve(loop_basic_blocks.size());
-
-    // Move nodes from the given function node to this loop node
-    for (auto function_node_iterator = function_node->Nodes.begin();
-         function_node_iterator != function_node->Nodes.end();) {
-        GenericNode *node = function_node_iterator->get();
-        llvm::BasicBlock *block = nullptr;
-
-        // Cast the current node to a normal node and extract the contained basic block
-        if (auto *normalnode = dynamic_cast<Node *>(node)) {
-            block = normalnode->block;
-        }
-
-        if (block && loop_basic_blocks.count(block)) {
-            this->Nodes.push_back(std::move(*function_node_iterator));                    // move node
-            function_node_iterator = function_node->Nodes.erase(function_node_iterator);  // erase empty slot
-        } else {
-            ++function_node_iterator;
-        }
-    }
-
-    // Build pointer set of nodes now owned by the loop
-    std::unordered_set<GenericNode *> inLoop;
-    inLoop.reserve(this->Nodes.size());
-    for (auto &nup : this->Nodes) {
-        inLoop.insert(nup.get());
-    }
-
-    // Move all edges contained entirely inside the loop into the loop node
-    for (auto it = function_node->Edges.begin(); it != function_node->Edges.end();) {
-        Edge *edge = it->get();
-        bool srcIn = (inLoop.count(edge->soure) != 0);
-        bool dstIn = (inLoop.count(edge->destination) != 0);
-
-        if (srcIn && dstIn) {
-            this->Edges.push_back(std::move(*it));
-            it = function_node->Edges.erase(it);
-        } else {
-            ++it;
-        }
-    }
-
-    this->hash = LoopNode::calculateHash();
-}
-
-void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
-    // Collapse subloops first, while edges still reference their internal nodes.
-    for (auto &nodeUP : this->Nodes) {
-        if (auto *childLoop = dynamic_cast<LoopNode *>(nodeUP.get())) {
-            childLoop->collapseLoop(edgeList);
-        }
-    }
-
-    // Build set of nodes directly contained in this loop scope.
-    std::unordered_set<GenericNode *> inLoop;
-    inLoop.reserve(this->Nodes.size());
-
-    int entryIndex = -1;
-    int exitIndex = -1;
-
-    for (int i=0; i < this->Nodes.size(); i++) {
-        auto &nup = this->Nodes[i];
-        if (auto *normalNup = dynamic_cast<Node *>(nup.get())) {
-            if (this->loop->isLoopLatch(normalNup->block)) {
-                exitIndex = i;
-            }
-
-            if (this->loop->isLoopExiting(normalNup->block)) {
-                entryIndex = i;
-            }
-        }
-        inLoop.insert(nup.get());
-    }
-
-    auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
-    auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
-
-    this->Nodes.push_back(std::move(entryNode));
-
-    int virtEntryIndex = this->Nodes.size() - 1;
-
-    this->Nodes.push_back(std::move(exitNode));
-
-    int virtExitIndex = this->Nodes.size() - 1;
-
-    auto entryEdge = std::make_unique<Edge>(
-        Edge(this->Nodes[virtEntryIndex].get(), this->Nodes[entryIndex].get()));
-
-    auto exitEdge = std::make_unique<Edge>(
-        Edge(this->Nodes[exitIndex].get(), this->Nodes[virtExitIndex].get()));
-
-    this->Edges.push_back(std::move(entryEdge));
-    this->Edges.push_back(std::move(exitEdge));
-
-    // Collapse this loop:
-    //    - move edges fully inside this loop into this->Edges
-    //    - redirect boundary edges to use this as endpoint
-    for (auto it = edgeList.begin(); it != edgeList.end();) {
-        Edge *e = it->get();
-        if (!e) {
-            ++it;
-            continue;
-        }
-
-        bool srcIn = (inLoop.count(e->soure) != 0);
-        bool dstIn = (inLoop.count(e->destination) != 0);
-
-        // Edge completely inside this loop: move it into this->Edges
-        if (srcIn && dstIn) {
-            this->Edges.push_back(std::move(*it));
-            it = edgeList.erase(it);
-            continue;
-        }
-
-        // Boundary edge: redirect endpoints that touch nodes inside this loop
-        if (srcIn) {
-            e->soure = this;
-        }
-        if (dstIn) {
-            e->destination = this;
-        }
-
-        ++it;
-    }
-
-    this->refreshBackEdges();
-}
-
-static std::string basicBlockToString(const llvm::BasicBlock* basicBlock) {
+static std::string basicBlockToString(const llvm::BasicBlock *basicBlock) {
     if (basicBlock == nullptr) {
         return "<null>";
     }
@@ -193,37 +29,244 @@ static std::string basicBlockToString(const llvm::BasicBlock* basicBlock) {
     return stream.str();
 }
 
-static std::string genericNodeTypeToString(const HLAC::GenericNode* genericNode) {
-    if (dynamic_cast<const HLAC::Node*>(genericNode) != nullptr) {
+static std::string genericNodeTypeToString(const HLAC::GenericNode *genericNode) {
+    if (dynamic_cast<const HLAC::Node *>(genericNode) != nullptr) {
         return "Node";
     }
-    if (dynamic_cast<const HLAC::LoopNode*>(genericNode) != nullptr) {
+
+    if (dynamic_cast<const HLAC::LoopNode *>(genericNode) != nullptr) {
         return "LoopNode";
     }
-    if (dynamic_cast<const HLAC::VirtualNode*>(genericNode) != nullptr) {
+
+    if (dynamic_cast<const HLAC::VirtualNode *>(genericNode) != nullptr) {
         return "VirtualNode";
     }
-    if (dynamic_cast<const HLAC::CallNode*>(genericNode) != nullptr) {
+
+    if (dynamic_cast<const HLAC::CallNode *>(genericNode) != nullptr) {
         return "CallNode";
     }
+
     return "GenericNode";
 }
 
-void LoopNode::debugDumpEdges() const {
-    llvm::BasicBlock* headerBlock = this->loop->getHeader();
+LoopNode::LoopNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry,
+                   FunctionNode *parentFunctionNode) {
+    // Store the LLVM loop
+    this->registry = registry;
+    this->loop = loop;
+    this->hasSubLoops = !loop->getSubLoops().empty();
 
-    llvm::SmallVector<llvm::BasicBlock*, 8> latchBlocks;
+    auto unknownLoopValue = static_cast<int64_t>(
+        ConfigParser::getAnalysisConfiguration().fallback["loops"]["UNKNOWN_LOOP"]);
+
+    this->bounds = LoopBound::DeltaInterval::interval(
+        0,
+        unknownLoopValue,
+        LoopBound::DeltaInterval::ValueType::Additive);
+
+    this->parentFunction = parentFunctionNode;
+    this->nodeType = NodeType::LOOPNODE;
+
+    auto functionName = function_node->function->getName().str();
+    auto loopName = loop->getName().str();
+
+    auto loopRegistry = registry.getLoopBoundResults();
+    if (loopRegistry.contains(functionName)) {
+        auto functionLoopRegistry = loopRegistry.at(functionName);
+        if (functionLoopRegistry.contains(loopName)) {
+            this->bounds = functionLoopRegistry.at(loopName);
+        }
+    }
+
+    // Create loop nodes recursively for subloops
+    for (llvm::Loop *subLoop : loop->getSubLoops()) {
+        auto subLoopNode = LoopNode::makeNode(subLoop, function_node, registry, function_node);
+        this->Nodes.emplace_back(std::move(subLoopNode));
+    }
+
+    // Collect all basicblocks that are contained within our loop
+    std::unordered_set<const llvm::BasicBlock *> loopBasicBlocks;
+    loopBasicBlocks.reserve(loop->getBlocks().size());
+
+    for (auto *basicBlock : loop->getBlocks()) {
+        loopBasicBlocks.insert(basicBlock);
+    }
+
+    this->Nodes.reserve(loopBasicBlocks.size());
+
+    // Move nodes from the given function node to this loop node
+    for (auto functionNodeIterator = function_node->Nodes.begin();
+         functionNodeIterator != function_node->Nodes.end();) {
+        GenericNode *genericNode = functionNodeIterator->get();
+        llvm::BasicBlock *basicBlock = nullptr;
+
+        // Cast the current node to a normal node and extract the contained basic block
+        if (auto *normalNode = dynamic_cast<Node *>(genericNode)) {
+            basicBlock = normalNode->block;
+        }
+
+        if (basicBlock != nullptr && loopBasicBlocks.count(basicBlock) != 0) {
+            this->Nodes.push_back(std::move(*functionNodeIterator));
+            functionNodeIterator = function_node->Nodes.erase(functionNodeIterator);
+        } else {
+            ++functionNodeIterator;
+        }
+    }
+
+    // Build pointer set of nodes now owned by the loop
+    std::unordered_set<GenericNode *> nodesInLoop;
+    nodesInLoop.reserve(this->Nodes.size());
+
+    for (auto &nodeUniquePointer : this->Nodes) {
+        nodesInLoop.insert(nodeUniquePointer.get());
+    }
+
+    // Move all edges contained entirely inside the loop into the loop node
+    for (auto edgeIterator = function_node->Edges.begin(); edgeIterator != function_node->Edges.end();) {
+        Edge *edge = edgeIterator->get();
+
+        if (edge == nullptr) {
+            ++edgeIterator;
+            continue;
+        }
+
+        const bool sourceIsInLoop = nodesInLoop.count(edge->soure) != 0;
+        const bool destinationIsInLoop = nodesInLoop.count(edge->destination) != 0;
+
+        if (sourceIsInLoop && destinationIsInLoop) {
+            this->Edges.push_back(std::move(*edgeIterator));
+            edgeIterator = function_node->Edges.erase(edgeIterator);
+        } else {
+            ++edgeIterator;
+        }
+    }
+
+    this->hash = LoopNode::calculateHash();
+}
+
+void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
+    // Collapse subloops first, while edges still reference their internal nodes.
+    for (auto &nodeUniquePointer : this->Nodes) {
+        if (auto *childLoop = dynamic_cast<LoopNode *>(nodeUniquePointer.get())) {
+            childLoop->collapseLoop(edgeList);
+        }
+    }
+
+    // Build set of nodes directly contained in this loop scope.
+    std::unordered_set<GenericNode *> nodesInLoop;
+    nodesInLoop.reserve(this->Nodes.size());
+
+    int headerIndex = -1;
+    std::vector<int> exitingBlockIndices;
+
+    llvm::BasicBlock *headerBlock = this->loop != nullptr ? this->loop->getHeader() : nullptr;
+
+    for (int nodeIndex = 0; nodeIndex < static_cast<int>(this->Nodes.size()); nodeIndex++) {
+        auto &nodeUniquePointer = this->Nodes[nodeIndex];
+        GenericNode *genericNode = nodeUniquePointer.get();
+
+        nodesInLoop.insert(genericNode);
+
+        auto *normalNode = dynamic_cast<Node *>(genericNode);
+        if (normalNode == nullptr || normalNode->block == nullptr) {
+            continue;
+        }
+
+        if (normalNode->block == headerBlock) {
+            headerIndex = nodeIndex;
+        }
+
+        if (this->loop->isLoopExiting(normalNode->block)) {
+            exitingBlockIndices.push_back(nodeIndex);
+        }
+    }
+
+    if (headerIndex < 0) {
+        Logger::getInstance().log(
+            "Loop collapse failed: header node not found for loop " + this->getDotName(),
+            LOGLEVEL::ERROR);
+        return;
+    }
+
+    if (exitingBlockIndices.empty()) {
+        Logger::getInstance().log(
+            "Loop collapse warning: no exiting block found for loop " + this->getDotName(),
+            LOGLEVEL::ERROR);
+    }
+
+    auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
+    auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
+
+    this->Nodes.push_back(std::move(entryNode));
+    const int virtualEntryIndex = static_cast<int>(this->Nodes.size()) - 1;
+
+    this->Nodes.push_back(std::move(exitNode));
+    const int virtualExitIndex = static_cast<int>(this->Nodes.size()) - 1;
+
+    auto entryEdge = std::make_unique<Edge>(
+        Edge(this->Nodes[virtualEntryIndex].get(), this->Nodes[headerIndex].get()));
+
+    this->Edges.push_back(std::move(entryEdge));
+
+    for (int exitingBlockIndex : exitingBlockIndices) {
+        auto exitEdge = std::make_unique<Edge>(
+            Edge(this->Nodes[exitingBlockIndex].get(), this->Nodes[virtualExitIndex].get()));
+
+        this->Edges.push_back(std::move(exitEdge));
+    }
+
+    // Collapse this loop:
+    //    - move edges fully inside this loop into this->Edges
+    //    - redirect boundary edges to use this as endpoint
+    for (auto edgeIterator = edgeList.begin(); edgeIterator != edgeList.end();) {
+        Edge *edge = edgeIterator->get();
+
+        if (edge == nullptr) {
+            ++edgeIterator;
+            continue;
+        }
+
+        const bool sourceIsInLoop = nodesInLoop.count(edge->soure) != 0;
+        const bool destinationIsInLoop = nodesInLoop.count(edge->destination) != 0;
+
+        // Edge completely inside this loop: move it into this->Edges
+        if (sourceIsInLoop && destinationIsInLoop) {
+            this->Edges.push_back(std::move(*edgeIterator));
+            edgeIterator = edgeList.erase(edgeIterator);
+            continue;
+        }
+
+        // Boundary edge: redirect endpoints that touch nodes inside this loop
+        if (sourceIsInLoop) {
+            edge->soure = this;
+        }
+
+        if (destinationIsInLoop) {
+            edge->destination = this;
+        }
+
+        ++edgeIterator;
+    }
+
+    this->refreshBackEdges();
+}
+
+void LoopNode::debugDumpEdges() const {
+    llvm::BasicBlock *headerBlock = this->loop->getHeader();
+
+    llvm::SmallVector<llvm::BasicBlock *, 8> latchBlocks;
     this->loop->getLoopLatches(latchBlocks);
 
     Logger::getInstance().log("Loop dump for function: " + this->parentFunction->name, LOGLEVEL::INFO);
     Logger::getInstance().log("Header: " + basicBlockToString(headerBlock), LOGLEVEL::INFO);
 
-    for (llvm::BasicBlock* latchBlock : latchBlocks) {
+    for (llvm::BasicBlock *latchBlock : latchBlocks) {
         Logger::getInstance().log("Latch: " + basicBlockToString(latchBlock), LOGLEVEL::INFO);
     }
 
-    for (const auto& edgeUniquePointer : this->Edges) {
-        const Edge* edge = edgeUniquePointer.get();
+    for (const auto &edgeUniquePointer : this->Edges) {
+        const Edge *edge = edgeUniquePointer.get();
+
         if (edge == nullptr) {
             continue;
         }
@@ -231,11 +274,11 @@ void LoopNode::debugDumpEdges() const {
         std::string sourceDescription = genericNodeTypeToString(edge->soure);
         std::string destinationDescription = genericNodeTypeToString(edge->destination);
 
-        if (auto* sourceNode = dynamic_cast<HLAC::Node*>(edge->soure)) {
+        if (auto *sourceNode = dynamic_cast<HLAC::Node *>(edge->soure)) {
             sourceDescription += " " + basicBlockToString(sourceNode->block);
         }
 
-        if (auto* destinationNode = dynamic_cast<HLAC::Node*>(edge->destination)) {
+        if (auto *destinationNode = dynamic_cast<HLAC::Node *>(edge->destination)) {
             destinationDescription += " " + basicBlockToString(destinationNode->block);
         }
 
@@ -248,18 +291,19 @@ void LoopNode::debugDumpEdges() const {
 void LoopNode::refreshBackEdges() {
     this->backEdges.clear();
 
-    llvm::BasicBlock* loopHeader = this->loop->getHeader();
+    llvm::BasicBlock *loopHeader = this->loop->getHeader();
     if (loopHeader == nullptr) {
         return;
     }
 
-    for (auto& edgeUniquePointer : this->Edges) {
-        Edge* edge = edgeUniquePointer.get();
+    for (auto &edgeUniquePointer : this->Edges) {
+        Edge *edge = edgeUniquePointer.get();
+
         if (edge == nullptr) {
             continue;
         }
 
-        auto* destinationNode = dynamic_cast<Node*>(edge->destination);
+        auto *destinationNode = dynamic_cast<Node *>(edge->destination);
         if (destinationNode == nullptr) {
             continue;
         }
@@ -269,7 +313,7 @@ void LoopNode::refreshBackEdges() {
         }
 
         // Ignore artificial loop entry edge
-        if (dynamic_cast<VirtualNode*>(edge->soure) != nullptr) {
+        if (dynamic_cast<VirtualNode *>(edge->soure) != nullptr) {
             continue;
         }
 
@@ -281,43 +325,48 @@ void LoopNode::constructCallNodes(bool considerDebugFunctions) {
     // Snapshot current nodes
     std::vector<GenericNode *> work;
     work.reserve(this->Nodes.size());
-    for (auto &up : this->Nodes) {
-        work.push_back(up.get());
+
+    for (auto &nodeUniquePointer : this->Nodes) {
+        work.push_back(nodeUniquePointer.get());
     }
 
-    for (GenericNode *base : work) {
-        if (!base) {
+    for (GenericNode *genericNode : work) {
+        if (genericNode == nullptr) {
             continue;
         }
 
-        if (auto *normalnode = dynamic_cast<Node *>(base)) {
+        if (auto *normalNode = dynamic_cast<Node *>(genericNode)) {
             // Collect calls first
             std::vector<llvm::CallBase *> calls;
-            for (auto it = normalnode->block->begin(); it != normalnode->block->end(); ++it) {
-                if (auto *cb = llvm::dyn_cast<llvm::CallBase>(&*it)) {
-                    calls.push_back(cb);
+
+            for (auto instructionIterator = normalNode->block->begin();
+                 instructionIterator != normalNode->block->end();
+                 ++instructionIterator) {
+                if (auto *callBase = llvm::dyn_cast<llvm::CallBase>(&*instructionIterator)) {
+                    calls.push_back(callBase);
                 }
             }
 
-            for (llvm::CallBase *callbase : calls) {
+            for (llvm::CallBase *callBase : calls) {
                 // callbase might have been erased by a previous transformation
-                if (!callbase || !callbase->getParent()) {
+                if (callBase == nullptr || callBase->getParent() == nullptr) {
                     continue;
                 }
 
-                llvm::Function *calledFunction = callbase->getCalledFunction();
-                if (calledFunction) {
-                    auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this->parentFunction);
+                llvm::Function *calledFunction = callBase->getCalledFunction();
+                if (calledFunction == nullptr) {
+                    continue;
+                }
 
-                    CallNode *callNode = callNodeUP.get();
-                    if (!callNode->isDebugFunction || !considerDebugFunctions) {
-                        this->Nodes.emplace_back(std::move(callNodeUP));
-                        callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
-                    }
+                auto callNodeUniquePointer = CallNode::makeNode(calledFunction, callBase, this->parentFunction);
+                CallNode *callNode = callNodeUniquePointer.get();
+
+                if (!callNode->isDebugFunction || !considerDebugFunctions) {
+                    this->Nodes.emplace_back(std::move(callNodeUniquePointer));
+                    callNode->collapseCalls(normalNode, this->Nodes, this->Edges);
                 }
             }
-
-        } else if (auto *loopNode = dynamic_cast<LoopNode *>(base)) {
+        } else if (auto *loopNode = dynamic_cast<LoopNode *>(genericNode)) {
             loopNode->constructCallNodes(considerDebugFunctions);
         }
     }
@@ -329,54 +378,58 @@ void LoopNode::constructCallNodes(bool considerDebugFunctions) {
 
 std::unique_ptr<LoopNode> LoopNode::makeNode(llvm::Loop *loop, FunctionNode *function_node, ResultRegistry registry,
                                              FunctionNode *parentFunctionNode) {
-    auto ln = std::make_unique<LoopNode>(loop, function_node, registry, parentFunctionNode);
-    return ln;
+    auto loopNode = std::make_unique<LoopNode>(loop, function_node, registry, parentFunctionNode);
+    return loopNode;
 }
 
-void LoopNode::printDotRepresentation(std::ostream &os) {
-    os << "subgraph \"" << this->getDotName() << "\" {\n";
-    os << "style=filled;", os << "fillcolor=\"#FFFFFF\";", os << "color=\"#2B2B2B\";";
-    os << "penwidth=2;";
-    os << "style=\"rounded,filled\";";
-    os << "fontname=\"Courier\";";
-    os << "tooltip=" << "\"" << "METDADATA" << "\";";
-    os << "  labelloc=\"t\";\n";
-    os << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", "
-       << this->bounds.getUpperBound() << ")" << "\r\";\n";
-    os << "  " << this->getAnchorDotName() << " [shape=point, width=0.01, label=\"\", style=invis];\n";
+void LoopNode::printDotRepresentation(std::ostream &outputStream) {
+    outputStream << "subgraph \"" << this->getDotName() << "\" {\n";
+    outputStream << "style=filled;";
+    outputStream << "fillcolor=\"#FFFFFF\";";
+    outputStream << "color=\"#2B2B2B\";";
+    outputStream << "penwidth=2;";
+    outputStream << "style=\"rounded,filled\";";
+    outputStream << "fontname=\"Courier\";";
+    outputStream << "tooltip=" << "\"" << "METDADATA" << "\";";
+    outputStream << "  labelloc=\"t\";\n";
+    outputStream << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", "
+                 << this->bounds.getUpperBound() << ")" << "\r\";\n";
+    outputStream << "  " << this->getAnchorDotName() << " [shape=point, width=0.01, label=\"\", style=invis];\n";
 
     for (auto &node : this->Nodes) {
-        node->printDotRepresentation(os);
+        node->printDotRepresentation(outputStream);
     }
 
     for (auto &edge : this->Edges) {
-        edge->printDotRepresentation(os);
+        edge->printDotRepresentation(outputStream);
     }
 
-    os << "}\n";
+    outputStream << "}\n";
 }
 
-void LoopNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> solution) {
-    os << "subgraph \"" << this->getDotName() << "\" {\n";
-    os << "style=filled;", os << "fillcolor=\"#FFFFFF\";", os << "color=\"#2B2B2B\";";
-    os << "penwidth=2;";
-    os << "style=\"rounded,filled\";";
-    os << "fontname=\"Courier\";";
-    os << "tooltip=" << "\"" << "METDADATA" << "\";";
-    os << "  labelloc=\"t\";\n";
-    os << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", "
-       << this->bounds.getUpperBound() << ")" << "\r\";\n";
-    os << "  " << this->getAnchorDotName() << " [shape=point, width=0.01, label=\"\", style=invis];\n";
+void LoopNode::printDotRepresentationWithSolution(std::ostream &outputStream, std::vector<double> solution) {
+    outputStream << "subgraph \"" << this->getDotName() << "\" {\n";
+    outputStream << "style=filled;";
+    outputStream << "fillcolor=\"#FFFFFF\";";
+    outputStream << "color=\"#2B2B2B\";";
+    outputStream << "penwidth=2;";
+    outputStream << "style=\"rounded,filled\";";
+    outputStream << "fontname=\"Courier\";";
+    outputStream << "tooltip=" << "\"" << "METDADATA" << "\";";
+    outputStream << "  labelloc=\"t\";\n";
+    outputStream << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", "
+                 << this->bounds.getUpperBound() << ")" << "\r\";\n";
+    outputStream << "  " << this->getAnchorDotName() << " [shape=point, width=0.01, label=\"\", style=invis];\n";
 
     for (auto &node : this->Nodes) {
-        node->printDotRepresentationWithSolution(os, solution);
+        node->printDotRepresentationWithSolution(outputStream, solution);
     }
 
     for (auto &edge : this->Edges) {
-        edge->printDotRepresentationWithSolution(os, solution);
+        edge->printDotRepresentationWithSolution(outputStream, solution);
     }
 
-    os << "}\n";
+    outputStream << "}\n";
 }
 
 std::string LoopNode::getDotName() {
@@ -389,13 +442,11 @@ std::string LoopNode::getAnchorDotName() {
 
 double LoopNode::getEnergy() {
     double energy = 0.0;
-
     return energy;
 }
 
 std::string LoopNode::calculateHash() {
     return Hasher::getHashForNode(this);
 }
-
 
 }  // namespace HLAC

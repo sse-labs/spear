@@ -11,6 +11,7 @@
 
 #include "ConfigParser.h"
 #include "ILP/ILPClusterCache.h"
+#include "ILP/ILPDebug.h"
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
 #include "PassUtil.h"
@@ -71,6 +72,10 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
         if (clusteredILPs.has_value()) {
             for (const auto& ilp : clusteredILPs.value()) {
+                /*if (funcNode->function->getName().str() == "main") {
+                    ILPDebug::dumpILPModel(ilp.second, funcNode->Edges, "main");
+                }*/
+
                 auto funcName = funcNode->function->getName().str();
                 functionILPCache[funcName].push_back(ilp.second);
             }
