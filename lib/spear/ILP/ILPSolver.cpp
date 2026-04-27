@@ -38,6 +38,40 @@ ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutio
     solutionModel = std::make_unique<CbcModel>(solver);
     solutionModel->setLogLevel(0);
     solutionModel->branchAndBound();
+
+    if (solutionModel->isContinuousUnbounded()) {
+        OsiSolverInterface *solverInterface = solutionModel->solver();
+
+        if (solverInterface == nullptr) {
+            std::cout << "[ILP DEBUG] Unbounded, but solver interface is null.\n";
+            return;
+        }
+
+        std::vector<double *> primalRays = solverInterface->getPrimalRays(1);
+
+        if (primalRays.empty() || primalRays[0] == nullptr) {
+            std::cout << "[ILP DEBUG] Unbounded, but no primal ray was returned.\n";
+            return;
+        }
+
+        double *primalRay = primalRays[0];
+        const int numberOfSolverColumns = solverInterface->getNumCols();
+
+        std::cout << "[ILP DEBUG] Unbounded primal ray:\n";
+
+        for (int columnIndex = 0; columnIndex < numberOfSolverColumns; ++columnIndex) {
+            if (std::abs(primalRay[columnIndex]) <= 1.0e-9) {
+                continue;
+            }
+
+            std::cout << "  x" << columnIndex
+                      << " direction=" << primalRay[columnIndex]
+                      << " objective=" << underlyingILPModel.obj[columnIndex]
+                      << "\n";
+        }
+
+        delete[] primalRay;
+    }
 }
 
 bool ILPSolver::solutionExists() const {
@@ -76,15 +110,27 @@ ILPSolverStatus ILPSolver::getStatus() const {
         return ILPSolverStatus::INFEASIBLE;
     }
 
-    int cbcStatus = solutionModel->status();
-
-    switch (cbcStatus) {
-        case 0: return ILPSolverStatus::INFEASIBLE;
-        case 1: return ILPSolverStatus::UNBOUNDED;
-        case 2: return ILPSolverStatus::TIME_LIMIT;
-        case 3: return ILPSolverStatus::NUMERICAL_ISSUES;
-        default: return ILPSolverStatus::INFEASIBLE;
+    if (solutionModel->isProvenOptimal()) {
+        return ILPSolverStatus::OPTIMAL;
     }
+
+    if (solutionModel->isProvenInfeasible()) {
+        return ILPSolverStatus::INFEASIBLE;
+    }
+
+    if (solutionModel->isContinuousUnbounded()) {
+        return ILPSolverStatus::UNBOUNDED;
+    }
+
+    if (solutionModel->isAbandoned()) {
+        return ILPSolverStatus::NUMERICAL_ISSUES;
+    }
+
+    if (solutionModel->isSecondsLimitReached() || solutionModel->isNodeLimitReached()) {
+        return ILPSolverStatus::TIME_LIMIT;
+    }
+
+    return ILPSolverStatus::UNKNOWN;
 }
 
 std::string ILPSolver::getStatusString() const {
@@ -92,13 +138,29 @@ std::string ILPSolver::getStatusString() const {
         return "No solution model available";
     }
 
-    int cbcStatus = solutionModel->status();
-
-    switch (cbcStatus) {
-        case 0: return "Infeasible";
-        case 1: return "Unbounded";
-        case 2: return "Time limit reached";
-        case 3: return "Numerical issues";
-        default: return "Unknown status";
+    if (solutionModel->isProvenOptimal()) {
+        return "Optimal";
     }
+
+    if (solutionModel->isProvenInfeasible()) {
+        return "Infeasible";
+    }
+
+    if (solutionModel->isContinuousUnbounded()) {
+        return "Unbounded";
+    }
+
+    if (solutionModel->isAbandoned()) {
+        return "Numerical issues";
+    }
+
+    if (solutionModel->isSecondsLimitReached()) {
+        return "Time limit reached";
+    }
+
+    if (solutionModel->isNodeLimitReached()) {
+        return "Node limit reached";
+    }
+
+    return "Unknown status";
 }

@@ -772,16 +772,32 @@ bool loopIsDependentNested(const LoopParameterDescription &description,
 
 LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription description,
                                       llvm::FunctionAnalysisManager *analysisManager) {
-    auto *preheaderBlock = description.loop->getLoopPreheader();
-    auto *parentFunction = preheaderBlock->getParent();
+    llvm::Loop *loop = description.loop;
+
+    if (loop == nullptr || loop->getHeader() == nullptr) {
+        return LoopType::MALFORMED_LOOP;
+    }
+
+    llvm::Function *parentFunction = loop->getHeader()->getParent();
+
+    if (parentFunction == nullptr) {
+        return LoopType::MALFORMED_LOOP;
+    }
+
+    llvm::BasicBlock *preheaderBlock = loop->getLoopPreheader();
+
+    if (preheaderBlock == nullptr) {
+        return LoopType::MALFORMED_LOOP;
+    }
 
     // Get dominator tree analysis
     auto &domTree = analysisManager->getResult<llvm::DominatorTreeAnalysis>(*parentFunction);
+
     // Get loop analysis
     auto &loopInformation = analysisManager->getResult<llvm::LoopAnalysis>(*parentFunction);
 
     // Check if loop is non uniform
-    if (!loopIsUniform(description.loop, domTree)) {
+    if (!loopIsUniform(loop, domTree)) {
         return LoopType::MALFORMED_LOOP;
     }
 
@@ -790,7 +806,6 @@ LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription descri
     }
 
     if (!loopConditionCannotBeDeduced(description, analysisManager, domTree, loopInformation)) {
-        // Check if condition deducible
         return LoopType::SYMBOLIC_BOUND_LOOP;
     }
 
@@ -798,7 +813,7 @@ LoopBound::LoopType determineLoopType(LoopBound::LoopParameterDescription descri
         return LoopType::SYMBOLIC_BOUND_LOOP;
     }
 
-    if (!loopIsCounting(description.loop, description.icmp)) {
+    if (!loopIsCounting(loop, description.icmp)) {
         return LoopType::NON_COUNTING_LOOP;
     }
 

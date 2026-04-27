@@ -39,6 +39,10 @@ class ILPBuilder {
      */
     static ILPModel buildMonolithicILP(HLAC::LoopNode *loop);
 
+    static std::vector<int> collectExternalLoopInvocationColumns(HLAC::LoopNode *loopNode,
+                                                          const std::vector<std::unique_ptr<HLAC::Edge>> &parentEdges,
+                                                          const std::vector<int> &incomingColumns);
+
     /**
      * Construct a clustered ILP from the given functionNode pointer
      * @param func FunctionNode pointer to calculate the clustered ILP for

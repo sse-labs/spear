@@ -188,6 +188,8 @@ class Edge {
      */
     int ilpIndex = -1;
 
+    bool isBackEdge = false;
+
     /**
      * Local string identifier used for dot printing
      */
@@ -354,6 +356,13 @@ class LoopNode : public GenericNode {
      * @param edgeList List of edges from the node, this loop node is contained in
      */
     void collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList);
+
+    void moveInternalAndCollapseBoundaryEdges(std::vector<std::unique_ptr<Edge>> &parentEdges,
+                                              const std::unordered_set<GenericNode *> &nodesInLoop,
+                                              const llvm::BasicBlock *headerBlock);
+
+    bool edgeReturnsToHeader(const Edge *edge, const llvm::BasicBlock *headerBlock) const;
+
     void debugDumpEdges() const;
     void refreshBackEdges();
 

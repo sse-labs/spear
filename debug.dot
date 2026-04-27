@@ -1,0 +1,49 @@
+digraph G {
+  rankdir=TB;
+  node [shape=box, style="rounded,filled", fillcolor="#b70d2870", color="#2B2B2B", penwidth=2, fontname="Courier"];
+  edge [label="⊤()", color="#A3D78A", penwidth=3];
+
+  VEntry [shape=circle, fillcolor=black, color=black, label="VEntry", fontcolor=white];
+  VExit  [shape=circle, fillcolor=black, color=black, label="VExit", fontcolor=white];
+
+  while_body237      [label="while.body237.i"];
+  land_lhs_true244   [label="land.lhs.true244.i"];
+  if_then254         [label="if.then254.i"];
+  land_lhs_true266   [label="land.lhs.true266.i"];
+  land_lhs_true269   [label="land.lhs.true269.i"];
+  lor_lhs_false272   [label="lor.lhs.false272.i"];
+  if_then275         [label="if.then275.i"];
+
+  if_end285          [label="if.end285.i\n(unbekannt)", fillcolor="#dddddd"];
+  if_end284          [label="if.end284.i\n(unbekannt)", fillcolor="#dddddd"];
+
+  call_LZ4_readLE16  [label="call: LZ4_readLE16", fillcolor="#8D89A6"];
+
+  VEntry -> while_body237;
+
+  while_body237 -> land_lhs_true244;
+  while_body237 -> if_end285;
+  while_body237 -> VExit;
+
+  land_lhs_true244 -> if_then254;
+  land_lhs_true244 -> if_end285;
+  land_lhs_true244 -> VExit;
+
+  if_then254 -> call_LZ4_readLE16;
+
+  call_LZ4_readLE16 -> land_lhs_true266;
+  call_LZ4_readLE16 -> VExit;
+
+  land_lhs_true266 -> land_lhs_true269;
+  land_lhs_true266 -> if_end284;
+  land_lhs_true266 -> VExit;
+
+  land_lhs_true269 -> if_then275;
+  land_lhs_true269 -> lor_lhs_false272;
+
+  lor_lhs_false272 -> if_then275;
+  lor_lhs_false272 -> if_end284;
+  lor_lhs_false272 -> VExit;
+
+  if_then275 -> while_body237;
+}

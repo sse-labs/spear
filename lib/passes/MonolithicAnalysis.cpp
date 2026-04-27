@@ -17,6 +17,7 @@
 #include "Logger.h"
 #include "PassUtil.h"
 #include "ProfileHandler.h"
+#include "ILP/ILPDebug.h"
 #include "nlohmann/json.hpp"
 
 nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings, bool showAllTimings) {
@@ -83,6 +84,8 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
             auto solvedResults = graph->solveMonolithicIlp(ilp.value(), funcName);
 
             if (!solvedResults.has_value()) {
+                ILPDebug::dumpILPModel(ilp.value(), funcNode->Edges, funcName);
+
                 Logger::getInstance().log(
                     "Failed to solve monolithic ILP for function " + funcNode->name,
                     LOGLEVEL::ERROR);
@@ -146,6 +149,9 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
         logger.log("Monolithic Total Time: " + std::to_string(monoTotalDuration.count()) + " µs",
                    LOGLEVEL::INFO);
     }
+
+    // graph->printDotRepresentation();
+
 
     nlohmann::json outputObject = nlohmann::json::object();
     outputObject["analysis"] = "monolithic";

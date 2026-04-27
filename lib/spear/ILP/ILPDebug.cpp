@@ -4,6 +4,9 @@
  */
 
 #include "ILP/ILPDebug.h"
+
+#include <CoinFinite.hpp>
+
 #include "Logger.h"
 
 #include <llvm/IR/BasicBlock.h>
@@ -147,14 +150,37 @@ void ILPDebug::dumpILPModel(
     const ILPModel &model,
     const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
     const std::string &name) {
+
     Logger::getInstance().log("========== ILP DUMP BEGIN: " + name + " ==========", LOGLEVEL::INFO);
 
     const int numberOfColumns = model.matrix.getNumCols();
     const int numberOfRows = model.matrix.getNumRows();
 
+    std::vector<int> columnUsageCount(numberOfColumns, 0);
+
+    const CoinPackedMatrix *columnOrderedMatrix = &model.matrix;
+    CoinPackedMatrix columnOrderedCopy;
+
+    // We want to inspect columns. If the matrix is row-ordered, create a column-ordered copy first.
+    if (!model.matrix.isColOrdered()) {
+        columnOrderedCopy.reverseOrderedCopyOf(model.matrix);
+        columnOrderedMatrix = &columnOrderedCopy;
+    }
+
+    const int *columnVectorLengths = columnOrderedMatrix->getVectorLengths();
+
+    if (columnVectorLengths != nullptr) {
+        for (int columnIndex = 0; columnIndex < numberOfColumns; ++columnIndex) {
+            columnUsageCount[columnIndex] = columnVectorLengths[columnIndex];
+        }
+    } else {
+        Logger::getInstance().log("  <failed to access column matrix storage>", LOGLEVEL::ERROR);
+    }
+
     Logger::getInstance().log("Variables:", LOGLEVEL::INFO);
+
     for (int columnIndex = 0; columnIndex < numberOfColumns; ++columnIndex) {
-        std::string edgeInfo = "<no-edge>";
+        std::string edgeInfo = "<no-edge-in-provided-edge-list>";
 
         for (const auto &edgePointer : edges) {
             const auto *edge = edgePointer.get();
@@ -164,33 +190,45 @@ void ILPDebug::dumpILPModel(
             }
         }
 
+        const bool suspiciousUnboundedColumn =
+            columnUsageCount[columnIndex] == 0 &&
+            model.col_ub[columnIndex] >= COIN_DBL_MAX / 2.0 &&
+            model.obj[columnIndex] > 0.0;
+
+        std::string warningSuffix;
+        if (suspiciousUnboundedColumn) {
+            warningSuffix = "  <-- WARNING: unused positive unbounded column";
+        }
+
         Logger::getInstance().log(
             "  x" + std::to_string(columnIndex) +
             " lb=" + formatBound(model.col_lb[columnIndex]) +
             " ub=" + formatBound(model.col_ub[columnIndex]) +
             " obj=" + formatCoefficient(model.obj[columnIndex]) +
-            " :: " + edgeInfo,
+            " usage=" + std::to_string(columnUsageCount[columnIndex]) +
+            " :: " + edgeInfo +
+            warningSuffix,
             LOGLEVEL::INFO);
     }
 
     Logger::getInstance().log("Constraints:", LOGLEVEL::INFO);
 
-    const CoinPackedMatrix *matrixToRead = &model.matrix;
+    const CoinPackedMatrix *rowOrderedMatrix = &model.matrix;
     CoinPackedMatrix rowOrderedCopy;
 
     // We want to iterate rows. If the matrix is column-ordered, create a row-ordered copy first.
     if (model.matrix.isColOrdered()) {
         rowOrderedCopy.reverseOrderedCopyOf(model.matrix);
-        matrixToRead = &rowOrderedCopy;
+        rowOrderedMatrix = &rowOrderedCopy;
     }
 
-    const int *vectorStarts = matrixToRead->getVectorStarts();
-    const int *vectorLengths = matrixToRead->getVectorLengths();
-    const int *indices = matrixToRead->getIndices();
-    const double *elements = matrixToRead->getElements();
+    const int *rowVectorStarts = rowOrderedMatrix->getVectorStarts();
+    const int *rowVectorLengths = rowOrderedMatrix->getVectorLengths();
+    const int *indices = rowOrderedMatrix->getIndices();
+    const double *elements = rowOrderedMatrix->getElements();
 
-    if (vectorStarts == nullptr || vectorLengths == nullptr || indices == nullptr || elements == nullptr) {
-        Logger::getInstance().log("  <failed to access matrix storage>", LOGLEVEL::ERROR);
+    if (rowVectorStarts == nullptr || rowVectorLengths == nullptr || indices == nullptr || elements == nullptr) {
+        Logger::getInstance().log("  <failed to access row matrix storage>", LOGLEVEL::ERROR);
         Logger::getInstance().log("========== ILP DUMP END: " + name + " ==========", LOGLEVEL::INFO);
         return;
     }
@@ -198,15 +236,19 @@ void ILPDebug::dumpILPModel(
     for (int rowIndex = 0; rowIndex < numberOfRows; ++rowIndex) {
         std::string rowString = "  row[" + std::to_string(rowIndex) + "]: ";
 
-        const int startOffset = vectorStarts[rowIndex];
-        const int rowLength = vectorLengths[rowIndex];
+        const int startOffset = rowVectorStarts[rowIndex];
+        const int rowLength = rowVectorLengths[rowIndex];
+
+        if (rowLength == 0) {
+            rowString += "<empty> ";
+        }
 
         for (int elementOffset = 0; elementOffset < rowLength; ++elementOffset) {
             const int storageIndex = startOffset + elementOffset;
             const int columnIndex = indices[storageIndex];
             const double coefficient = elements[storageIndex];
 
-            rowString += "(" + std::to_string(coefficient) + " * x" + std::to_string(columnIndex) + ") ";
+            rowString += "(" + formatCoefficient(coefficient) + " * x" + std::to_string(columnIndex) + ") ";
         }
 
         rowString += "in [" + formatBound(model.row_lb[rowIndex]) +
