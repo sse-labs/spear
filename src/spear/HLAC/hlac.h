@@ -423,6 +423,9 @@ class FunctionNode : public GenericNode {
      */
     ResultRegistry registry;
 
+
+    bool isGotoFunction;
+
     /**
      * Mapping of function energy
      * worst and best case
@@ -602,6 +605,7 @@ class FunctionNode : public GenericNode {
      * @return Vector representing the topological order of the contained nodes
      */
     std::vector<GenericNode *> getTopologicalOrdering();
+    bool isAcyclic() const;
 };
 
 /**

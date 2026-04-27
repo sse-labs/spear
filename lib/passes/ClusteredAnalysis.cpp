@@ -50,8 +50,8 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
                 funcNode->nodeEnergy[binding.nodeIndex] = cacheIterator->second;
             } else {
                 // If we dont know the function, we need to get the energy
-                double eng = binding.reference->getEnergy();
-                funcNode->nodeEnergy[binding.nodeIndex] = eng;
+                double energy = binding.reference->getEnergy();
+                funcNode->nodeEnergy[binding.nodeIndex] = energy;
             }
         }
 
@@ -59,6 +59,36 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
         auto getEnergyInitDuration = std::chrono::duration_cast<std::chrono::microseconds>(
             getEnergyInitEnd - getEnergyInitStart);
         totalGetEnergyInitDuration += getEnergyInitDuration;
+
+        auto funcName = funcNode->function->getName().str();
+
+        if (funcName == "LZ4_compress_fast_extState") {
+            int test = 0;
+        }
+
+        if (funcNode->isGotoFunction) {
+            Logger::getInstance().log(
+                "Skipping clustered ILP analysis for goto function " + funcName + ". Using fallback energy.",
+                LOGLEVEL::WARNING);
+
+            double fallbackEnergy = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
+
+            // If we encounter the main function add the additional program start offset cost to it!
+            if (funcName == "main") {
+                auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
+                if (offsetCost.has_value()) {
+                    fallbackEnergy += offsetCost.value();
+                }
+            }
+
+            graph->FunctionEnergyCache[funcNode->name] = fallbackEnergy;
+
+            Logger::getInstance().log(
+                "Fallback Energy of " + funcName + ": " + PassUtil::formatScientific(fallbackEnergy) + " J",
+                LOGLEVEL::HIGHLIGHT);
+
+            continue;
+        }
 
         auto clusteredBuildStart = std::chrono::high_resolution_clock::now();
 
@@ -71,12 +101,11 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
         totalBuildDuration += clusteredBuildDuration;
 
         if (clusteredILPs.has_value()) {
-            for (const auto& ilp : clusteredILPs.value()) {
+            for (const auto &ilp : clusteredILPs.value()) {
                 /*if (funcNode->function->getName().str() == "main") {
                     ILPDebug::dumpILPModel(ilp.second, funcNode->Edges, "main");
                 }*/
 
-                auto funcName = funcNode->function->getName().str();
                 functionILPCache[funcName].push_back(ilp.second);
             }
 
@@ -90,7 +119,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
                 clusteredSolveEnd - clusteredSolveStart);
             totalSolveDuration += clusteredSolveDuration;
 
-            const auto& solvedResults = clusteredSolvedResults;
+            const auto &solvedResults = clusteredSolvedResults;
             clusteredLoopResults[funcNode.get()] = solvedResults;
 
             auto dagStart = std::chrono::high_resolution_clock::now();
@@ -107,10 +136,8 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
             // Trace the taken path and print the result of the clustered approach
             if (dagResults.has_value()) {
-                const auto& resultPair = dagResults.value();
+                const auto &resultPair = dagResults.value();
                 auto resVector = resultPair.longestPath;
-
-                auto funcName = funcNode->function->getName().str();
                 auto funcEnergy = resultPair.WCEC;
 
                 // If we encounter the main function add the additional program start offset cost to it!
@@ -145,7 +172,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
         auto &logger = Logger::getInstance();
         if (showAllTimings) {
             logger.log("Clustered getEnergy Init Time: " + std::to_string(totalGetEnergyInitDuration.count()) + " µs",
-                   LOGLEVEL::INFO);
+                       LOGLEVEL::INFO);
             logger.log("Clustered ILP Build Time: " + std::to_string(totalBuildDuration.count()) + " µs",
                        LOGLEVEL::INFO);
             logger.log("Clustered ILP Solve Time: " + std::to_string(totalSolveDuration.count()) + " µs",
@@ -164,11 +191,11 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
     outputObject["duration"] = clusteredTotalDuration.count();
     outputObject["functions"] = {};
 
-    for (auto [funcname, energy] : graph->FunctionEnergyCache) {
+    for (auto &[funcname, energy] : graph->FunctionEnergyCache) {
         auto ilpVec = functionILPCache[funcname];
         auto ilpArr = nlohmann::json::array();
 
-        for (const auto& ilp : ilpVec) {
+        for (const auto &ilp : ilpVec) {
             auto ilpObj = nlohmann::json::object();
 
             ilpObj["numVariables"] = ilp.col_lb.size();
@@ -183,12 +210,21 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
         };
 
         auto funcNode = graph->getFunctionByName(funcname);
-        auto loopres = clusteredLoopResults[funcNode];
+        if (funcNode == nullptr) {
+            continue;
+        }
 
-        for ( auto &node : funcNode->Nodes ) {
+        ILPClusteredLoopResult loopres;
+        auto loopResultIterator = clusteredLoopResults.find(funcNode);
+        if (loopResultIterator != clusteredLoopResults.end()) {
+            loopres = loopResultIterator->second;
+        }
+
+        for (auto &node : funcNode->Nodes) {
             PassUtil::appendGraphContent(outputObject["functions"][funcname], node.get(), loopres);
         }
     }
 
     return outputObject;
 }
+

@@ -362,7 +362,7 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
     fillObjectiveFunction(model, loop);
 
     if (loop->parentFunction->name == "LZ4_decompress_safe") {
-        ILPDebug::dumpILPModel(model, loop->Edges, loop->loop->getName().str());
+        //ILPDebug::dumpILPModel(model, loop->Edges, loop->loop->getName().str());
     }
 
     return model;

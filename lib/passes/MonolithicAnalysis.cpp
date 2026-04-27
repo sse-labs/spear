@@ -51,82 +51,125 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
             getEnergyInitEnd - getEnergyInitStart);
         totalGetEnergyInitDuration += getEnergyInitDuration;
 
+        auto funcName = funcNode->function->getName().str();
+
+        if (funcNode->isGotoFunction) {
+            Logger::getInstance().log(
+                "Skipping monolithic ILP analysis for goto function " + funcName + ". Using fallback energy.",
+                LOGLEVEL::WARNING);
+
+            auto fallbackEnergy = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
+
+            if (funcName == "main") {
+                auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
+                if (offsetCost.has_value()) {
+                    fallbackEnergy += offsetCost.value();
+                }
+            }
+
+            graph->FunctionEnergyCache[funcNode->name] = fallbackEnergy;
+            functionILPCache[funcName] = std::nullopt;
+
+            Logger::getInstance().log(
+                "Fallback Energy of " + funcName + ": " + PassUtil::formatScientific(fallbackEnergy) + " J",
+                LOGLEVEL::HIGHLIGHT);
+
+            continue;
+        }
+
         auto monoBuildStart = std::chrono::high_resolution_clock::now();
 
         // Build one big ILP for the program under analysis
         auto ilp = graph->buildMonolithicILP(funcNode.get());
-
-        if (!ilp.has_value()) {
-            if (!HLAC::Util::starts_with(funcNode->name, "__psr")
-                && !HLAC::Util::starts_with(funcNode->name, "__clang")) {
-                Logger::getInstance().log(
-                "Failed to build monolithic ILP for function " + funcNode->name,
-                LOGLEVEL::ERROR);
-            }
-            continue;
-        }
-
-        // auto solvedResults = graph->solveMonolithicIlp(ilp.value());
 
         auto monoBuildEnd = std::chrono::high_resolution_clock::now();
         auto monoBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(
             monoBuildEnd - monoBuildStart);
         totalBuildDuration += monoBuildDuration;
 
-        if (ilp.has_value()) {
-            auto funcName = funcNode->function->getName().str();
-            auto monoSolveStart = std::chrono::high_resolution_clock::now();
-
-            // ILPUtil::printILPModelHumanReadable(funcNode->function->getName().str(), ilp.value());
-
-            functionILPCache[funcName] = ilp;
-
-            auto solvedResults = graph->solveMonolithicIlp(ilp.value(), funcName);
-
-            if (!solvedResults.has_value()) {
-                ILPDebug::dumpILPModel(ilp.value(), funcNode->Edges, funcName);
-
+        if (!ilp.has_value()) {
+            if (!HLAC::Util::starts_with(funcNode->name, "__psr")
+                && !HLAC::Util::starts_with(funcNode->name, "__clang")) {
                 Logger::getInstance().log(
-                    "Failed to solve monolithic ILP for function " + funcNode->name,
+                    "Failed to build monolithic ILP for function " + funcNode->name,
                     LOGLEVEL::ERROR);
-
-                auto hmmm = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
-                graph->FunctionEnergyCache[funcNode->name] = hmmm;
             }
 
-            auto monoSolveEnd = std::chrono::high_resolution_clock::now();
-            auto monoSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
-                monoSolveEnd - monoSolveStart);
-            totalSolveDuration += monoSolveDuration;
+            auto fallbackEnergy = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
 
-            /*funcNode->nodeEnergy = std::vector<double>(
-                funcNode->topologicalSortedRepresentationOfNodes.size(), 0.0);*/
-
-            if (solvedResults.has_value()) {
-                auto resultPair = solvedResults.value();
-
-                auto funcEnergy = resultPair.optimalValue;
-
-                // If we encounter the main function add the additional program start offset cost to it!
-                if (funcName == "main") {
-                    auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
-                    if (offsetCost.has_value()) {
-                        funcEnergy += offsetCost.value();
-                    }
+            if (funcName == "main") {
+                auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
+                if (offsetCost.has_value()) {
+                    fallbackEnergy += offsetCost.value();
                 }
+            }
 
-                graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
+            graph->FunctionEnergyCache[funcNode->name] = fallbackEnergy;
+            functionILPCache[funcName] = std::nullopt;
 
-                Logger::getInstance().log(
-                    "Monolithic Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J",
-                    LOGLEVEL::HIGHLIGHT);
+            continue;
+        }
 
-                if (ConfigParser::getAnalysisConfiguration().writeDotFiles) {
-                    graph->printDotRepresentationWithSolution(
+        auto monoSolveStart = std::chrono::high_resolution_clock::now();
+
+        // ILPUtil::printILPModelHumanReadable(funcNode->function->getName().str(), ilp.value());
+
+        functionILPCache[funcName] = ilp;
+
+        auto solvedResults = graph->solveMonolithicIlp(ilp.value(), funcName);
+
+        if (!solvedResults.has_value()) {
+            // ILPDebug::dumpILPModel(ilp.value(), funcNode->Edges, funcName);
+
+            Logger::getInstance().log(
+                "Failed to solve monolithic ILP for function " + funcNode->name,
+                LOGLEVEL::ERROR);
+
+            auto fallbackEnergy = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
+
+            if (funcName == "main") {
+                auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
+                if (offsetCost.has_value()) {
+                    fallbackEnergy += offsetCost.value();
+                }
+            }
+
+            graph->FunctionEnergyCache[funcNode->name] = fallbackEnergy;
+            functionILPCache[funcName] = std::nullopt;
+        }
+
+        auto monoSolveEnd = std::chrono::high_resolution_clock::now();
+        auto monoSolveDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+            monoSolveEnd - monoSolveStart);
+        totalSolveDuration += monoSolveDuration;
+
+        /*funcNode->nodeEnergy = std::vector<double>(
+            funcNode->topologicalSortedRepresentationOfNodes.size(), 0.0);*/
+
+        if (solvedResults.has_value()) {
+            auto resultPair = solvedResults.value();
+
+            auto funcEnergy = resultPair.optimalValue;
+
+            // If we encounter the main function add the additional program start offset cost to it!
+            if (funcName == "main") {
+                auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
+                if (offsetCost.has_value()) {
+                    funcEnergy += offsetCost.value();
+                }
+            }
+
+            graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
+
+            Logger::getInstance().log(
+                "Monolithic Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J",
+                LOGLEVEL::HIGHLIGHT);
+
+            if (ConfigParser::getAnalysisConfiguration().writeDotFiles) {
+                graph->printDotRepresentationWithSolution(
                     graph->getFunctionByName(funcName),
                     resultPair.variableValues,
                     "monolithic");
-                }
             }
         }
     }
@@ -140,7 +183,7 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
         auto &logger = Logger::getInstance();
         if (showAllTimings) {
             logger.log("Monolithic getEnergy Init Time: " + std::to_string(totalGetEnergyInitDuration.count()) + " µs",
-                   LOGLEVEL::INFO);
+                       LOGLEVEL::INFO);
             logger.log("Monolithic ILP Build Time: " + std::to_string(totalBuildDuration.count()) + " µs",
                        LOGLEVEL::INFO);
             logger.log("Monolithic ILP Solve Time: " + std::to_string(totalSolveDuration.count()) + " µs",
@@ -152,19 +195,18 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
 
     // graph->printDotRepresentation();
 
-
     nlohmann::json outputObject = nlohmann::json::object();
     outputObject["analysis"] = "monolithic";
     outputObject["duration"] = monoTotalDuration.count();
     outputObject["functions"] = {};
 
-    for (const auto& [functionName, energy] : graph->FunctionEnergyCache) {
+    for (const auto &[functionName, energy] : graph->FunctionEnergyCache) {
         auto ilpArr = nlohmann::json::array();
         auto ilpObj = nlohmann::json::object();
 
         auto ilpIterator = functionILPCache.find(functionName);
         if (ilpIterator != functionILPCache.end() && ilpIterator->second.has_value()) {
-            const auto& ilpModel = ilpIterator->second.value();
+            const auto &ilpModel = ilpIterator->second.value();
             ilpObj["numVariables"] = ilpModel.col_lb.size();
             ilpObj["numConstrains"] = ilpModel.row_lb.size();
             ilpObj["status"] = "solved";
@@ -182,7 +224,11 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
         };
 
         auto functionNode = graph->getFunctionByName(functionName);
-        for (auto& node : functionNode->Nodes) {
+        if (functionNode == nullptr) {
+            continue;
+        }
+
+        for (auto &node : functionNode->Nodes) {
             PassUtil::appendGraphContent(outputObject["functions"][functionName], node.get());
         }
     }
