@@ -182,11 +182,6 @@ void ILPBuilder::appendLoopBoundConstraint(
     HLAC::LoopNode *loopNode,
     const std::vector<int> &invocationCols) {
 
-    if (loopNode->loop->getName().str() == "while.body237.i") {
-        std::cout << "Loop has " << loopNode->backEdges.size() << " loop edges." << std::endl;
-        std::cout << "Loop has " << invocationCols.size() << " invocation columns." << std::endl;
-    }
-
     if (loopNode == nullptr) {
         Logger::getInstance().log(
             "Loop bound debug: loopNode is null.",
@@ -194,71 +189,43 @@ void ILPBuilder::appendLoopBoundConstraint(
         return;
     }
 
-    if (invocationCols.empty()) {
+    if (invocationCols.size() != 1) {
         Logger::getInstance().log(
-            "Loop bound debug: no invocation columns for loop " + loopNode->getDotName(),
-            LOGLEVEL::ERROR);
+            "Loop bound fallback: loop " + loopNode->getDotName()
+            + " has " + std::to_string(invocationCols.size())
+            + " invocation columns, expected exactly one.",
+            LOGLEVEL::WARNING);
         return;
     }
 
-    const auto lowerBound = loopNode->bounds.getLowerBound();
-    const auto upperBound = loopNode->bounds.getUpperBound();
+    const double upperBoundAsDouble = static_cast<double>(loopNode->bounds.getUpperBound());
+    const double upperBackedgeFactor = std::max(0.0, upperBoundAsDouble - 1.0);
+    const int invocationColumn = invocationCols.front();
 
-    const double lowerBoundAsDouble = static_cast<double>(lowerBound);
-    const double upperBoundAsDouble = static_cast<double>(upperBound);
-
-    // std::cout << "Defining execution bound for "
-    //           << loopNode->getDotName()
-    //           << "["
-    //           << loopNode->loop->getName().str()
-    //           << "] with bounds ["
-    //           << lowerBoundAsDouble
-    //           << ", "
-    //           << upperBoundAsDouble
-    //           << "]\n";
-
-    std::unordered_map<int, double> executionCoefficientsByColumn;
-
-    // std::cout << "Loop bound invocations:\n";
-
-    for (int invocationColumn : invocationCols) {
-        ILPUtil::insertOrAccumulate(
-            executionCoefficientsByColumn,
-            invocationColumn,
-            1.0);
-
-        // std::cout << "  x" << invocationColumn << "\n";
-    }
-
-    // std::cout << "Loop bound backedges:\n";
+    std::unordered_map<int, double> upperBoundCoefficientsByColumn;
 
     for (HLAC::Edge *backEdge : loopNode->backEdges) {
-        if (backEdge == nullptr) {
-            continue;
+        if (backEdge != nullptr) {
+            ILPUtil::insertOrAccumulate(upperBoundCoefficientsByColumn, backEdge->ilpIndex, 1.0);
         }
-
-        ILPUtil::insertOrAccumulate(
-            executionCoefficientsByColumn,
-            backEdge->ilpIndex,
-            1.0);
-
-        /*std::cout << "  x"
-                  << backEdge->ilpIndex
-                  << " = "
-                  << backEdge->soure->getDotName()
-                  << " -> "
-                  << backEdge->destination->getDotName()
-                  << "\n";*/
     }
 
-    CoinPackedVector executionBoundRow =
-        ILPUtil::createRowFromCoefficients(executionCoefficientsByColumn);
+    ILPUtil::insertOrAccumulate(
+        upperBoundCoefficientsByColumn,
+        invocationColumn,
+        -upperBackedgeFactor);
 
-    ILPUtil::appendRow(
-        model,
-        executionBoundRow,
-        lowerBoundAsDouble,
-        upperBoundAsDouble);
+    CoinPackedVector upperBoundRow = ILPUtil::createRowFromCoefficients(upperBoundCoefficientsByColumn);
+    ILPUtil::appendRow(model, upperBoundRow, -COIN_DBL_MAX, 0.0);
+
+    /*Logger::getInstance().log(
+        "Loop bound debug: loop=" + loopNode->getDotName()
+        + " lower=" + std::to_string(loopNode->bounds.getLowerBound())
+        + " upper=" + std::to_string(loopNode->bounds.getUpperBound())
+        + " upperBackedgeFactor=" + std::to_string(upperBackedgeFactor)
+        + " invocations=" + std::to_string(invocationCols.size())
+        + " backedges=" + std::to_string(loopNode->backEdges.size()),
+        LOGLEVEL::INFO);*/
 }
 
 void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::FunctionNode *func) {
