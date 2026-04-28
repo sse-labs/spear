@@ -306,7 +306,7 @@ ILPClusteredLoopResult hlac::solveClusteredIlps(ILPLoopModelMapping loopModelMap
                 loopEnergyMapping.emplace(loopNode, cachedResult.value());
             }
         } else {
-            auto solvedModel = ILPBuilder::solveModel(model);
+            std::optional<ILPResult> solvedModel = ILPBuilder::solveClusteredLoopModel(model, loopNode);
 
             if (solvedModel.has_value()) {
                 // std::cout << "Loop " << loopNode->loop->getName().str() << " -> " << objectiveValue << std::endl;

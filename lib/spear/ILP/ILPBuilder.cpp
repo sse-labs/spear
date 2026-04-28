@@ -177,6 +177,40 @@ void ILPBuilder::appendGraphConstraints(
     }
 }
 
+std::optional<ILPResult> ILPBuilder::solveClusteredLoopModel(
+    const ILPModel &ilpModel,
+    HLAC::LoopNode *loopNode) {
+
+    ILPSolver modelSolver(ilpModel);
+
+    auto optimalSolution = modelSolver.getSolvedModelValue();
+    auto optimalPath = modelSolver.getSolvedSolution();
+
+    if (optimalPath.has_value() && optimalSolution.has_value()) {
+        return std::make_optional<ILPResult>(optimalSolution.value(), optimalPath.value());
+    }
+
+    const ILPSolverStatus solverStatus = modelSolver.getStatus();
+
+    if (solverStatus == ILPSolverStatus::INFEASIBLE) {
+        Logger::getInstance().log(
+            "Clustered ILP: loop " + loopNode->getDotName()
+            + " is infeasible under feasibility constraints. Treating it as unreachable with energy 0.0.",
+            LOGLEVEL::WARNING);
+
+        return std::make_optional<ILPResult>(
+            0.0,
+            std::vector<double>(ilpModel.matrix.getNumCols(), 0.0));
+    }
+
+    Logger::getInstance().log(
+        "Clustered ILP failed for loop " + loopNode->getDotName()
+        + " with status " + modelSolver.getStatusString(),
+        LOGLEVEL::ERROR);
+
+    return std::nullopt;
+}
+
 void ILPBuilder::appendLoopBoundConstraint(
     ILPModel &model,
     HLAC::LoopNode *loopNode,
@@ -436,10 +470,13 @@ std::unordered_map<HLAC::LoopNode *, ILPModel> ILPBuilder::buildClusteredILP(HLA
     ILPUtil::assignEdgeIndicesFunction(func, 0);
 
     for (auto &nodeUP : func->Nodes) {
-        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
-            ILPModel loopModel = buildMonolithicILP(loopNode);
-            resultMapping[loopNode] = loopModel;
+        auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get());
+        if (loopNode == nullptr) {
+            continue;
         }
+
+        ILPModel loopModel = buildMonolithicILP(loopNode);
+        resultMapping[loopNode] = loopModel;
     }
 
     return resultMapping;

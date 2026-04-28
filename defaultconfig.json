@@ -14,7 +14,7 @@
     "outputmode": "normal",
     "outputDirectory": "./output/hmmm",
     "clusteredCacheEnabled": false,
-    "feasibilityEnabled": false,
+    "feasibilityEnabled": true,
     "writeDotFiles": false,
     "elbMappingActivated": true,
     "legacyConfig": {

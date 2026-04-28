@@ -58,6 +58,9 @@ class ILPBuilder {
      */
     static std::optional<ILPResult> solveModel(const ILPModel &ilpModel);
 
+    static std::optional<ILPResult> solveClusteredLoopModel(const ILPModel &ilpModel, HLAC::LoopNode *loopNode);
+
+
  private:
     /**
      * Insert feasibility information contained in the given functionNode to the given model.
@@ -97,8 +100,9 @@ class ILPBuilder {
         const std::vector<int> *invocationCols);
 
 
+
     static std::vector<int> getInvocationColumnsForLoopNode(HLAC::LoopNode *loopNode,
-                                                     const std::vector<std::unique_ptr<HLAC::Edge>> &scopeEdges);
+                                                            const std::vector<std::unique_ptr<HLAC::Edge>> &scopeEdges);
 
 
     /**
