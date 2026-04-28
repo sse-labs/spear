@@ -198,34 +198,71 @@ void ILPBuilder::appendLoopBoundConstraint(
         return;
     }
 
+    const double lowerBoundAsDouble = static_cast<double>(loopNode->bounds.getLowerBound());
     const double upperBoundAsDouble = static_cast<double>(loopNode->bounds.getUpperBound());
+
+    const double lowerBackedgeFactor = std::max(0.0, lowerBoundAsDouble - 1.0);
     const double upperBackedgeFactor = std::max(0.0, upperBoundAsDouble - 1.0);
+
     const int invocationColumn = invocationCols.front();
 
-    std::unordered_map<int, double> upperBoundCoefficientsByColumn;
+    std::unordered_map<int, double> backedgeCoefficientsByColumn;
 
     for (HLAC::Edge *backEdge : loopNode->backEdges) {
-        if (backEdge != nullptr) {
-            ILPUtil::insertOrAccumulate(upperBoundCoefficientsByColumn, backEdge->ilpIndex, 1.0);
+        if (backEdge == nullptr) {
+            continue;
         }
+
+        if (backEdge->ilpIndex < 0 || backEdge->ilpIndex >= static_cast<int>(model.col_lb.size())) {
+            Logger::getInstance().log(
+                "Loop bound debug: invalid backedge ilpIndex in loop " + loopNode->getDotName(),
+                LOGLEVEL::ERROR);
+            continue;
+        }
+
+        ILPUtil::insertOrAccumulate(backedgeCoefficientsByColumn, backEdge->ilpIndex, 1.0);
     }
 
-    ILPUtil::insertOrAccumulate(
-        upperBoundCoefficientsByColumn,
-        invocationColumn,
-        -upperBackedgeFactor);
+    if (backedgeCoefficientsByColumn.empty()) {
+        Logger::getInstance().log(
+            "Loop bound debug: loop " + loopNode->getDotName() + " has no valid backedges.",
+            LOGLEVEL::ERROR);
+        return;
+    }
 
-    CoinPackedVector upperBoundRow = ILPUtil::createRowFromCoefficients(upperBoundCoefficientsByColumn);
-    ILPUtil::appendRow(model, upperBoundRow, -COIN_DBL_MAX, 0.0);
+    {
+        std::unordered_map<int, double> lowerBoundCoefficientsByColumn = backedgeCoefficientsByColumn;
 
-    /*Logger::getInstance().log(
-        "Loop bound debug: loop=" + loopNode->getDotName()
-        + " lower=" + std::to_string(loopNode->bounds.getLowerBound())
-        + " upper=" + std::to_string(loopNode->bounds.getUpperBound())
-        + " upperBackedgeFactor=" + std::to_string(upperBackedgeFactor)
-        + " invocations=" + std::to_string(invocationCols.size())
-        + " backedges=" + std::to_string(loopNode->backEdges.size()),
-        LOGLEVEL::INFO);*/
+        ILPUtil::insertOrAccumulate(
+            lowerBoundCoefficientsByColumn,
+            invocationColumn,
+            -lowerBackedgeFactor);
+
+        CoinPackedVector lowerBoundRow = ILPUtil::createRowFromCoefficients(lowerBoundCoefficientsByColumn);
+        ILPUtil::appendRow(model, lowerBoundRow, 0.0, COIN_DBL_MAX);
+    }
+
+    {
+        std::unordered_map<int, double> upperBoundCoefficientsByColumn = backedgeCoefficientsByColumn;
+
+        ILPUtil::insertOrAccumulate(
+            upperBoundCoefficientsByColumn,
+            invocationColumn,
+            -upperBackedgeFactor);
+
+        CoinPackedVector upperBoundRow = ILPUtil::createRowFromCoefficients(upperBoundCoefficientsByColumn);
+        ILPUtil::appendRow(model, upperBoundRow, -COIN_DBL_MAX, 0.0);
+    }
+
+    // Logger::getInstance().log(
+    //     "Loop bound debug: loop=" + loopNode->getDotName()
+    //     + " lower=" + std::to_string(loopNode->bounds.getLowerBound())
+    //     + " upper=" + std::to_string(loopNode->bounds.getUpperBound())
+    //     + " lowerBackedgeFactor=" + std::to_string(lowerBackedgeFactor)
+    //     + " upperBackedgeFactor=" + std::to_string(upperBackedgeFactor)
+    //     + " invocations=" + std::to_string(invocationCols.size())
+    //     + " backedges=" + std::to_string(loopNode->backEdges.size()),
+    //     LOGLEVEL::INFO);
 }
 
 void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::FunctionNode *func) {

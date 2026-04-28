@@ -28,7 +28,7 @@
     ],
     "fallback": {
       "calls": {
-        "UNKNOWN_FUNCTION": 3e-4
+        "UNKNOWN_FUNCTION": 2.000602872520e-08
       },
       "loops": {
         "MALFORMED_LOOP":  1000,
