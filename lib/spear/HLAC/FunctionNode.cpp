@@ -425,7 +425,8 @@ std::vector<GenericNode *> FunctionNode::getTopologicalOrdering() {
 
     if (topologicalOrdering.size() != this->Nodes.size()) {
         Logger::getInstance().log(
-            "Topological ordering failed for " + this->function->getName().str()  + " because the function graph is not acyclic.",
+            "Topological ordering failed for " + this->function->getName().str()
+            + " because the function graph is not acyclic.",
             LOGLEVEL::ERROR);
     }
 

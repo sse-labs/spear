@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
+#include <iostream>
 
 #include "HLAC/util.h"
 
@@ -183,7 +184,6 @@ std::optional<DAGLongestPathSolution> hlac::DAGLongestPath(
 
     if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
         && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
-
         if (functionNode->function->getName().str() == "LZ4_compress_fast_extState") {
             int test = 0;
         }

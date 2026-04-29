@@ -3,12 +3,6 @@
  * All rights reserved.
  */
 
-#include "ILP/ILPDebug.h"
-
-#include <CoinFinite.hpp>
-
-#include "Logger.h"
-
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -18,6 +12,11 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <CoinFinite.hpp>
+
+#include "ILP/ILPDebug.h"
+#include "Logger.h"
 
 std::string ILPDebug::basicBlockToDebugString(const llvm::BasicBlock *basicBlock) {
     if (basicBlock == nullptr) {

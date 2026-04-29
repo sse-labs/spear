@@ -168,7 +168,8 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
             }
 
             Logger::getInstance().log(
-                "Monolithic Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J " + illformatString,
+                "Monolithic Energy of " + funcName + ": "
+                + PassUtil::formatScientific(funcEnergy) + " J " + illformatString,
                 LOGLEVEL::HIGHLIGHT);
 
             if (ConfigParser::getAnalysisConfiguration().writeDotFiles) {

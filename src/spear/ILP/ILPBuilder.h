@@ -24,11 +24,11 @@ class ILPBuilder {
      */
     ILPBuilder() = default;
 
-     /**
-      * Construct a monolithic ILP from the given functionNode pointer
-      * @param func FunctionNode pointer to calculate the monolithic ILP for
-      * @return Returns the constructed ILPModel for the given function
-      */
+    /**
+     * Construct a monolithic ILP from the given functionNode pointer
+     * @param func FunctionNode pointer to calculate the monolithic ILP for
+     * @return Returns the constructed ILPModel for the given function
+     */
     static ILPModel buildMonolithicILP(HLAC::FunctionNode *func);
 
     /**
@@ -39,9 +39,17 @@ class ILPBuilder {
      */
     static ILPModel buildMonolithicILP(HLAC::LoopNode *loop);
 
-    static std::vector<int> collectExternalLoopInvocationColumns(HLAC::LoopNode *loopNode,
-                                                          const std::vector<std::unique_ptr<HLAC::Edge>> &parentEdges,
-                                                          const std::vector<int> &incomingColumns);
+    /**
+     * Collect column variables that lead to the given loopnode
+     * @param loopNode LoopNode to consider
+     * @param parentEdges Edges in the parent node
+     * @param incomingColumns Vector of already determined possible incoming columns
+     * @return Calculated columns variables that resemble and invocation of the given loopnode
+     */
+    static std::vector<int>
+    collectExternalLoopInvocationColumns(HLAC::LoopNode *loopNode,
+                                         const std::vector<std::unique_ptr<HLAC::Edge>> &parentEdges,
+                                         const std::vector<int> &incomingColumns);
 
     /**
      * Construct a clustered ILP from the given functionNode pointer
@@ -52,12 +60,18 @@ class ILPBuilder {
 
     /**
      * Solve a given ILPModel using the ILPSolver class
-     * @param model Model to solve
+     * @param ilpModel Model to solve
      * @return Optional over ILPResult. Contains the ILPResult if the model could be solved successfully, std::nullopt
      * otherwise
      */
     static std::optional<ILPResult> solveModel(const ILPModel &ilpModel);
 
+    /**
+     * Solve the clustereed loop model for the given loopnodé
+     * @param ilpModel Model to solve
+     * @param loopNode LoopNode to consider
+     * @return Possible ILPResult
+     */
     static std::optional<ILPResult> solveClusteredLoopModel(const ILPModel &ilpModel, HLAC::LoopNode *loopNode);
 
 
@@ -93,17 +107,9 @@ class ILPBuilder {
      * @param invocationCols Optional pointer to ILP column indices representing how often
      * this subgraph is entered from the parent graph. If nullptr, the subgraph is treated as top-level.
      */
-    static void appendGraphConstraints(
-        ILPModel &model,
-        const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
-        const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
-        const std::vector<int> *invocationCols);
-
-
-
-    static std::vector<int> getInvocationColumnsForLoopNode(HLAC::LoopNode *loopNode,
-                                                            const std::vector<std::unique_ptr<HLAC::Edge>> &scopeEdges);
-
+    static void appendGraphConstraints(ILPModel &model, const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
+                                       const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
+                                       const std::vector<int> *invocationCols);
 
     /**
      * Add a loop bound constraint for the given loop node to the ILP model.
@@ -131,10 +137,8 @@ class ILPBuilder {
      * @param invocationCols ILP column indices representing how often the loop is entered
      * from the surrounding graph
      */
-    static void appendLoopBoundConstraint(
-        ILPModel &model,
-        HLAC::LoopNode *loopNode,
-        const std::vector<int> &invocationCols);
+    static void appendLoopBoundConstraint(ILPModel &model, HLAC::LoopNode *loopNode,
+                                          const std::vector<int> &invocationCols);
 
 
     /**
@@ -163,9 +167,6 @@ class ILPBuilder {
      * @param loopNode LoopNode to extract the energy values from
      */
     static void fillObjectiveFunction(ILPModel &model, HLAC::LoopNode *loopNode);
-
-    static int assignLoopInvocationIndices(HLAC::FunctionNode *functionNode, int nextColumn);
-    static int assignLoopInvocationIndices(HLAC::LoopNode *loopNode, int nextColumn);
 };
 
 #endif  // SRC_SPEAR_ILP_ILPBUILDER_H_

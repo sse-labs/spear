@@ -357,15 +357,12 @@ class LoopNode : public GenericNode {
      */
     void collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList);
 
-    void moveInternalAndCollapseBoundaryEdges(std::vector<std::unique_ptr<Edge>> &parentEdges,
-                                              const std::unordered_set<GenericNode *> &nodesInLoop,
-                                              const llvm::BasicBlock *headerBlock);
-
-    bool edgeReturnsToHeader(const Edge *edge, const llvm::BasicBlock *headerBlock) const;
-
-    void debugDumpEdges() const;
+    /**
+     * Refresh the internal backedge storage of the loopnode.
+     * Finds backedges and stores them inside the loopnode
+     */
     void refreshBackEdges();
-    
+
     /**
      * Construct CallNodes from calls contained within this LoopNode
      * We need this function here to perform recurive CallNode construction
@@ -423,9 +420,14 @@ class FunctionNode : public GenericNode {
      */
     ResultRegistry registry;
 
-
+    /**
+     * Flag to detect functions that contain gotos
+     */
     bool isGotoFunction;
 
+    /**
+     * Flag to detect functions that contain loops with multiple entries, which we currently do not support
+     */
     bool isIllFormatted = false;
 
     /**
@@ -588,6 +590,11 @@ class FunctionNode : public GenericNode {
      */
     bool isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph);
 
+    /**
+     * Check if the function represented by this FunctionNode is ill-formatted, which means that it contains
+     * loops with multiple entries.
+     * @return True if the loop is ill-formatted, false otherwise
+     */
     bool checkForIllFormat();
 
  private:
@@ -609,6 +616,11 @@ class FunctionNode : public GenericNode {
      * @return Vector representing the topological order of the contained nodes
      */
     std::vector<GenericNode *> getTopologicalOrdering();
+
+    /**
+     * Check if the function contains internal cycles
+     * @return True if an internal cycle can be found, false otherwise
+     */
     bool isAcyclic() const;
 };
 

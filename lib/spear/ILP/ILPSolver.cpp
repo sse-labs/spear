@@ -9,17 +9,25 @@
 
 #include "ILP/ILPSolver.h"
 
-constexpr double objectiveScalingFactor = 1.0e12;
+/**
+ * Scaling factor to the objective function values.
+ * Reduces errors where the solver returns a solution that is slightly worse than the optimal solution due to numerical
+ */
+constexpr double objectiveScalingFactor = 1.0e15;
 
 ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutionModel(nullptr) {
     OsiClpSolverInterface solver;
     solver.getModelPtr()->setLogLevel(0);
 
+    /**
+     * Scale the objective function with the objectiveScalingFactor
+     */
     std::vector<double> scaledObjective = underlyingILPModel.obj;
     for (double &objectiveCoefficient : scaledObjective) {
         objectiveCoefficient *= objectiveScalingFactor;
     }
 
+    // Load the problem into the solver
     solver.loadProblem(
         underlyingILPModel.matrix,
         underlyingILPModel.col_lb.data(),
@@ -28,8 +36,10 @@ ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutio
         underlyingILPModel.row_lb.data(),
         underlyingILPModel.row_ub.data());
 
+    // Set the goal of the solver to maximize (-1 max/ +1 min)
     solver.setObjSense(-1.0);
 
+    // Set the expected values to be integers, as edges can only be executed integer-wise
     const int numberOfColumns = underlyingILPModel.matrix.getNumCols();
     for (int columnIndex = 0; columnIndex < numberOfColumns; ++columnIndex) {
         solver.setInteger(columnIndex);
@@ -37,41 +47,9 @@ ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutio
 
     solutionModel = std::make_unique<CbcModel>(solver);
     solutionModel->setLogLevel(0);
+
+    // Execute the actual solving
     solutionModel->branchAndBound();
-
-    if (solutionModel->isContinuousUnbounded()) {
-        OsiSolverInterface *solverInterface = solutionModel->solver();
-
-        if (solverInterface == nullptr) {
-            std::cout << "[ILP DEBUG] Unbounded, but solver interface is null.\n";
-            return;
-        }
-
-        std::vector<double *> primalRays = solverInterface->getPrimalRays(1);
-
-        if (primalRays.empty() || primalRays[0] == nullptr) {
-            std::cout << "[ILP DEBUG] Unbounded, but no primal ray was returned.\n";
-            return;
-        }
-
-        double *primalRay = primalRays[0];
-        const int numberOfSolverColumns = solverInterface->getNumCols();
-
-        std::cout << "[ILP DEBUG] Unbounded primal ray:\n";
-
-        for (int columnIndex = 0; columnIndex < numberOfSolverColumns; ++columnIndex) {
-            if (std::abs(primalRay[columnIndex]) <= 1.0e-9) {
-                continue;
-            }
-
-            std::cout << "  x" << columnIndex
-                      << " direction=" << primalRay[columnIndex]
-                      << " objective=" << underlyingILPModel.obj[columnIndex]
-                      << "\n";
-        }
-
-        delete[] primalRay;
-    }
 }
 
 bool ILPSolver::solutionExists() const {
@@ -87,6 +65,7 @@ std::optional<double> ILPSolver::getSolvedModelValue() const {
         return std::nullopt;
     }
 
+    // When returning optimal solution we have to scale it back using the objectivescalingfactor
     return solutionModel->getObjValue() / objectiveScalingFactor;
 }
 

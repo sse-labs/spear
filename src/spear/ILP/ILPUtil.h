@@ -105,8 +105,20 @@ class ILPUtil {
      */
     static int getMaxEdgeIndex(HLAC::LoopNode *loopNode);
 
-    static void insertOrAccumulate(std::unordered_map<int, double> &coefficientsByColumn, int column, double coefficient);
+    /**
+     * Add or insert the given coefficient in the given coefficient map via the defined column index
+     * @param coefficientsByColumn Mapping to the set the coefficient in
+     * @param column Column index
+     * @param coefficient Coefficient to add or assing
+     */
+    static void insertOrAccumulate(std::unordered_map<int,
+        double> &coefficientsByColumn, int column, double coefficient);
 
+    /**
+     * Converts a map of coefficients in a CBC vector while removing numerical insignificant values
+     * @param coefficientsByColumn Coefficient map
+     * @return CBC row resulting from the mapping
+     */
     static CoinPackedVector createRowFromCoefficients(const std::unordered_map<int, double> &coefficientsByColumn);
 
  private:

@@ -157,7 +157,8 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
                 }
 
                 Logger::getInstance().log(
-                    "Clustered Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J " + illformatString,
+                    "Clustered Energy of " + funcName + ": "
+                    + PassUtil::formatScientific(funcEnergy) + " J " + illformatString,
                     LOGLEVEL::HIGHLIGHT);
 
                 if (ConfigParser::getAnalysisConfiguration().writeDotFiles) {
