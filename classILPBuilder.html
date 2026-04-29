@@ -90,15 +90,13 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:ae10aa5fc73640e399fa0b9e7505a234d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8de779f762e52ff1b7aee41cc09e7caf" id="r_a8de779f762e52ff1b7aee41cc09e7caf"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="structILPModel.html">ILPModel</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPBuilder.html#a8de779f762e52ff1b7aee41cc09e7caf">buildMonolithicILP</a> (<a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loop)</td></tr>
 <tr class="separator:a8de779f762e52ff1b7aee41cc09e7caf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5c15a4bb2e686c4a4407f192a0f3520a" id="r_a5c15a4bb2e686c4a4407f192a0f3520a"><td class="memItemLeft" align="right" valign="top"><a id="a5c15a4bb2e686c4a4407f192a0f3520a" name="a5c15a4bb2e686c4a4407f192a0f3520a"></a>
-static std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>collectExternalLoopInvocationColumns</b> (<a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loopNode, const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> &gt; &gt; &amp;parentEdges, const std::vector&lt; int &gt; &amp;incomingColumns)</td></tr>
+<tr class="memitem:a5c15a4bb2e686c4a4407f192a0f3520a" id="r_a5c15a4bb2e686c4a4407f192a0f3520a"><td class="memItemLeft" align="right" valign="top">static std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPBuilder.html#a5c15a4bb2e686c4a4407f192a0f3520a">collectExternalLoopInvocationColumns</a> (<a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loopNode, const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> &gt; &gt; &amp;parentEdges, const std::vector&lt; int &gt; &amp;incomingColumns)</td></tr>
 <tr class="separator:a5c15a4bb2e686c4a4407f192a0f3520a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4ed98f015aadc726de85dae743757d71" id="r_a4ed98f015aadc726de85dae743757d71"><td class="memItemLeft" align="right" valign="top">static ClusteredILPModel&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPBuilder.html#a4ed98f015aadc726de85dae743757d71">buildClusteredILP</a> (<a class="el" href="classHLAC_1_1FunctionNode.html">HLAC::FunctionNode</a> *func)</td></tr>
 <tr class="separator:a4ed98f015aadc726de85dae743757d71"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a39cbc4a3fc87a290c1c7a1ef83b1b012" id="r_a39cbc4a3fc87a290c1c7a1ef83b1b012"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPBuilder.html#a39cbc4a3fc87a290c1c7a1ef83b1b012">solveModel</a> (const <a class="el" href="structILPModel.html">ILPModel</a> &amp;ilpModel)</td></tr>
 <tr class="separator:a39cbc4a3fc87a290c1c7a1ef83b1b012"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa9362a0dd720936d606b4cf5388d8ea2" id="r_aa9362a0dd720936d606b4cf5388d8ea2"><td class="memItemLeft" align="right" valign="top"><a id="aa9362a0dd720936d606b4cf5388d8ea2" name="aa9362a0dd720936d606b4cf5388d8ea2"></a>
-static std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>solveClusteredLoopModel</b> (const <a class="el" href="structILPModel.html">ILPModel</a> &amp;ilpModel, <a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loopNode)</td></tr>
+<tr class="memitem:aa9362a0dd720936d606b4cf5388d8ea2" id="r_aa9362a0dd720936d606b4cf5388d8ea2"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPBuilder.html#aa9362a0dd720936d606b4cf5388d8ea2">solveClusteredLoopModel</a> (const <a class="el" href="structILPModel.html">ILPModel</a> &amp;ilpModel, <a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loopNode)</td></tr>
 <tr class="separator:aa9362a0dd720936d606b4cf5388d8ea2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -230,6 +228,101 @@ static std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a>
 
 </div>
 </div>
+<a id="a5c15a4bb2e686c4a4407f192a0f3520a" name="a5c15a4bb2e686c4a4407f192a0f3520a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5c15a4bb2e686c4a4407f192a0f3520a">&#9670;&#160;</a></span>collectExternalLoopInvocationColumns()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static std::vector&lt; int &gt; ILPBuilder::collectExternalLoopInvocationColumns </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *&#160;</td>
+          <td class="paramname"><em>loopNode</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>parentEdges</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>incomingColumns</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Collect column variables that lead to the given loopnode </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">loopNode</td><td><a class="el" href="classLoopNode.html">LoopNode</a> to consider </td></tr>
+    <tr><td class="paramname">parentEdges</td><td>Edges in the parent node </td></tr>
+    <tr><td class="paramname">incomingColumns</td><td>Vector of already determined possible incoming columns </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Calculated columns variables that resemble and invocation of the given loopnode </dd></dl>
+
+</div>
+</div>
+<a id="aa9362a0dd720936d606b4cf5388d8ea2" name="aa9362a0dd720936d606b4cf5388d8ea2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa9362a0dd720936d606b4cf5388d8ea2">&#9670;&#160;</a></span>solveClusteredLoopModel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a> &gt; ILPBuilder::solveClusteredLoopModel </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structILPModel.html">ILPModel</a> &amp;&#160;</td>
+          <td class="paramname"><em>ilpModel</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *&#160;</td>
+          <td class="paramname"><em>loopNode</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Solve the clustereed loop model for the given loopnodé </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ilpModel</td><td>Model to solve </td></tr>
+    <tr><td class="paramname">loopNode</td><td><a class="el" href="classLoopNode.html">LoopNode</a> to consider </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Possible <a class="el" href="structILPResult.html">ILPResult</a> </dd></dl>
+
+</div>
+</div>
 <a id="a39cbc4a3fc87a290c1c7a1ef83b1b012" name="a39cbc4a3fc87a290c1c7a1ef83b1b012"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a39cbc4a3fc87a290c1c7a1ef83b1b012">&#9670;&#160;</a></span>solveModel()</h2>
 
@@ -255,7 +348,7 @@ static std::optional&lt; <a class="el" href="structILPResult.html">ILPResult</a>
 </div><div class="memdoc">
 <p>Solve a given <a class="el" href="structILPModel.html">ILPModel</a> using the <a class="el" href="classILPSolver.html">ILPSolver</a> class </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">model</td><td>Model to solve </td></tr>
+    <tr><td class="paramname">ilpModel</td><td>Model to solve </td></tr>
   </table>
   </dd>
 </dl>

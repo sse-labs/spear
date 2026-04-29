@@ -6,9 +6,11 @@ var searchData=
   ['isconstant_3',['isConstant',['../classLoopBound_1_1CheckExpr.html#ad474b71b8447762c275ee8b8ae94259e',1,'LoopBound::CheckExpr']]],
   ['isentry_4',['isEntry',['../classHLAC_1_1VirtualNode.html#a89b216aa775db0332abbaeb28dd52405',1,'HLAC::VirtualNode']]],
   ['isexit_5',['isExit',['../classHLAC_1_1VirtualNode.html#a04dbb9077a14c691d6b2df399ac67bce',1,'HLAC::VirtualNode']]],
-  ['islinkerfunction_6',['isLinkerFunction',['../classHLAC_1_1CallNode.html#afa5af8f2d1768c8aecd796c8695b054b',1,'HLAC::CallNode']]],
-  ['ismainfunction_7',['isMainFunction',['../classHLAC_1_1FunctionNode.html#a673464e3e0b865afd0e1af0e7e47482e',1,'HLAC::FunctionNode']]],
-  ['isrecursive_8',['isRecursive',['../classHLAC_1_1FunctionNode.html#a6d55873496ff491f4d85ece3e5e2b7f6',1,'HLAC::FunctionNode']]],
-  ['isunknown_9',['isUnknown',['../classLoopBound_1_1CheckExpr.html#a1fa07bcfcc9109d501592e0a0dbcd505',1,'LoopBound::CheckExpr']]],
-  ['iterations_10',['iterations',['../classLoopTree.html#af4addbd8bbbc207cb1d7735a785782e4',1,'LoopTree']]]
+  ['isgotofunction_6',['isGotoFunction',['../classHLAC_1_1FunctionNode.html#afbaab9a79811835f548ab6cf5651c1f1',1,'HLAC::FunctionNode']]],
+  ['isillformatted_7',['isIllFormatted',['../classHLAC_1_1FunctionNode.html#a0a9d3a6ec3b14aacbc997b40742a802d',1,'HLAC::FunctionNode']]],
+  ['islinkerfunction_8',['isLinkerFunction',['../classHLAC_1_1CallNode.html#afa5af8f2d1768c8aecd796c8695b054b',1,'HLAC::CallNode']]],
+  ['ismainfunction_9',['isMainFunction',['../classHLAC_1_1FunctionNode.html#a673464e3e0b865afd0e1af0e7e47482e',1,'HLAC::FunctionNode']]],
+  ['isrecursive_10',['isRecursive',['../classHLAC_1_1FunctionNode.html#a6d55873496ff491f4d85ece3e5e2b7f6',1,'HLAC::FunctionNode']]],
+  ['isunknown_11',['isUnknown',['../classLoopBound_1_1CheckExpr.html#a1fa07bcfcc9109d501592e0a0dbcd505',1,'LoopBound::CheckExpr']]],
+  ['iterations_12',['iterations',['../classLoopTree.html#af4addbd8bbbc207cb1d7735a785782e4',1,'LoopTree']]]
 ];

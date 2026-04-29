@@ -98,11 +98,9 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:a3fd1abb93fd458d32e81ccbce4777f2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8f88836bc61374ee1d317a463dbae60e" id="r_a8f88836bc61374ee1d317a463dbae60e"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPUtil.html#a8f88836bc61374ee1d317a463dbae60e">getMaxEdgeIndex</a> (<a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loopNode)</td></tr>
 <tr class="separator:a8f88836bc61374ee1d317a463dbae60e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1ff01eaafefc92f412e56ee71fbb2095" id="r_a1ff01eaafefc92f412e56ee71fbb2095"><td class="memItemLeft" align="right" valign="top"><a id="a1ff01eaafefc92f412e56ee71fbb2095" name="a1ff01eaafefc92f412e56ee71fbb2095"></a>
-static void&#160;</td><td class="memItemRight" valign="bottom"><b>insertOrAccumulate</b> (std::unordered_map&lt; int, double &gt; &amp;coefficientsByColumn, int column, double coefficient)</td></tr>
+<tr class="memitem:a1ff01eaafefc92f412e56ee71fbb2095" id="r_a1ff01eaafefc92f412e56ee71fbb2095"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPUtil.html#a1ff01eaafefc92f412e56ee71fbb2095">insertOrAccumulate</a> (std::unordered_map&lt; int, double &gt; &amp;coefficientsByColumn, int column, double coefficient)</td></tr>
 <tr class="separator:a1ff01eaafefc92f412e56ee71fbb2095"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7aac21d7d17ea418c7c83b00cf22a0bb" id="r_a7aac21d7d17ea418c7c83b00cf22a0bb"><td class="memItemLeft" align="right" valign="top"><a id="a7aac21d7d17ea418c7c83b00cf22a0bb" name="a7aac21d7d17ea418c7c83b00cf22a0bb"></a>
-static CoinPackedVector&#160;</td><td class="memItemRight" valign="bottom"><b>createRowFromCoefficients</b> (const std::unordered_map&lt; int, double &gt; &amp;coefficientsByColumn)</td></tr>
+<tr class="memitem:a7aac21d7d17ea418c7c83b00cf22a0bb" id="r_a7aac21d7d17ea418c7c83b00cf22a0bb"><td class="memItemLeft" align="right" valign="top">static CoinPackedVector&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classILPUtil.html#a7aac21d7d17ea418c7c83b00cf22a0bb">createRowFromCoefficients</a> (const std::unordered_map&lt; int, double &gt; &amp;coefficientsByColumn)</td></tr>
 <tr class="separator:a7aac21d7d17ea418c7c83b00cf22a0bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -309,6 +307,39 @@ static CoinPackedVector&#160;</td><td class="memItemRight" valign="bottom"><b>cr
 
 </div>
 </div>
+<a id="a7aac21d7d17ea418c7c83b00cf22a0bb" name="a7aac21d7d17ea418c7c83b00cf22a0bb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7aac21d7d17ea418c7c83b00cf22a0bb">&#9670;&#160;</a></span>createRowFromCoefficients()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static CoinPackedVector ILPUtil::createRowFromCoefficients </td>
+          <td>(</td>
+          <td class="paramtype">const std::unordered_map&lt; int, double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>coefficientsByColumn</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Converts a map of coefficients in a CBC vector while removing numerical insignificant values </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">coefficientsByColumn</td><td>Coefficient map </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>CBC row resulting from the mapping </dd></dl>
+
+</div>
+</div>
 <a id="a8f88836bc61374ee1d317a463dbae60e" name="a8f88836bc61374ee1d317a463dbae60e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8f88836bc61374ee1d317a463dbae60e">&#9670;&#160;</a></span>getMaxEdgeIndex()</h2>
 
@@ -339,6 +370,56 @@ static CoinPackedVector&#160;</td><td class="memItemRight" valign="bottom"><b>cr
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Returns the biggest ILPIndex of the given <a class="el" href="classLoopNode.html">LoopNode</a> </dd></dl>
+
+</div>
+</div>
+<a id="a1ff01eaafefc92f412e56ee71fbb2095" name="a1ff01eaafefc92f412e56ee71fbb2095"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ff01eaafefc92f412e56ee71fbb2095">&#9670;&#160;</a></span>insertOrAccumulate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void ILPUtil::insertOrAccumulate </td>
+          <td>(</td>
+          <td class="paramtype">std::unordered_map&lt; int, double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>coefficientsByColumn</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>column</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>coefficient</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Add or insert the given coefficient in the given coefficient map via the defined column index </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">coefficientsByColumn</td><td>Mapping to the set the coefficient in </td></tr>
+    <tr><td class="paramname">column</td><td>Column index </td></tr>
+    <tr><td class="paramname">coefficient</td><td>Coefficient to add or assing </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>

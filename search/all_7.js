@@ -9,7 +9,7 @@ var searchData=
   ['feasibilityelement_6',['feasibilityelement',['../classFeasibility_1_1FeasibilityElement.html',1,'Feasibility::FeasibilityElement'],['../classFeasibility_1_1FeasibilityElement.html#a0fae617bcabca274908d2982f0943333',1,'Feasibility::FeasibilityElement::FeasibilityElement()']]],
   ['feasibilityproblem_7',['feasibilityProblem',['../classPhasarHandlerPass.html#aacccb8f447c9212816a6fa7122746c24',1,'PhasarHandlerPass']]],
   ['feasibilitytostring_8',['feasibilityToString',['../classHLAC_1_1Util.html#a83a243a770eac070a14d24af4392f16e',1,'HLAC::Util']]],
-  ['feasibilitywrapper_9',['feasibilitywrapper',['../classPhasarHandlerPass.html#a29ec9a6d6db8269b5d1640997df2cd8c',1,'PhasarHandlerPass::feasibilitywrapper'],['../classFeasibility_1_1FeasibilityWrapper.html#a146e332caa9cbe731bf35b86de8c73a4',1,'Feasibility::FeasibilityWrapper::FeasibilityWrapper()'],['../classFeasibility_1_1FeasibilityWrapper.html',1,'Feasibility::FeasibilityWrapper']]],
+  ['feasibilitywrapper_9',['feasibilitywrapper',['../classFeasibility_1_1FeasibilityWrapper.html#a146e332caa9cbe731bf35b86de8c73a4',1,'Feasibility::FeasibilityWrapper::FeasibilityWrapper()'],['../classPhasarHandlerPass.html#a29ec9a6d6db8269b5d1640997df2cd8c',1,'PhasarHandlerPass::feasibilitywrapper'],['../classFeasibility_1_1FeasibilityWrapper.html',1,'Feasibility::FeasibilityWrapper']]],
   ['findblock_10',['findBlock',['../classProgramGraph.html#a9450ec4e99c330c26535491056e8a639',1,'ProgramGraph']]],
   ['findcounterfromicmp_11',['findCounterFromICMP',['../classLoopBound_1_1LoopBoundIDEAnalysis.html#a9d1f8d26a90d0ab769aabe56bfea055d',1,'LoopBound::LoopBoundIDEAnalysis']]],
   ['findedgebyglobalid_12',['findEdgeByGlobalId',['../classHLAC_1_1Util.html#a07594c7d83d7a9545f684431dae24a78',1,'HLAC::Util']]],

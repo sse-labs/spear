@@ -99,17 +99,7 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:aefd4946443ad84de28252f5be9bdc518"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0bcef023b44e0728df391e081256b715" id="r_a0bcef023b44e0728df391e081256b715"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a0bcef023b44e0728df391e081256b715">collapseLoop</a> (std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt; &amp;edgeList)</td></tr>
 <tr class="separator:a0bcef023b44e0728df391e081256b715"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad578852afa8b930bf69754d4b90fd699" id="r_ad578852afa8b930bf69754d4b90fd699"><td class="memItemLeft" align="right" valign="top"><a id="ad578852afa8b930bf69754d4b90fd699" name="ad578852afa8b930bf69754d4b90fd699"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>moveInternalAndCollapseBoundaryEdges</b> (std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">Edge</a> &gt; &gt; &amp;parentEdges, const std::unordered_set&lt; <a class="el" href="classHLAC_1_1GenericNode.html">GenericNode</a> * &gt; &amp;nodesInLoop, const llvm::BasicBlock *headerBlock)</td></tr>
-<tr class="separator:ad578852afa8b930bf69754d4b90fd699"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac6af79461adb94c137adb493fed24b3c" id="r_ac6af79461adb94c137adb493fed24b3c"><td class="memItemLeft" align="right" valign="top"><a id="ac6af79461adb94c137adb493fed24b3c" name="ac6af79461adb94c137adb493fed24b3c"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>edgeReturnsToHeader</b> (const <a class="el" href="classHLAC_1_1Edge.html">Edge</a> *edge, const llvm::BasicBlock *headerBlock) const</td></tr>
-<tr class="separator:ac6af79461adb94c137adb493fed24b3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af3b33474621488943efed79ec86e59f7" id="r_af3b33474621488943efed79ec86e59f7"><td class="memItemLeft" align="right" valign="top"><a id="af3b33474621488943efed79ec86e59f7" name="af3b33474621488943efed79ec86e59f7"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>debugDumpEdges</b> () const</td></tr>
-<tr class="separator:af3b33474621488943efed79ec86e59f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a22bb1864c95138035f9af355cc916720" id="r_a22bb1864c95138035f9af355cc916720"><td class="memItemLeft" align="right" valign="top"><a id="a22bb1864c95138035f9af355cc916720" name="a22bb1864c95138035f9af355cc916720"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>refreshBackEdges</b> ()</td></tr>
+<tr class="memitem:a22bb1864c95138035f9af355cc916720" id="r_a22bb1864c95138035f9af355cc916720"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a22bb1864c95138035f9af355cc916720">refreshBackEdges</a> ()</td></tr>
 <tr class="separator:a22bb1864c95138035f9af355cc916720"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab27886c6add0a7a5ebafdb4e720eaaa3" id="r_ab27886c6add0a7a5ebafdb4e720eaaa3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#ab27886c6add0a7a5ebafdb4e720eaaa3">constructCallNodes</a> (bool considerDebugFunctions=false)</td></tr>
 <tr class="separator:ab27886c6add0a7a5ebafdb4e720eaaa3"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -500,6 +490,24 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>invocationIlpIndex</b>
 </dl>
 
 <p>Reimplemented from <a class="el" href="classHLAC_1_1GenericNode.html#a0247189bda9a6c81d89d9b2ce9fbbf5a">HLAC::GenericNode</a>.</p>
+
+</div>
+</div>
+<a id="a22bb1864c95138035f9af355cc916720" name="a22bb1864c95138035f9af355cc916720"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a22bb1864c95138035f9af355cc916720">&#9670;&#160;</a></span>refreshBackEdges()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void HLAC::LoopNode::refreshBackEdges </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Refresh the internal backedge storage of the loopnode. Finds backedges and stores them inside the loopnode </p>
 
 </div>
 </div>
