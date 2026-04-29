@@ -30,6 +30,7 @@ void hlac::makeFunction(llvm::Function* function, llvm::FunctionAnalysisManager 
     functions.emplace_back(std::move(fnptr));
 }
 
+
 void hlac::printDotRepresentation() {
     std::filesystem::create_directories("./dot");
 

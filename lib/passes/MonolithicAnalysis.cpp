@@ -161,8 +161,14 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
 
             graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
 
+            std::string illformatString = "";
+
+            if (funcNode->isIllFormatted) {
+                illformatString = " (ILL)";
+            }
+
             Logger::getInstance().log(
-                "Monolithic Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J",
+                "Monolithic Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J " + illformatString,
                 LOGLEVEL::HIGHLIGHT);
 
             if (ConfigParser::getAnalysisConfiguration().writeDotFiles) {
@@ -220,13 +226,15 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
 
         outputObject["functions"][functionName] = {
             {"energy", energy},
-            {"ILPS", ilpArr}
+            {"ILPS", ilpArr},
         };
 
         auto functionNode = graph->getFunctionByName(functionName);
         if (functionNode == nullptr) {
             continue;
         }
+
+        outputObject["functions"][functionName]["illformatted"] = functionNode->isIllFormatted;
 
         for (auto &node : functionNode->Nodes) {
             PassUtil::appendGraphContent(outputObject["functions"][functionName], node.get());

@@ -206,6 +206,26 @@ FunctionNode::FunctionNode(llvm::Function *function,
     this->hash = FunctionNode::calculateHash();
 
     this->isGotoFunction = !isAcyclic();
+
+    this->isIllFormatted = this->checkForIllFormat();
+}
+
+bool FunctionNode::checkForIllFormat() {
+    std::vector<HLAC::LoopNodeEdgeSummary> loopNodeEdgeSummaries;
+
+    HLAC::Util::collectLoopNodeEdgeSummaries(
+        this->name,
+        this->Nodes,
+        this->Edges,
+        loopNodeEdgeSummaries);
+
+    for (auto &summary : loopNodeEdgeSummaries) {
+        if (summary.incomingEdgeCount > 1 || summary.outgoingEdgeCount > 1) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool FunctionNode::isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph) {
@@ -229,7 +249,6 @@ bool FunctionNode::isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph) {
 
     return false;
 }
-
 
 void FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
     for (auto &loop : loops) {

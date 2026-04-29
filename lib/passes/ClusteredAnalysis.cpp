@@ -150,8 +150,14 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
                 graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
 
+                std::string illformatString = "";
+
+                if (funcNode->isIllFormatted) {
+                    illformatString = " (ILL)";
+                }
+
                 Logger::getInstance().log(
-                    "Clustered Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J",
+                    "Clustered Energy of " + funcName + ": " + PassUtil::formatScientific(funcEnergy) + " J " + illformatString,
                     LOGLEVEL::HIGHLIGHT);
 
                 if (ConfigParser::getAnalysisConfiguration().writeDotFiles) {
@@ -213,6 +219,8 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
         if (funcNode == nullptr) {
             continue;
         }
+
+        outputObject["functions"][funcname]["illformatted"] = funcNode->isIllFormatted;
 
         ILPClusteredLoopResult loopres;
         auto loopResultIterator = clusteredLoopResults.find(funcNode);

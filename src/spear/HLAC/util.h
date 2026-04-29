@@ -22,6 +22,13 @@
 
 namespace HLAC {
 
+struct LoopNodeEdgeSummary {
+    std::string functionName;
+    std::string loopNodeName;
+    std::size_t incomingEdgeCount = 0;
+    std::size_t outgoingEdgeCount = 0;
+};
+
 /**
  * Util class to implement utility functions for HLACS
  */
@@ -202,6 +209,31 @@ class Util {
         HLAC::LoopNode *loopNode,
         const std::unordered_set<HLAC::Edge *> &takenSet,
         std::vector<double> &result);
+
+    /**
+ * Collect all LoopNodes and nested LoopNodes that have more than one incoming or outgoing edge.
+ * The edge counts are computed relative to the graph level that directly contains the LoopNode.
+ *
+ * @param functionName Name of the parent function
+ * @param nodes Nodes to inspect
+ * @param edges Edges belonging to the inspected graph level
+ * @param loopNodeEdgeSummaries Output vector receiving matching LoopNode summaries
+ */
+    static void collectLoopNodeEdgeSummaries(
+        const std::string &functionName,
+        const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
+        const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
+        std::vector<LoopNodeEdgeSummary> &loopNodeEdgeSummaries);
+
+    /**
+     * Print LoopNode edge summaries as CSV.
+     *
+     * @param os Output stream to print to
+     * @param loopNodeEdgeSummaries Summaries to print
+     */
+    static void printLoopNodeEdgeSummaries(
+        std::ostream &os,
+        const std::vector<LoopNodeEdgeSummary> &loopNodeEdgeSummaries);
 };
 
 }  // namespace HLAC

@@ -16,6 +16,7 @@
 
 #include "HLAC/util.h"
 
+
 namespace HLAC {
 
 std::string Util::stripParameters(const std::string& s) {
@@ -514,6 +515,54 @@ void Util::markTakenEdgesInLoop(
         if (auto *innerLoop = dynamic_cast<LoopNode *>(nodeUP.get())) {
             markTakenEdgesInLoop(innerLoop, takenSet, result);
         }
+    }
+}
+
+void HLAC::Util::collectLoopNodeEdgeSummaries(
+    const std::string &functionName,
+    const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
+    const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
+    std::vector<HLAC::LoopNodeEdgeSummary> &loopNodeEdgeSummaries) {
+    for (const auto &nodeUniquePointer : nodes) {
+        auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUniquePointer.get());
+
+        if (!loopNode) {
+            continue;
+        }
+
+        std::size_t incomingEdgeCount = 0;
+        std::size_t outgoingEdgeCount = 0;
+
+        for (const auto &edgeUniquePointer : edges) {
+            HLAC::Edge *edge = edgeUniquePointer.get();
+
+            if (!edge || !edge->soure || !edge->destination) {
+                continue;
+            }
+
+            if (edge->destination == loopNode) {
+                incomingEdgeCount++;
+            }
+
+            if (edge->soure == loopNode) {
+                outgoingEdgeCount++;
+            }
+        }
+
+        if (incomingEdgeCount > 1 || outgoingEdgeCount > 1) {
+            loopNodeEdgeSummaries.push_back({
+                functionName,
+                loopNode->getDotName(),
+                incomingEdgeCount,
+                outgoingEdgeCount
+            });
+        }
+
+        HLAC::Util::collectLoopNodeEdgeSummaries(
+            functionName,
+            loopNode->Nodes,
+            loopNode->Edges,
+            loopNodeEdgeSummaries);
     }
 }
 

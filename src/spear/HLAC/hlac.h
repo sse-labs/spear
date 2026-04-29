@@ -365,7 +365,7 @@ class LoopNode : public GenericNode {
 
     void debugDumpEdges() const;
     void refreshBackEdges();
-
+    
     /**
      * Construct CallNodes from calls contained within this LoopNode
      * We need this function here to perform recurive CallNode construction
@@ -425,6 +425,8 @@ class FunctionNode : public GenericNode {
 
 
     bool isGotoFunction;
+
+    bool isIllFormatted = false;
 
     /**
      * Mapping of function energy
@@ -585,6 +587,8 @@ class FunctionNode : public GenericNode {
      * @return True if the function is recursive, false otherwise
      */
     bool isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph);
+
+    bool checkForIllFormat();
 
  private:
     /**
