@@ -128,17 +128,21 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span> </div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno"><a class="line" href="classILPUtil.html#a8f88836bc61374ee1d317a463dbae60e">  106</a></span>    <span class="keyword">static</span> <span class="keywordtype">int</span> <a class="code hl_function" href="classILPUtil.html#a8f88836bc61374ee1d317a463dbae60e">getMaxEdgeIndex</a>(<a class="code hl_class" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loopNode);</div>
 <div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span> </div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> <span class="keyword">private</span>:</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    <span class="keyword">static</span> std::string boundToString(<span class="keywordtype">double</span> value);</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span> </div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    <span class="keyword">static</span> std::string formatLinearExpr(<span class="keyword">const</span> CoinPackedMatrix &amp;matrix, <span class="keywordtype">int</span> row);</div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>};</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    <span class="keyword">static</span> <span class="keywordtype">void</span> insertOrAccumulate(std::unordered_map&lt;int, double&gt; &amp;coefficientsByColumn, <span class="keywordtype">int</span> column, <span class="keywordtype">double</span> coefficient);</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span> </div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    <span class="keyword">static</span> CoinPackedVector createRowFromCoefficients(<span class="keyword">const</span> std::unordered_map&lt;int, double&gt; &amp;coefficientsByColumn);</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span> <span class="keyword">private</span>:</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <span class="keyword">static</span> std::string boundToString(<span class="keywordtype">double</span> value);</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span> </div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    <span class="keyword">static</span> std::string formatLinearExpr(<span class="keyword">const</span> CoinPackedMatrix &amp;matrix, <span class="keywordtype">int</span> row);</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>};</div>
 </div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span> </div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span><span class="preprocessor">#endif  </span><span class="comment">// SRC_SPEAR_ILP_ILPUTIL_H_</span></div>
-<div class="ttc" id="aclassHLAC_1_1FunctionNode_html"><div class="ttname"><a href="classHLAC_1_1FunctionNode.html">HLAC::FunctionNode</a></div><div class="ttdef"><b>Definition</b> hlac.h:410</div></div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span> </div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span><span class="preprocessor">#endif  </span><span class="comment">// SRC_SPEAR_ILP_ILPUTIL_H_</span></div>
+<div class="ttc" id="aclassHLAC_1_1FunctionNode_html"><div class="ttname"><a href="classHLAC_1_1FunctionNode.html">HLAC::FunctionNode</a></div><div class="ttdef"><b>Definition</b> hlac.h:419</div></div>
 <div class="ttc" id="aclassHLAC_1_1GenericNode_html"><div class="ttname"><a href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a></div><div class="ttdef"><b>Definition</b> hlac.h:62</div></div>
-<div class="ttc" id="aclassHLAC_1_1LoopNode_html"><div class="ttname"><a href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a></div><div class="ttdef"><b>Definition</b> hlac.h:291</div></div>
+<div class="ttc" id="aclassHLAC_1_1LoopNode_html"><div class="ttname"><a href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a></div><div class="ttdef"><b>Definition</b> hlac.h:293</div></div>
 <div class="ttc" id="aclassILPUtil_html"><div class="ttname"><a href="classILPUtil.html">ILPUtil</a></div><div class="ttdef"><b>Definition</b> ILPUtil.h:22</div></div>
 <div class="ttc" id="aclassILPUtil_html_a3fd1abb93fd458d32e81ccbce4777f2d"><div class="ttname"><a href="classILPUtil.html#a3fd1abb93fd458d32e81ccbce4777f2d">ILPUtil::appendRow</a></div><div class="ttdeci">static void appendRow(ILPModel &amp;model, const CoinPackedVector &amp;row, double lb, double ub)</div></div>
 <div class="ttc" id="aclassILPUtil_html_a6dc86f9af2110d24a9c144e841791961"><div class="ttname"><a href="classILPUtil.html#a6dc86f9af2110d24a9c144e841791961">ILPUtil::longestPathDAG</a></div><div class="ttdeci">static ILPLongestPathDAGSolution longestPathDAG(HLAC::FunctionNode *func, const ILPClusteredLoopResult &amp;loopMapping)</div></div>

@@ -13,6 +13,7 @@ var searchData=
   ['loopclassifier_10',['LoopClassifier',['../classLoopBound_1_1LoopClassifier.html',1,'LoopBound']]],
   ['loopcountericmp_11',['LoopCounterICMP',['../structLoopBound_1_1LoopCounterICMP.html',1,'LoopBound']]],
   ['loopnode_12',['loopnode',['../classHLAC_1_1LoopNode.html',1,'HLAC::LoopNode'],['../classLoopNode.html',1,'LoopNode']]],
-  ['loopparameterdescription_13',['LoopParameterDescription',['../structLoopBound_1_1LoopParameterDescription.html',1,'LoopBound']]],
-  ['looptree_14',['LoopTree',['../classLoopTree.html',1,'']]]
+  ['loopnodeedgesummary_13',['LoopNodeEdgeSummary',['../structHLAC_1_1LoopNodeEdgeSummary.html',1,'HLAC']]],
+  ['loopparameterdescription_14',['LoopParameterDescription',['../structLoopBound_1_1LoopParameterDescription.html',1,'LoopBound']]],
+  ['looptree_15',['LoopTree',['../classLoopTree.html',1,'']]]
 ];

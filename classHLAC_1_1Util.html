@@ -126,6 +126,10 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:a353b7ea69a47aa5f511c9429ee1b59dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a80aafe96f34e5cf2a052059b44f87bac" id="r_a80aafe96f34e5cf2a052059b44f87bac"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a80aafe96f34e5cf2a052059b44f87bac">markTakenEdgesInLoop</a> (<a class="el" href="classHLAC_1_1LoopNode.html">HLAC::LoopNode</a> *loopNode, const std::unordered_set&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> * &gt; &amp;takenSet, std::vector&lt; double &gt; &amp;result)</td></tr>
 <tr class="separator:a80aafe96f34e5cf2a052059b44f87bac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e77c8b30961d09f2e9c2d2e2a925c0e" id="r_a5e77c8b30961d09f2e9c2d2e2a925c0e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#a5e77c8b30961d09f2e9c2d2e2a925c0e">collectLoopNodeEdgeSummaries</a> (const std::string &amp;functionName, const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> &gt; &gt; &amp;nodes, const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> &gt; &gt; &amp;edges, std::vector&lt; <a class="el" href="structHLAC_1_1LoopNodeEdgeSummary.html">LoopNodeEdgeSummary</a> &gt; &amp;loopNodeEdgeSummaries)</td></tr>
+<tr class="separator:a5e77c8b30961d09f2e9c2d2e2a925c0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac08f5b407f99fc7784a2365b0fd10cdf" id="r_ac08f5b407f99fc7784a2365b0fd10cdf"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1Util.html#ac08f5b407f99fc7784a2365b0fd10cdf">printLoopNodeEdgeSummaries</a> (std::ostream &amp;os, const std::vector&lt; <a class="el" href="structHLAC_1_1LoopNodeEdgeSummary.html">LoopNodeEdgeSummary</a> &gt; &amp;loopNodeEdgeSummaries)</td></tr>
+<tr class="separator:ac08f5b407f99fc7784a2365b0fd10cdf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classHLAC_1_1Util.html">Util</a> class to implement utility functions for HLACS </p>
@@ -217,6 +221,64 @@ Static Public Member Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">loop</td><td><a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> to inspect </td></tr>
     <tr><td class="paramname">allEdges</td><td>Vector the edges will be appended to </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a5e77c8b30961d09f2e9c2d2e2a925c0e" name="a5e77c8b30961d09f2e9c2d2e2a925c0e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e77c8b30961d09f2e9c2d2e2a925c0e">&#9670;&#160;</a></span>collectLoopNodeEdgeSummaries()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void HLAC::Util::collectLoopNodeEdgeSummaries </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>functionName</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a> &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>nodes</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::unique_ptr&lt; <a class="el" href="classHLAC_1_1Edge.html">HLAC::Edge</a> &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>edges</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="structHLAC_1_1LoopNodeEdgeSummary.html">LoopNodeEdgeSummary</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>loopNodeEdgeSummaries</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Collect all LoopNodes and nested LoopNodes that have more than one incoming or outgoing edge. The edge counts are computed relative to the graph level that directly contains the <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">functionName</td><td>Name of the parent function </td></tr>
+    <tr><td class="paramname">nodes</td><td>Nodes to inspect </td></tr>
+    <tr><td class="paramname">edges</td><td>Edges belonging to the inspected graph level </td></tr>
+    <tr><td class="paramname">loopNodeEdgeSummaries</td><td>Output vector receiving matching <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> summaries </td></tr>
   </table>
   </dd>
 </dl>
@@ -844,6 +906,50 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Prettified input string </dd></dl>
+
+</div>
+</div>
+<a id="ac08f5b407f99fc7784a2365b0fd10cdf" name="ac08f5b407f99fc7784a2365b0fd10cdf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac08f5b407f99fc7784a2365b0fd10cdf">&#9670;&#160;</a></span>printLoopNodeEdgeSummaries()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void HLAC::Util::printLoopNodeEdgeSummaries </td>
+          <td>(</td>
+          <td class="paramtype">std::ostream &amp;&#160;</td>
+          <td class="paramname"><em>os</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structHLAC_1_1LoopNodeEdgeSummary.html">LoopNodeEdgeSummary</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>loopNodeEdgeSummaries</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Print <a class="el" href="classHLAC_1_1LoopNode.html">LoopNode</a> edge summaries as CSV.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">os</td><td>Output stream to print to </td></tr>
+    <tr><td class="paramname">loopNodeEdgeSummaries</td><td>Summaries to print </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
