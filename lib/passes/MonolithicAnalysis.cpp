@@ -155,6 +155,16 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
 
             // If we encounter the main function add the additional program start offset cost to it!
             if (funcName == "main") {
+
+                for (int column : {55, 56, 156, 157, 158}) {
+                    Logger::getInstance().log(
+                        "SOLUTION DEBUG x" + std::to_string(column)
+                        + " = " + std::to_string(resultPair.variableValues[column])
+                        + " obj = " + ILPDebug::formatCoefficient(ilp.value().obj[column]),
+                        LOGLEVEL::INFO);
+                }
+
+                //ILPDebug::dumpILPModel(ilp.value(), funcNode->Edges, "main");
                 auto offsetCost = ProfileHandler::get_instance().getProgramOffset();
                 if (offsetCost.has_value()) {
                     funcEnergy += offsetCost.value();

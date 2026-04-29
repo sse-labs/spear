@@ -7,7 +7,9 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -21,6 +23,50 @@
 
 #include "Logger.h"
 
+namespace {
+constexpr double zeroTolerance = 1.0e-15;
+
+double getBestClusteredExitEnergyForSuccessor(
+    HLAC::LoopNode *loopNode,
+    HLAC::GenericNode *successorNode,
+    const std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>> &loopMapping,
+    bool &foundMatchingExit) {
+
+    foundMatchingExit = false;
+
+    if (loopNode == nullptr || successorNode == nullptr) {
+        return -std::numeric_limits<double>::infinity();
+    }
+
+    auto loopMappingIterator = loopMapping.find(loopNode);
+    if (loopMappingIterator == loopMapping.end()) {
+        Logger::getInstance().log(
+            "Warning: LoopNode "
+            + loopNode->getDotName()
+            + " not found in loop mapping, skipping loop exit edge.",
+            LOGLEVEL::WARNING);
+
+        return -std::numeric_limits<double>::infinity();
+    }
+
+    double bestExitEnergy = -std::numeric_limits<double>::infinity();
+
+    for (const auto &[loopResult, virtualExitNode] : loopMappingIterator->second) {
+        if (virtualExitNode == nullptr) {
+            continue;
+        }
+
+        if (virtualExitNode->successor != successorNode) {
+            continue;
+        }
+
+        foundMatchingExit = true;
+        bestExitEnergy = std::max(bestExitEnergy, loopResult.optimalValue);
+    }
+
+    return bestExitEnergy;
+}
+}  // namespace
 
 std::string ILPUtil::boundToString(double value) {
     if (value <= -COIN_DBL_MAX / 2) {
@@ -49,25 +95,25 @@ std::string ILPUtil::formatLinearExpr(const CoinPackedMatrix &matrix, int row) {
     CoinBigIndex end = start + lengths[row];
 
     for (CoinBigIndex k = start; k < end; ++k) {
-        double coeff = elements[k];
-        int col = indices[k];
+        double coefficient = elements[k];
+        int column = indices[k];
 
-        if (std::abs(coeff) < 1e-15) {
+        if (std::abs(coefficient) < zeroTolerance) {
             continue;
         }
 
         if (!first) {
-            oss << (coeff >= 0.0 ? " + " : " - ");
-        } else if (coeff < 0.0) {
+            oss << (coefficient >= 0.0 ? " + " : " - ");
+        } else if (coefficient < 0.0) {
             oss << "-";
         }
 
-        double absCoeff = std::abs(coeff);
-        if (std::abs(absCoeff - 1.0) > 1e-15) {
-            oss << absCoeff << "*";
+        double absoluteCoefficient = std::abs(coefficient);
+        if (std::abs(absoluteCoefficient - 1.0) > zeroTolerance) {
+            oss << absoluteCoefficient << "*";
         }
 
-        oss << "x" << col;
+        oss << "x" << column;
         first = false;
     }
 
@@ -81,80 +127,80 @@ std::string ILPUtil::formatLinearExpr(const CoinPackedMatrix &matrix, int row) {
 void ILPUtil::printILPModelHumanReadable(std::string funcname, const ILPModel &model) {
     const CoinPackedMatrix &matrix = model.matrix;
 
-    const int numRows = matrix.getNumRows();
-    const int numCols = matrix.getNumCols();
+    const int numberOfRows = matrix.getNumRows();
+    const int numberOfColumns = matrix.getNumCols();
 
-    std::cout << "================ Monolithic ILP Model - "<< funcname <<  " ================\n\n";
+    std::cout << "================ Monolithic ILP Model - " << funcname << " ================\n\n";
 
     std::cout << "Objective:\n";
     std::cout << "  maximize ";
 
-    bool firstObj = true;
-    for (int j = 0; j < numCols; ++j) {
-        double coeff = model.obj[j];
+    bool firstObjectiveCoefficient = true;
+    for (int column = 0; column < numberOfColumns; ++column) {
+        double coefficient = model.obj[column];
 
-        if (std::abs(coeff) < 1e-15) {
+        if (std::abs(coefficient) < zeroTolerance) {
             continue;
         }
 
-        if (!firstObj) {
-            std::cout << (coeff >= 0.0 ? " + " : " - ");
-        } else if (coeff < 0.0) {
+        if (!firstObjectiveCoefficient) {
+            std::cout << (coefficient >= 0.0 ? " + " : " - ");
+        } else if (coefficient < 0.0) {
             std::cout << "-";
         }
 
-        double absCoeff = std::abs(coeff);
-        if (std::abs(absCoeff - 1.0) > 1e-15) {
-            std::cout << absCoeff << "*";
+        double absoluteCoefficient = std::abs(coefficient);
+        if (std::abs(absoluteCoefficient - 1.0) > zeroTolerance) {
+            std::cout << absoluteCoefficient << "*";
         }
 
-        std::cout << "x" << j;
-        firstObj = false;
+        std::cout << "x" << column;
+        firstObjectiveCoefficient = false;
     }
 
-    if (firstObj) {
+    if (firstObjectiveCoefficient) {
         std::cout << "0";
     }
 
     std::cout << "\n\n";
 
     std::cout << "Constraints:\n";
-    for (int i = 0; i < numRows; ++i) {
-        std::string expr = formatLinearExpr(matrix, i);
+    for (int row = 0; row < numberOfRows; ++row) {
+        std::string expression = formatLinearExpr(matrix, row);
 
-        double lb = model.row_lb[i];
-        double ub = model.row_ub[i];
+        double lowerBound = model.row_lb[row];
+        double upperBound = model.row_ub[row];
 
-        bool hasLb = lb > -COIN_DBL_MAX / 2;
-        bool hasUb = ub < COIN_DBL_MAX / 2;
+        bool hasLowerBound = lowerBound > -COIN_DBL_MAX / 2;
+        bool hasUpperBound = upperBound < COIN_DBL_MAX / 2;
 
-        std::cout << "  c" << i << ": ";
+        std::cout << "  c" << row << ": ";
 
-        if (hasLb && hasUb) {
-            if (std::abs(lb - ub) < 1e-12) {
-                std::cout << expr << " = " << boundToString(lb);
+        if (hasLowerBound && hasUpperBound) {
+            if (std::abs(lowerBound - upperBound) < 1e-12) {
+                std::cout << expression << " = " << boundToString(lowerBound);
             } else {
-                std::cout << boundToString(lb) << " <= "
-                          << expr << " <= "
-                          << boundToString(ub);
+                std::cout << boundToString(lowerBound) << " <= "
+                          << expression << " <= "
+                          << boundToString(upperBound);
             }
-        } else if (hasLb) {
-            std::cout << expr << " >= " << boundToString(lb);
-        } else if (hasUb) {
-            std::cout << expr << " <= " << boundToString(ub);
+        } else if (hasLowerBound) {
+            std::cout << expression << " >= " << boundToString(lowerBound);
+        } else if (hasUpperBound) {
+            std::cout << expression << " <= " << boundToString(upperBound);
         } else {
-            std::cout << "-inf <= " << expr << " <= inf";
+            std::cout << "-inf <= " << expression << " <= inf";
         }
 
         std::cout << "\n";
     }
 
     std::cout << "\nVariable bounds:\n";
-    for (int j = 0; j < numCols; ++j) {
+    for (int column = 0; column < numberOfColumns; ++column) {
         std::cout << "  "
-                  << boundToString(model.col_lb[j])
-                  << " <= x" << j
-                  << " <= " << boundToString(model.col_ub[j])
+                  << boundToString(model.col_lb[column])
+                  << " <= x" << column
+                  << " <= " << boundToString(model.col_ub[column])
                   << "\n";
     }
 
@@ -164,81 +210,81 @@ void ILPUtil::printILPModelHumanReadable(std::string funcname, const ILPModel &m
 void ILPUtil::printILPModelHumanReadable(std::string funcname, std::string loopname, const ILPModel &model) {
     const CoinPackedMatrix &matrix = model.matrix;
 
-    const int numRows = matrix.getNumRows();
-    const int numCols = matrix.getNumCols();
+    const int numberOfRows = matrix.getNumRows();
+    const int numberOfColumns = matrix.getNumCols();
 
-    std::cout << "================ Clustered ILP Model - "<< funcname << "(" << loopname << ")"
-    <<  " ================\n\n";
+    std::cout << "================ Clustered ILP Model - " << funcname << "(" << loopname << ")"
+              << " ================\n\n";
 
     std::cout << "Objective:\n";
     std::cout << "  maximize ";
 
-    bool firstObj = true;
-    for (int j = 0; j < numCols; ++j) {
-        double coeff = model.obj[j];
+    bool firstObjectiveCoefficient = true;
+    for (int column = 0; column < numberOfColumns; ++column) {
+        double coefficient = model.obj[column];
 
-        if (std::abs(coeff) < 1e-15) {
+        if (std::abs(coefficient) < zeroTolerance) {
             continue;
         }
 
-        if (!firstObj) {
-            std::cout << (coeff >= 0.0 ? " + " : " - ");
-        } else if (coeff < 0.0) {
+        if (!firstObjectiveCoefficient) {
+            std::cout << (coefficient >= 0.0 ? " + " : " - ");
+        } else if (coefficient < 0.0) {
             std::cout << "-";
         }
 
-        double absCoeff = std::abs(coeff);
-        if (std::abs(absCoeff - 1.0) > 1e-15) {
-            std::cout << absCoeff << "*";
+        double absoluteCoefficient = std::abs(coefficient);
+        if (std::abs(absoluteCoefficient - 1.0) > zeroTolerance) {
+            std::cout << absoluteCoefficient << "*";
         }
 
-        std::cout << "x" << j;
-        firstObj = false;
+        std::cout << "x" << column;
+        firstObjectiveCoefficient = false;
     }
 
-    if (firstObj) {
+    if (firstObjectiveCoefficient) {
         std::cout << "0";
     }
 
     std::cout << "\n\n";
 
     std::cout << "Constraints:\n";
-    for (int i = 0; i < numRows; ++i) {
-        std::string expr = formatLinearExpr(matrix, i);
+    for (int row = 0; row < numberOfRows; ++row) {
+        std::string expression = formatLinearExpr(matrix, row);
 
-        double lb = model.row_lb[i];
-        double ub = model.row_ub[i];
+        double lowerBound = model.row_lb[row];
+        double upperBound = model.row_ub[row];
 
-        bool hasLb = lb > -COIN_DBL_MAX / 2;
-        bool hasUb = ub < COIN_DBL_MAX / 2;
+        bool hasLowerBound = lowerBound > -COIN_DBL_MAX / 2;
+        bool hasUpperBound = upperBound < COIN_DBL_MAX / 2;
 
-        std::cout << "  c" << i << ": ";
+        std::cout << "  c" << row << ": ";
 
-        if (hasLb && hasUb) {
-            if (std::abs(lb - ub) < 1e-12) {
-                std::cout << expr << " = " << boundToString(lb);
+        if (hasLowerBound && hasUpperBound) {
+            if (std::abs(lowerBound - upperBound) < 1e-12) {
+                std::cout << expression << " = " << boundToString(lowerBound);
             } else {
-                std::cout << boundToString(lb) << " <= "
-                          << expr << " <= "
-                          << boundToString(ub);
+                std::cout << boundToString(lowerBound) << " <= "
+                          << expression << " <= "
+                          << boundToString(upperBound);
             }
-        } else if (hasLb) {
-            std::cout << expr << " >= " << boundToString(lb);
-        } else if (hasUb) {
-            std::cout << expr << " <= " << boundToString(ub);
+        } else if (hasLowerBound) {
+            std::cout << expression << " >= " << boundToString(lowerBound);
+        } else if (hasUpperBound) {
+            std::cout << expression << " <= " << boundToString(upperBound);
         } else {
-            std::cout << "-inf <= " << expr << " <= inf";
+            std::cout << "-inf <= " << expression << " <= inf";
         }
 
         std::cout << "\n";
     }
 
     std::cout << "\nVariable bounds:\n";
-    for (int j = 0; j < numCols; ++j) {
+    for (int column = 0; column < numberOfColumns; ++column) {
         std::cout << "  "
-                  << boundToString(model.col_lb[j])
-                  << " <= x" << j
-                  << " <= " << boundToString(model.col_ub[j])
+                  << boundToString(model.col_lb[column])
+                  << " <= x" << column
+                  << " <= " << boundToString(model.col_ub[column])
                   << "\n";
     }
 
@@ -394,7 +440,7 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
     HLAC::FunctionNode *func,
     std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>> &loopMapping) {
 
-    const double NEG_INF = -std::numeric_limits<double>::infinity();
+    const double negativeInfinity = -std::numeric_limits<double>::infinity();
 
     const auto &nodes = func->topologicalSortedRepresentationOfNodes;
     if (nodes.empty()) {
@@ -446,7 +492,7 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
             LOGLEVEL::WARNING);
     }
 
-    std::vector<double> distance(numberOfNodes, NEG_INF);
+    std::vector<double> distance(numberOfNodes, negativeInfinity);
     std::vector<HLAC::GenericNode *> parent(numberOfNodes, nullptr);
 
     distance[startIterator->second] = nodeEnergy[startIterator->second];
@@ -468,7 +514,7 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
         }
 
         const double currentDistance = distance[currentIndex];
-        if (currentDistance == NEG_INF) {
+        if (currentDistance == negativeInfinity) {
             continue;
         }
 
@@ -491,32 +537,12 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
             double edgeContribution = nodeEnergy[destinationIndex];
 
             if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(currentNode)) {
-                auto loopMappingIterator = loopMapping.find(loopNode);
-
-                if (loopMappingIterator == loopMapping.end()) {
-                    Logger::getInstance().log(
-                        "Warning: LoopNode "
-                        + loopNode->getDotName()
-                        + " not found in loop mapping, skipping loop exit edge.",
-                        LOGLEVEL::WARNING);
-                    continue;
-                }
-
                 bool foundMatchingExit = false;
-                double bestExitEnergy = NEG_INF;
-
-                for (const auto &[loopResult, virtualExitNode] : loopMappingIterator->second) {
-                    if (virtualExitNode == nullptr) {
-                        continue;
-                    }
-
-                    if (virtualExitNode->successor != edge->destination) {
-                        continue;
-                    }
-
-                    foundMatchingExit = true;
-                    bestExitEnergy = std::max(bestExitEnergy, loopResult.optimalValue);
-                }
+                const double bestExitEnergy = getBestClusteredExitEnergyForSuccessor(
+                    loopNode,
+                    edge->destination,
+                    loopMapping,
+                    foundMatchingExit);
 
                 if (!foundMatchingExit) {
                     continue;
@@ -571,7 +597,7 @@ int ILPUtil::assignEdgeIndicesFunction(HLAC::FunctionNode *func, int nextIndex) 
 
     for (auto &nodeUP : func->Nodes) {
         // For loopnodes we need to consider the contained edges. Therefore, we need to index them as well
-        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
             nextIndex = assignEdgeIndicesLoop(loopNode, nextIndex);
         }
     }
@@ -587,7 +613,7 @@ int ILPUtil::assignEdgeIndicesLoop(HLAC::LoopNode *loopNode, int nextIndex) {
     }
 
     for (auto &nodeUP : loopNode->Nodes) {
-        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
+        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
             // Index the subloops edges
             nextIndex = assignEdgeIndicesLoop(innerLoop, nextIndex);
         }
@@ -598,15 +624,16 @@ int ILPUtil::assignEdgeIndicesLoop(HLAC::LoopNode *loopNode, int nextIndex) {
 }
 
 void ILPUtil::buildIncidenceMaps(
-    const std::vector<std::unique_ptr<HLAC::Edge>>& edges,
-    std::unordered_map<HLAC::GenericNode*, std::vector<int>>& incoming,
-    std::unordered_map<HLAC::GenericNode*, std::vector<int>>& outgoing,
+    const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
+    std::unordered_map<HLAC::GenericNode *, std::vector<int>> &incoming,
+    std::unordered_map<HLAC::GenericNode *, std::vector<int>> &outgoing,
     int numberOfVariables) {
+
     incoming.clear();
     outgoing.clear();
 
-    for (const auto& edgeUP : edges) {
-        HLAC::Edge* edge = edgeUP.get();
+    for (const auto &edgeUP : edges) {
+        HLAC::Edge *edge = edgeUP.get();
 
         if (edge == nullptr) {
             continue;
@@ -630,25 +657,25 @@ void ILPUtil::buildIncidenceMaps(
 void ILPUtil::insertUnique(
     CoinPackedVector &row,
     std::unordered_set<int> &used,
-    int col,
-    double coeff) {
+    int column,
+    double coefficient) {
 
     // Check that we do not add columns that are already contained in the vector
-    if (!used.insert(col).second) {
+    if (!used.insert(column).second) {
         Logger::getInstance().log(
-            "Warning: duplicate column " + std::to_string(col) + " while building row",
+            "Warning: duplicate column " + std::to_string(column) + " while building row",
             LOGLEVEL::WARNING);
         return;
     }
 
-    // Inser the row and the respective coefficient into the vector
-    row.insert(col, coeff);
+    // Insert the row and the respective coefficient into the vector
+    row.insert(column, coefficient);
 }
 
-void ILPUtil::appendRow(ILPModel &model, const CoinPackedVector &row, double lb, double ub) {
+void ILPUtil::appendRow(ILPModel &model, const CoinPackedVector &row, double lowerBound, double upperBound) {
     model.matrix.appendRow(row);
-    model.row_lb.push_back(lb);
-    model.row_ub.push_back(ub);
+    model.row_lb.push_back(lowerBound);
+    model.row_ub.push_back(upperBound);
 }
 
 int ILPUtil::getMaxEdgeIndex(HLAC::LoopNode *loopNode) {

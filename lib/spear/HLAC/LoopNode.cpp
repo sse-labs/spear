@@ -176,7 +176,7 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
             headerIndex = nodeIndex;
         }
 
-        if (this->loop->isLoopExiting(normalNode->block)) {
+        if (this->loop != nullptr && this->loop->isLoopExiting(normalNode->block)) {
             exitingBlockIndices.push_back(nodeIndex);
         }
     }
@@ -194,7 +194,7 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
             LOGLEVEL::ERROR);
     }
 
-    std::unordered_map<GenericNode *, GenericNode *> originalSuccessorByExitingNode;
+    std::unordered_map<GenericNode *, std::vector<GenericNode *>> originalSuccessorsByExitingNode;
 
     for (const auto &edgeUniquePointer : edgeList) {
         Edge *edge = edgeUniquePointer.get();
@@ -210,40 +210,47 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
             continue;
         }
 
-        if (originalSuccessorByExitingNode.count(edge->soure) != 0 &&
-            originalSuccessorByExitingNode[edge->soure] != edge->destination) {
-            Logger::getInstance().log(
-                "Loop collapse warning: multiple external successors for exiting node in loop " + this->getDotName() + " in " + this->parentFunction->function->getName().str(),
-                LOGLEVEL::ERROR);
-            continue;
+        std::vector<GenericNode *> &externalSuccessors = originalSuccessorsByExitingNode[edge->soure];
+
+        bool successorAlreadyKnown = false;
+        for (GenericNode *knownSuccessor : externalSuccessors) {
+            if (knownSuccessor == edge->destination) {
+                successorAlreadyKnown = true;
+                break;
+            }
         }
 
-        originalSuccessorByExitingNode[edge->soure] = edge->destination;
+        if (!successorAlreadyKnown) {
+            externalSuccessors.push_back(edge->destination);
+        }
     }
 
     auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
 
-    std::map<int, int> exitNodesIndices;
+    std::map<int, std::vector<int>> exitNodeIndicesByExitingBlockIndex;
+
     for (int exitingBlockIndex : exitingBlockIndices) {
         GenericNode *exitingNode = this->Nodes[exitingBlockIndex].get();
 
-        auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
-
-        if (originalSuccessorByExitingNode.count(exitingNode) != 0) {
-            exitNode->successor = originalSuccessorByExitingNode[exitingNode];
-        } else {
+        auto successorIterator = originalSuccessorsByExitingNode.find(exitingNode);
+        if (successorIterator == originalSuccessorsByExitingNode.end() || successorIterator->second.empty()) {
             Logger::getInstance().log(
                 "Loop collapse warning: no external successor found for exiting node in loop " + this->getDotName(),
                 LOGLEVEL::ERROR);
+            continue;
         }
 
-        this->Nodes.push_back(std::move(exitNode));
-        const int virtualExitIndex = static_cast<int>(this->Nodes.size()) - 1;
-        exitNodesIndices[exitingBlockIndex] = virtualExitIndex;
-        this->exits.push_back(virtualExitIndex);
+        for (GenericNode *externalSuccessor : successorIterator->second) {
+            auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
+            exitNode->successor = externalSuccessor;
+
+            this->Nodes.push_back(std::move(exitNode));
+
+            const int virtualExitIndex = static_cast<int>(this->Nodes.size()) - 1;
+            exitNodeIndicesByExitingBlockIndex[exitingBlockIndex].push_back(virtualExitIndex);
+            this->exits.push_back(virtualExitIndex);
+        }
     }
-
-
 
     this->Nodes.push_back(std::move(entryNode));
     const int virtualEntryIndex = static_cast<int>(this->Nodes.size()) - 1;
@@ -253,13 +260,17 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
 
     this->Edges.push_back(std::move(entryEdge));
 
-    for (const auto &exitingNodeIndexAndVirtualExitIndex : exitNodesIndices) {
-        auto exitEdge = std::make_unique<Edge>(
-            Edge(
-                this->Nodes[exitingNodeIndexAndVirtualExitIndex.first].get(),
-                this->Nodes[exitingNodeIndexAndVirtualExitIndex.second].get()));
+    for (const auto &exitingBlockIndexAndVirtualExitIndices : exitNodeIndicesByExitingBlockIndex) {
+        const int exitingBlockIndex = exitingBlockIndexAndVirtualExitIndices.first;
 
-        this->Edges.push_back(std::move(exitEdge));
+        for (int virtualExitIndex : exitingBlockIndexAndVirtualExitIndices.second) {
+            auto exitEdge = std::make_unique<Edge>(
+                Edge(
+                    this->Nodes[exitingBlockIndex].get(),
+                    this->Nodes[virtualExitIndex].get()));
+
+            this->Edges.push_back(std::move(exitEdge));
+        }
     }
 
     // Collapse this loop:

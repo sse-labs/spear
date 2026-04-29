@@ -79,7 +79,8 @@ void ILPBuilder::appendGraphConstraints(
     ILPModel &model,
     const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
     const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
-    const std::vector<int> *invocationCols) {
+    const std::vector<int> *invocationCols,
+    bool shouldAppendLoopExitSuccessorConstraints) {
 
     std::unordered_map<HLAC::GenericNode *, std::vector<int>> incomingEdgesPerNode;
     std::unordered_map<HLAC::GenericNode *, std::vector<int>> outgoingEdgesPerNode;
@@ -197,7 +198,17 @@ void ILPBuilder::appendGraphConstraints(
                     LOGLEVEL::ERROR);
             }
 
-            appendGraphConstraints(model, loopNode->Nodes, loopNode->Edges, &invocationColumns);
+            appendGraphConstraints(
+                model,
+                loopNode->Nodes,
+                loopNode->Edges,
+                &invocationColumns,
+                shouldAppendLoopExitSuccessorConstraints);
+
+            if (shouldAppendLoopExitSuccessorConstraints) {
+                appendLoopExitSuccessorConstraints(model, loopNode, edges);
+            }
+
             appendLoopBoundConstraint(model, loopNode, invocationColumns);
         }
     }
@@ -207,7 +218,7 @@ std::optional<ILPResult> ILPBuilder::solveClusteredLoopModel(
     const ILPModel &ilpModel,
     HLAC::LoopNode *loopNode) {
 
-    ILPSolver modelSolver(ilpModel);
+    ILPSolver modelSolver(ilpModel, loopNode->parentFunction->function->getName().str());
 
     auto optimalSolution = modelSolver.getSolvedModelValue();
     auto optimalPath = modelSolver.getSolvedSolution();
@@ -249,12 +260,11 @@ void ILPBuilder::appendLoopBoundConstraint(
         return;
     }
 
-    if (invocationCols.size() != 1) {
+    if (invocationCols.empty()) {
         Logger::getInstance().log(
-            "Loop bound fallback: loop " + loopNode->getDotName()
-            + " has " + std::to_string(invocationCols.size())
-            + " invocation columns, expected exactly one.",
-            LOGLEVEL::WARNING);
+            "Loop bound debug: loop " + loopNode->getDotName()
+            + " has no invocation columns.",
+            LOGLEVEL::ERROR);
         return;
     }
 
@@ -263,8 +273,6 @@ void ILPBuilder::appendLoopBoundConstraint(
 
     const double lowerBackedgeFactor = std::max(0.0, lowerBoundAsDouble - 1.0);
     const double upperBackedgeFactor = std::max(0.0, upperBoundAsDouble - 1.0);
-
-    const int invocationColumn = invocationCols.front();
 
     std::unordered_map<int, double> backedgeCoefficientsByColumn;
 
@@ -290,13 +298,36 @@ void ILPBuilder::appendLoopBoundConstraint(
         return;
     }
 
+    std::unordered_map<int, double> invocationCoefficientsByColumn;
+
+    for (int invocationColumn : invocationCols) {
+        if (invocationColumn < 0 || invocationColumn >= static_cast<int>(model.col_lb.size())) {
+            Logger::getInstance().log(
+                "Loop bound debug: invalid invocation ilpIndex in loop " + loopNode->getDotName(),
+                LOGLEVEL::ERROR);
+            continue;
+        }
+
+        ILPUtil::insertOrAccumulate(invocationCoefficientsByColumn, invocationColumn, 1.0);
+    }
+
+    if (invocationCoefficientsByColumn.empty()) {
+        Logger::getInstance().log(
+            "Loop bound debug: loop " + loopNode->getDotName()
+            + " has no valid invocation columns.",
+            LOGLEVEL::ERROR);
+        return;
+    }
+
     {
         std::unordered_map<int, double> lowerBoundCoefficientsByColumn = backedgeCoefficientsByColumn;
 
-        ILPUtil::insertOrAccumulate(
-            lowerBoundCoefficientsByColumn,
-            invocationColumn,
-            -lowerBackedgeFactor);
+        for (const auto &[invocationColumn, coefficient] : invocationCoefficientsByColumn) {
+            ILPUtil::insertOrAccumulate(
+                lowerBoundCoefficientsByColumn,
+                invocationColumn,
+                -lowerBackedgeFactor * coefficient);
+        }
 
         CoinPackedVector lowerBoundRow = ILPUtil::createRowFromCoefficients(lowerBoundCoefficientsByColumn);
         ILPUtil::appendRow(model, lowerBoundRow, 0.0, COIN_DBL_MAX);
@@ -305,10 +336,12 @@ void ILPBuilder::appendLoopBoundConstraint(
     {
         std::unordered_map<int, double> upperBoundCoefficientsByColumn = backedgeCoefficientsByColumn;
 
-        ILPUtil::insertOrAccumulate(
-            upperBoundCoefficientsByColumn,
-            invocationColumn,
-            -upperBackedgeFactor);
+        for (const auto &[invocationColumn, coefficient] : invocationCoefficientsByColumn) {
+            ILPUtil::insertOrAccumulate(
+                upperBoundCoefficientsByColumn,
+                invocationColumn,
+                -upperBackedgeFactor * coefficient);
+        }
 
         CoinPackedVector upperBoundRow = ILPUtil::createRowFromCoefficients(upperBoundCoefficientsByColumn);
         ILPUtil::appendRow(model, upperBoundRow, -COIN_DBL_MAX, 0.0);
@@ -357,8 +390,8 @@ void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::LoopNode *loopNode
     }
 }
 
-std::optional<ILPResult> ILPBuilder::solveModel(const ILPModel &ilpModel) {
-    ILPSolver modelSolver(ilpModel);
+std::optional<ILPResult> ILPBuilder::solveModel(const ILPModel &ilpModel, std::string fname) {
+    ILPSolver modelSolver(ilpModel, fname);
 
     auto optimalSolution = modelSolver.getSolvedModelValue();
     auto optimalPath = modelSolver.getSolvedSolution();
@@ -417,7 +450,7 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
 
     applyEdgeFeasibilityBounds(model, loop);
 
-    appendGraphConstraints(model, loop->Nodes, loop->Edges, &invocationColumns);
+    appendGraphConstraints(model, loop->Nodes, loop->Edges, &invocationColumns, true);
 
     appendLoopBoundConstraint(model, loop, invocationColumns);
 
@@ -438,14 +471,54 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
 std::vector<std::pair<ILPModel, HLAC::VirtualNode *>> ILPBuilder::buildClusteredILP(HLAC::LoopNode *loop) {
     std::vector<std::pair<ILPModel, HLAC::VirtualNode *>> models;
 
-    for (auto exitIdx : loop->exits) {
-        const int maxEdgeIndex = ILPUtil::getMaxEdgeIndex(loop);
+    if (loop == nullptr) {
+        return models;
+    }
 
-        const int invocationColumn = maxEdgeIndex + 1;
-        const int variableCount = invocationColumn + 1;
+    if (loop->parentFunction == nullptr) {
+        Logger::getInstance().log(
+            "Clustered ILP debug: loop " + loop->getDotName() + " has no parent function.",
+            LOGLEVEL::ERROR);
+        return models;
+    }
 
-        const std::vector<int> invocationColumns = {invocationColumn};
+    const int variableCount = ILPUtil::getMaxEdgeIndex(loop) + 1;
 
+    std::vector<int> invocationColumns;
+
+    for (const auto &edgeUniquePointer : loop->parentFunction->Edges) {
+        HLAC::Edge *edge = edgeUniquePointer.get();
+
+        if (edge == nullptr) {
+            continue;
+        }
+
+        if (edge->destination != loop) {
+            continue;
+        }
+
+        if (edge->soure == loop) {
+            continue;
+        }
+
+        if (edge->ilpIndex < 0 || edge->ilpIndex >= variableCount) {
+            Logger::getInstance().log(
+                "Clustered ILP debug: invalid parent invocation edge index for loop " + loop->getDotName(),
+                LOGLEVEL::ERROR);
+            continue;
+        }
+
+        invocationColumns.push_back(edge->ilpIndex);
+    }
+
+    if (invocationColumns.empty()) {
+        Logger::getInstance().log(
+            "Clustered ILP debug: no parent invocation columns for loop " + loop->getDotName(),
+            LOGLEVEL::ERROR);
+        return models;
+    }
+
+    for (int exitIdx : loop->exits) {
         ILPModel model{
             .matrix = CoinPackedMatrix(false, 0, 0),
             .row_lb = {},
@@ -457,33 +530,125 @@ std::vector<std::pair<ILPModel, HLAC::VirtualNode *>> ILPBuilder::buildClustered
 
         applyEdgeFeasibilityBounds(model, loop);
 
-        appendGraphConstraints(model, loop->Nodes, loop->Edges, &invocationColumns);
+        appendGraphConstraints(model, loop->Nodes, loop->Edges, &invocationColumns, false);
 
         appendLoopBoundConstraint(model, loop, invocationColumns);
 
-        appendEqualityConstraint(model, invocationColumn);
+        for (int invocationColumn : invocationColumns) {
+            appendEqualityConstraint(model, invocationColumn);
+        }
 
         fillObjectiveFunction(model, loop);
 
         appendExitConstrains(model, loop, exitIdx);
 
-        if (loop->parentFunction->name == "main") {
-            //ILPDebug::dumpILPModel(model, loop->Edges, loop->loop->getName().str());
+        auto *exitNode = dynamic_cast<HLAC::VirtualNode *>(loop->Nodes[exitIdx].get());
+
+        if (exitNode == nullptr || !exitNode->isExit) {
+            Logger::getInstance().log(
+                "Clustered ILP debug: selected exit is not a virtual exit in loop " + loop->getDotName(),
+                LOGLEVEL::ERROR);
+            continue;
         }
 
-        auto exitNode = loop->Nodes[exitIdx].get();
-
-        models.push_back(std::make_pair(model, dynamic_cast<HLAC::VirtualNode *>(exitNode)));
+        models.push_back(std::make_pair(model, exitNode));
     }
 
     return models;
 }
 
+void ILPBuilder::appendLoopExitSuccessorConstraints(
+    ILPModel &model,
+    HLAC::LoopNode *loopNode,
+    const std::vector<std::unique_ptr<HLAC::Edge>> &parentEdges) {
+
+    if (loopNode == nullptr) {
+        return;
+    }
+
+    std::unordered_map<HLAC::GenericNode *, std::vector<int>> incomingEdgesPerLoopNode;
+    std::unordered_map<HLAC::GenericNode *, std::vector<int>> outgoingEdgesPerLoopNode;
+
+    ILPUtil::buildIncidenceMaps(
+        loopNode->Edges,
+        incomingEdgesPerLoopNode,
+        outgoingEdgesPerLoopNode,
+        static_cast<int>(model.col_lb.size()));
+
+    std::unordered_map<HLAC::GenericNode *, std::vector<int>> exitIncomingColumnsBySuccessor;
+
+    for (int exitIndex : loopNode->exits) {
+        if (exitIndex < 0 || exitIndex >= static_cast<int>(loopNode->Nodes.size())) {
+            continue;
+        }
+
+        auto *virtualExitNode = dynamic_cast<HLAC::VirtualNode *>(loopNode->Nodes[exitIndex].get());
+        if (virtualExitNode == nullptr || !virtualExitNode->isExit) {
+            continue;
+        }
+
+        if (virtualExitNode->successor == nullptr) {
+            continue;
+        }
+
+        const std::vector<int> incomingExitColumns =
+            incomingEdgesPerLoopNode.contains(virtualExitNode)
+                ? incomingEdgesPerLoopNode[virtualExitNode]
+                : std::vector<int>{};
+
+        for (int column : incomingExitColumns) {
+            exitIncomingColumnsBySuccessor[virtualExitNode->successor].push_back(column);
+        }
+    }
+
+    for (const auto &[successorNode, exitIncomingColumns] : exitIncomingColumnsBySuccessor) {
+        std::unordered_map<int, double> coefficientsByColumn;
+
+        for (int column : exitIncomingColumns) {
+            if (column < 0 || column >= static_cast<int>(model.col_lb.size())) {
+                continue;
+            }
+
+            ILPUtil::insertOrAccumulate(coefficientsByColumn, column, 1.0);
+        }
+
+        bool foundParentSuccessorEdge = false;
+
+        for (const auto &edgeUniquePointer : parentEdges) {
+            HLAC::Edge *edge = edgeUniquePointer.get();
+
+            if (edge == nullptr) {
+                continue;
+            }
+
+            if (edge->soure != loopNode) {
+                continue;
+            }
+
+            if (edge->destination != successorNode) {
+                continue;
+            }
+
+            if (edge->ilpIndex < 0 || edge->ilpIndex >= static_cast<int>(model.col_lb.size())) {
+                continue;
+            }
+
+            ILPUtil::insertOrAccumulate(coefficientsByColumn, edge->ilpIndex, -1.0);
+            foundParentSuccessorEdge = true;
+        }
+
+        if (!foundParentSuccessorEdge) {
+            continue;
+        }
+
+        CoinPackedVector row = ILPUtil::createRowFromCoefficients(coefficientsByColumn);
+        ILPUtil::appendRow(model, row, 0.0, 0.0);
+    }
+}
+
 void ILPBuilder::appendExitConstrains(ILPModel &model, HLAC::LoopNode *loopNode, int exitIdx) {
     if (loopNode == nullptr) {
-        Logger::getInstance().log(
-            "Exit constraint debug: loopNode is null.",
-            LOGLEVEL::ERROR);
+        Logger::getInstance().log("Exit constraint debug: loopNode is null.", LOGLEVEL::ERROR);
         return;
     }
 
@@ -495,13 +660,19 @@ void ILPBuilder::appendExitConstrains(ILPModel &model, HLAC::LoopNode *loopNode,
     }
 
     HLAC::GenericNode *exitNodeToConsider = loopNode->Nodes[exitIdx].get();
-    int activeColumn = -1;
-    std::vector<int> disabledColumns;
+
+    std::unordered_map<int, double> activeExitCoefficientsByColumn;
+    std::unordered_map<int, double> disabledExitCoefficientsByColumn;
 
     for (auto &edgeUniquePointer : loopNode->Edges) {
         HLAC::Edge *edge = edgeUniquePointer.get();
 
-        if (edge == nullptr || edge->destination != exitNodeToConsider) {
+        if (edge == nullptr) {
+            continue;
+        }
+
+        auto *virtualDestination = dynamic_cast<HLAC::VirtualNode *>(edge->destination);
+        if (virtualDestination == nullptr || !virtualDestination->isExit) {
             continue;
         }
 
@@ -512,45 +683,26 @@ void ILPBuilder::appendExitConstrains(ILPModel &model, HLAC::LoopNode *loopNode,
             continue;
         }
 
-        activeColumn = edge->ilpIndex;
+        if (edge->destination == exitNodeToConsider) {
+            ILPUtil::insertOrAccumulate(activeExitCoefficientsByColumn, edge->ilpIndex, 1.0);
+        } else {
+            ILPUtil::insertOrAccumulate(disabledExitCoefficientsByColumn, edge->ilpIndex, 1.0);
+        }
     }
 
-    for (auto &edgeUniquePointer : loopNode->Edges) {
-        HLAC::Edge *edge = edgeUniquePointer.get();
-
-        if (edge == nullptr || edge->destination == exitNodeToConsider) {
-            continue;
-        }
-
-        auto *virtualDestination = dynamic_cast<HLAC::VirtualNode *>(edge->destination);
-
-        if (virtualDestination == nullptr || !virtualDestination->isExit) {
-            continue;
-        }
-
-        if (edge->ilpIndex < 0 || edge->ilpIndex >= static_cast<int>(model.col_lb.size())) {
-            Logger::getInstance().log(
-                "Exit constraint debug: invalid disabled exit edge ilpIndex in loop " + loopNode->getDotName(),
-                LOGLEVEL::ERROR);
-            continue;
-        }
-
-        disabledColumns.push_back(edge->ilpIndex);
-    }
-
-    if (activeColumn < 0) {
+    if (activeExitCoefficientsByColumn.empty()) {
         Logger::getInstance().log(
             "Exit constraint debug: no active exit edge found in loop " + loopNode->getDotName(),
             LOGLEVEL::ERROR);
         return;
     }
 
-    model.col_lb[activeColumn] = 1.0;
-    model.col_ub[activeColumn] = 1.0;
+    CoinPackedVector activeExitRow = ILPUtil::createRowFromCoefficients(activeExitCoefficientsByColumn);
+    ILPUtil::appendRow(model, activeExitRow, 1.0, 1.0);
 
-    for (int disabledColumn : disabledColumns) {
-        model.col_lb[disabledColumn] = 0.0;
-        model.col_ub[disabledColumn] = 0.0;
+    if (!disabledExitCoefficientsByColumn.empty()) {
+        CoinPackedVector disabledExitRow = ILPUtil::createRowFromCoefficients(disabledExitCoefficientsByColumn);
+        ILPUtil::appendRow(model, disabledExitRow, 0.0, 0.0);
     }
 }
 
@@ -605,7 +757,7 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::FunctionNode *func) {
 
     applyEdgeFeasibilityBounds(model, func);
 
-    appendGraphConstraints(model, func->Nodes, func->Edges, nullptr);
+    appendGraphConstraints(model, func->Nodes, func->Edges, nullptr, true);
 
     fillObjectiveFunction(model, func);
 
@@ -636,7 +788,6 @@ void ILPUtil::insertOrAccumulate(std::unordered_map<int, double> &coefficientsBy
 }
 
 CoinPackedVector ILPUtil::createRowFromCoefficients(const std::unordered_map<int, double> &coefficientsByColumn) {
-
     CoinPackedVector row;
 
     for (const auto &[column, coefficient] : coefficientsByColumn) {

@@ -41,6 +41,8 @@ class ILPBuilder {
     static ILPModel buildMonolithicILP(HLAC::LoopNode *loop);
 
     static std::vector<std::pair<ILPModel, HLAC::VirtualNode *>> buildClusteredILP(HLAC::LoopNode *loop);
+    static void appendLoopExitSuccessorConstraints(ILPModel &model, HLAC::LoopNode *loopNode,
+                                            const std::vector<std::unique_ptr<HLAC::Edge>> &parentEdges);
 
     static std::vector<int> collectExternalLoopInvocationColumns(HLAC::LoopNode *loopNode,
                                                           const std::vector<std::unique_ptr<HLAC::Edge>> &parentEdges,
@@ -59,7 +61,7 @@ class ILPBuilder {
      * @return Optional over ILPResult. Contains the ILPResult if the model could be solved successfully, std::nullopt
      * otherwise
      */
-    static std::optional<ILPResult> solveModel(const ILPModel &ilpModel);
+    static std::optional<ILPResult> solveModel(const ILPModel &ilpModel, std::string fname);
 
     static std::optional<ILPResult> solveClusteredLoopModel(const ILPModel &ilpModel, HLAC::LoopNode *loopNode);
 
@@ -95,12 +97,12 @@ class ILPBuilder {
      * @param edges Edges from the HLAC graph under analysis
      * @param invocationCols Optional pointer to ILP column indices representing how often
      * this subgraph is entered from the parent graph. If nullptr, the subgraph is treated as top-level.
+     * @param shouldAppendLoopExitSuccessorConstraints
      */
-    static void appendGraphConstraints(
-        ILPModel &model,
-        const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
-        const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
-        const std::vector<int> *invocationCols);
+    static void appendGraphConstraints(ILPModel &model, const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
+                                       const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
+                                       const std::vector<int> *invocationCols,
+                                       bool shouldAppendLoopExitSuccessorConstraints);
 
 
 
