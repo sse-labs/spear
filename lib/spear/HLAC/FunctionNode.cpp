@@ -220,7 +220,7 @@ bool FunctionNode::checkForIllFormat() {
         loopNodeEdgeSummaries);
 
     for (auto &summary : loopNodeEdgeSummaries) {
-        if (summary.incomingEdgeCount > 1 || summary.outgoingEdgeCount > 1) {
+        if (summary.incomingEdgeCount > 1) {
             return true;
         }
     }

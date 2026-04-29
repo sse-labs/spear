@@ -31,11 +31,11 @@
         "UNKNOWN_FUNCTION": 2.000602872520e-08
       },
       "loops": {
-        "MALFORMED_LOOP":  1000,
-        "SYMBOLIC_BOUND_LOOP":  2000,
-        "NON_COUNTING_LOOP":  3000,
-        "NESTED_LOOP":  4000,
-        "UNKNOWN_LOOP": 5000
+        "MALFORMED_LOOP":  100,
+        "SYMBOLIC_BOUND_LOOP":  200,
+        "NON_COUNTING_LOOP":  300,
+        "NESTED_LOOP":  400,
+        "UNKNOWN_LOOP": 500
       }
     }
   }

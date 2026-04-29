@@ -150,7 +150,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
                 graph->FunctionEnergyCache[funcNode->name] = funcEnergy;
 
-                std::string illformatString = "";
+                std::string illformatString;
 
                 if (funcNode->isIllFormatted) {
                     illformatString = " (ILL)";
