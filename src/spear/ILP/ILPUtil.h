@@ -105,6 +105,10 @@ class ILPUtil {
      */
     static int getMaxEdgeIndex(HLAC::LoopNode *loopNode);
 
+    static void insertOrAccumulate(std::unordered_map<int, double> &coefficientsByColumn, int column, double coefficient);
+
+    static CoinPackedVector createRowFromCoefficients(const std::unordered_map<int, double> &coefficientsByColumn);
+
  private:
     /**
      * Return the given double value of a bound to a string with fixed precission.

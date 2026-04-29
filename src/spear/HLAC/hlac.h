@@ -188,6 +188,8 @@ class Edge {
      */
     int ilpIndex = -1;
 
+    bool isBackEdge = false;
+
     /**
      * Local string identifier used for dot printing
      */
@@ -354,9 +356,16 @@ class LoopNode : public GenericNode {
      * @param edgeList List of edges from the node, this loop node is contained in
      */
     void collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList);
+
+    void moveInternalAndCollapseBoundaryEdges(std::vector<std::unique_ptr<Edge>> &parentEdges,
+                                              const std::unordered_set<GenericNode *> &nodesInLoop,
+                                              const llvm::BasicBlock *headerBlock);
+
+    bool edgeReturnsToHeader(const Edge *edge, const llvm::BasicBlock *headerBlock) const;
+
     void debugDumpEdges() const;
     void refreshBackEdges();
-
+    
     /**
      * Construct CallNodes from calls contained within this LoopNode
      * We need this function here to perform recurive CallNode construction
@@ -413,6 +422,11 @@ class FunctionNode : public GenericNode {
      * Phasar result registry
      */
     ResultRegistry registry;
+
+
+    bool isGotoFunction;
+
+    bool isIllFormatted = false;
 
     /**
      * Mapping of function energy
@@ -574,6 +588,8 @@ class FunctionNode : public GenericNode {
      */
     bool isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph);
 
+    bool checkForIllFormat();
+
  private:
     /**
      * Iterates over the contained nodes and constructs LoopNodes recursively for all contained loops
@@ -593,6 +609,7 @@ class FunctionNode : public GenericNode {
      * @return Vector representing the topological order of the contained nodes
      */
     std::vector<GenericNode *> getTopologicalOrdering();
+    bool isAcyclic() const;
 };
 
 /**

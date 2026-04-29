@@ -63,8 +63,13 @@ void Edge::printDotRepresentation(std::ostream &os) {
         }
     };
 
+    std::string backedgemod = "";
+    if (this->isBackEdge) {
+        backedgemod = "BE";
+    }
+
     openAttrs();
-    os << "label=\"" << Util::feasibilityToString(this->feasibility) << "(" << this->ilpIndex << ")" << "\"";
+    os << "label=\"" << Util::feasibilityToString(this->feasibility) << "(x" << this->ilpIndex << ") " << backedgemod << "\"";
 
     if (srcLoop) {
         openAttrs();

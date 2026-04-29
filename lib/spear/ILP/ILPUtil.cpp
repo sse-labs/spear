@@ -245,105 +245,309 @@ void ILPUtil::printILPModelHumanReadable(std::string funcname, std::string loopn
     std::cout << "\n===========================================\n";
 }
 
-ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
-    HLAC::FunctionNode *func,
-    const std::unordered_map<HLAC::LoopNode*, ILPResult> &loopMapping) {
-    const double NEG_INF = -std::numeric_limits<double>::infinity();
-
-    // Query the topological sorting of the underlying functionNode
-    const auto &nodes = func->topologicalSortedRepresentationOfNodes;
-    // Abort the longest path search early if no nodes exist
-    if (nodes.empty()) {
-        // This case should never occur in the field...
-        return {};
+static HLAC::GenericNode *findVirtualEntryNode(HLAC::FunctionNode *functionNode) {
+    if (functionNode == nullptr) {
+        return nullptr;
     }
 
-    // We iterate over the nodes and precalculate the energy of loopnodes from out clustered loop mapping
-    for (std::size_t i = 0; i < nodes.size(); ++i) {
-        // Get the next node
-        HLAC::GenericNode *node = func->topologicalSortedRepresentationOfNodes[i];
+    std::unordered_map<HLAC::GenericNode *, std::size_t> incomingEdgeCount;
 
-        // Check if its a loopnode
-        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
-            // Get the loopnode from the mapping
-            try {
-                auto ln = loopMapping.at(loopNode);
-                func->nodeEnergy[i] = ln.optimalValue;
-            } catch (const std::out_of_range &e) {
-                // If the loopnode could not be found in the mapping, perform a quick fallback and zero the value
-                Logger::getInstance().log(
-                    "Warning: LoopNode "
-                    + loopNode->getDotName() + " not found in loop mapping, using 0.0 as energy value.",
-                    LOGLEVEL::WARNING);
-                func->nodeEnergy[i] = 0.0;
-            }
+    // Initialize incoming edge counter for all nodes
+    for (const auto &nodePointer : functionNode->Nodes) {
+        if (nodePointer != nullptr) {
+            incomingEdgeCount[nodePointer.get()] = 0;
         }
     }
 
-    const std::size_t n = nodes.size();
-    HLAC::GenericNode *start = nodes.front();
-
-    // Query HLAC representation that can be used for DAG longest path search
-    const auto &nodeToIndex = func->nodeLookup;
-    const auto &nodeEnergy = func->nodeEnergy;
-    const auto &adjacency = func->adjacencyRepresentation;
-
-    // Create a distance vector that maps the index of the node to its calculated distance to the startnode
-    // (= energy cost along the path)
-    std::vector<double> distance(n, NEG_INF);
-
-    // Create a vector that saves the parent node for each node, so we can trace the path
-    std::vector<HLAC::GenericNode*> parent(n, nullptr);
-
-    // Init the cost of the start node
-    distance[nodeToIndex.at(start)] = start->getEnergy();
-
-    // Iterate over the nodes in des graph
-    for (std::size_t u = 0; u < n; ++u) {
-        // Get the distance of the current node to the start node.
-        // If it is negative infinity, we have not found a path to this
-        const double du = distance[u];
-        if (du == NEG_INF) {
+    // Count incoming edges
+    for (const auto &edgePointer : functionNode->Edges) {
+        if (edgePointer == nullptr || edgePointer->destination == nullptr) {
             continue;
         }
 
-        HLAC::GenericNode *uNode = nodes[u];
+        ++incomingEdgeCount[edgePointer->destination];
+    }
 
-        // Check all adjacent nodes
-        for (HLAC::Edge *edge : adjacency[u]) {
-            // Ignore the edge if its not feasible
-            if (!edge->feasibility) {
+    std::vector<HLAC::GenericNode *> entryCandidates;
+
+    // Collect all nodes with zero incoming edges
+    for (const auto &[node, incomingCount] : incomingEdgeCount) {
+        if (incomingCount == 0) {
+            entryCandidates.push_back(node);
+        }
+    }
+
+    if (entryCandidates.empty()) {
+        Logger::getInstance().log(
+            "Function has no node without incoming edges. Cannot determine virtual entry node.",
+            LOGLEVEL::ERROR);
+        return nullptr;
+    }
+
+    if (entryCandidates.size() > 1) {
+        std::ostringstream oss;
+        oss << "Function has multiple nodes without incoming edges ("
+            << entryCandidates.size()
+            << "). Candidates:\n";
+
+        for (auto *node : entryCandidates) {
+            if (node != nullptr) {
+                oss << "  - " << node->name << "\n";
+            } else {
+                oss << "  - <null>\n";
+            }
+        }
+
+        Logger::getInstance().log(oss.str(), LOGLEVEL::ERROR);
+    }
+
+    HLAC::GenericNode *virtualEntryCandidate = nullptr;
+
+    for (auto *node : entryCandidates) {
+        if (node == nullptr || node->nodeType != HLAC::NodeType::VIRTUALNODE) {
+            continue;
+        }
+
+        auto *virtualNode = dynamic_cast<HLAC::VirtualNode *>(node);
+
+        if (!virtualNode->isEntry) {
+            continue;
+        }
+
+        if (virtualEntryCandidate != nullptr) {
+            Logger::getInstance().log(
+                "Function has multiple virtual entry nodes among entry candidates. Cannot uniquely determine virtual entry node.",
+                LOGLEVEL::ERROR);
+            return nullptr;
+        }
+
+        virtualEntryCandidate = node;
+    }
+
+    if (virtualEntryCandidate != nullptr) {
+        return virtualEntryCandidate;
+    }
+
+    if (entryCandidates.size() == 1) {
+        return entryCandidates.front();
+    }
+
+    Logger::getInstance().log(
+        "Function has multiple nodes without incoming edges, but none is marked as virtual entry node.",
+        LOGLEVEL::ERROR);
+
+    return nullptr;
+}
+
+static std::vector<bool> findReachableNodesFromStart(
+    HLAC::GenericNode *startNode,
+    const std::unordered_map<HLAC::GenericNode *, std::size_t> &nodeToIndex,
+    const std::vector<std::vector<HLAC::Edge *>> &adjacency,
+    std::size_t numberOfNodes) {
+
+    std::vector<bool> reachable(numberOfNodes, false);
+
+    if (startNode == nullptr) {
+        return reachable;
+    }
+
+    auto startIterator = nodeToIndex.find(startNode);
+    if (startIterator == nodeToIndex.end()) {
+        return reachable;
+    }
+
+    std::vector<HLAC::GenericNode *> worklist;
+    worklist.push_back(startNode);
+    reachable[startIterator->second] = true;
+
+    while (!worklist.empty()) {
+        HLAC::GenericNode *currentNode = worklist.back();
+        worklist.pop_back();
+
+        const std::size_t currentIndex = nodeToIndex.at(currentNode);
+
+        for (HLAC::Edge *edge : adjacency[currentIndex]) {
+            if (edge == nullptr || !edge->feasibility || edge->destination == nullptr) {
                 continue;
             }
 
-            // Find the destination node
-            auto it = nodeToIndex.find(edge->destination);
-            if (it == nodeToIndex.end()) {
+            auto destinationIterator = nodeToIndex.find(edge->destination);
+            if (destinationIterator == nodeToIndex.end()) {
                 continue;
             }
 
-            // Destination vertex
-            const std::size_t v = it->second;
-            // Compute the candidate energy for reaching node v via u.
-            const double candidateEnergy = du + nodeEnergy[v];
+            const std::size_t destinationIndex = destinationIterator->second;
 
-            // Relaxation step: update if we found a better (higher energy) path.
-            if (candidateEnergy > distance[v]) {
-                distance[v] = candidateEnergy;
-                parent[v] = uNode;
+            if (reachable[destinationIndex]) {
+                continue;
+            }
+
+            reachable[destinationIndex] = true;
+            worklist.push_back(edge->destination);
+        }
+    }
+
+    return reachable;
+}
+
+ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
+    HLAC::FunctionNode *func,
+    const std::unordered_map<HLAC::LoopNode *, ILPResult> &loopMapping) {
+
+    const double NEG_INF = -std::numeric_limits<double>::infinity();
+
+    const auto &nodes = func->topologicalSortedRepresentationOfNodes;
+    if (nodes.empty()) {
+        return {};
+    }
+
+    const std::size_t numberOfNodes = nodes.size();
+
+    const auto &nodeToIndex = func->nodeLookup;
+    const auto &adjacency = func->adjacencyRepresentation;
+    auto &nodeEnergy = func->nodeEnergy;
+
+    for (HLAC::GenericNode *node : nodes) {
+        if (node == nullptr) {
+            continue;
+        }
+
+        auto nodeIterator = nodeToIndex.find(node);
+        if (nodeIterator == nodeToIndex.end()) {
+            continue;
+        }
+
+        const std::size_t nodeIndex = nodeIterator->second;
+
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(node)) {
+            try {
+                const auto loopResult = loopMapping.at(loopNode);
+                nodeEnergy[nodeIndex] = loopResult.optimalValue;
+            } catch (const std::out_of_range &) {
+                Logger::getInstance().log(
+                    "Warning: LoopNode "
+                    + loopNode->getDotName()
+                    + " not found in loop mapping, using 0.0 as energy value.",
+                    LOGLEVEL::WARNING);
+                nodeEnergy[nodeIndex] = 0.0;
             }
         }
     }
 
-    /// Conver the calculated distances and parents into the expected mapping format for the return type
-    std::unordered_map<HLAC::GenericNode*, double> distanceMap;
-    std::unordered_map<HLAC::GenericNode*, HLAC::GenericNode*> parentMap;
-    distanceMap.reserve(n);
-    parentMap.reserve(n);
+    HLAC::GenericNode *start = findVirtualEntryNode(func);
 
-    for (std::size_t i = 0; i < n; ++i) {
-        distanceMap.emplace(nodes[i], distance[i]);
-        parentMap.emplace(nodes[i], parent[i]);
+    if (start == nullptr) {
+        Logger::getInstance().log(
+            "Could not determine unique virtual entry node for function " + func->name,
+            LOGLEVEL::ERROR);
+        return {};
+    }
+
+    auto startIterator = nodeToIndex.find(start);
+    if (startIterator == nodeToIndex.end()) {
+        Logger::getInstance().log(
+            "Virtual entry node is not contained in node lookup for function " + func->name,
+            LOGLEVEL::ERROR);
+        return {};
+    }
+
+    const std::vector<bool> reachable = findReachableNodesFromStart(
+        start,
+        nodeToIndex,
+        adjacency,
+        numberOfNodes);
+
+    std::size_t unreachableNodeCount = 0;
+    for (bool isReachable : reachable) {
+        if (!isReachable) {
+            ++unreachableNodeCount;
+        }
+    }
+
+    if (unreachableNodeCount > 0) {
+        Logger::getInstance().log(
+            "Ignoring "
+            + std::to_string(unreachableNodeCount)
+            + " unreachable nodes in DAG longest path for function "
+            + func->name,
+            LOGLEVEL::WARNING);
+    }
+
+    std::vector<double> distance(numberOfNodes, NEG_INF);
+    std::vector<HLAC::GenericNode *> parent(numberOfNodes, nullptr);
+
+    distance[startIterator->second] = nodeEnergy[startIterator->second];
+
+    for (HLAC::GenericNode *currentNode : nodes) {
+        if (currentNode == nullptr) {
+            continue;
+        }
+
+        auto currentIterator = nodeToIndex.find(currentNode);
+        if (currentIterator == nodeToIndex.end()) {
+            continue;
+        }
+
+        const std::size_t currentIndex = currentIterator->second;
+
+        if (!reachable[currentIndex]) {
+            continue;
+        }
+
+        const double currentDistance = distance[currentIndex];
+        if (currentDistance == NEG_INF) {
+            continue;
+        }
+
+        for (HLAC::Edge *edge : adjacency[currentIndex]) {
+            if (edge == nullptr || !edge->feasibility || edge->destination == nullptr) {
+                continue;
+            }
+
+            auto destinationIterator = nodeToIndex.find(edge->destination);
+            if (destinationIterator == nodeToIndex.end()) {
+                continue;
+            }
+
+            const std::size_t destinationIndex = destinationIterator->second;
+
+            if (!reachable[destinationIndex]) {
+                continue;
+            }
+
+            const double candidateEnergy = currentDistance + nodeEnergy[destinationIndex];
+
+            if (candidateEnergy > distance[destinationIndex]) {
+                distance[destinationIndex] = candidateEnergy;
+                parent[destinationIndex] = currentNode;
+            }
+        }
+    }
+
+    std::unordered_map<HLAC::GenericNode *, double> distanceMap;
+    std::unordered_map<HLAC::GenericNode *, HLAC::GenericNode *> parentMap;
+
+    distanceMap.reserve(numberOfNodes);
+    parentMap.reserve(numberOfNodes);
+
+    for (HLAC::GenericNode *node : nodes) {
+        if (node == nullptr) {
+            continue;
+        }
+
+        auto nodeIterator = nodeToIndex.find(node);
+        if (nodeIterator == nodeToIndex.end()) {
+            continue;
+        }
+
+        const std::size_t nodeIndex = nodeIterator->second;
+
+        if (!reachable[nodeIndex]) {
+            continue;
+        }
+
+        distanceMap.emplace(node, distance[nodeIndex]);
+        parentMap.emplace(node, parent[nodeIndex]);
     }
 
     return {std::move(distanceMap), std::move(parentMap)};
