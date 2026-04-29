@@ -24,6 +24,8 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
     Logger::getInstance().log("Running Monolithic ILP Analysis for Energy", LOGLEVEL::INFO);
     std::unordered_map<std::string, std::optional<ILPModel>> functionILPCache;
 
+    graph->printDotRepresentation();
+
     // ================= Monolithic ILP =================
 
     auto monoTotalStart = std::chrono::high_resolution_clock::now();

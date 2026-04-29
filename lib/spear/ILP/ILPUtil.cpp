@@ -667,3 +667,94 @@ int ILPUtil::getMaxEdgeIndex(HLAC::LoopNode *loopNode) {
 
     return maxIndex;
 }
+
+double ILPUtil::calculateEnergyOfTakenEdges(
+    const std::vector<HLAC::Edge *> &takenEdges,
+    const ILPClusteredLoopResult &clusteredLoopResults) {
+
+    double pathEnergy = 0.0;
+
+    for (HLAC::Edge *takenEdge : takenEdges) {
+        if (takenEdge == nullptr || takenEdge->destination == nullptr) {
+            continue;
+        }
+
+        HLAC::GenericNode *destinationNode = takenEdge->destination;
+
+        if (auto *loopnode = dynamic_cast<HLAC::LoopNode *>(destinationNode)) {
+
+            auto loopResultIterator = clusteredLoopResults.find(loopnode);
+
+            if (loopResultIterator == clusteredLoopResults.end()) {
+                continue;
+            }
+
+            std::cout << takenEdge->soure->getDotName() << " -> " << destinationNode->getDotName() << ": " << loopResultIterator->second.optimalValue << std::endl;
+            pathEnergy += loopResultIterator->second.optimalValue;
+            continue;
+        }
+
+        std::cout << takenEdge->soure->getDotName() << " -> " << destinationNode->getDotName() << ": " << destinationNode->getEnergy() << std::endl;
+        pathEnergy += destinationNode->getEnergy();
+    }
+
+    return pathEnergy;
+}
+
+std::vector<HLAC::Edge *> ILPUtil::collectEdges(HLAC::GenericNode *node) {
+    std::vector<HLAC::Edge *> edges;
+
+    if (auto *functionNode = dynamic_cast<HLAC::FunctionNode *>(node)) {
+        for (const auto &edgeUniquePointer : functionNode->Edges) {
+            edges.push_back(edgeUniquePointer.get());
+        }
+
+        for (const auto &nodeUniquePointer : functionNode->Nodes) {
+            auto childEdges = collectEdges(nodeUniquePointer.get());
+            edges.insert(edges.end(), childEdges.begin(), childEdges.end());
+        }
+    }
+
+    if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(node)) {
+        for (const auto &edgeUniquePointer : loopNode->Edges) {
+            edges.push_back(edgeUniquePointer.get());
+        }
+
+        for (const auto &nodeUniquePointer : loopNode->Nodes) {
+            auto childEdges = collectEdges(nodeUniquePointer.get());
+            edges.insert(edges.end(), childEdges.begin(), childEdges.end());
+        }
+    }
+
+    return edges;
+}
+
+double ILPUtil::calculateEnergyOfMonolithicSolution(
+    const std::vector<HLAC::Edge *> &edges,
+    const std::vector<double> &variableValues) {
+
+    double solutionEnergy = 0.0;
+
+    for (HLAC::Edge *edge : edges) {
+        if (edge == nullptr || edge->destination == nullptr) {
+            continue;
+        }
+
+        int ilpIndex = edge->ilpIndex;
+
+        if (ilpIndex < 0 || ilpIndex >= static_cast<int>(variableValues.size())) {
+            continue;
+        }
+
+        double executionCount = variableValues[ilpIndex];
+
+        if (executionCount <= 0.0) {
+            continue;
+        }
+
+        std::cout << edge->soure->getDotName() + " -> " + edge->destination->getDotName() << ": " << executionCount * edge->destination->getEnergy() << std::endl;
+        solutionEnergy += executionCount * edge->destination->getEnergy();
+    }
+
+    return solutionEnergy;
+}

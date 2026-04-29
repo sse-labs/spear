@@ -203,21 +203,24 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
     this->Nodes.push_back(std::move(exitNode));
     const int virtualExitIndex = static_cast<int>(this->Nodes.size()) - 1;
 
+    GenericNode *virtualEntryNode = this->Nodes[virtualEntryIndex].get();
+    GenericNode *virtualExitNode = this->Nodes[virtualExitIndex].get();
+
     auto entryEdge = std::make_unique<Edge>(
-        Edge(this->Nodes[virtualEntryIndex].get(), this->Nodes[headerIndex].get()));
+        Edge(virtualEntryNode, this->Nodes[headerIndex].get()));
 
     this->Edges.push_back(std::move(entryEdge));
 
     for (int exitingBlockIndex : exitingBlockIndices) {
         auto exitEdge = std::make_unique<Edge>(
-            Edge(this->Nodes[exitingBlockIndex].get(), this->Nodes[virtualExitIndex].get()));
+            Edge(this->Nodes[exitingBlockIndex].get(), virtualExitNode));
 
         this->Edges.push_back(std::move(exitEdge));
     }
 
     // Collapse this loop:
     //    - move edges fully inside this loop into this->Edges
-    //    - redirect boundary edges to use this as endpoint
+    //    - redirect boundary edges to use this loop node as collapsed endpoint
     for (auto edgeIterator = edgeList.begin(); edgeIterator != edgeList.end();) {
         Edge *edge = edgeIterator->get();
 
@@ -236,13 +239,19 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
             continue;
         }
 
-        // Boundary edge: redirect endpoints that touch nodes inside this loop
-        if (sourceIsInLoop) {
-            edge->soure = this;
+        // Loop entry edge: outside -> loop-internal becomes outside -> LoopNode
+        if (!sourceIsInLoop && destinationIsInLoop) {
+            edge->destination = this;
+            ++edgeIterator;
+            continue;
         }
 
-        if (destinationIsInLoop) {
-            edge->destination = this;
+        // Loop exit edge: loop-internal -> outside becomes LoopNode -> outside.
+        // The internal exit decision is represented inside the loop by edges into virtualExitNode.
+        if (sourceIsInLoop && !destinationIsInLoop) {
+            edge->soure = this;
+            ++edgeIterator;
+            continue;
         }
 
         ++edgeIterator;

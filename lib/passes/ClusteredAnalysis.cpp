@@ -66,7 +66,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
             int test = 0;
         }
 
-        if (funcNode->isGotoFunction) {
+        /*if (funcNode->isGotoFunction) {
             Logger::getInstance().log(
                 "Skipping clustered ILP analysis for goto function " + funcName + ". Using fallback energy.",
                 LOGLEVEL::WARNING);
@@ -88,7 +88,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
                 LOGLEVEL::HIGHLIGHT);
 
             continue;
-        }
+        }*/
 
         auto clusteredBuildStart = std::chrono::high_resolution_clock::now();
 

@@ -105,6 +105,13 @@ class ILPUtil {
      */
     static int getMaxEdgeIndex(HLAC::LoopNode *loopNode);
 
+    static double calculateEnergyOfTakenEdges(const std::vector<HLAC::Edge *> &takenEdges,
+                                       const ILPClusteredLoopResult &clusteredLoopResults);
+    static std::vector<HLAC::Edge *> collectEdges(HLAC::GenericNode *node);
+
+    static double calculateEnergyOfMonolithicSolution(const std::vector<HLAC::Edge *> &edges,
+                                               const std::vector<double> &variableValues);
+
     static void insertOrAccumulate(std::unordered_map<int, double> &coefficientsByColumn, int column, double coefficient);
 
     static CoinPackedVector createRowFromCoefficients(const std::unordered_map<int, double> &coefficientsByColumn);

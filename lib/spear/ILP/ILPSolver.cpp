@@ -9,7 +9,7 @@
 
 #include "ILP/ILPSolver.h"
 
-constexpr double objectiveScalingFactor = 1.0e12;
+constexpr double objectiveScalingFactor = 1.0e10;
 
 ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutionModel(nullptr) {
     OsiClpSolverInterface solver;
