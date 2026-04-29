@@ -20,7 +20,7 @@
 nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool showTimings, bool showAllTimings) {
     Logger::getInstance().log("Running Clustered ILP Analysis for Energy", LOGLEVEL::INFO);
 
-    std::unordered_map<std::string, std::vector<ILPModel>> functionILPCache;
+    std::unordered_map<std::string, std::vector<std::vector<std::pair<ILPModel, HLAC::VirtualNode *>>>> functionILPCache;
 
     std::string cacheActiveStr = (ConfigParser::getAnalysisConfiguration().cachingEnabled ? "enabled" : "disabled");
     Logger::getInstance().log("Cluster cache is " + cacheActiveStr, LOGLEVEL::INFO);
@@ -33,7 +33,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
     auto totalSolveDuration = std::chrono::microseconds::zero();
     auto totalDagDuration = std::chrono::microseconds::zero();
 
-    std::unordered_map<HLAC::FunctionNode *, ILPClusteredLoopResult> clusteredLoopResults;
+    std::unordered_map<HLAC::FunctionNode *, std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>>> clusteredLoopResults;
 
     auto clusteredTotalStart = std::chrono::high_resolution_clock::now();
 
@@ -197,7 +197,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
     outputObject["duration"] = clusteredTotalDuration.count();
     outputObject["functions"] = {};
 
-    for (auto &[funcname, energy] : graph->FunctionEnergyCache) {
+    /*for (auto &[funcname, energy] : graph->FunctionEnergyCache) {
         auto ilpVec = functionILPCache[funcname];
         auto ilpArr = nlohmann::json::array();
 
@@ -231,7 +231,7 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
         for (auto &node : funcNode->Nodes) {
             PassUtil::appendGraphContent(outputObject["functions"][funcname], node.get(), loopres);
         }
-    }
+    }*/
 
     return outputObject;
 }

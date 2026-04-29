@@ -152,11 +152,11 @@ class Util {
      * @param edges Existing edges
      * @return List of edges taken on the calculated path
      */
-    static std::vector<Edge *> findTakenEdges(
+    static std::vector<HLAC::Edge *> findTakenEdges(
         GenericNode *entryNode,
         const std::unordered_map<HLAC::GenericNode *, HLAC::GenericNode *> &predecessors,
-        std::vector<std::unique_ptr<Edge>> &edges,
-        const std::unordered_map<HLAC::LoopNode *, ILPResult> &loopResults);
+        std::vector<std::unique_ptr<HLAC::Edge>> &edges,
+        const std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>> &loopResults);
 
     /**
      * Search for the edge under the given ILPIndex

@@ -392,7 +392,7 @@ static std::vector<bool> findReachableNodesFromStart(
 
 ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
     HLAC::FunctionNode *func,
-    const std::unordered_map<HLAC::LoopNode *, ILPResult> &loopMapping) {
+    std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>> &loopMapping) {
 
     const double NEG_INF = -std::numeric_limits<double>::infinity();
 
@@ -406,33 +406,6 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
     const auto &nodeToIndex = func->nodeLookup;
     const auto &adjacency = func->adjacencyRepresentation;
     auto &nodeEnergy = func->nodeEnergy;
-
-    for (HLAC::GenericNode *node : nodes) {
-        if (node == nullptr) {
-            continue;
-        }
-
-        auto nodeIterator = nodeToIndex.find(node);
-        if (nodeIterator == nodeToIndex.end()) {
-            continue;
-        }
-
-        const std::size_t nodeIndex = nodeIterator->second;
-
-        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(node)) {
-            try {
-                const auto loopResult = loopMapping.at(loopNode);
-                nodeEnergy[nodeIndex] = loopResult.optimalValue;
-            } catch (const std::out_of_range &) {
-                Logger::getInstance().log(
-                    "Warning: LoopNode "
-                    + loopNode->getDotName()
-                    + " not found in loop mapping, using 0.0 as energy value.",
-                    LOGLEVEL::WARNING);
-                nodeEnergy[nodeIndex] = 0.0;
-            }
-        }
-    }
 
     HLAC::GenericNode *start = findVirtualEntryNode(func);
 
@@ -515,7 +488,44 @@ ILPLongestPathDAGSolution ILPUtil::longestPathDAG(
                 continue;
             }
 
-            const double candidateEnergy = currentDistance + nodeEnergy[destinationIndex];
+            double edgeContribution = nodeEnergy[destinationIndex];
+
+            if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(currentNode)) {
+                auto loopMappingIterator = loopMapping.find(loopNode);
+
+                if (loopMappingIterator == loopMapping.end()) {
+                    Logger::getInstance().log(
+                        "Warning: LoopNode "
+                        + loopNode->getDotName()
+                        + " not found in loop mapping, skipping loop exit edge.",
+                        LOGLEVEL::WARNING);
+                    continue;
+                }
+
+                bool foundMatchingExit = false;
+                double bestExitEnergy = NEG_INF;
+
+                for (const auto &[loopResult, virtualExitNode] : loopMappingIterator->second) {
+                    if (virtualExitNode == nullptr) {
+                        continue;
+                    }
+
+                    if (virtualExitNode->successor != edge->destination) {
+                        continue;
+                    }
+
+                    foundMatchingExit = true;
+                    bestExitEnergy = std::max(bestExitEnergy, loopResult.optimalValue);
+                }
+
+                if (!foundMatchingExit) {
+                    continue;
+                }
+
+                edgeContribution = bestExitEnergy + nodeEnergy[destinationIndex];
+            }
+
+            const double candidateEnergy = currentDistance + edgeContribution;
 
             if (candidateEnergy > distance[destinationIndex]) {
                 distance[destinationIndex] = candidateEnergy;

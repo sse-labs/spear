@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "HLAC/hlac.h"
 #include "ILPTypes.h"
 
 
@@ -39,6 +40,8 @@ class ILPBuilder {
      */
     static ILPModel buildMonolithicILP(HLAC::LoopNode *loop);
 
+    static std::vector<std::pair<ILPModel, HLAC::VirtualNode *>> buildClusteredILP(HLAC::LoopNode *loop);
+
     static std::vector<int> collectExternalLoopInvocationColumns(HLAC::LoopNode *loopNode,
                                                           const std::vector<std::unique_ptr<HLAC::Edge>> &parentEdges,
                                                           const std::vector<int> &incomingColumns);
@@ -48,7 +51,7 @@ class ILPBuilder {
      * @param func FunctionNode pointer to calculate the clustered ILP for
      * @return Returns the constructed ClusteredILPModel
      */
-    static ClusteredILPModel buildClusteredILP(HLAC::FunctionNode *func);
+    static std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPModel, HLAC::VirtualNode *>>> buildClusteredILP(HLAC::FunctionNode *func);
 
     /**
      * Solve a given ILPModel using the ILPSolver class
@@ -145,6 +148,10 @@ class ILPBuilder {
      * @param col Column relevant for the synthetic constrain
      */
     static void appendEqualityConstraint(ILPModel &model, int col);
+
+    static void appendExitConstrains(ILPModel &model,
+        HLAC::LoopNode *loopNode,
+        int exitIdx);
 
     /**
      * Fill in the objective function of the model. This adds the energy cost per variable to the vector that

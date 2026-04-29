@@ -46,7 +46,7 @@ class ILPUtil {
      */
     static ILPLongestPathDAGSolution longestPathDAG(
         HLAC::FunctionNode *func,
-        const ILPClusteredLoopResult &loopMapping);
+        std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>> &loopMapping);
 
     /**
      * Calculate mappings from nodes to their incoming and outgoing edge indices for the given edges.

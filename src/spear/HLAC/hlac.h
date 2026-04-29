@@ -137,6 +137,8 @@ class VirtualNode : public GenericNode {
      */
     bool isExit = false;
 
+    GenericNode *successor = nullptr;
+
     /**
      * Parent node of this node
      */
@@ -326,6 +328,8 @@ class LoopNode : public GenericNode {
      * Parent FunctionNode this LoopNode belongs to
      */
     FunctionNode *parentFunction = nullptr;
+
+    std::vector<int> exits;
 
     /**
      * Flag to store if the contained loop has subloops that find representation as further LoopNodes
@@ -823,7 +827,7 @@ class hlac {
      * @return Mapping of function names to their respective solution of the DAG longest path search
      */
     static std::optional<DAGLongestPathSolution> DAGLongestPath(FunctionNode *functionNode,
-                                                         std::unordered_map<LoopNode *, ILPResult> clusteredResult);
+                                                         std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>> clusteredResult);
 
     /**
      * Build an ILP representation for the contained functions
@@ -836,7 +840,7 @@ class hlac {
      * Build clustered ILP representations for the contained functions
      * @return Returns mapping of functionname to
      */
-    std::optional<ClusteredILPModel> buildClusteredILPS(FunctionNode *functionNode);
+    std::optional<std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPModel, HLAC::VirtualNode *>>>> buildClusteredILPS(FunctionNode *functionNode);
 
     /**
      * Solve the monolithic models of the contained functions
@@ -850,7 +854,7 @@ class hlac {
      * @param loopModelMapping Mapping function name to constructed clustered ILPModel
      * @return Mapping of function name to clustered ILP result
      */
-    static ILPClusteredLoopResult solveClusteredIlps(ILPLoopModelMapping loopModelMapping);
+    static std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>> solveClusteredIlps( std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPModel, HLAC::VirtualNode *>>> loopModelMapping);
 };
 }  // namespace HLAC
 

@@ -13,11 +13,11 @@
 
 std::string HLAC::VirtualNode::getDotName() {
     if (isEntry) {
-        return "VirtEntry_" + parent->getAddress();
+        return "VirtEntry_" + parent->getAddress() + "_" + this->getAddress();
     } else if (isExit) {
-        return "VirtExit" + parent->getAddress();
+        return "VirtExit" + parent->getAddress() + "_" + this->getAddress();
     } else {
-        return "VirtualPoint" + parent->getAddress();
+        return "VirtualPoint" + parent->getAddress() + "_" + this->getAddress();
     }
 }
 
@@ -34,7 +34,12 @@ void HLAC::VirtualNode::printDotRepresentation(std::ostream &os) {
             if (isEntry) {
                 llvmOS << "label=\"VEntry\"";
             } else if (isExit) {
-                llvmOS << "label=\"VExit\"";
+                llvmOS << "label=\"VExit";
+                llvmOS << "\\n";
+                if (successor != nullptr) {
+                    llvmOS << successor->name;
+                }
+                llvmOS << "\"";
             } else {
                 llvmOS << "label=\"VirtualPoint\"";
             }
@@ -57,7 +62,12 @@ void HLAC::VirtualNode::printDotRepresentationWithSolution(std::ostream &os, std
     if (isEntry) {
         llvmOS << "label=\"VEntry\"";
     } else if (isExit) {
-        llvmOS << "label=\"VExit\"";
+        llvmOS << "label=\"VExit";
+        llvmOS << "\\n";
+        if (successor != nullptr) {
+            llvmOS << successor->name;
+        }
+        llvmOS << "\"";
     } else {
         llvmOS << "label=\"VirtualPoint\"";
     }

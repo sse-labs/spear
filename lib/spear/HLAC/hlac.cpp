@@ -156,7 +156,8 @@ std::optional<ILPModel> hlac::buildMonolithicILP(FunctionNode *functionNode) {
     return std::nullopt;
 }
 
-std::optional<ClusteredILPModel> hlac::buildClusteredILPS(FunctionNode *functionNode) {
+std::optional<std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPModel, HLAC::VirtualNode *>>>>
+hlac::buildClusteredILPS(FunctionNode *functionNode) {
     // ignore phasar hooks
     if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
         && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
@@ -179,7 +180,7 @@ std::optional<ILPResult> hlac::solveMonolithicIlp(ILPModel &model, std::string f
 
 std::optional<DAGLongestPathSolution> hlac::DAGLongestPath(
     FunctionNode *functionNode,
-    std::unordered_map<LoopNode *, ILPResult> clusteredResult) {
+    std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>> clusteredResult) {
 
     if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
         && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
@@ -290,30 +291,49 @@ std::optional<DAGLongestPathSolution> hlac::DAGLongestPath(
     return std::nullopt;
 }
 
-ILPClusteredLoopResult hlac::solveClusteredIlps(ILPLoopModelMapping loopModelMapping) {
+std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>> hlac::solveClusteredIlps(
+    std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPModel, HLAC::VirtualNode *>>> loopModelMapping) {
+
     ILPClusterCache &cache = ILPClusterCache::getInstance();
 
-    // We need to solve the ILP for each loop and then combine the results to get the overall energy and path
-    // for the function
-    std::unordered_map<LoopNode *, ILPResult> loopEnergyMapping;
+    std::unordered_map<HLAC::LoopNode *, std::vector<std::pair<ILPResult, HLAC::VirtualNode *>>> loopEnergyMapping;
     loopEnergyMapping.reserve(loopModelMapping.size());
 
-    // std::cout << "Clustered results for " << name << ":\n";
+    for (const auto &[loopNode, loopModels] : loopModelMapping) {
+        if (loopNode == nullptr) {
+            continue;
+        }
 
-    for (const auto &[loopNode, model] : loopModelMapping) {
-        if (cache.entryExists(loopNode->hash)) {
-            auto cachedResult = cache.getEntry(loopNode->hash);
-            if (cachedResult.has_value()) {
-                loopEnergyMapping.emplace(loopNode, cachedResult.value());
+        std::vector<std::pair<ILPResult, HLAC::VirtualNode *>> exitResults;
+        exitResults.reserve(loopModels.size());
+
+        for (const auto &[model, exitNode] : loopModels) {
+            if (exitNode == nullptr) {
+                continue;
             }
-        } else {
+
+            // TODO: Enable caching again.
+            //
+            // Important: The cache key must include the exit node or another stable exit identifier.
+            // Otherwise, different exit-specific ILPs for the same loop overwrite each other.
+            //
+            // const std::string cacheKey =
+            //     std::to_string(loopNode->hash) + "_exit_" + std::to_string(exitNode->hash);
+
             std::optional<ILPResult> solvedModel = ILPBuilder::solveClusteredLoopModel(model, loopNode);
 
-            if (solvedModel.has_value()) {
-                // std::cout << "Loop " << loopNode->loop->getName().str() << " -> " << objectiveValue << std::endl;
-                cache.setEntry(loopNode->hash, solvedModel.value());
-                loopEnergyMapping.emplace(loopNode, std::move(*solvedModel));
+            if (!solvedModel.has_value()) {
+                continue;
             }
+
+            // TODO: Cache enabling.
+            // cache.setEntry(cacheKey, solvedModel.value());
+
+            exitResults.emplace_back(std::move(solvedModel.value()), exitNode);
+        }
+
+        if (!exitResults.empty()) {
+            loopEnergyMapping.emplace(loopNode, std::move(exitResults));
         }
     }
 
