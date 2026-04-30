@@ -331,13 +331,12 @@ std::unique_ptr<Edge> FunctionNode::makeEdge(GenericNode *src, GenericNode *dst)
 }
 
 void FunctionNode::printDotRepresentation(std::ostream &os) {
-    os << "digraph " << "\"" << this->getDotName() << "\"" << " {" << std::endl;
-    os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\"];" << std::endl;
-    os << "compound=true;" << std::endl;
-    os << "style=\"rounded,filled\";" << std::endl;
-    os << "fontname=\"Courier\";" << std::endl;
-    os << "  labelloc=\"t\";\n";
-    os << "label=" << "\"" << this->getDotName() << "\";" << std::endl;
+    os << "digraph \"" << this->getDotName() << "\" {\n";
+    os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\", compound=true, labelloc=\"t\", label=\""
+       << this->getDotName()
+       << "\"];\n";
+    os << "node [fontname=\"Courier\"];\n";
+    os << "edge [fontname=\"Courier\"];\n";
 
     for (auto &node : this->Nodes) {
         node->printDotRepresentation(os);
@@ -347,17 +346,16 @@ void FunctionNode::printDotRepresentation(std::ostream &os) {
         edge->printDotRepresentation(os);
     }
 
-    os << "}" << std::endl;
+    os << "}\n";
 }
 
 void FunctionNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> solution) {
-    os << "digraph " << "\"" << this->getDotName() << "\"" << " {" << std::endl;
-    os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\"];" << std::endl;
-    os << "compound=true;" << std::endl;
-    os << "style=\"rounded,filled\";" << std::endl;
-    os << "fontname=\"Courier\";" << std::endl;
-    os << "  labelloc=\"t\";\n";
-    os << "label=" << "\"" << this->getDotName() << "\";" << std::endl;
+    os << "digraph \"" << this->getDotName() << "\" {\n";
+    os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\", compound=true, labelloc=\"t\", label=\""
+       << this->getDotName()
+       << "\"];\n";
+    os << "node [fontname=\"Courier\"];\n";
+    os << "edge [fontname=\"Courier\"];\n";
 
     for (auto &node : this->Nodes) {
         node->printDotRepresentationWithSolution(os, solution);
@@ -367,7 +365,7 @@ void FunctionNode::printDotRepresentationWithSolution(std::ostream &os, std::vec
         edge->printDotRepresentationWithSolution(os, solution);
     }
 
-    os << "}" << std::endl;
+    os << "}\n";
 }
 
 std::string FunctionNode::getDotName() {

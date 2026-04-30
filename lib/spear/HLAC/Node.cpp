@@ -48,22 +48,27 @@ void Node::printDotRepresentation(std::ostream &os) {
     }
 
     // Ensure last line is left-aligned too
-    if (rawBody.empty() || rawBody.back() != '\n')
+    if (rawBody.empty() || rawBody.back() != '\n') {
         rawBody += "\n";
+    }
 
-    const std::string escName = Util::dotRecordEscape(Util::stripParameters(this->name)) + "\\l";
+    const std::string escName = Util::dotRecordEscape(Util::stripParameters(this->name));
     const std::string escBody = Util::dotRecordEscape(rawBody);
+    const std::string escTooltip = Util::dotRecordEscape(Util::stripParameters(this->name));
 
-    llvmOS << getDotName() << "["
-           << "shape=record," << "\n"
-           << "style=filled," << "\n"
-           << "fillcolor=\"#b70d2870\"," << "\n"
-           << "color=\"#2B2B2B\"," << "\n"
-           << "penwidth=2," << "\n"
-           << "style=\"rounded,filled\"," << "\n"
-           << "fontname=\"Courier\"," << "\n"
-           << "label=\"{" << escName << "|" << escBody << "}\""
-           << ",tooltip=\"" << Util::dotRecordEscape(Util::stripParameters(this->name)) << "\""
+    llvmOS << getDotName() << " ["
+           << "shape=record,"
+           << "style=\"rounded,filled\","
+           << "fillcolor=\"#b70d2870\","
+           << "color=\"#2B2B2B\","
+           << "penwidth=2,"
+           << "fontname=\"Courier\","
+           << "label=\"{"
+           << escName
+           << " | "
+           << escBody
+           << "}\","
+           << "tooltip=\"" << escTooltip << "\""
            << "];\n";
 
     llvmOS.flush();
@@ -88,22 +93,29 @@ void Node::printDotRepresentationWithSolution(std::ostream &os, std::vector<doub
     }
 
     // Ensure last line is left-aligned too
-    if (rawBody.empty() || rawBody.back() != '\n')
+    if (rawBody.empty() || rawBody.back() != '\n') {
         rawBody += "\n";
+    }
 
-    const std::string escName = Util::dotRecordEscape(Util::stripParameters(this->name)) + "\\l";
+    const std::string escName = Util::dotRecordEscape(Util::stripParameters(this->name));
     const std::string escBody = Util::dotRecordEscape(rawBody);
+    const std::string escTooltip = Util::dotRecordEscape(Util::stripParameters(this->name));
 
-    llvmOS << getDotName() << "["
-           << "shape=record," << "\n"
-           << "style=filled," << "\n"
-           << "fillcolor=\"#b70d2870\"," << "\n"
-           << "color=\"#2B2B2B\"," << "\n"
-           << "penwidth=2," << "\n"
-           << "style=\"rounded,filled\"," << "\n"
-           << "fontname=\"Courier\"," << "\n"
-           << "label=\"{" << escName << this->getEnergy() << " J" << "|" << escBody << "}\""
-           << ",tooltip=\"" << Util::dotRecordEscape(Util::stripParameters(this->name)) << "\""
+    llvmOS << getDotName() << " ["
+           << "shape=record,"
+           << "style=\"rounded,filled\","
+           << "fillcolor=\"#b70d2870\","
+           << "color=\"#2B2B2B\","
+           << "penwidth=2,"
+           << "fontname=\"Courier\","
+           << "label=\"{"
+           << escName
+           << " | "
+           << this->getEnergy() << " J"
+           << " | "
+           << escBody
+           << "}\","
+           << "tooltip=\"" << escTooltip << "\""
            << "];\n";
 
     llvmOS.flush();

@@ -24,22 +24,23 @@ std::string HLAC::VirtualNode::getDotName() {
 void HLAC::VirtualNode::printDotRepresentation(std::ostream &os) {
     llvm::raw_os_ostream llvmOS(os);
 
-    llvmOS << getDotName() << "["
-            << "shape=circle," << "\n"
-            << "fillcolor=black," << "\n"
-            << "color=black," << "\n"
-            << "width=0.1" << "\n"
-            << "height=0.1" << "\n";
+    llvmOS << getDotName() << " ["
+           << "shape=circle,"
+           << "style=filled,"
+           << "fillcolor=black,"
+           << "color=black,"
+           << "width=0.1,"
+           << "height=0.1,";
 
-            if (isEntry) {
-                llvmOS << "label=\"VEntry\"";
-            } else if (isExit) {
-                llvmOS << "label=\"VExit\"";
-            } else {
-                llvmOS << "label=\"VirtualPoint\"";
-            }
+    if (isEntry) {
+        llvmOS << "label=\"VEntry\"";
+    } else if (isExit) {
+        llvmOS << "label=\"VExit\"";
+    } else {
+        llvmOS << "label=\"VirtualPoint\"";
+    }
 
-            llvmOS << "];\n";
+    llvmOS << "];\n";
 
     llvmOS.flush();
 }
@@ -47,12 +48,13 @@ void HLAC::VirtualNode::printDotRepresentation(std::ostream &os) {
 void HLAC::VirtualNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> result) {
     llvm::raw_os_ostream llvmOS(os);
 
-    llvmOS << getDotName() << "["
-            << "shape=circle," << "\n"
-            << "fillcolor=black," << "\n"
-            << "color=black," << "\n"
-            << "width=0.1" << "\n"
-            << "height=0.1" << "\n";
+    llvmOS << getDotName() << " ["
+           << "shape=circle,"
+           << "style=filled,"
+           << "fillcolor=black,"
+           << "color=black,"
+           << "width=0.1,"
+           << "height=0.1,";
 
     if (isEntry) {
         llvmOS << "label=\"VEntry\"";

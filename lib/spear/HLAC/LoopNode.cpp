@@ -251,43 +251,6 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
     this->refreshBackEdges();
 }
 
-void LoopNode::debugDumpEdges() const {
-    llvm::BasicBlock *headerBlock = this->loop->getHeader();
-
-    llvm::SmallVector<llvm::BasicBlock *, 8> latchBlocks;
-    this->loop->getLoopLatches(latchBlocks);
-
-    Logger::getInstance().log("Loop dump for function: " + this->parentFunction->name, LOGLEVEL::INFO);
-    Logger::getInstance().log("Header: " + basicBlockToString(headerBlock), LOGLEVEL::INFO);
-
-    for (llvm::BasicBlock *latchBlock : latchBlocks) {
-        Logger::getInstance().log("Latch: " + basicBlockToString(latchBlock), LOGLEVEL::INFO);
-    }
-
-    for (const auto &edgeUniquePointer : this->Edges) {
-        const Edge *edge = edgeUniquePointer.get();
-
-        if (edge == nullptr) {
-            continue;
-        }
-
-        std::string sourceDescription = genericNodeTypeToString(edge->soure);
-        std::string destinationDescription = genericNodeTypeToString(edge->destination);
-
-        if (auto *sourceNode = dynamic_cast<HLAC::Node *>(edge->soure)) {
-            sourceDescription += " " + basicBlockToString(sourceNode->block);
-        }
-
-        if (auto *destinationNode = dynamic_cast<HLAC::Node *>(edge->destination)) {
-            destinationDescription += " " + basicBlockToString(destinationNode->block);
-        }
-
-        Logger::getInstance().log(
-            "Edge: " + sourceDescription + " -> " + destinationDescription,
-            LOGLEVEL::INFO);
-    }
-}
-
 void LoopNode::refreshBackEdges() {
     this->backEdges.clear();
 
@@ -384,17 +347,20 @@ std::unique_ptr<LoopNode> LoopNode::makeNode(llvm::Loop *loop, FunctionNode *fun
 
 void LoopNode::printDotRepresentation(std::ostream &outputStream) {
     outputStream << "subgraph \"" << this->getDotName() << "\" {\n";
-    outputStream << "style=filled;";
-    outputStream << "fillcolor=\"#FFFFFF\";";
-    outputStream << "color=\"#2B2B2B\";";
-    outputStream << "penwidth=2;";
-    outputStream << "style=\"rounded,filled\";";
-    outputStream << "fontname=\"Courier\";";
-    outputStream << "tooltip=" << "\"" << "METDADATA" << "\";";
-    outputStream << "  labelloc=\"t\";\n";
-    outputStream << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", "
-                 << this->bounds.getUpperBound() << ")" << "\r\";\n";
-    outputStream << "  " << this->getAnchorDotName() << " [shape=point, width=0.01, label=\"\", style=invis];\n";
+    outputStream << "graph ["
+                 << "style=\"rounded,filled\","
+                 << "fillcolor=\"#FFFFFF\","
+                 << "color=\"#2B2B2B\","
+                 << "penwidth=2,"
+                 << "fontname=\"Courier\","
+                 << "tooltip=\"METADATA\","
+                 << "labelloc=\"t\","
+                 << "label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", "
+                 << this->bounds.getUpperBound() << ")\""
+                 << "];\n";
+
+    outputStream << this->getAnchorDotName()
+                 << " [shape=point, width=0.01, label=\"\", style=invis];\n";
 
     for (auto &node : this->Nodes) {
         node->printDotRepresentation(outputStream);
@@ -409,17 +375,20 @@ void LoopNode::printDotRepresentation(std::ostream &outputStream) {
 
 void LoopNode::printDotRepresentationWithSolution(std::ostream &outputStream, std::vector<double> solution) {
     outputStream << "subgraph \"" << this->getDotName() << "\" {\n";
-    outputStream << "style=filled;";
-    outputStream << "fillcolor=\"#FFFFFF\";";
-    outputStream << "color=\"#2B2B2B\";";
-    outputStream << "penwidth=2;";
-    outputStream << "style=\"rounded,filled\";";
-    outputStream << "fontname=\"Courier\";";
-    outputStream << "tooltip=" << "\"" << "METDADATA" << "\";";
-    outputStream << "  labelloc=\"t\";\n";
-    outputStream << "  label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", "
-                 << this->bounds.getUpperBound() << ")" << "\r\";\n";
-    outputStream << "  " << this->getAnchorDotName() << " [shape=point, width=0.01, label=\"\", style=invis];\n";
+    outputStream << "graph ["
+                 << "style=\"rounded,filled\","
+                 << "fillcolor=\"#FFFFFF\","
+                 << "color=\"#2B2B2B\","
+                 << "penwidth=2,"
+                 << "fontname=\"Courier\","
+                 << "tooltip=\"METADATA\","
+                 << "labelloc=\"t\","
+                 << "label=\"" << this->getDotName() << "(" << this->bounds.getLowerBound() << ", "
+                 << this->bounds.getUpperBound() << ")\""
+                 << "];\n";
+
+    outputStream << this->getAnchorDotName()
+                 << " [shape=point, width=0.01, label=\"\", style=invis];\n";
 
     for (auto &node : this->Nodes) {
         node->printDotRepresentationWithSolution(outputStream, solution);
