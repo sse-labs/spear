@@ -131,10 +131,6 @@ void ILPBuilder::appendGraphConstraints(ILPModel &model, const std::vector<std::
             }
 
 
-            if (virtualNode->virtualNodeKind == HLAC::VirtualNodeKind::FALLBACK) {
-                int i = 10;
-            }
-
             /**
              * For exit nodes we want to ensure that incoming edges are called exactly one time
              */
@@ -215,9 +211,6 @@ std::optional<ILPResult> ILPBuilder::solveClusteredLoopModel(const ILPModel &ilp
     auto optimalSolution = modelSolver.getSolvedModelValue();
     auto optimalPath = modelSolver.getSolvedSolution();
 
-    ILPDebug::dumpILPModel(ilpModel, loopNode->Edges, "for loop " + loopNode->getDotName());
-
-
     // If solution and path exist return it
     if (optimalPath.has_value() && optimalSolution.has_value()) {
         return std::make_optional<ILPResult>(optimalSolution.value(), optimalPath.value());
@@ -227,7 +220,6 @@ std::optional<ILPResult> ILPBuilder::solveClusteredLoopModel(const ILPModel &ilp
     const ILPSolverStatus solverStatus = modelSolver.getStatus();
 
     if (solverStatus == ILPSolverStatus::INFEASIBLE) {
-
         Logger::getInstance().log(
                 "Clustered ILP: loop " + loopNode->getDotName() +
                         " is infeasible under feasibility constraints. Treating it as unreachable with energy 0.0.",

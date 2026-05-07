@@ -45,6 +45,11 @@ enum class NodeType {
     VIRTUALNODE = 4,
 };
 
+/**
+ * Enum of the virtual node kind
+ * Currently only Entry and NormalExit are used.
+ * Future versions could use other exit methods to represent control flow more flexible
+ */
 enum class VirtualNodeKind {
     Entry,
     NormalExit,
@@ -312,11 +317,6 @@ class LoopNode : public GenericNode {
      * Backedge of the loop
      */
     std::vector<Edge*> backEdges;
-
-    /**
-     *
-     */
-    int possibleFallbackIndex = -1;
 
     /**
      * List of contained Nodes
