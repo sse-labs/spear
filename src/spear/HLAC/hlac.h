@@ -45,6 +45,16 @@ enum class NodeType {
     VIRTUALNODE = 4,
 };
 
+enum class VirtualNodeKind {
+    Entry,
+    NormalExit,
+    ReturnExit,
+    BreakExit,
+    ContinueTarget,
+    Generic,
+    FALLBACK,
+};
+
 /**
  * Binding of node index to callee name for call nodes.
  * This is used to determine which call nodes are relevant for the optimal solution and to print the
@@ -128,14 +138,9 @@ class GenericNode {
 class VirtualNode : public GenericNode {
  public:
     /**
-     * Flag to determine if a node is an entry node
+     * Kind of this virtual node.
      */
-    bool isEntry = false;
-
-    /**
-     * Flag to determine if a node is an exit node
-     */
-    bool isExit = false;
+    VirtualNodeKind virtualNodeKind = VirtualNodeKind::Generic;
 
     /**
      * Parent node of this node
@@ -144,12 +149,11 @@ class VirtualNode : public GenericNode {
 
     /**
      * Create a new virtual points
-     * @param isEntry Flag to determine if the virtual point is an entry point
-     * @param isExit Flag to determine if the virtual point in an exit point
+     * @param virtualNodeKind Kind of the virtual point
      * @param givparent Parent node of the virtual point
      * @return
      */
-    static std::unique_ptr<VirtualNode> makeVirtualPoint(bool isEntry, bool isExit, GenericNode *givparent);
+    static std::unique_ptr<VirtualNode> makeVirtualPoint(VirtualNodeKind virtualNodeKind, GenericNode *givparent);
 
     /**
      * Print this NormalNode as dot representation
@@ -170,6 +174,13 @@ class VirtualNode : public GenericNode {
      * @return Name of the node as escaped dot string
      */
     std::string getDotName() override;
+
+    /**
+     * Get the label string of the given kind
+     * @param virtualNodeKind Kind to get the label vor
+     * @return String representation of the kind useable in dot
+     */
+    static std::string getVirtualNodeLabel(HLAC::VirtualNodeKind virtualNodeKind);
 
     /**
      * Calculate the hash of the node
@@ -301,6 +312,11 @@ class LoopNode : public GenericNode {
      * Backedge of the loop
      */
     std::vector<Edge*> backEdges;
+
+    /**
+     *
+     */
+    int possibleFallbackIndex = -1;
 
     /**
      * List of contained Nodes

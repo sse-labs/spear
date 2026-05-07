@@ -60,7 +60,7 @@ FunctionNode::FunctionNode(llvm::Function *function,
         int localExitIndex = -1;
 
         // create entry once
-        auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
+        auto entryNode = VirtualNode::makeVirtualPoint(VirtualNodeKind::Entry, this);
         this->Nodes.push_back(std::move(entryNode));
         localEntryIndex = this->Nodes.size() - 1;
 
@@ -80,7 +80,7 @@ FunctionNode::FunctionNode(llvm::Function *function,
         }
 
         if (hasExitBlock) {
-            auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
+            auto exitNode = VirtualNode::makeVirtualPoint(VirtualNodeKind::NormalExit, this);
             this->Nodes.push_back(std::move(exitNode));
             localExitIndex = this->Nodes.size() - 1;
         }
@@ -169,10 +169,10 @@ FunctionNode::FunctionNode(llvm::Function *function,
             node->globalId = i;
 
             if (auto *virtualNode = dynamic_cast<VirtualNode *>(node.get())) {
-                if (virtualNode->isEntry) {
+                if (virtualNode->virtualNodeKind == VirtualNodeKind::Entry) {
                     entryIndex = i;
                 }
-                if (virtualNode->isExit) {
+                if (virtualNode->virtualNodeKind == VirtualNodeKind::NormalExit) {
                     exitIndex = i;
                 }
             }

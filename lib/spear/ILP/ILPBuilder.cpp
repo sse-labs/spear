@@ -104,7 +104,7 @@ void ILPBuilder::appendGraphConstraints(ILPModel &model, const std::vector<std::
             /**
              * For entry nodes we want to ensure that outgoing edges are called exactly one time
              */
-            if (virtualNode->isEntry) {
+            if (virtualNode->virtualNodeKind == HLAC::VirtualNodeKind::Entry) {
                 std::unordered_map<int, double> coefficientsByColumn;
 
                 // Calculate the coefficient of the outgoing edges
@@ -130,10 +130,15 @@ void ILPBuilder::appendGraphConstraints(ILPModel &model, const std::vector<std::
                 continue;
             }
 
+
+            if (virtualNode->virtualNodeKind == HLAC::VirtualNodeKind::FALLBACK) {
+                int i = 10;
+            }
+
             /**
              * For exit nodes we want to ensure that incoming edges are called exactly one time
              */
-            if (virtualNode->isExit) {
+            if (virtualNode->virtualNodeKind == HLAC::VirtualNodeKind::NormalExit) {
                 std::unordered_map<int, double> coefficientsByColumn;
 
                 for (int column : incomingEdges) {
@@ -210,6 +215,9 @@ std::optional<ILPResult> ILPBuilder::solveClusteredLoopModel(const ILPModel &ilp
     auto optimalSolution = modelSolver.getSolvedModelValue();
     auto optimalPath = modelSolver.getSolvedSolution();
 
+    ILPDebug::dumpILPModel(ilpModel, loopNode->Edges, "for loop " + loopNode->getDotName());
+
+
     // If solution and path exist return it
     if (optimalPath.has_value() && optimalSolution.has_value()) {
         return std::make_optional<ILPResult>(optimalSolution.value(), optimalPath.value());
@@ -219,6 +227,7 @@ std::optional<ILPResult> ILPBuilder::solveClusteredLoopModel(const ILPModel &ilp
     const ILPSolverStatus solverStatus = modelSolver.getStatus();
 
     if (solverStatus == ILPSolverStatus::INFEASIBLE) {
+
         Logger::getInstance().log(
                 "Clustered ILP: loop " + loopNode->getDotName() +
                         " is infeasible under feasibility constraints. Treating it as unreachable with energy 0.0.",
@@ -480,6 +489,10 @@ ILPModel ILPBuilder::buildMonolithicILP(HLAC::FunctionNode *func) {
 
     // Apply feasibility constrains to the model
     applyEdgeFeasibilityBounds(model, func);
+
+    if (func->function->getName() == "main") {
+        int i = 10;
+    }
 
     // Apply flow constrains
     appendGraphConstraints(model, func->Nodes, func->Edges, nullptr);

@@ -45,8 +45,8 @@ std::string Hasher::getHashForVirtualNode(VirtualNode * node) {
     std::ostringstream outputStream;
 
     outputStream << "kind=virtual_node;";
-    outputStream << "is_entry=" << (node->isEntry ? "1" : "0") << ";";
-    outputStream << "is_exit=" << (node->isExit ? "1" : "0") << ";";
+    outputStream << "is_entry=" << (node->virtualNodeKind == VirtualNodeKind::Entry ? "1" : "0") << ";";
+    outputStream << "is_exit=" << (node->virtualNodeKind == VirtualNodeKind::NormalExit ? "1" : "0") << ";";
 
     if (node->parent != nullptr) {
         outputStream << "parent_kind=" << Hasher::nodeTypeToString(node->parent) << ";";
@@ -443,8 +443,8 @@ std::string Hasher::fallBackHashAdditions(const HLAC::GenericNode *node) {
     if (const auto *virtualNode = dynamic_cast<const HLAC::VirtualNode *>(node)) {
         std::ostringstream outputStream;
         outputStream << "virtual:";
-        outputStream << "entry=" << (virtualNode->isEntry ? "1" : "0") << ",";
-        outputStream << "exit=" << (virtualNode->isExit ? "1" : "0");
+        outputStream << "entry=" << (virtualNode->virtualNodeKind == VirtualNodeKind::Entry ? "1" : "0") << ",";
+        outputStream << "exit=" << (virtualNode->virtualNodeKind == VirtualNodeKind::NormalExit ? "1" : "0");
         return outputStream.str();
     }
 

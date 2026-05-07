@@ -296,7 +296,7 @@ static HLAC::GenericNode *findVirtualEntryNode(HLAC::FunctionNode *functionNode)
 
         auto *virtualNode = dynamic_cast<HLAC::VirtualNode *>(node);
 
-        if (!virtualNode->isEntry) {
+        if (virtualNode->virtualNodeKind != HLAC::VirtualNodeKind::Entry) {
             continue;
         }
 

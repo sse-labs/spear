@@ -24,6 +24,8 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
     Logger::getInstance().log("Running Monolithic ILP Analysis for Energy", LOGLEVEL::INFO);
     std::unordered_map<std::string, std::optional<ILPModel>> functionILPCache;
 
+    graph->printDotRepresentation();
+
     // ================= Monolithic ILP =================
 
     auto monoTotalStart = std::chrono::high_resolution_clock::now();
@@ -119,11 +121,16 @@ nlohmann::json MonolithicAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool s
         auto solvedResults = graph->solveMonolithicIlp(ilp.value(), funcName);
 
         if (!solvedResults.has_value()) {
-            // ILPDebug::dumpILPModel(ilp.value(), funcNode->Edges, funcName);
+//            ILPDebug::dumpILPModel(ilp.value(), funcNode->Edges, funcName);
 
             Logger::getInstance().log(
                 "Failed to solve monolithic ILP for function " + funcNode->name,
                 LOGLEVEL::ERROR);
+
+            graph->printDotRepresentationWithSolution(
+                    graph->getFunctionByName(funcName),
+                    std::vector<double>{},
+                    "monolithic");
 
             auto fallbackEnergy = ConfigParser::getAnalysisConfiguration().fallback["calls"]["UNKNOWN_FUNCTION"];
 

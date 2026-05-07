@@ -158,6 +158,7 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
 
     int headerIndex = -1;
     std::vector<int> exitingBlockIndices;
+    std::vector<GenericNode *> returnExitSources;
 
     llvm::BasicBlock *headerBlock = this->loop != nullptr ? this->loop->getHeader() : nullptr;
 
@@ -188,14 +189,48 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
         return;
     }
 
+    /**
+     * If we do not find a exit to the loop, we are most certainly dealing with a while(true) loop
+     * To make this function analyseable, we need to insert a fallback node to the current loop that enables exists.
+     * This will be an edge from the latch source to the virtual fallback exit
+     *
+     * Assuming that the most expensive path correlates to the longest path, this early exit will not kill our
+     * worst case perspective. This only limits our loop to the defined loop bound.
+     */
     if (exitingBlockIndices.empty()) {
         Logger::getInstance().log(
             "Loop collapse warning: no exiting block found for loop " + this->getDotName(),
             LOGLEVEL::ERROR);
+
+        /*auto fallbackExitNode = VirtualNode::makeVirtualPoint(VirtualNodeKind::FALLBACK, this);
+        this->Nodes.push_back(std::move(fallbackExitNode));
+        const int fallbackExitIndex = static_cast<int>(this->Nodes.size()) - 1;
+
+        for (auto &edgeUniquePointer : this->Edges) {
+            Edge *edge = edgeUniquePointer.get();
+
+            if (edge == nullptr) {
+                continue;
+            }
+
+            auto *destinationNode = dynamic_cast<Node *>(edge->destination);
+            if (destinationNode == nullptr || destinationNode->block != headerBlock) {
+                continue;
+            }
+
+            if (dynamic_cast<VirtualNode *>(edge->soure) != nullptr) {
+                continue;
+            }
+
+            auto fallbackEdge = std::make_unique<Edge>(
+                Edge(edge->soure, this->Nodes[fallbackExitIndex].get()));
+
+            this->Edges.push_back(std::move(fallbackEdge));
+        }*/
     }
 
-    auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
-    auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
+    auto entryNode = VirtualNode::makeVirtualPoint(VirtualNodeKind::Entry, this);
+    auto exitNode = VirtualNode::makeVirtualPoint(VirtualNodeKind::NormalExit, this);
 
     this->Nodes.push_back(std::move(entryNode));
     const int virtualEntryIndex = static_cast<int>(this->Nodes.size()) - 1;
@@ -282,6 +317,18 @@ void LoopNode::refreshBackEdges() {
 
         this->backEdges.push_back(edge);
     }
+
+    /*
+    if (possibleFallbackIndex != -1) {
+        for (auto &backEdge : this->backEdges) {
+            if (backEdge != nullptr) {
+                auto newEdge = std::make_unique<Edge>(Edge(backEdge->soure, this->Nodes[this->possibleFallbackIndex].get()));
+                //this->Edges.push_back(std::move(newEdge));
+            }
+        }
+    }
+    */
+
 }
 
 void LoopNode::constructCallNodes(bool considerDebugFunctions) {
