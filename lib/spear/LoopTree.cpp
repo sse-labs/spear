@@ -30,9 +30,9 @@ LoopTree::LoopTree(
 
     this->findBoundVars(scalarEvolution);
 
-    for (auto bv : this->boundvars) {
+    /*for (auto bv : this->boundvars) {
         llvm::errs() << "\t\tBound variable: " << *bv << "\n";
-    }
+    }*/
 
     // Iterate over the given Subloops
     for (auto subLoop : subloops) {

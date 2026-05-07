@@ -21,7 +21,7 @@
 
 #include "analyses/loopbound/util.h"
 
-LoopBound::LoopBoundWrapper::LoopBoundWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses,
+LoopBound::LoopBoundWrapper::LoopBoundWrapper(const std::shared_ptr<psr::HelperAnalyses>& helperAnalyses,
                                               llvm::FunctionAnalysisManager *analysisManager) {
     if (!helperAnalyses) {
         return;

@@ -22,6 +22,7 @@
 #include "LLVMHandler.h"
 
 #include "ConfigParser.h"
+#include "Logger.h"
 
 #define SPR_IGNORE_DEBUG_FUNCTIONS 1
 
@@ -59,7 +60,7 @@ FunctionNode::FunctionNode(llvm::Function *function,
         int localExitIndex = -1;
 
         // create entry once
-        auto entryNode = VirtualNode::makeVirtualPoint(true, false, this);
+        auto entryNode = VirtualNode::makeVirtualPoint(VirtualNodeKind::Entry, this);
         this->Nodes.push_back(std::move(entryNode));
         localEntryIndex = this->Nodes.size() - 1;
 
@@ -79,7 +80,7 @@ FunctionNode::FunctionNode(llvm::Function *function,
         }
 
         if (hasExitBlock) {
-            auto exitNode = VirtualNode::makeVirtualPoint(false, true, this);
+            auto exitNode = VirtualNode::makeVirtualPoint(VirtualNodeKind::NormalExit, this);
             this->Nodes.push_back(std::move(exitNode));
             localExitIndex = this->Nodes.size() - 1;
         }
@@ -168,10 +169,10 @@ FunctionNode::FunctionNode(llvm::Function *function,
             node->globalId = i;
 
             if (auto *virtualNode = dynamic_cast<VirtualNode *>(node.get())) {
-                if (virtualNode->isEntry) {
+                if (virtualNode->virtualNodeKind == VirtualNodeKind::Entry) {
                     entryIndex = i;
                 }
-                if (virtualNode->isExit) {
+                if (virtualNode->virtualNodeKind == VirtualNodeKind::NormalExit) {
                     exitIndex = i;
                 }
             }
@@ -203,6 +204,28 @@ FunctionNode::FunctionNode(llvm::Function *function,
     this->isRecursive = isFunctionRecursive(parentGraph->lazyCallGraph);
 
     this->hash = FunctionNode::calculateHash();
+
+    this->isGotoFunction = !isAcyclic();
+
+    this->isIllFormatted = this->checkForIllFormat();
+}
+
+bool FunctionNode::checkForIllFormat() {
+    std::vector<HLAC::LoopNodeEdgeSummary> loopNodeEdgeSummaries;
+
+    HLAC::Util::collectLoopNodeEdgeSummaries(
+        this->name,
+        this->Nodes,
+        this->Edges,
+        loopNodeEdgeSummaries);
+
+    for (auto &summary : loopNodeEdgeSummaries) {
+        if (summary.incomingEdgeCount > 1) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool FunctionNode::isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph) {
@@ -226,7 +249,6 @@ bool FunctionNode::isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph) {
 
     return false;
 }
-
 
 void FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
     for (auto &loop : loops) {
@@ -271,15 +293,17 @@ void FunctionNode::constructCallNodes(bool considerDebugFunctions) {
                 llvm::Function *calleeFunction = callbase->getCaller();
 
                 // Construct the CallNode
-                if ( !calledFunction->getName().starts_with("__psr")
+                if (calledFunction) {
+                    if ( !calledFunction->getName().starts_with("__psr")
                     && !calleeFunction->getName().starts_with("__psr") ) {
-                    auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this);
-                    CallNode *callNode = callNodeUP.get();
+                        auto callNodeUP = CallNode::makeNode(calledFunction, callbase, this);
+                        CallNode *callNode = callNodeUP.get();
 
-                    if (!callNode->isDebugFunction || !considerDebugFunctions) {
-                        // Add the CallNode to the list of Nodes and rewrite the edges of this FunctionNode
-                        this->Nodes.emplace_back(std::move(callNodeUP));
-                        callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                        if (!callNode->isDebugFunction || !considerDebugFunctions) {
+                            // Add the CallNode to the list of Nodes and rewrite the edges of this FunctionNode
+                            this->Nodes.emplace_back(std::move(callNodeUP));
+                            callNode->collapseCalls(normalnode, this->Nodes, this->Edges);
+                        }
                     }
                 }
             }
@@ -307,13 +331,12 @@ std::unique_ptr<Edge> FunctionNode::makeEdge(GenericNode *src, GenericNode *dst)
 }
 
 void FunctionNode::printDotRepresentation(std::ostream &os) {
-    os << "digraph " << "\"" << this->getDotName() << "\"" << " {" << std::endl;
-    os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\"];" << std::endl;
-    os << "compound=true;" << std::endl;
-    os << "style=\"rounded,filled\";" << std::endl;
-    os << "fontname=\"Courier\";" << std::endl;
-    os << "  labelloc=\"t\";\n";
-    os << "label=" << "\"" << this->getDotName() << "\";" << std::endl;
+    os << "digraph \"" << this->getDotName() << "\" {\n";
+    os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\", compound=true, labelloc=\"t\", label=\""
+       << this->getDotName()
+       << "\"];\n";
+    os << "node [fontname=\"Courier\"];\n";
+    os << "edge [fontname=\"Courier\"];\n";
 
     for (auto &node : this->Nodes) {
         node->printDotRepresentation(os);
@@ -323,17 +346,16 @@ void FunctionNode::printDotRepresentation(std::ostream &os) {
         edge->printDotRepresentation(os);
     }
 
-    os << "}" << std::endl;
+    os << "}\n";
 }
 
 void FunctionNode::printDotRepresentationWithSolution(std::ostream &os, std::vector<double> solution) {
-    os << "digraph " << "\"" << this->getDotName() << "\"" << " {" << std::endl;
-    os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\"];" << std::endl;
-    os << "compound=true;" << std::endl;
-    os << "style=\"rounded,filled\";" << std::endl;
-    os << "fontname=\"Courier\";" << std::endl;
-    os << "  labelloc=\"t\";\n";
-    os << "label=" << "\"" << this->getDotName() << "\";" << std::endl;
+    os << "digraph \"" << this->getDotName() << "\" {\n";
+    os << "graph [pad=\".3\", ranksep=\"1.4\", nodesep=\"1.0\", compound=true, labelloc=\"t\", label=\""
+       << this->getDotName()
+       << "\"];\n";
+    os << "node [fontname=\"Courier\"];\n";
+    os << "edge [fontname=\"Courier\"];\n";
 
     for (auto &node : this->Nodes) {
         node->printDotRepresentationWithSolution(os, solution);
@@ -343,7 +365,7 @@ void FunctionNode::printDotRepresentationWithSolution(std::ostream &os, std::vec
         edge->printDotRepresentationWithSolution(os, solution);
     }
 
-    os << "}" << std::endl;
+    os << "}\n";
 }
 
 std::string FunctionNode::getDotName() {
@@ -359,55 +381,99 @@ double FunctionNode::getEnergy() {
 }
 
 std::vector<GenericNode *> FunctionNode::getTopologicalOrdering() {
-    // Node -> Incoming edge representation to access in degree more easily
     auto incomingMapping = Util::createIncomingList(this->Nodes, this->Edges);
+    auto adjacentMapping = Util::createAdjacentList(this->Nodes, this->Edges);
 
-    // Adjacent representation of our graph
-    auto G = Util::createAdjacentList(this->Nodes, this->Edges);
     std::vector<GenericNode *> topologicalOrdering;
-
-    // Calculate in-degree
     std::map<HLAC::GenericNode *, int> inDegree;
-    for (const auto [node, edgelist] : incomingMapping) {
-        inDegree[node] = incomingMapping[node].size();
+
+    for (const auto &nodeUniquePointer : this->Nodes) {
+        GenericNode *node = nodeUniquePointer.get();
+        inDegree[node] = 0;
     }
 
-    // Heap where access the discovered nodes
-    std::queue<GenericNode *> H;
+    for (const auto &[node, incomingEdges] : incomingMapping) {
+        inDegree[node] = static_cast<int>(incomingEdges.size());
+    }
 
-    // Add all nodes to the heap that have 0 incoming edges (should only be the entry node)
-    for (auto [node, incomingEdges] : inDegree) {
-        if (incomingEdges == 0) {
-            H.push(node);
+    std::queue<GenericNode *> discoveredNodes;
+
+    for (const auto &[node, degree] : inDegree) {
+        if (degree == 0) {
+            discoveredNodes.push(node);
         }
     }
 
-    // Iterate over the node heap
-    while (!H.empty()) {
-        // Get the node at the front of the queue
-        auto minVertex = H.front();
-        H.pop();
+    while (!discoveredNodes.empty()) {
+        GenericNode *currentNode = discoveredNodes.front();
+        discoveredNodes.pop();
 
-        // Add this element to the ordering. As we assume correct ordering for the element under analysis
-        topologicalOrdering.push_back(minVertex);
+        topologicalOrdering.push_back(currentNode);
 
-        // Iterate over the adjacent edges of our element
-        for (auto edge : G[minVertex]) {
-            // We simulate the removal of the edge from the graph
-            // Decrease indegree of destination node
-            auto dest = edge->destination;
-            inDegree[dest]--;
+        for (Edge *edge : adjacentMapping[currentNode]) {
+            GenericNode *destinationNode = edge->destination;
 
-            // If the destination node is now no longer accesible from any other node (e.g there is no other node
-            // that we need to deal with first)
-            if (inDegree[dest] == 0) {
-                H.push(dest);
+            inDegree[destinationNode]--;
+
+            if (inDegree[destinationNode] == 0) {
+                discoveredNodes.push(destinationNode);
             }
         }
     }
 
+    if (topologicalOrdering.size() != this->Nodes.size()) {
+        Logger::getInstance().log(
+            "Topological ordering failed for " + this->function->getName().str()
+            + " because the function graph is not acyclic.",
+            LOGLEVEL::ERROR);
+    }
 
     return topologicalOrdering;
+}
+
+
+bool FunctionNode::isAcyclic() const {
+    auto incomingMapping = Util::createIncomingList(this->Nodes, this->Edges);
+    auto adjacentMapping = Util::createAdjacentList(this->Nodes, this->Edges);
+
+    std::map<HLAC::GenericNode *, int> inDegree;
+
+    for (const auto &nodeUniquePointer : this->Nodes) {
+        GenericNode *node = nodeUniquePointer.get();
+        inDegree[node] = 0;
+    }
+
+    for (const auto &[node, incomingEdges] : incomingMapping) {
+        inDegree[node] = static_cast<int>(incomingEdges.size());
+    }
+
+    std::queue<GenericNode *> discoveredNodes;
+
+    for (const auto &[node, degree] : inDegree) {
+        if (degree == 0) {
+            discoveredNodes.push(node);
+        }
+    }
+
+    std::size_t processedNodeCount = 0;
+
+    while (!discoveredNodes.empty()) {
+        GenericNode *currentNode = discoveredNodes.front();
+        discoveredNodes.pop();
+
+        processedNodeCount++;
+
+        for (Edge *edge : adjacentMapping[currentNode]) {
+            GenericNode *destinationNode = edge->destination;
+            inDegree[destinationNode]--;
+
+            if (inDegree[destinationNode] == 0) {
+                discoveredNodes.push(destinationNode);
+            }
+        }
+    }
+
+    return processedNodeCount == this->Nodes.size();
 }
 
 std::string FunctionNode::calculateHash() {

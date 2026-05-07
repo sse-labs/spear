@@ -9,10 +9,20 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <string>
 
 #include <CbcModel.hpp>
 #include <OsiClpSolverInterface.hpp>
 #include "ILPBuilder.h"
+
+enum ILPSolverStatus {
+    INFEASIBLE,
+    UNBOUNDED,
+    TIME_LIMIT,
+    NUMERICAL_ISSUES,
+    OPTIMAL,
+    UNKNOWN
+};
 
 /**
  * ILPSolver class.
@@ -24,7 +34,7 @@ class ILPSolver {
      * Create a new solver for the given ILPModel
      * @param model Model to construct the solver for
      */
-    explicit ILPSolver(ILPModel model);
+    explicit ILPSolver(const ILPModel& model);
 
     /**
      * Check if a solution for the solved model was found
@@ -43,6 +53,18 @@ class ILPSolver {
      * @return Returns the values of the variables as double vector, if a solution was found. std::nullopt otherwise
      */
     std::optional<std::vector<double>> getSolvedSolution() const;
+
+    /**
+     * Get the status of the solver after solving the model
+     * @return Status of the solver as ILPSolverStatus enum value
+     */
+    ILPSolverStatus getStatus() const;
+
+    /**
+     *
+     * @return
+     */
+    std::string getStatusString() const;
 
  private:
     /**

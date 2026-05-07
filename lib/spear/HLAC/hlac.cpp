@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
+#include <iostream>
 
 #include "HLAC/util.h"
 
@@ -29,6 +30,7 @@ void hlac::makeFunction(llvm::Function* function, llvm::FunctionAnalysisManager 
     auto fnptr = FunctionNode::makeNode(function, fam, registry, this);
     functions.emplace_back(std::move(fnptr));
 }
+
 
 void hlac::printDotRepresentation() {
     std::filesystem::create_directories("./dot");
@@ -110,6 +112,11 @@ std::map<std::string, double> hlac::getEnergy() {
 }
 
 double hlac::getEnergyPerFunction(std::string functionName, bool isRecursive) {
+    if (Util::starts_with(functionName, "__psr") || Util::starts_with(functionName, "__clang")) {
+        // We return 0.0 for phasar hooks, as they are not relevant for our analysis and we do not want to log them
+        return 0.0;
+    }
+
     if (FunctionEnergyCache.contains(functionName)) {
         return FunctionEnergyCache[functionName];
     }
@@ -165,27 +172,117 @@ std::optional<ClusteredILPModel> hlac::buildClusteredILPS(FunctionNode *function
 }
 
 
-std::optional<ILPResult> hlac::solveMonolithicIlp(ILPModel &model) {
+std::optional<ILPResult> hlac::solveMonolithicIlp(ILPModel &model, std::string fname) {
     auto solvedModel = ILPBuilder::solveModel(model);
 
     return solvedModel;
 }
 
-std::optional<DAGLongestPathSolution> hlac::DAGLongestPath(FunctionNode *functionNode,
+std::optional<DAGLongestPathSolution> hlac::DAGLongestPath(
+    FunctionNode *functionNode,
     std::unordered_map<LoopNode *, ILPResult> clusteredResult) {
+
     if (!Util::starts_with(functionNode->function->getName().str(), "__psr")
-            && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
-        auto [distances, predecessors] =
-            ILPUtil::longestPathDAG(functionNode, clusteredResult);
+        && !Util::starts_with(functionNode->function->getName().str(), "__clang")) {
+        if (functionNode->function->getName().str() == "LZ4_compress_fast_extState") {
+            int test = 0;
+        }
+
+        auto [distances, predecessors] = ILPUtil::longestPathDAG(functionNode, clusteredResult);
 
         auto funcNode = functionNode;
-
-        // auto entryNode = funcNode->Nodes[funcNode->entryIndex];
         auto exitNode = funcNode->Nodes[funcNode->exitIndex].get();
 
-        double exitEnergy = distances[exitNode];
+        for (HLAC::GenericNode *node : funcNode->topologicalSortedRepresentationOfNodes) {
+            for (const auto &edgeUP : funcNode->Edges) {
+                HLAC::Edge *edge = edgeUP.get();
 
-        std::vector<Edge *> takenEdges = Util::findTakenEdges(exitNode, predecessors, funcNode->Edges, clusteredResult);
+                if (edge == nullptr || edge->soure != node || edge->destination == nullptr) {
+                    continue;
+                }
+
+                bool destinationInTopo = false;
+                for (HLAC::GenericNode *topologicalNode : funcNode->topologicalSortedRepresentationOfNodes) {
+                    if (topologicalNode == edge->destination) {
+                        destinationInTopo = true;
+                        break;
+                    }
+                }
+
+                if (destinationInTopo) {
+                    continue;
+                }
+
+                bool destinationInNodes = false;
+                for (const auto &nodeUP : funcNode->Nodes) {
+                    if (nodeUP.get() == edge->destination) {
+                        destinationInNodes = true;
+                        break;
+                    }
+                }
+
+                std::cout << "[BROKEN EDGE] "
+                          << edge->soure->getDotName()
+                          << " -> "
+                          << edge->destination->getDotName()
+                          << " feasible="
+                          << edge->feasibility
+                          << " destinationInNodes="
+                          << destinationInNodes
+                          << "\n";
+            }
+        }
+
+        auto exitDistanceIterator = distances.find(exitNode);
+
+        if (exitDistanceIterator == distances.end()) {
+            std::cout << "[ERROR] Exit node missing in DAG distances: "
+                      << exitNode->getDotName()
+                      << "\n";
+
+            double maximumEnergy = -std::numeric_limits<double>::infinity();
+            GenericNode *maximumEnergyNode = nullptr;
+
+            for (const auto &distanceEntry : distances) {
+                if (distanceEntry.second > maximumEnergy) {
+                    maximumEnergy = distanceEntry.second;
+                    maximumEnergyNode = distanceEntry.first;
+                }
+            }
+
+            if (maximumEnergyNode == nullptr) {
+                return std::nullopt;
+            }
+
+            for (const auto &nodeEntry : distances) {
+                std::cout << "Node: " << nodeEntry.first->getDotName() << ": \n";
+                if (auto nn = dynamic_cast<HLAC::Node *>(nodeEntry.first)) {
+                    std::cout << nn->block->getName().str() << "\n";
+                }
+            }
+
+            std::cout << "[INFO] Falling back to maximum-distance node: "
+                      << maximumEnergyNode->getDotName()
+                      << " energy="
+                      << maximumEnergy
+                      << "\n";
+
+            std::vector<Edge *> takenEdges = Util::findTakenEdges(
+                maximumEnergyNode,
+                predecessors,
+                funcNode->Edges,
+                clusteredResult);
+
+            return std::make_optional<DAGLongestPathSolution>({maximumEnergy, takenEdges});
+        }
+
+        double exitEnergy = exitDistanceIterator->second;
+
+        std::vector<Edge *> takenEdges = Util::findTakenEdges(
+            exitNode,
+            predecessors,
+            funcNode->Edges,
+            clusteredResult);
 
         return std::make_optional<DAGLongestPathSolution>({exitEnergy, takenEdges});
     }
@@ -210,7 +307,7 @@ ILPClusteredLoopResult hlac::solveClusteredIlps(ILPLoopModelMapping loopModelMap
                 loopEnergyMapping.emplace(loopNode, cachedResult.value());
             }
         } else {
-            auto solvedModel = ILPBuilder::solveModel(model);
+            std::optional<ILPResult> solvedModel = ILPBuilder::solveClusteredLoopModel(model, loopNode);
 
             if (solvedModel.has_value()) {
                 // std::cout << "Loop " << loopNode->loop->getName().str() << " -> " << objectiveValue << std::endl;

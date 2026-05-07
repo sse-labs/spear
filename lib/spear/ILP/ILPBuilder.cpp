@@ -3,48 +3,45 @@
  * All rights reserved.
  */
 
-#include <unordered_set>
-#include <utility>
-#include <unordered_map>
-#include <vector>
+#include <cmath>
 #include <iostream>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+#include <algorithm>
 
 #include "ILP/ILPBuilder.h"
 
 #include "HLAC/hlac.h"
+#include "ILP/ILPDebug.h"
 #include "ILP/ILPSolver.h"
 #include "ILP/ILPUtil.h"
 #include "Logger.h"
 #include "PassUtil.h"
 
 void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode *func) {
-    // Iterate over the edges in the function node
     for (auto &edgeUP : func->Edges) {
         auto *edge = edgeUP.get();
         if (!edge) {
             continue;
         }
 
-        // Check that the currently viewed edge has a valid ILPIndex
-        const int col = edge->ilpIndex;
-        if (col < 0 || col >= static_cast<int>(model.col_ub.size())) {
-            Logger::getInstance().log(
-                "Warning: invalid ilpIndex while applying feasibility bound.",
-                LOGLEVEL::ERROR);
-            // If the index is invalid, throw everything against the wall and ignore the edge...
+        const int column = edge->ilpIndex;
+        if (column < 0 || column >= static_cast<int>(model.col_ub.size())) {
+            Logger::getInstance().log("Warning: invalid ilpIndex while applying feasibility bound.", LOGLEVEL::ERROR);
             continue;
         }
 
-        // If the edge is not feasible
+        // If the edge is infeasible we enforce the respective variable to be 0 by setting
+        // its upper and lower bound to 0
         if (!edge->feasibility) {
-            // We limit the value domain of the corresponding column to 0.0 <= x_i <= 0.0 to restrict the usage of this
-            // edge entirely
-            model.col_lb[col] = 0.0;
-            model.col_ub[col] = 0.0;
+            model.col_lb[column] = 0.0;
+            model.col_ub[column] = 0.0;
         }
     }
 
-    // Apply the feasibility constrain creation to all sub-LoopNodes
+    // Call the function recursively for contained loop nodes
     for (auto &nodeUP : func->Nodes) {
         if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
             applyEdgeFeasibilityBounds(model, loopNode);
@@ -53,33 +50,27 @@ void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::FunctionNode 
 }
 
 void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::LoopNode *loopNode) {
-    // Iterate over the edges in the loop node
     for (auto &edgeUP : loopNode->Edges) {
         auto *edge = edgeUP.get();
         if (!edge) {
             continue;
         }
 
-        // Check that the currently viewed edge has a valid ILPIndex
-        const int col = edge->ilpIndex;
-        if (col < 0 || col >= static_cast<int>(model.col_ub.size())) {
-            Logger::getInstance().log(
-                "Warning: invalid ilpIndex while applying feasibility bound.",
-                LOGLEVEL::ERROR);
+        const int column = edge->ilpIndex;
+        if (column < 0 || column >= static_cast<int>(model.col_ub.size())) {
+            Logger::getInstance().log("Warning: invalid ilpIndex while applying feasibility bound.", LOGLEVEL::ERROR);
             continue;
-            // If the index is invalid, throw everything against the wall and ignore the edge...
         }
 
-        // If the edge is not feasible
+        // If the edge is infeasible we enforce the respective variable to be 0 by setting
+        // its upper and lower bound to 0
         if (!edge->feasibility) {
-            // We limit the value domain of the corresponding column to 0.0 <= x_i <= 0.0 to restrict the usage of this
-            // edge entirely
-            model.col_lb[col] = 0.0;
-            model.col_ub[col] = 0.0;
+            model.col_lb[column] = 0.0;
+            model.col_ub[column] = 0.0;
         }
     }
 
-    // Apply the feasibility constrain creation to all sub-LoopNodes
+    // Call the function recursively for contained loop nodes
     for (auto &nodeUP : loopNode->Nodes) {
         if (auto *innerLoop = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
             applyEdgeFeasibilityBounds(model, innerLoop);
@@ -87,66 +78,81 @@ void ILPBuilder::applyEdgeFeasibilityBounds(ILPModel &model, HLAC::LoopNode *loo
     }
 }
 
-void ILPBuilder::appendGraphConstraints(
-    ILPModel &model,
-    const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
-    const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
-    const std::vector<int> *invocationCols) {
-    std::unordered_map<HLAC::GenericNode*, std::vector<int>> incomingEdgesPerNode;
-    std::unordered_map<HLAC::GenericNode*, std::vector<int>> outgoingEdgesPerNode;
+void ILPBuilder::appendGraphConstraints(ILPModel &model, const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
+                                        const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
+                                        const std::vector<int> *invocationCols) {
+    // Create the incoming and outgoing edge mappings
+    std::unordered_map<HLAC::GenericNode *, std::vector<int>> incomingEdgesPerNode;
+    std::unordered_map<HLAC::GenericNode *, std::vector<int>> outgoingEdgesPerNode;
 
-    // Build the indices for all contained edges
-    ILPUtil::buildIncidenceMaps(edges, incomingEdgesPerNode, outgoingEdgesPerNode);
+    // Calculate the incoming and outgoing mappins
+    ILPUtil::buildIncidenceMaps(edges, incomingEdgesPerNode, outgoingEdgesPerNode,
+                                static_cast<int>(model.col_lb.size()));
 
-    /**
-     * We need to add constraints for all nodes in this scope.
-     * For each node we need to add a flow constraint that ensures that the number of incoming edges
-     * equals the number of outgoing edges.
-     *
-     */
+    // For each node in the considered scope...
     for (const auto &nodeUP : nodes) {
         auto *node = nodeUP.get();
-        CoinPackedVector row;
-        std::unordered_set<int> usedCols;
 
-        /**
-         * Additionally, we need to handle our virtual nodes that represent entry and exit points of functions and loops.
-         * For these nodes, we need to add the constraint that they will be executed at least once.
-         *
-         */
-        if (auto *virtualNode = dynamic_cast<HLAC::VirtualNode*>(node)) {
-            if (virtualNode->isEntry) {
-                for (int col : outgoingEdgesPerNode[node]) {
-                    ILPUtil::insertUnique(row, usedCols, col, 1.0);
+        const std::vector<int> incomingEdges =
+            incomingEdgesPerNode.contains(node) ? incomingEdgesPerNode[node] : std::vector<int>{};
+
+        const std::vector<int> outgoingEdges =
+                outgoingEdgesPerNode.contains(node) ? outgoingEdgesPerNode[node] : std::vector<int>{};
+
+        // Handle virtual nodes
+        if (auto *virtualNode = dynamic_cast<HLAC::VirtualNode *>(node)) {
+            /**
+             * For entry nodes we want to ensure that outgoing edges are called exactly one time
+             */
+            if (virtualNode->virtualNodeKind == HLAC::VirtualNodeKind::Entry) {
+                std::unordered_map<int, double> coefficientsByColumn;
+
+                // Calculate the coefficient of the outgoing edges
+                for (int column : outgoingEdges) {
+                    ILPUtil::insertOrAccumulate(coefficientsByColumn, column, 1.0);
                 }
 
                 if (invocationCols == nullptr) {
-                    // Top-level function entry: exactly one entry
+                    // Case that entry node is not used for loop invocation, e.g. in the function entry node or in a
+                    // loop without external invocation
+                    CoinPackedVector row = ILPUtil::createRowFromCoefficients(coefficientsByColumn);
                     ILPUtil::appendRow(model, row, 1.0, 1.0);
                 } else {
-                    // Loop-internal entry: equals outer loop invocation count
-                    for (int col : *invocationCols) {
-                        ILPUtil::insertUnique(row, usedCols, col, -1.0);
+                    // Case that the entry node is called multiple times
+                    for (int column : *invocationCols) {
+                        ILPUtil::insertOrAccumulate(coefficientsByColumn, column, -1.0);
                     }
+
+                    CoinPackedVector row = ILPUtil::createRowFromCoefficients(coefficientsByColumn);
                     ILPUtil::appendRow(model, row, 0.0, 0.0);
                 }
 
                 continue;
             }
 
-            if (virtualNode->isExit) {
-                for (int col : incomingEdgesPerNode[node]) {
-                    ILPUtil::insertUnique(row, usedCols, col, 1.0);
+
+            /**
+             * For exit nodes we want to ensure that incoming edges are called exactly one time
+             */
+            if (virtualNode->virtualNodeKind == HLAC::VirtualNodeKind::NormalExit) {
+                std::unordered_map<int, double> coefficientsByColumn;
+
+                for (int column : incomingEdges) {
+                    ILPUtil::insertOrAccumulate(coefficientsByColumn, column, 1.0);
                 }
 
                 if (invocationCols == nullptr) {
-                    // Top-level function exit: exactly one completed path
+                    // Case that exit node is not used for loop invocation, e.g. in the function exit node or in a
+                    // loop without external invocation
+                    CoinPackedVector row = ILPUtil::createRowFromCoefficients(coefficientsByColumn);
                     ILPUtil::appendRow(model, row, 1.0, 1.0);
                 } else {
-                    // Loop-internal exit: equals outer loop invocation count
-                    for (int col : *invocationCols) {
-                        ILPUtil::insertUnique(row, usedCols, col, -1.0);
+                    // Case that the exit node is called multiple times
+                    for (int column : *invocationCols) {
+                        ILPUtil::insertOrAccumulate(coefficientsByColumn, column, -1.0);
                     }
+
+                    CoinPackedVector row = ILPUtil::createRowFromCoefficients(coefficientsByColumn);
                     ILPUtil::appendRow(model, row, 0.0, 0.0);
                 }
 
@@ -155,103 +161,165 @@ void ILPBuilder::appendGraphConstraints(
         }
 
         /**
-         * Create the constrain for incoming and outgoing edges
-         * Set the coefficient in the matrix for each incoming edge to 1
-         * and for each outgoing edge to -1. This originates from transforming the following term
-         *
-         * e.g
-         *
-         *      x_1 + x_2 = x_3 + x_4
-         * <=>  x_1 + x_2 - x_3 - x_4 = 0
-         *
-         *
+         * For any other node we have to ensure that the amount of incoming edges is equal to the amount of
+         * outgoing edges
+         * e.g          x_1 + x_2 = x_3 + x_4
+         * Which is expressed in cbc via
+         *              x_1 + x_2 - x_3 - x_4 = 0
          */
-        for (int col : incomingEdgesPerNode[node]) {
-            ILPUtil::insertUnique(row, usedCols, col, 1.0);
+        std::unordered_map<int, double> coefficientsByColumn;
+
+        for (int column : incomingEdges) {
+            ILPUtil::insertOrAccumulate(coefficientsByColumn, column, 1.0);
         }
 
-        for (int col : outgoingEdgesPerNode[node]) {
-            ILPUtil::insertUnique(row, usedCols, col, -1.0);
+        for (int column : outgoingEdges) {
+            ILPUtil::insertOrAccumulate(coefficientsByColumn, column, -1.0);
         }
 
-        // Each edge constraint has to equal 0, as the amount of incoming flow has to equal the amount of outgoing flow
+        CoinPackedVector row = ILPUtil::createRowFromCoefficients(coefficientsByColumn);
         ILPUtil::appendRow(model, row, 0.0, 0.0);
 
+        /**
+         * For loops we have to create seperate graph constrains for the contained graph
+         * additionally we append loop bound constrains
+         */
+        if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(node)) {
+            const std::vector<int> incomingColumns =
+                    incomingEdgesPerNode.contains(node) ? incomingEdgesPerNode[node] : std::vector<int>{};
 
-        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(node)) {
-            const std::vector<int> outerIncoming = incomingEdgesPerNode[node];
+            const std::vector<int> invocationColumns =
+                    collectExternalLoopInvocationColumns(loopNode, edges, incomingColumns);
 
-            // Add all internal flow constraints of the loop.
-            appendGraphConstraints(model, loopNode->Nodes, loopNode->Edges, &outerIncoming);
+            if (invocationColumns.empty()) {
+                Logger::getInstance().log("Loop invocation debug: no external invocation columns for loop " +
+                                                  loopNode->getDotName(),
+                                          LOGLEVEL::ERROR);
+            }
 
-            // Add bound constraint for the loop.
-            appendLoopBoundConstraint(model, loopNode, outerIncoming);
+            appendGraphConstraints(model, loopNode->Nodes, loopNode->Edges, &invocationColumns);
+            appendLoopBoundConstraint(model, loopNode, invocationColumns);
         }
     }
 }
 
-void ILPBuilder::appendLoopBoundConstraint(
-    ILPModel &model, HLAC::LoopNode *loopNode,
-    const std::vector<int> &invocationCols) {
-    // Create an empty row
-    CoinPackedVector row;
-    // Where we store the columns used by the loop
-    std::unordered_set<int> usedCols;
+std::optional<ILPResult> ILPBuilder::solveClusteredLoopModel(const ILPModel &ilpModel, HLAC::LoopNode *loopNode) {
+    // Create a new solver
+    ILPSolver modelSolver(ilpModel);
 
-    if (loopNode->backEdge == nullptr) {
+    // Get the optimal solution and path
+    auto optimalSolution = modelSolver.getSolvedModelValue();
+    auto optimalPath = modelSolver.getSolvedSolution();
+
+    // If solution and path exist return it
+    if (optimalPath.has_value() && optimalSolution.has_value()) {
+        return std::make_optional<ILPResult>(optimalSolution.value(), optimalPath.value());
+    }
+
+    // Otherwise evaluate the reason no result was generated
+    const ILPSolverStatus solverStatus = modelSolver.getStatus();
+
+    if (solverStatus == ILPSolverStatus::INFEASIBLE) {
         Logger::getInstance().log(
-            "Warning: Loop " + loopNode->getDotName() + " has no backedge, skipping loop bound constraint.",
-            LOGLEVEL::ERROR);
+                "Clustered ILP: loop " + loopNode->getDotName() +
+                        " is infeasible under feasibility constraints. Treating it as unreachable with energy 0.0.",
+                LOGLEVEL::WARNING);
+
+        return std::make_optional<ILPResult>(0.0, std::vector<double>(ilpModel.matrix.getNumCols(), 0.0));
+    }
+
+    Logger::getInstance().log("Clustered ILP failed for loop " + loopNode->getDotName() + " with status " +
+                                      modelSolver.getStatusString(),
+                              LOGLEVEL::ERROR);
+
+    // Eventually return a nullopt if the solver fails
+    return std::nullopt;
+}
+
+void ILPBuilder::appendLoopBoundConstraint(ILPModel &model, HLAC::LoopNode *loopNode,
+                                           const std::vector<int> &invocationCols) {
+    if (loopNode == nullptr) {
+        Logger::getInstance().log("Loop bound debug: loopNode is null.", LOGLEVEL::ERROR);
         return;
     }
 
-    const int backCol = loopNode->backEdge->ilpIndex;
-    const auto lb = static_cast<double>(loopNode->bounds.getLowerBound());
-    const auto ub = static_cast<double>(loopNode->bounds.getUpperBound());
-
-    // Upper bound:
-    // x_back - ub * sum(invocations) <= 0
-    CoinPackedVector upperBoundRow;
-    std::unordered_set<int> upperBoundUsedCols;
-
-    ILPUtil::insertUnique(upperBoundRow, upperBoundUsedCols, backCol, 1.0);
-
-    for (int col : invocationCols) {
-        ILPUtil::insertUnique(upperBoundRow, upperBoundUsedCols, col, -ub);
+    // If the loop has multiple invocation columns we cannot calculate the value accordingly.
+    if (invocationCols.size() != 1) {
+        Logger::getInstance().log("Loop bound fallback: loop " + loopNode->getDotName() + " has " +
+                                          std::to_string(invocationCols.size()) +
+                                          " invocation columns, expected exactly one.",
+                                  LOGLEVEL::WARNING);
+        return;
     }
 
-    ILPUtil::appendRow(model, upperBoundRow, -COIN_DBL_MAX, 0.0);
+    // Query the bounds of the loop
+    const double lowerBoundAsDouble = static_cast<double>(loopNode->bounds.getLowerBound());
+    const double upperBoundAsDouble = static_cast<double>(loopNode->bounds.getUpperBound());
 
-    // Lower bound:
-    // x_back - lb * sum(invocations) >= 0
-    CoinPackedVector lowerBoundRow;
-    std::unordered_set<int> lowerBoundUsedCols;
+    // Calculate the times the backedges of the loop will be executed. (Bound - 1)
+    const double lowerBackedgeFactor = std::max(0.0, lowerBoundAsDouble - 1.0);
+    const double upperBackedgeFactor = std::max(0.0, upperBoundAsDouble - 1.0);
 
-    ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedCols, backCol, 1.0);
+    // Get the invocation column
+    const int invocationColumn = invocationCols.front();
+    std::unordered_map<int, double> backedgeCoefficientsByColumn;
 
-    for (int col : invocationCols) {
-        ILPUtil::insertUnique(lowerBoundRow, lowerBoundUsedCols, col, -lb);
+    // Iterate over the backedges in the loopnode
+    for (HLAC::Edge *backEdge : loopNode->backEdges) {
+        if (backEdge == nullptr) {
+            continue;
+        }
+
+        if (backEdge->ilpIndex < 0 || backEdge->ilpIndex >= static_cast<int>(model.col_lb.size())) {
+            Logger::getInstance().log("Loop bound debug: invalid backedge ilpIndex in loop " + loopNode->getDotName(),
+                                      LOGLEVEL::ERROR);
+            continue;
+        }
+
+        // Insert the backedge coefficient into the map with a factor of 1.0 as we want to express that the backedge is
+        // executed once per loop iteration
+        ILPUtil::insertOrAccumulate(backedgeCoefficientsByColumn, backEdge->ilpIndex, 1.0);
     }
 
+    if (backedgeCoefficientsByColumn.empty()) {
+        Logger::getInstance().log("Loop bound debug: loop " + loopNode->getDotName() + " has no valid backedges.",
+                                  LOGLEVEL::ERROR);
+        return;
+    }
+
+    /**
+     * Insert a constraint that enforces that the backedge variables is called at least lowerBackedgeFactor times
+     */
+    std::unordered_map<int, double> lowerBoundCoefficientsByColumn = backedgeCoefficientsByColumn;
+    ILPUtil::insertOrAccumulate(lowerBoundCoefficientsByColumn, invocationColumn, -lowerBackedgeFactor);
+    CoinPackedVector lowerBoundRow = ILPUtil::createRowFromCoefficients(lowerBoundCoefficientsByColumn);
     ILPUtil::appendRow(model, lowerBoundRow, 0.0, COIN_DBL_MAX);
+
+    /**
+     * Insert a constraint that enforces that the backedge variables is called at most upperBackedgeFactor times
+     */
+    std::unordered_map<int, double> upperBoundCoefficientsByColumn = backedgeCoefficientsByColumn;
+    ILPUtil::insertOrAccumulate(upperBoundCoefficientsByColumn, invocationColumn, -upperBackedgeFactor);
+    CoinPackedVector upperBoundRow = ILPUtil::createRowFromCoefficients(upperBoundCoefficientsByColumn);
+    ILPUtil::appendRow(model, upperBoundRow, -COIN_DBL_MAX, 0.0);
 }
 
 void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::FunctionNode *func) {
-    // For all edges in this functionnode set the objective vector values
+    // For each edge
     for (auto &edgeUP : func->Edges) {
         auto *edge = edgeUP.get();
 
+        // Search for the edge destination in our direct node cache.
+        // If the value is not found calculate it
         auto cacheIterator = func->directNodeEnergyCache.find(edge->destination);
         if (cacheIterator != func->directNodeEnergyCache.end()) {
             model.obj[edge->ilpIndex] = cacheIterator->second;
         } else {
-            // Fall back to the live node energy for nodes that are intentionally
-            // not cached here, such as call nodes filled later.
             model.obj[edge->ilpIndex] = edge->destination->getEnergy();
         }
     }
 
-    // Then we need to check all contained loopnodes
+    // Call the fillObjectiveFunction recursively for contained loop nodes
     for (auto &nodeUP : func->Nodes) {
         if (auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
             fillObjectiveFunction(model, loopNode);
@@ -260,141 +328,186 @@ void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::FunctionNode *func
 }
 
 void ILPBuilder::fillObjectiveFunction(ILPModel &model, HLAC::LoopNode *loopNode) {
-    // For all edges in the loopnode set the objective vector values
     for (auto &edgeUP : loopNode->Edges) {
         auto *edge = edgeUP.get();
         model.obj[edge->ilpIndex] = edge->destination->getEnergy();
     }
 
-    // Check all contained loopnodes recursively
+    // Call the fillObjectiveFunction recursively for contained loop nodes
     for (auto &nodeUP : loopNode->Nodes) {
-        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
+        if (auto *innerLoop = dynamic_cast<HLAC::LoopNode *>(nodeUP.get())) {
             fillObjectiveFunction(model, innerLoop);
         }
     }
 }
 
+std::optional<ILPResult> ILPBuilder::solveModel(const ILPModel &ilpModel) {
+    // Create a new solver
+    ILPSolver modelSolver(ilpModel);
 
-std::optional<ILPResult> ILPBuilder::solveModel(ILPModel ilpModel) {
-    // Create a new solver on the model
-    ILPSolver modelSolver(std::move(ilpModel));
-
-    // Solve the model and query optimal solution and path
+    // Get the optimal solution and path
     auto optimalSolution = modelSolver.getSolvedModelValue();
     auto optimalPath = modelSolver.getSolvedSolution();
 
-    // Validate that the solver found a solution...
+    // If solution and path exist return it
     if (optimalPath.has_value() && optimalSolution.has_value()) {
         return std::make_optional<ILPResult>(optimalSolution.value(), optimalPath.value());
+    }
+
+    // Otherwise evaluate the reason no result was generated
+    auto solverStatus = modelSolver.getStatus();
+    auto statusString = modelSolver.getStatusString();
+
+    std::cout << "[ILP ERROR] Solver failed.\n";
+    std::cout << "  Status: " << statusString << "\n";
+    std::cout << "  Variables: " << ilpModel.matrix.getNumCols() << "\n";
+    std::cout << "  Constraints: " << ilpModel.matrix.getNumRows() << "\n";
+
+    if (solverStatus == ILPSolverStatus::INFEASIBLE) {
+        std::cout << "  Reason: Model is infeasible (constraints contradict each other).\n";
+    } else if (solverStatus == ILPSolverStatus::UNBOUNDED) {
+        std::cout << "  Reason: Model is unbounded (objective can grow indefinitely).\n";
+    } else if (solverStatus == ILPSolverStatus::TIME_LIMIT) {
+        std::cout << "  Reason: Solver hit time limit.\n";
+    } else if (solverStatus == ILPSolverStatus::NUMERICAL_ISSUES) {
+        std::cout << "  Reason: Numerical instability detected.\n";
+    } else {
+        std::cerr << "  Reason: Unknown solver failure.\n";
     }
 
     return std::nullopt;
 }
 
-void ILPBuilder::appendEqualityConstraint(ILPModel &model, int col) {
-    CoinPackedVector row;
-    std::unordered_set<int> usedCols;
-    double value = 1.0;
+void ILPBuilder::appendEqualityConstraint(ILPModel &model, int column) {
+    /**
+     * Create a constrain that limits the given column variable to be executed exactly once
+     */
+    std::unordered_map<int, double> coefficientsByColumn;
+    ILPUtil::insertOrAccumulate(coefficientsByColumn, column, 1.0);
 
-    // Add a simulated constrain that enforces the entry edge in the respective loopnode to be executed once
-    // This is needed for clustered ILP solving where we need to assume that the loopnode is being executed
-    ILPUtil::insertUnique(row, usedCols, col, 1.0);
-    ILPUtil::appendRow(model, row, value, value);
+    CoinPackedVector row = ILPUtil::createRowFromCoefficients(coefficientsByColumn);
+    ILPUtil::appendRow(model, row, 1.0, 1.0);
 }
 
 ILPModel ILPBuilder::buildMonolithicILP(HLAC::LoopNode *loop) {
-    // The loop is part of a function graph whose edges already carry stable global ids.
-    // Therefore we must not renumber the loop edges locally here.
+    // Find the max edge index
     const int maxEdgeIndex = ILPUtil::getMaxEdgeIndex(loop);
 
-    /**
-     * The Invocation col is the artificial variable we are introducing
-     */
-    const int invocationCol = maxEdgeIndex + 1;
-    const int numVars = invocationCol + 1;
+    // Construct the invocation column index
+    const int invocationColumn = maxEdgeIndex + 1;
+    const int variableCount = invocationColumn + 1;
 
-    // We assume that the variable entrying this loop is invocationCol
-    const std::vector<int> invocationCols = {invocationCol};
+    const std::vector<int> invocationColumns = {invocationColumn};
 
-    // Create empty model storage.
-    ILPModel model{
-        .matrix = CoinPackedMatrix(false, 0, 0),
-        .row_lb = {},
-        .row_ub = {},
-        .col_lb = std::vector<double>(numVars, 0.0),
-        .col_ub = std::vector<double>(numVars, COIN_DBL_MAX),
-        .obj = std::vector<double>(numVars, 0.0)
-    };
+    // Construct the ILPModel for solving
+    ILPModel model{.matrix = CoinPackedMatrix(false, 0, 0),
+                   .row_lb = {},
+                   .row_ub = {},
+                   .col_lb = std::vector<double>(variableCount, 0.0),
+                   .col_ub = std::vector<double>(variableCount, COIN_DBL_MAX),
+                   .obj = std::vector<double>(variableCount, 0.0)};
 
-    // Encode edge feasibility
+    // Apply feasibility constrains
     applyEdgeFeasibilityBounds(model, loop);
 
-    // Append all flow and loop constraints recursively.
-    appendGraphConstraints(model, loop->Nodes, loop->Edges, &invocationCols);
+    // Append graph constrains
+    appendGraphConstraints(model, loop->Nodes, loop->Edges, &invocationColumns);
 
-    // As we are already in a loop, we need to append all loop bound constrains right here
-    // We calculate loop constrains via the scale of how often the loopnode will be entered,
-    // This works perfectly fine for monolithic ILP calculation, where all constrains exit.
-    // However, for clustered ILP construction, we have to assume that the top level loop(and only the top level loop)
-    // Will be entered exactly one time.
-    appendLoopBoundConstraint(model, loop, invocationCols);
+    // Append loop bound constrains
+    appendLoopBoundConstraint(model, loop, invocationColumns);
 
-    // Loop entry simulation variable
-    appendEqualityConstraint(model, invocationCol);
+    // Append variable constraints so each variable is called once
+    appendEqualityConstraint(model, invocationColumn);
 
-    // Fill objective recursively with energy cost
+    // Fill the objective function with energy values
     fillObjectiveFunction(model, loop);
 
     return model;
 }
 
+std::vector<int>
+ILPBuilder::collectExternalLoopInvocationColumns(HLAC::LoopNode *loopNode,
+                                                 const std::vector<std::unique_ptr<HLAC::Edge>> &parentEdges,
+                                                 const std::vector<int> &incomingColumns) {
+    std::vector<int> invocationColumns;
+
+    // Iterate over the incoming columns
+    for (int incomingColumn : incomingColumns) {
+        HLAC::Edge *matchingEdge = nullptr;
+
+        // Find the parent edge corresponding to the incoming column
+        for (const auto &edgeUniquePointer : parentEdges) {
+            HLAC::Edge *edge = edgeUniquePointer.get();
+
+            if (edge != nullptr && edge->ilpIndex == incomingColumn) {
+                matchingEdge = edge;
+                break;
+            }
+        }
+
+        // Validate the edge
+        if (matchingEdge == nullptr) {
+            continue;
+        }
+
+        // Ignore the edge if the destination is not our loopnode
+        if (matchingEdge->destination != loopNode) {
+            continue;
+        }
+
+        // Ignore the edge if the source is our loopnode
+        if (matchingEdge->soure == loopNode) {
+            continue;
+        }
+
+        // In any other case push the column into the invocation columns vector as it represents an external
+        // invocation of the loop
+        invocationColumns.push_back(incomingColumn);
+    }
+
+    return invocationColumns;
+}
+
 ILPModel ILPBuilder::buildMonolithicILP(HLAC::FunctionNode *func) {
-    // Assign global ILP column indices to every edge recursively.
-    const int numVars = ILPUtil::assignEdgeIndicesFunction(func, 0);
+    const int variableCount = ILPUtil::assignEdgeIndicesFunction(func, 0);
 
-    // Create empty model storage.
-    ILPModel model{
-        .matrix = CoinPackedMatrix(false, 0, 0),
-        .row_lb = {},
-        .row_ub = {},
-        .col_lb = std::vector<double>(numVars, 0.0),
-        .col_ub = std::vector<double>(numVars, COIN_DBL_MAX),
-        .obj = std::vector<double>(numVars, 0.0)
-    };
+    // Construct the ILPModel for solving
+    ILPModel model{.matrix = CoinPackedMatrix(false, 0, 0),
+                   .row_lb = {},
+                   .row_ub = {},
+                   .col_lb = std::vector<double>(variableCount, 0.0),
+                   .col_ub = std::vector<double>(variableCount, COIN_DBL_MAX),
+                   .obj = std::vector<double>(variableCount, 0.0)};
 
-    // Encode edge feasibility
+    // Apply feasibility constrains to the model
     applyEdgeFeasibilityBounds(model, func);
 
-    // Append all flow and loop constraints recursively.
+    if (func->function->getName() == "main") {
+        int i = 10;
+    }
+
+    // Apply flow constrains
     appendGraphConstraints(model, func->Nodes, func->Edges, nullptr);
 
-    // Fill objective recursively with energy cost
+    // Fill the objective function
     fillObjectiveFunction(model, func);
 
     return model;
 }
 
 std::unordered_map<HLAC::LoopNode *, ILPModel> ILPBuilder::buildClusteredILP(HLAC::FunctionNode *func) {
-    /**
-     * In contrary to the monolithic ILP, we do not build one big ILP for the whole function,
-     * but instead we build separate ILPs for each loop in the function and use a generic graph algorithm for finding the
-     * worst path in the function
-     */
     std::unordered_map<HLAC::LoopNode *, ILPModel> resultMapping;
 
-    // Assign stable global ids once for the complete function graph.
     ILPUtil::assignEdgeIndicesFunction(func, 0);
 
     for (auto &nodeUP : func->Nodes) {
-        if (auto *loopNode = dynamic_cast<HLAC::LoopNode*>(nodeUP.get())) {
-            // Build the ILP for the loop node
-            ILPModel loopModel = buildMonolithicILP(loopNode);
-
-            // ILPUtil::printILPModelHumanReadable(func->name, loopNode->loop->getName().str(), loopModel);
-
-            // Store the model in the result mapping
-            resultMapping[loopNode] = loopModel;
+        auto *loopNode = dynamic_cast<HLAC::LoopNode *>(nodeUP.get());
+        if (loopNode == nullptr) {
+            continue;
         }
+
+        ILPModel loopModel = buildMonolithicILP(loopNode);
+        resultMapping[loopNode] = loopModel;
     }
 
     return resultMapping;

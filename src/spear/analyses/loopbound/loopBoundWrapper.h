@@ -55,7 +55,7 @@ class LoopBoundWrapper {
      * @param helperAnalyses Phasar help analyses to access phasars analysis information
      * @param FAM FunctionAnalysisManager to access llvm analysis information
      */
-    LoopBoundWrapper(std::shared_ptr<psr::HelperAnalyses> helperAnalyses, llvm::FunctionAnalysisManager *FAM);
+    LoopBoundWrapper(const std::shared_ptr<psr::HelperAnalyses>& helperAnalyses, llvm::FunctionAnalysisManager *FAM);
 
     /**
      * Store the given loop and its subloops in the given vector

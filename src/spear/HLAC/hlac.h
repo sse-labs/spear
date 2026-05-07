@@ -46,6 +46,21 @@ enum class NodeType {
 };
 
 /**
+ * Enum of the virtual node kind
+ * Currently only Entry and NormalExit are used.
+ * Future versions could use other exit methods to represent control flow more flexible
+ */
+enum class VirtualNodeKind {
+    Entry,
+    NormalExit,
+    ReturnExit,
+    BreakExit,
+    ContinueTarget,
+    Generic,
+    FALLBACK,
+};
+
+/**
  * Binding of node index to callee name for call nodes.
  * This is used to determine which call nodes are relevant for the optimal solution and to print the
  * optimal solution in a human-readable way.
@@ -128,14 +143,9 @@ class GenericNode {
 class VirtualNode : public GenericNode {
  public:
     /**
-     * Flag to determine if a node is an entry node
+     * Kind of this virtual node.
      */
-    bool isEntry = false;
-
-    /**
-     * Flag to determine if a node is an exit node
-     */
-    bool isExit = false;
+    VirtualNodeKind virtualNodeKind = VirtualNodeKind::Generic;
 
     /**
      * Parent node of this node
@@ -144,12 +154,11 @@ class VirtualNode : public GenericNode {
 
     /**
      * Create a new virtual points
-     * @param isEntry Flag to determine if the virtual point is an entry point
-     * @param isExit Flag to determine if the virtual point in an exit point
+     * @param virtualNodeKind Kind of the virtual point
      * @param givparent Parent node of the virtual point
      * @return
      */
-    static std::unique_ptr<VirtualNode> makeVirtualPoint(bool isEntry, bool isExit, GenericNode *givparent);
+    static std::unique_ptr<VirtualNode> makeVirtualPoint(VirtualNodeKind virtualNodeKind, GenericNode *givparent);
 
     /**
      * Print this NormalNode as dot representation
@@ -172,6 +181,13 @@ class VirtualNode : public GenericNode {
     std::string getDotName() override;
 
     /**
+     * Get the label string of the given kind
+     * @param virtualNodeKind Kind to get the label vor
+     * @return String representation of the kind useable in dot
+     */
+    static std::string getVirtualNodeLabel(HLAC::VirtualNodeKind virtualNodeKind);
+
+    /**
      * Calculate the hash of the node
      * @return Hash of the node as string
      */
@@ -187,6 +203,8 @@ class Edge {
      * Global unique identifier of this edge
      */
     int ilpIndex = -1;
+
+    bool isBackEdge = false;
 
     /**
      * Local string identifier used for dot printing
@@ -298,7 +316,7 @@ class LoopNode : public GenericNode {
     /**
      * Backedge of the loop
      */
-    HLAC::Edge *backEdge = nullptr;
+    std::vector<Edge*> backEdges;
 
     /**
      * List of contained Nodes
@@ -330,6 +348,8 @@ class LoopNode : public GenericNode {
      */
     bool hasSubLoops = false;
 
+    int invocationIlpIndex = -1;
+
     /**
      * Constructor to create a new LoopNode
      * @param loop loop that should be represented by the LoopNOde
@@ -352,6 +372,12 @@ class LoopNode : public GenericNode {
      * @param edgeList List of edges from the node, this loop node is contained in
      */
     void collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList);
+
+    /**
+     * Refresh the internal backedge storage of the loopnode.
+     * Finds backedges and stores them inside the loopnode
+     */
+    void refreshBackEdges();
 
     /**
      * Construct CallNodes from calls contained within this LoopNode
@@ -409,6 +435,16 @@ class FunctionNode : public GenericNode {
      * Phasar result registry
      */
     ResultRegistry registry;
+
+    /**
+     * Flag to detect functions that contain gotos
+     */
+    bool isGotoFunction;
+
+    /**
+     * Flag to detect functions that contain loops with multiple entries, which we currently do not support
+     */
+    bool isIllFormatted = false;
 
     /**
      * Mapping of function energy
@@ -570,6 +606,13 @@ class FunctionNode : public GenericNode {
      */
     bool isFunctionRecursive(llvm::LazyCallGraph &lazyCallGraph);
 
+    /**
+     * Check if the function represented by this FunctionNode is ill-formatted, which means that it contains
+     * loops with multiple entries.
+     * @return True if the loop is ill-formatted, false otherwise
+     */
+    bool checkForIllFormat();
+
  private:
     /**
      * Iterates over the contained nodes and constructs LoopNodes recursively for all contained loops
@@ -589,6 +632,12 @@ class FunctionNode : public GenericNode {
      * @return Vector representing the topological order of the contained nodes
      */
     std::vector<GenericNode *> getTopologicalOrdering();
+
+    /**
+     * Check if the function contains internal cycles
+     * @return True if an internal cycle can be found, false otherwise
+     */
+    bool isAcyclic() const;
 };
 
 /**
@@ -822,7 +871,7 @@ class hlac {
      * @param model Constructed monolithic model
      * @return Mapping of function name to monolithic ILP result
      */
-    std::optional<ILPResult> solveMonolithicIlp(ILPModel &model);
+    std::optional<ILPResult> solveMonolithicIlp(ILPModel &model, std::string fname = "");
 
     /**
      * Solve the clustered models of the contained functions
