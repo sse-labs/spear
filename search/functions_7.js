@@ -58,5 +58,6 @@ var searchData=
   ['getunknowncost_55',['getUnknownCost',['../classProfileHandler.html#aa4209f2865309b654e5b64222f731ecb',1,'ProfileHandler']]],
   ['getupperbound_56',['getUpperBound',['../classLoopBound_1_1DeltaInterval.html#a6973e1122100293315a192dc0812b7b0',1,'LoopBound::DeltaInterval']]],
   ['getvaluetypeasstr_57',['getValueTypeAsStr',['../classLoopBound_1_1DeltaInterval.html#adc5150018674204477f1b07419839b38',1,'LoopBound::DeltaInterval']]],
-  ['greatestlowerbound_58',['greatestLowerBound',['../classLoopBound_1_1DeltaInterval.html#ac085cf1b44949f4de822d85d5d33fff8',1,'LoopBound::DeltaInterval']]]
+  ['getvirtualnodelabel_58',['getVirtualNodeLabel',['../classHLAC_1_1VirtualNode.html#a1853a0662ace91489d2869fe510b544d',1,'HLAC::VirtualNode']]],
+  ['greatestlowerbound_59',['greatestLowerBound',['../classLoopBound_1_1DeltaInterval.html#ac085cf1b44949f4de822d85d5d33fff8',1,'LoopBound::DeltaInterval']]]
 ];

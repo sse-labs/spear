@@ -59,6 +59,7 @@ var searchData=
   ['getunknowncost_56',['getUnknownCost',['../classProfileHandler.html#aa4209f2865309b654e5b64222f731ecb',1,'ProfileHandler']]],
   ['getupperbound_57',['getUpperBound',['../classLoopBound_1_1DeltaInterval.html#a6973e1122100293315a192dc0812b7b0',1,'LoopBound::DeltaInterval']]],
   ['getvaluetypeasstr_58',['getValueTypeAsStr',['../classLoopBound_1_1DeltaInterval.html#adc5150018674204477f1b07419839b38',1,'LoopBound::DeltaInterval']]],
-  ['globalid_59',['globalId',['../classHLAC_1_1GenericNode.html#a2bc157cbc9d043ff12888764327768b8',1,'HLAC::GenericNode']]],
-  ['greatestlowerbound_60',['greatestLowerBound',['../classLoopBound_1_1DeltaInterval.html#ac085cf1b44949f4de822d85d5d33fff8',1,'LoopBound::DeltaInterval']]]
+  ['getvirtualnodelabel_59',['getVirtualNodeLabel',['../classHLAC_1_1VirtualNode.html#a1853a0662ace91489d2869fe510b544d',1,'HLAC::VirtualNode']]],
+  ['globalid_60',['globalId',['../classHLAC_1_1GenericNode.html#a2bc157cbc9d043ff12888764327768b8',1,'HLAC::GenericNode']]],
+  ['greatestlowerbound_61',['greatestLowerBound',['../classLoopBound_1_1DeltaInterval.html#ac085cf1b44949f4de822d85d5d33fff8',1,'LoopBound::DeltaInterval']]]
 ];
