@@ -1,5 +1,29 @@
 var searchData=
 [
-  ['key_0',['key',['../classFeasibility_1_1EnvNode.html#a732d849b626d84730b7cb1c7b81da8ae',1,'Feasibility::EnvNode::key'],['../structFeasibility_1_1EnvKey.html#a9d6017e216f604b85600f785c2d76248',1,'Feasibility::EnvKey::key']]],
-  ['kind_1',['Kind',['../classFeasibility_1_1FeasibilityElement.html#af2ebbb7ddf04da2dba86a2f6dacab62a',1,'Feasibility::FeasibilityElement']]]
+  ['lazyatom_0',['lazyatom',['../structFeasibility_1_1LazyAtom.html',1,'Feasibility::LazyAtom'],['../structFeasibility_1_1LazyAtom.html#a854c0ff2f0fb311959730729e692c4f3',1,'Feasibility::LazyAtom::LazyAtom(const llvm::BasicBlock *predecessorBlock, const llvm::BasicBlock *successorBlock, const llvm::ICmpInst *icmpInstruction, bool areWeOnTheTrueEdge)'],['../structFeasibility_1_1LazyAtom.html#a102044fb0dc866aae5839b1385f437e0',1,'Feasibility::LazyAtom::LazyAtom()=default']]],
+  ['lazycallgraph_1',['lazyCallGraph',['../classHLAC_1_1hlac.html#a80c89be96bada0fe02335645adef728b',1,'HLAC::hlac']]],
+  ['leastupperbound_2',['leastUpperBound',['../classLoopBound_1_1DeltaInterval.html#a45090920c39f85817766cf0523e64ba3',1,'LoopBound::DeltaInterval']]],
+  ['legacyanalysis_3',['LegacyAnalysis',['../classLegacyAnalysis.html',1,'']]],
+  ['legacyanalysisconfiguration_4',['LegacyAnalysisConfiguration',['../structLegacyAnalysisConfiguration.html',1,'']]],
+  ['legacywrapper_5',['legacyWrapper',['../classPassUtil.html#ad15f4ff4bb3ee3607c5977d84bdfc3b3',1,'PassUtil']]],
+  ['llvmhandler_6',['llvmhandler',['../classLLVMHandler.html#a5fa12d2aac33eb0249abc09bf0ee0a19',1,'LLVMHandler::LLVMHandler()'],['../classLLVMHandler.html',1,'LLVMHandler']]],
+  ['logger_7',['Logger',['../classLogger.html',1,'']]],
+  ['longestpathdag_8',['longestPathDAG',['../classILPUtil.html#a6dc86f9af2110d24a9c144e841791961',1,'ILPUtil']]],
+  ['lookup_9',['lookup',['../classELBMapper.html#a354010b6db3a8684735bbeec7603956f',1,'ELBMapper']]],
+  ['loop_10',['loop',['../classHLAC_1_1LoopNode.html#af07f34788c32883bd9b007b2e8e6775e',1,'HLAC::LoopNode']]],
+  ['loopbound_11',['LoopBound',['../namespaceLoopBound.html',1,'']]],
+  ['loopbounddomain_12',['LoopBoundDomain',['../structLoopBound_1_1LoopBoundDomain.html',1,'LoopBound']]],
+  ['loopboundideanalysis_13',['loopboundideanalysis',['../classLoopBound_1_1LoopBoundIDEAnalysis.html',1,'LoopBound::LoopBoundIDEAnalysis'],['../classLoopBound_1_1LoopBoundIDEAnalysis.html#aed923a837a3dfda02ecdcbc2d8efed2e',1,'LoopBound::LoopBoundIDEAnalysis::LoopBoundIDEAnalysis()']]],
+  ['loopboundincrementinstance_14',['LoopBoundIncrementInstance',['../structLoopBound_1_1LoopBoundIncrementInstance.html',1,'LoopBound']]],
+  ['loopboundproblem_15',['loopboundProblem',['../classPhasarHandlerPass.html#a858f853c8a8a2cb1de3b01b0751e68df',1,'PhasarHandlerPass']]],
+  ['loopboundwrapper_16',['loopboundwrapper',['../classLoopBound_1_1LoopBoundWrapper.html',1,'LoopBound::LoopBoundWrapper'],['../classLoopBound_1_1LoopBoundWrapper.html#aebe6195cbacbeca46f496af45648c74b',1,'LoopBound::LoopBoundWrapper::LoopBoundWrapper()'],['../classPhasarHandlerPass.html#a4654fc5d8fa5c0699bb8847eaca16185',1,'PhasarHandlerPass::loopboundwrapper']]],
+  ['loopcache_17',['LoopCache',['../structLoopBound_1_1LoopCache.html',1,'LoopBound']]],
+  ['loopclassifier_18',['loopclassifier',['../classLoopBound_1_1LoopClassifier.html',1,'LoopBound::LoopClassifier'],['../classLoopBound_1_1LoopClassifier.html#aebb04d9b81c2fc5a0544b85dcc2b5455',1,'LoopBound::LoopClassifier::LoopClassifier()']]],
+  ['loopcountericmp_19',['LoopCounterICMP',['../structLoopBound_1_1LoopCounterICMP.html',1,'LoopBound']]],
+  ['loopnode_20',['loopnode',['../classLoopNode.html#a9ed8fbdf9af17f6c52f7ccd4bc0de458',1,'LoopNode::LoopNode()'],['../classLoopNode.html',1,'LoopNode'],['../classHLAC_1_1LoopNode.html',1,'HLAC::LoopNode'],['../classHLAC_1_1LoopNode.html#aefd4946443ad84de28252f5be9bdc518',1,'HLAC::LoopNode::LoopNode()']]],
+  ['loopnodeedgesummary_21',['LoopNodeEdgeSummary',['../structHLAC_1_1LoopNodeEdgeSummary.html',1,'HLAC']]],
+  ['loopparameterdescription_22',['LoopParameterDescription',['../structLoopBound_1_1LoopParameterDescription.html',1,'LoopBound']]],
+  ['looptree_23',['looptree',['../classLoopTree.html',1,'LoopTree'],['../classLoopNode.html#a34181dd8b9ba9b9ce1c8a99126427993',1,'LoopNode::loopTree'],['../classLoopTree.html#a45a0862b4849d3302b8a5d5b99e7a0f8',1,'LoopTree::LoopTree()']]],
+  ['looptype_24',['LoopType',['../namespaceLoopBound.html#a7c54a9f40f78bc05e04204a9f18e74df',1,'LoopBound']]],
+  ['lowerbound_25',['lowerbound',['../structLoopBound_1_1DeltaIntervalAdditive.html#a5bb43f8e4590d2ea905c863e6324ab15',1,'LoopBound::DeltaIntervalAdditive::lowerBound'],['../structLoopBound_1_1DeltaIntervalMultiplicative.html#a8791b4bb0e6c5aca7560380f26e98394',1,'LoopBound::DeltaIntervalMultiplicative::lowerBound'],['../structLoopBound_1_1DeltaIntervalDivision.html#a758d086ff8a7c7c44d9c8cf5172a57b2',1,'LoopBound::DeltaIntervalDivision::lowerBound']]]
 ];

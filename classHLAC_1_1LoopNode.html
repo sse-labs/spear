@@ -144,8 +144,7 @@ Public Attributes</h2></td></tr>
 <tr class="separator:af357fc78be2a8817cea044fb7847d831"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1e78eebcfa2ab5df5d43d64cc0e5a472" id="r_a1e78eebcfa2ab5df5d43d64cc0e5a472"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a1e78eebcfa2ab5df5d43d64cc0e5a472">hasSubLoops</a> = false</td></tr>
 <tr class="separator:a1e78eebcfa2ab5df5d43d64cc0e5a472"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a930e93ea991bef59636e8168703a9f1b" id="r_a930e93ea991bef59636e8168703a9f1b"><td class="memItemLeft" align="right" valign="top"><a id="a930e93ea991bef59636e8168703a9f1b" name="a930e93ea991bef59636e8168703a9f1b"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>invocationIlpIndex</b> = -1</td></tr>
+<tr class="memitem:a930e93ea991bef59636e8168703a9f1b" id="r_a930e93ea991bef59636e8168703a9f1b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1LoopNode.html#a930e93ea991bef59636e8168703a9f1b">invocationIlpIndex</a> = -1</td></tr>
 <tr class="separator:a930e93ea991bef59636e8168703a9f1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_attribs_classHLAC_1_1GenericNode"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classHLAC_1_1GenericNode')"><img src="closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="classHLAC_1_1GenericNode.html">HLAC::GenericNode</a></td></tr>
 <tr class="memitem:a0846161d75459a69951eb59cb73a69b7 inherit pub_attribs_classHLAC_1_1GenericNode" id="r_a0846161d75459a69951eb59cb73a69b7"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classHLAC_1_1GenericNode.html#a0846161d75459a69951eb59cb73a69b7">name</a></td></tr>
@@ -569,6 +568,21 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>invocationIlpIndex</b>
       </table>
 </div><div class="memdoc">
 <p>Flag to store if the contained loop has subloops that find representation as further LoopNodes </p>
+
+</div>
+</div>
+<a id="a930e93ea991bef59636e8168703a9f1b" name="a930e93ea991bef59636e8168703a9f1b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a930e93ea991bef59636e8168703a9f1b">&#9670;&#160;</a></span>invocationIlpIndex</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int HLAC::LoopNode::invocationIlpIndex = -1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Id of the variable used to represent the invocation count of the represented loop in the ILP formulation. This is used to link the loop node to the corresponding variable in the ILP and to determine the iteration count of the loop in the optimal solution. </p>
 
 </div>
 </div>

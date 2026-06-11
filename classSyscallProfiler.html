@@ -108,11 +108,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>log</b> (std::string 
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a7e471b6fffc12391f6a7d69c21219f82" id="r_a7e471b6fffc12391f6a7d69c21219f82"><td class="memItemLeft" align="right" valign="top"><a id="a7e471b6fffc12391f6a7d69c21219f82" name="a7e471b6fffc12391f6a7d69c21219f82"></a>
-static int&#160;</td><td class="memItemRight" valign="bottom"><b>set_ignore_tgid_map</b> (syscall_trace_bpf *skel, uint32_t tgid_to_ignore)</td></tr>
+<tr class="memitem:a7e471b6fffc12391f6a7d69c21219f82" id="r_a7e471b6fffc12391f6a7d69c21219f82"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classSyscallProfiler.html#a7e471b6fffc12391f6a7d69c21219f82">set_ignore_tgid_map</a> (syscall_trace_bpf *skel, uint32_t tgid_to_ignore)</td></tr>
 <tr class="separator:a7e471b6fffc12391f6a7d69c21219f82"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad41b60c435bad93471278b7b548ed91e" id="r_ad41b60c435bad93471278b7b548ed91e"><td class="memItemLeft" align="right" valign="top"><a id="ad41b60c435bad93471278b7b548ed91e" name="ad41b60c435bad93471278b7b548ed91e"></a>
-static int&#160;</td><td class="memItemRight" valign="bottom"><b>handle_event</b> (void *ctx, void *data, size_t data_sz)</td></tr>
+<tr class="memitem:ad41b60c435bad93471278b7b548ed91e" id="r_ad41b60c435bad93471278b7b548ed91e"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classSyscallProfiler.html#ad41b60c435bad93471278b7b548ed91e">handle_event</a> (void *ctx, void *data, size_t data_sz)</td></tr>
 <tr class="separator:ad41b60c435bad93471278b7b548ed91e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
@@ -159,6 +157,57 @@ const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b><
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="ad41b60c435bad93471278b7b548ed91e" name="ad41b60c435bad93471278b7b548ed91e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad41b60c435bad93471278b7b548ed91e">&#9670;&#160;</a></span>handle_event()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static int SyscallProfiler::handle_event </td>
+          <td>(</td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>ctx</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>data</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>data_sz</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Generic callback to handle a system call event </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ctx</td><td>Context of the system call </td></tr>
+    <tr><td class="paramname">data</td><td>Additional data </td></tr>
+    <tr><td class="paramname">data_sz</td><td>Additional data </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Success id </dd></dl>
+
+</div>
+</div>
 <a id="a217641d87707e6da39e6a7c151591576" name="a217641d87707e6da39e6a7c151591576"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a217641d87707e6da39e6a7c151591576">&#9670;&#160;</a></span>profile()</h2>
 
@@ -184,6 +233,50 @@ const std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tag</b><
 <p>Gather information about syscalls and return them as JSON object </p><dl class="section return"><dt>Returns</dt><dd>JSON object containing per-syscall energy statistics </dd></dl>
 
 <p>Implements <a class="el" href="classProfiler.html#af50d7dfce1868917936dec58632a0284">Profiler</a>.</p>
+
+</div>
+</div>
+<a id="a7e471b6fffc12391f6a7d69c21219f82" name="a7e471b6fffc12391f6a7d69c21219f82"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7e471b6fffc12391f6a7d69c21219f82">&#9670;&#160;</a></span>set_ignore_tgid_map()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static int SyscallProfiler::set_ignore_tgid_map </td>
+          <td>(</td>
+          <td class="paramtype">syscall_trace_bpf *&#160;</td>
+          <td class="paramname"><em>skel</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>tgid_to_ignore</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Helper function to set the tgid to ignore in the BPF program, so that we don't record our own measurements </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">skel</td><td>Tracer skeleton </td></tr>
+    <tr><td class="paramname">tgid_to_ignore</td><td>Ids to ignore </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Success id </dd></dl>
 
 </div>
 </div>
