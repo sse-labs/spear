@@ -62,10 +62,6 @@ nlohmann::json ClusteredAnalysis::run(std::shared_ptr<HLAC::hlac> graph, bool sh
 
         auto funcName = funcNode->function->getName().str();
 
-        if (funcName == "LZ4_compress_fast_extState") {
-            int test = 0;
-        }
-
         if (funcNode->isGotoFunction) {
             Logger::getInstance().log(
                 "Skipping clustered ILP analysis for goto function " + funcName + ". Using fallback energy.",

@@ -10,6 +10,10 @@
 #include "feasibility/FeasibilityAnalysis.h"
 #include "loopbound/LoopBound.h"
 
+/*
+ * Result registry class for storing the result of the phasar based analyses
+ *
+ */
 class ResultRegistry {
  public:
     /**

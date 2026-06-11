@@ -348,6 +348,11 @@ class LoopNode : public GenericNode {
      */
     bool hasSubLoops = false;
 
+    /**
+     * Id of the variable used to represent the invocation count of the represented loop in the ILP formulation.
+     * This is used to link the loop node to the corresponding variable in the ILP and to determine the iteration count
+     * of the loop in the optimal solution.
+     */
     int invocationIlpIndex = -1;
 
     /**
