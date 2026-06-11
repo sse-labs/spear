@@ -27,11 +27,11 @@ before installing SPEAR.
 
 * **Phasar**
   Used for static analysis of LLVM IR.
-  Follow the installation instructions in the official Phasar repository.
+  Follow the installation instructions in the official Phasar repository. [Link](https://github.com/secure-software-engineering/phasar)
 
 * **Z3**
   SMT solver used for analysis.
-  Install via your package manager or from the official Z3 repository.
+  Install via your package manager or from the official Z3 repository. [Link](https://github.com/z3prover/z3)
 
 * **CMake**
   Required to configure the build process.
@@ -44,7 +44,7 @@ before installing SPEAR.
 
 * **bpftool**
   Used to profile system call behavior.
-  Install via your package manager.
+  Install via your package manager. [Link](https://github.com/libbpf/bpftool)
 
 * **nlohmann-json**
   Header-only C++ library used for JSON output.
