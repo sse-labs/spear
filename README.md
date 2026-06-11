@@ -73,9 +73,15 @@ Even though energy seems to be a problematic factor regarding cost and environme
 developers are not well aware about the energy-consumption of their software. Either trough missing information about their
 used architecture or through the abstraction their used language implements.
 
-To work towards filling this knowledge-gap, this bachelor-thesis provides a tool
+To work towards filling this knowledge-gap, we created a tool
 for static analysis of LLVM-IR Code which will get populated with energy-consumption profiling
-from the Intel RAPL Interface.
+from the RAPL Interface.
+
+## Supported Platforms
+
+Currently, SPEAR is only supported on Linux-based systems with Intel CPUs or AMD CPUs that support RAPL.
+Additional support for other platforms may be added in the future, but currently there are no plans to support 
+non-Intel/AMD architectures or non-Linux operating systems.
 
 ## Running the profiler
 
