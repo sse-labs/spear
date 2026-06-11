@@ -9,35 +9,6 @@
 *  The edge functions form a small lattice that describes how loop-step
  * information is transformed along control-flow paths.
  *
- *                           DeltaIntervalTop
- *                                 (⊤)
- *                                  |
- *          -------------------------------------------------
- *          |                                                |
- *   DeltaIntervalCollect                         DeltaIntervalIdentity
- *   (collect increments)                               (id)
- *          |                                                |
- *          -------------------------------------------------
- *                                  |
- *                           DeltaIntervalBottom
- *                                 (⊥)
- *
- *  DeltaIntervalIdentity
- *   Neutral element for composition.
- *   computeTarget(x) = x
- *
- *  DeltaIntervalCollect
- *   Collects possible increments observed along a path and merges them
- *   conservatively. This is the only edge function that actively changes
- *   the delta interval during analysis.
- *
- *  DeltaIntervalTop
- *   Represents an unknown transformation.
- *   Dominates joins and poisons compositions.
- *
- *  DeltaIntervalBottom
- *   Represents an impossible or killed path.
- *   Absorbing element for composition.
  *
  *
  */
@@ -126,9 +97,9 @@ struct DeltaIntervalAdditive {
 };
 
 /**
- * DeltaIntervalCollect
+ * DeltaIntervalMultiplicative
  *
- * Defines edge function operations used for calculating the increment interval
+ * DeltaInterval for multiplicative increments
  */
 struct DeltaIntervalMultiplicative {
     // Define the lattice elements
@@ -198,9 +169,9 @@ struct DeltaIntervalMultiplicative {
 };
 
 /**
- * DeltaIntervalCollect
+ * DeltaIntervalDivision
  *
- * Defines edge function operations used for calculating the increment interval
+ * DeltaInterval for divisive increments
  */
 struct DeltaIntervalDivision {
     // Define the lattice elements

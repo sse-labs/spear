@@ -124,7 +124,6 @@ double Node::getNodeEnergy(LLVMHandler *handler) {
 
     if (isCurrentlyEvaluating) {
         // Cycle detected
-        // You need a real strategy here. Returning 0.0 is only a placeholder.
         return 0.0;
     }
 

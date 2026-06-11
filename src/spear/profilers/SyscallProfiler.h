@@ -38,7 +38,7 @@ struct evt {
 };
 
 /**
- * Per-TID inflight state (supports sched_switch gating)
+ * Per-TID inflight state
  */
 struct Inflight {
     uint32_t syscall_id = 0;
@@ -64,7 +64,21 @@ class SyscallProfiler : public Profiler {
      */
     SyscallProfiler();
 
+    /**
+     * Helper function to set the tgid to ignore in the BPF program, so that we don't record our own measurements
+     * @param skel Tracer skeleton
+     * @param tgid_to_ignore Ids to ignore
+     * @return Success id
+     */
     static int set_ignore_tgid_map(syscall_trace_bpf* skel, uint32_t tgid_to_ignore);
+
+    /**
+     * Generic callback to handle a system call event
+     * @param ctx Context of the system call
+     * @param data Additional data
+     * @param data_sz Additional data
+     * @return Success id
+     */
     static int handle_event(void* ctx, void* data, size_t data_sz);
 
     /**
@@ -74,9 +88,21 @@ class SyscallProfiler : public Profiler {
     json profile() override;
 
  private:
+    /*
+     * Register reader to handle measurements
+     */
     static RegisterReader raplReader;
 
+    /*
+     * Stop the current measurement and accumulate the measured energy since the last start
+     * @param inf System call information
+     */
     static void stop_segment_and_accumulate(Inflight& inf);
+
+    /*
+     * Start the measurement of a new segment
+     * @param inf System call information
+     */
     static void start_segment(Inflight& inf);
 };
 

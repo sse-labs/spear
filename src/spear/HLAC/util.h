@@ -224,16 +224,6 @@ class Util {
         const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,
         const std::vector<std::unique_ptr<HLAC::Edge>> &edges,
         std::vector<LoopNodeEdgeSummary> &loopNodeEdgeSummaries);
-
-    /**
-     * Print LoopNode edge summaries as CSV.
-     *
-     * @param os Output stream to print to
-     * @param loopNodeEdgeSummaries Summaries to print
-     */
-    static void printLoopNodeEdgeSummaries(
-        std::ostream &os,
-        const std::vector<LoopNodeEdgeSummary> &loopNodeEdgeSummaries);
 };
 
 }  // namespace HLAC

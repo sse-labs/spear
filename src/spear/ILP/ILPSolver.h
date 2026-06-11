@@ -61,8 +61,8 @@ class ILPSolver {
     ILPSolverStatus getStatus() const;
 
     /**
-     *
-     * @return
+     * Return the status of the solver as string
+     * @return String representing the solver status
      */
     std::string getStatusString() const;
 

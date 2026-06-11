@@ -59,8 +59,8 @@ int SyscallProfiler::set_ignore_tgid_map(syscall_trace_bpf* skel, uint32_t tgid_
 }
 
 /**
- * Helper: add energy delta for a running segment and stop the segment.
- * Safe if called only when inf.running == true.
+ * Stop the current segement and accumulate the recorded energy to the total energy for this syscall ID.
+ * Also marks the segment as not running.
  */
 void SyscallProfiler::stop_segment_and_accumulate(Inflight& inf) {
     const double endEng = raplReader.getEnergy();
@@ -74,8 +74,9 @@ void SyscallProfiler::stop_segment_and_accumulate(Inflight& inf) {
 }
 
 /**
- * Helper: start a new running segment
- * (after sys_enter or after switch_in while still in syscall)
+ * Start a new running segment that measures the energy after the system call is entered (sys_enter) or
+ * on switch in (switch_in) if the thread is still inside the same syscall. Records the start energy and marks the
+ * segment as running.
  */
 void SyscallProfiler::start_segment(Inflight& inf) {
     inf.start_energy = raplReader.getEnergy();
@@ -94,19 +95,20 @@ int SyscallProfiler::handle_event(void* /* ctx */, void* data, size_t data_sz) {
         return 0;
     }
 
-    const auto* e = static_cast<const evt*>(data);
+    const auto* event = static_cast<const evt*>(data);
 
     // Ensure we have a state entry for this TID (also for switch events)
-    auto& inf = inflight[e->tid];  // default-constructs if missing
+    auto& inf = inflight[event->tid];
 
-    switch (e->type) {
-        case 0: {  // sys_enter
-            if (e->id >= MAX_SYSCALL) {
+    switch (event->type) {
+        // sys_enter
+        case 0: {
+            if (event->id >= MAX_SYSCALL) {
                 inf = Inflight{};
                 return 0;
             }
 
-            inf.syscall_id = e->id;
+            inf.syscall_id = event->id;
             inf.in_syscall = true;
             inf.running = false;
 
@@ -114,8 +116,8 @@ int SyscallProfiler::handle_event(void* /* ctx */, void* data, size_t data_sz) {
             start_segment(inf);
             break;
         }
-
-        case 2: {  // switch_out (prev_tid)
+        // switch_out
+        case 2: {
             // If the thread is switched out while still inside a syscall,
             // stop measuring so we do not measure sleep time.
             if (inf.in_syscall && inf.running) {
@@ -123,8 +125,8 @@ int SyscallProfiler::handle_event(void* /* ctx */, void* data, size_t data_sz) {
             }
             break;
         }
-
-        case 3: {  // switch_in (next_tid)
+        // switch_in
+        case 3: {
             // If the thread is scheduled back in and still inside the same syscall,
             // restart measuring for the next on-CPU segment.
             if (inf.in_syscall && !inf.running) {
@@ -132,8 +134,8 @@ int SyscallProfiler::handle_event(void* /* ctx */, void* data, size_t data_sz) {
             }
             break;
         }
-
-        case 1: {  // sys_exit
+        // sys_exit
+        case 1: {
             // Finish the last on-CPU segment
             if (inf.in_syscall && inf.running) {
                 stop_segment_and_accumulate(inf);
@@ -145,7 +147,7 @@ int SyscallProfiler::handle_event(void* /* ctx */, void* data, size_t data_sz) {
             }
 
             // Clear state for this TID to avoid stale entries
-            inflight.erase(e->tid);
+            inflight.erase(event->tid);
             break;
         }
 
