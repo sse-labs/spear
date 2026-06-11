@@ -115,7 +115,8 @@ int SyscallProfiler::handle_event(void* /* ctx */, void* data, size_t data_sz) {
             // At sys_enter we are on CPU, start measuring immediately
             start_segment(inf);
             break;
-        }// switch_out
+        }
+        // switch_out
         case 2: {
             // If the thread is switched out while still inside a syscall,
             // stop measuring so we do not measure sleep time.
