@@ -125,7 +125,6 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(const std::shared_ptr<psr::HelperA
 
 std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(llvm::FunctionAnalysisManager *analysisManager,
                                                             llvm::LoopInfo &loopInfo) {
-
     if (!this->isConstant && this->BaseLoad) {
         const llvm::Function *currentFunction = this->BaseLoad->getFunction();
         if (currentFunction) {
