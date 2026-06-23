@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2026 Maximilian Krebs
+ * Copyright (c) 2026 Maximilian Krebs
  * All rights reserved.
  */
 

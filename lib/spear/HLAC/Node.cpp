@@ -38,7 +38,6 @@ void Node::printDotRepresentation(std::ostream &os) {
     for (const llvm::Instruction &I : *this->block) {
         std::string line = Util::instToString(I);
 
-        // Only strip for calls/invokes/callbr
         if (llvm::isa<llvm::CallBase>(I)) {
             line = Util::stripParameters(line);
         }
@@ -47,7 +46,6 @@ void Node::printDotRepresentation(std::ostream &os) {
         rawBody += "\n";
     }
 
-    // Ensure last line is left-aligned too
     if (rawBody.empty() || rawBody.back() != '\n') {
         rawBody += "\n";
     }
@@ -83,7 +81,6 @@ void Node::printDotRepresentationWithSolution(std::ostream &os, std::vector<doub
     for (const llvm::Instruction &I : *this->block) {
         std::string line = Util::instToString(I);
 
-        // Only strip for calls/invokes/callbr
         if (llvm::isa<llvm::CallBase>(I)) {
             line = Util::stripParameters(line);
         }
@@ -92,7 +89,6 @@ void Node::printDotRepresentationWithSolution(std::ostream &os, std::vector<doub
         rawBody += "\n";
     }
 
-    // Ensure last line is left-aligned too
     if (rawBody.empty() || rawBody.back() != '\n') {
         rawBody += "\n";
     }

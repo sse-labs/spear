@@ -142,13 +142,13 @@ class FeasibilityAnalysisManager {
     const llvm::Value *resolve(uint32_t envId, const llvm::Value *val) const;
 
     /**
-     * Extend the environment represented by baseEnvId with a new binding from k to v, and return the Id
+     * Extend the environment represented by baseEnvId with a new binding from key to val, and return the Id
      * of the resulting environment.
      * @param baseEnvId Environment ID representing environment to extend.
      * @param key Key of the new binding to add to the environment.
      * @param val Value of the new binding to add to the environment.
      * @return Id of the new environment that extends the environment represented by
-     * baseEnvId with the new binding from k to v. If an identical environment already exists, returns the existing Id
+     * baseEnvId with the new binding from key to val. If an identical environment already exists, returns the existing Id
      * for that environment.
      */
     uint32_t extendEnv(uint32_t baseEnvId, const llvm::Value *key, const llvm::Value *val);
@@ -213,7 +213,7 @@ class FeasibilityAnalysisManager {
     /**
      * Environment cache map. This map is used to efficiently check for the existence of environments and to avoid
      * creating duplicate environments. The key is an EnvKey, which represents a single variable binding
-     * (key-value pair) in the environment, and the value is the ID of the environment that contains this binding.
+     * in the environment, and the value is the ID of the environment that contains this binding.
      */
     std::unordered_map<EnvKey, uint32_t, EnvKeyHash> EnvCache;
 

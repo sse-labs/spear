@@ -27,8 +27,6 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(const std::shared_ptr<psr::HelperA
         return;
     }
 
-    // Keep pointer for other components that might still expect it, but do not
-    // use it to query LoopAnalysis/DT analyses (may be a different/unregistered FAM).
     this->FAM = analysisManager;
 
     auto &interproceduralCFG = helperAnalyses->getICFG();
@@ -42,7 +40,6 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(const std::shared_ptr<psr::HelperA
     loopClassifiers.clear();
     LoopCaches.clear();
 
-    // Build and keep DT+LI per function alive
     for (llvm::Function &F : *module) {
         if (F.isDeclaration()) {
             continue;
@@ -71,12 +68,12 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(const std::shared_ptr<psr::HelperA
 
     for (const auto &description : loopDescriptions) {
         if (!description.loop || !description.counterRoot || !description.icmp) {
-            continue;  // Skip incomplete descriptions
+            continue;
         }
 
         llvm::BasicBlock *headerBlock = description.loop->getHeader();
         if (!headerBlock) {
-            continue;  // Missing loop header
+            continue;
         }
 
         llvm::Function *parentFunction = headerBlock->getParent();
@@ -88,7 +85,7 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(const std::shared_ptr<psr::HelperA
             continue;
         }
 
-        // Local DT + LoopInfo for the current parent function.
+        // Local DT and LoopInfo for the current parent function.
         llvm::DominatorTree DT(*parentFunction);
         llvm::LoopInfo loopInfo(DT);
 
@@ -102,7 +99,7 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(const std::shared_ptr<psr::HelperA
         auto incrementInterval = queryIntervalAtInstuction(incrementStore, counterRoot);
         auto predicate = description.icmp->getPredicate();
 
-        // Pass local DT+LoopInfo into helpers that need them.
+        // Pass local DT and LoopInfo into helpers that need them.
         auto checkExpression = findLoopCheckExpr(description, analysisManager, loopInfo);
         if (!checkExpression) {
             continue;
@@ -128,12 +125,10 @@ LoopBound::LoopBoundWrapper::LoopBoundWrapper(const std::shared_ptr<psr::HelperA
 
 std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(llvm::FunctionAnalysisManager *analysisManager,
                                                             llvm::LoopInfo &loopInfo) {
-    (void) analysisManager;  // may be null / unconfigured don't depend on it here.
 
     if (!this->isConstant && this->BaseLoad) {
         const llvm::Function *currentFunction = this->BaseLoad->getFunction();
         if (currentFunction) {
-            // Build dominator tree locally (no FAM).
             llvm::DominatorTree dominatorTree(*const_cast<llvm::Function *>(currentFunction));
 
             if (auto constValue = LoopBound::Util::tryDeduceConstFromLoad(this->BaseLoad, dominatorTree, loopInfo)) {
@@ -158,36 +153,37 @@ std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(llvm::FunctionAnalys
 
 void LoopBound::LoopBoundWrapper::collectLoops(llvm::Loop *loop, std::vector<llvm::Loop *> &outputLoops) {
     if (!loop) {
-        return;  // Nothing to collect
+        return;
     }
 
-    outputLoops.push_back(loop);  // Store current loop
+    // Store current loop
+    outputLoops.push_back(loop);
 
     for (llvm::Loop *subLoop : loop->getSubLoops()) {
-        collectLoops(subLoop, outputLoops);  // Recurse into subloops
+        collectLoops(subLoop, outputLoops);
     }
 }
 
 bool LoopBound::LoopBoundWrapper::hasCachedValueAt(const llvm::Instruction *instruction,
                                                    const llvm::Value *factValue) const {
     if (!this->cachedResults || !instruction || !factValue) {
-        return false;  // Validate inputs
+        return false;
     }
 
-    const llvm::Value *cleanFact = LoopBound::Util::stripAddr(factValue);  // Normalize fact
+    const llvm::Value *cleanFact = LoopBound::Util::stripAddr(factValue);
     if (!cleanFact) {
-        return false;  // Invalid fact
+        return false;
     }
 
-    const auto &results = *this->cachedResults;                  // Cached results
-    const auto &resultsAtInst = results.resultsAt(instruction);  // Results at instruction
+    const auto &results = *this->cachedResults;
+    const auto &resultsAtInst = results.resultsAt(instruction);
 
     auto foundIt = resultsAtInst.find(cleanFact);
     if (foundIt == resultsAtInst.end()) {
-        return false;  // No value cached
+        return false;
     }
 
-    const auto &intervalValue = foundIt->second;  // Extract interval
+    const auto &intervalValue = foundIt->second;
     return !intervalValue.isBottom() && !intervalValue.isTop() && !intervalValue.isEmpty();
 }
 
@@ -195,46 +191,46 @@ std::optional<LoopBound::DeltaInterval>
 LoopBound::LoopBoundWrapper::queryIntervalAtInstuction(const llvm::Instruction *instruction,
                                                        const llvm::Value *factValue) {
     if (!instruction || !factValue || !this->cachedResults) {
-        return std::nullopt;  // Missing inputs
+        return std::nullopt;
     }
 
-    const llvm::Value *cleanFact = LoopBound::Util::stripAddr(factValue);  // Normalize fact
+    const llvm::Value *cleanFact = LoopBound::Util::stripAddr(factValue);
     if (!cleanFact) {
         return std::nullopt;  // Invalid fact
     }
 
-    auto intervalValue = this->cachedResults->resultAt(instruction, cleanFact);  // Query result
+    auto intervalValue = this->cachedResults->resultAt(instruction, cleanFact);
 
     if (intervalValue.isBottom() || intervalValue.isTop() || intervalValue.isEmpty()) {
-        return std::nullopt;  // Unusable interval
+        return std::nullopt;
     }
-    return intervalValue;  // Return computed interval
+    return intervalValue;
 }
 
 const llvm::StoreInst *
 LoopBound::LoopBoundWrapper::findStoreIncOfLoop(const LoopBound::LoopParameterDescription &description) {
     if (!description.loop || !description.counterRoot) {
-        return nullptr;  // Missing loop or counter
+        return nullptr;
     }
 
-    const llvm::Value *counterRoot = LoopBound::Util::stripAddr(description.counterRoot);  // Normalize counter root
+    const llvm::Value *counterRoot = LoopBound::Util::stripAddr(description.counterRoot);
     if (!counterRoot) {
-        return nullptr;  // Invalid counter root
+        return nullptr;
     }
 
     for (llvm::BasicBlock *basicBlock : description.loop->blocks()) {
         for (llvm::Instruction &instruction : *basicBlock) {
             auto *storeInst = llvm::dyn_cast<llvm::StoreInst>(&instruction);
             if (!storeInst) {
-                continue;  // Not a store
+                continue;
             }
 
             if (LoopBound::LoopBoundIDEAnalysis::extractConstIncFromStore(storeInst, counterRoot).has_value()) {
-                return storeInst;  // Found increment store
+                return storeInst;
             }
         }
     }
-    return nullptr;  // No increment store found
+    return nullptr;
 }
 
 std::unordered_map<std::string, std::vector<LoopBound::LoopClassifier>>
@@ -243,7 +239,7 @@ LoopBound::LoopBoundWrapper::getLoopParameterDescriptionMap() {
 
     for (auto &desc : getClassifiers()) {
         if (!desc.loop || !desc.function) {
-            continue;  // Skip incomplete descriptions
+            continue;
         }
         llvm::Function *parentFunction = desc.loop->getHeader()->getParent();
         if (!parentFunction) {
@@ -341,7 +337,6 @@ LoopBound::LoopBoundWrapper::findLoopCheckExpr(const LoopBound::LoopParameterDes
     } else if (!op0IsCounter && op1IsCounter) {
         otherSideValue = op0;
     } else {
-        // Can't even identify counter side -> no check expr
         return std::nullopt;
     }
 
@@ -361,7 +356,7 @@ LoopBound::LoopBoundWrapper::findLoopCheckExpr(const LoopBound::LoopParameterDes
         }
     }
 
-    // 2) base + const
+    // 2) base and const
     if (auto expr = peelBasePlusConst(otherSideValue)) {
         return *expr;
     }
@@ -378,7 +373,7 @@ LoopBound::LoopBoundWrapper::findLoopCheckExpr(const LoopBound::LoopParameterDes
 
     LoopBound::CheckExpr Unknown(nullptr, nullptr, -255, false, true);
 
-    // Fallback or unknown values. This mitigates classifier throw away, if we encounter a nested loop
+    // Fallback or unknown values.
     if (Util::loopIsDependentNested(description, loopInfo)) {
         return Unknown;
     }

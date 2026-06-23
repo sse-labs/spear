@@ -102,7 +102,8 @@ DeltaIntervalAdditive::DeltaIntervalAdditive(int64_t L, int64_t U) : lowerBound(
     return source;
   }
 
-  return source.leastUpperBound(inc);  // hull accumulate
+  // hull accumulate
+  return source.leastUpperBound(inc);
 }
 
 EF DeltaIntervalAdditive::compose(psr::EdgeFunctionRef<DeltaIntervalAdditive> self, const EF &second) {
@@ -272,7 +273,8 @@ DeltaIntervalDivision::DeltaIntervalDivision(int64_t L, int64_t U)
     return source;
   }
 
-  return source.leastUpperBound(inc);  // hull accumulate
+  // hull accumulate
+  return source.leastUpperBound(inc);
 }
 
 EF DeltaIntervalDivision::compose(psr::EdgeFunctionRef<DeltaIntervalDivision> self, const EF &second) {
@@ -291,7 +293,6 @@ EF DeltaIntervalDivision::compose(psr::EdgeFunctionRef<DeltaIntervalDivision> se
     return EF(std::in_place_type<DeltaIntervalTop>);
   }
 
-  // Do not mix lattice element types
   if (second.template isa<DeltaIntervalAdditive>()) {
     return EF(std::in_place_type<DeltaIntervalTop>);
   }

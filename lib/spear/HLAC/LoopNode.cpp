@@ -255,14 +255,14 @@ void LoopNode::collapseLoop(std::vector<std::unique_ptr<Edge>> &edgeList) {
         const bool sourceIsInLoop = nodesInLoop.count(edge->soure) != 0;
         const bool destinationIsInLoop = nodesInLoop.count(edge->destination) != 0;
 
-        // Edge completely inside this loop: move it into this->Edges
+        // Edge completely inside this loop move it into this->Edges
         if (sourceIsInLoop && destinationIsInLoop) {
             this->Edges.push_back(std::move(*edgeIterator));
             edgeIterator = edgeList.erase(edgeIterator);
             continue;
         }
 
-        // Boundary edge: redirect endpoints that touch nodes inside this loop
+        // Boundary edge redirect endpoints that touch nodes inside this loop
         if (sourceIsInLoop) {
             edge->soure = this;
         }
@@ -311,7 +311,6 @@ void LoopNode::refreshBackEdges() {
 }
 
 void LoopNode::constructCallNodes(bool considerDebugFunctions) {
-    // Snapshot current nodes
     std::vector<GenericNode *> work;
     work.reserve(this->Nodes.size());
 
@@ -360,8 +359,6 @@ void LoopNode::constructCallNodes(bool considerDebugFunctions) {
         }
     }
 
-    // Call construction may split, replace or remove edges.
-    // Therefore the previously cached backedge pointer may be stale now.
     this->refreshBackEdges();
 }
 

@@ -260,8 +260,6 @@ void FunctionNode::constructLoopNodes(std::vector<llvm::Loop *> &loops) {
 }
 
 void FunctionNode::constructCallNodes(bool considerDebugFunctions) {
-    // Create shadowed worklist of Nodes that need to be considered
-    // We shadow the list here to avoid dereferencing nodes while we are still working on them
     std::vector<GenericNode*> work;
     work.reserve(this->Nodes.size());
     for (auto &up : this->Nodes) {
@@ -373,8 +371,6 @@ std::string FunctionNode::getDotName() {
 }
 
 double FunctionNode::getEnergy() {
-    // Here we need to implement the global ILP formulation for the function energy estimation or the
-    // DAG search based approach
     double energy = 0.0;
 
     return energy;

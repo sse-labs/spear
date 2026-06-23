@@ -9,12 +9,11 @@
 
 std::optional<int64_t> LoopBound::CheckExpr::calculateCheck(
     llvm::FunctionAnalysisManager *analysisManager, llvm::LoopInfo &loopInfo) {
-    (void)analysisManager;  // may be null / unconfigured don't depend on it here.
 
     if (!this->isConstant && this->BaseLoad) {
         const llvm::Function *currentFunction = this->BaseLoad->getFunction();
         if (currentFunction) {
-            // Build dominator tree locally (no FAM).
+            // Build dominator tree locally
             llvm::DominatorTree dominatorTree(*const_cast<llvm::Function *>(currentFunction));
 
             if (auto constValue =

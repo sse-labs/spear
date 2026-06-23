@@ -23,6 +23,7 @@ class Generator:
 
             filename = Path(self.baseloc) / f"{opcode}.ll"
 
+            # Handle special instructions
             if opcode == "br":
                 with open(filename, "w") as f:
                     f.write(f'@global = global i32 0\n\n')
@@ -55,7 +56,7 @@ class Generator:
                     f.write('  ret i32 0\n')
                     f.write('}\n')
 
-                continue
+                continue # Skip the rest of the loop for this instruction since we already handled it
 
             if opcode == "switch":
                 with open(filename, "w") as f:
@@ -92,7 +93,7 @@ class Generator:
                     f.write('  ret i32 0\n')
                     f.write('}\n')
 
-                continue
+                continue # Skip the rest of the loop for this instruction since we already handled it
 
             if opcode == "frem":
                 with open(filename, "w") as f:
@@ -113,11 +114,9 @@ class Generator:
                     f.write('  ret i32 0\n')
                     f.write('}\n')
 
-                continue
+                continue # Skip the rest of the loop for this instruction since we already handled it
 
-            # -----------------------------------------------------------------
-            # NORMAL BEHAVIOR FOR OTHER OPCODES
-            # -----------------------------------------------------------------
+            # Handle non exceptions and deal with complex and normal instructions
             if not inst.is_complex:
                 with open(filename, "w") as f:
                     if inst.sideeffecttype is not None:

@@ -40,7 +40,7 @@ class EnvNode {
 };
 
 /**
- * Key for the environment map, representing a single binding (key-value pair) in the environment.
+ * Key for the environment map, representing a single binding in the environment.
  * This struct is used as the key in the environment map to allow for efficient lookup of bindings based on the environment ID and the key-value pair.
  */
 struct EnvKey {

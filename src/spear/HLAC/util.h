@@ -211,14 +211,14 @@ class Util {
         std::vector<double> &result);
 
     /**
- * Collect all LoopNodes and nested LoopNodes that have more than one incoming or outgoing edge.
- * The edge counts are computed relative to the graph level that directly contains the LoopNode.
- *
- * @param functionName Name of the parent function
- * @param nodes Nodes to inspect
- * @param edges Edges belonging to the inspected graph level
- * @param loopNodeEdgeSummaries Output vector receiving matching LoopNode summaries
- */
+     * Collect all LoopNodes and nested LoopNodes that have more than one incoming or outgoing edge.
+     * The edge counts are computed relative to the graph level that directly contains the LoopNode.
+     *
+     * @param functionName Name of the parent function
+     * @param nodes Nodes to inspect
+     * @param edges Edges belonging to the inspected graph level
+     * @param loopNodeEdgeSummaries Output vector receiving matching LoopNode summaries
+     */
     static void collectLoopNodeEdgeSummaries(
         const std::string &functionName,
         const std::vector<std::unique_ptr<HLAC::GenericNode>> &nodes,

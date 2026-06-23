@@ -46,8 +46,6 @@ void hlac::printDotRepresentation() {
 void hlac::printDotRepresentationWithSolution(FunctionNode *FN, std::vector<double> result, std::string appendName) {
     std::filesystem::create_directories("./dot");
 
-    // Why the fuck do we run in a loop here? We write dot with different input results from other functions...
-    // Remove this loop
     std::string filename = "./dot/" + FN->name + "_solution_" + appendName + ".dot";
     std::ofstream out(filename);
 
@@ -297,8 +295,6 @@ ILPClusteredLoopResult hlac::solveClusteredIlps(ILPLoopModelMapping loopModelMap
     // for the function
     std::unordered_map<LoopNode *, ILPResult> loopEnergyMapping;
     loopEnergyMapping.reserve(loopModelMapping.size());
-
-    // std::cout << "Clustered results for " << name << ":\n";
 
     for (const auto &[loopNode, model] : loopModelMapping) {
         if (cache.entryExists(loopNode->hash)) {

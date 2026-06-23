@@ -28,7 +28,7 @@ DeltaInterval DeltaInterval::top() {
 
 DeltaInterval DeltaInterval::empty() {
   // Neutral element for LUB over NORMAL increments.
-  // Means: "no increments observed yet".
+  // Means: no increments observed yet.
   return {ValueType::EMPTY, 0, 0};
 }
 

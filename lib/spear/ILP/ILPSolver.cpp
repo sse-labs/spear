@@ -36,7 +36,7 @@ ILPSolver::ILPSolver(const ILPModel& model) : underlyingILPModel(model), solutio
         underlyingILPModel.row_lb.data(),
         underlyingILPModel.row_ub.data());
 
-    // Set the goal of the solver to maximize (-1 max/ +1 min)
+    // Set the goal of the solver to maximize (-1 max +1 min)
     solver.setObjSense(-1.0);
 
     // Set the expected values to be integers, as edges can only be executed integer-wise

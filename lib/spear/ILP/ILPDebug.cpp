@@ -160,7 +160,6 @@ void ILPDebug::dumpILPModel(
     const CoinPackedMatrix *columnOrderedMatrix = &model.matrix;
     CoinPackedMatrix columnOrderedCopy;
 
-    // We want to inspect columns. If the matrix is row-ordered, create a column-ordered copy first.
     if (!model.matrix.isColOrdered()) {
         columnOrderedCopy.reverseOrderedCopyOf(model.matrix);
         columnOrderedMatrix = &columnOrderedCopy;
@@ -215,7 +214,6 @@ void ILPDebug::dumpILPModel(
     const CoinPackedMatrix *rowOrderedMatrix = &model.matrix;
     CoinPackedMatrix rowOrderedCopy;
 
-    // We want to iterate rows. If the matrix is column-ordered, create a row-ordered copy first.
     if (model.matrix.isColOrdered()) {
         rowOrderedCopy.reverseOrderedCopyOf(model.matrix);
         rowOrderedMatrix = &rowOrderedCopy;

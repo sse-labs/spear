@@ -54,8 +54,6 @@ std::optional<int64_t> LoopBound::LoopClassifier::solveAdditiveBound(llvm::CmpIn
 std::optional<int64_t> LoopBound::LoopClassifier::solveMultiplicativeBound(
 llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
     // We do not deal with == or !=
-    // Only calculate check o init * increment^k
-    // Where o is one of { <, <= } and init > 0, check > 0, increment > 0
     if (pred == llvm::CmpInst::ICMP_EQ || pred == llvm::CmpInst::ICMP_NE) {
         return std::nullopt;
     }
@@ -106,8 +104,6 @@ llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
 std::optional<int64_t> LoopBound::LoopClassifier::solveDivisionBound(
 llvm::CmpInst::Predicate pred, int64_t init, int64_t check, int64_t increment) {
     // We do not deal with == or !=
-    // Only calculate check o init * increment^k
-    // Where o is one of { <, <= } and init > 0, check > 0, increment > 0
     if (pred == llvm::CmpInst::ICMP_EQ || pred == llvm::CmpInst::ICMP_NE) {
         return std::nullopt;
     }

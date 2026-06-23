@@ -121,8 +121,6 @@ void PassUtil::collectCallNodeBindingsFromNestedNodes(HLAC::GenericNode *current
 
 void PassUtil::cacheDirectNodeEnergies(HLAC::GenericNode *currentNode,
                                        std::unordered_map<HLAC::GenericNode *, double> &directNodeEnergyCache) {
-    // Call node energies are updated later once callee energies are known.
-    // Do not cache them here to avoid storing stale values.
     if (currentNode->nodeType == HLAC::NodeType::CALLNODE) {
         return;
     }

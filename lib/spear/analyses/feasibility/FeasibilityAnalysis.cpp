@@ -164,7 +164,7 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getNormalFlowFunct
 }
 
 FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallFlowFunction(n_t CallSite, f_t Callee) {
-    // Intraprocedural: do not propagate any facts into the callee.
+    // Intraprocedural do not propagate any facts into the callee.
     auto Inner = std::make_shared<EmptyFlow<d_t, container_t>>();
     return std::make_shared<DebugFlow<d_t, container_t>>(
         Inner, "CallEmpty", this, CallSite, CallSite);
@@ -172,7 +172,7 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallFlowFunctio
 
 FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getRetFlowFunction(n_t CallSite, f_t Callee,
                                                                                 n_t ExitStmt, n_t RetSite) {
-    // Intraprocedural: do not propagate any facts back from the callee.
+    // Intraprocedural do not propagate any facts back from the callee.
     auto Inner = std::make_shared<EmptyFlow<d_t, container_t>>();
     return std::make_shared<DebugFlow<d_t, container_t>>(
         Inner, "RetEmpty", this, CallSite, RetSite);
@@ -180,7 +180,7 @@ FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getRetFlowFunction
 
 FeasibilityAnalysis::FlowFunctionPtrType FeasibilityAnalysis::getCallToRetFlowFunction(n_t CallSite, n_t RetSite,
                                                                                        llvm::ArrayRef<f_t> Callees) {
-    // Intraprocedural: keep facts within the caller across a call site.
+    // Intraprocedural keep facts within the caller across a call site.
     auto Inner = std::make_shared<KeepLocalOnCallToRet<d_t, container_t>>();
     return std::make_shared<DebugFlow<d_t, container_t>>(
         Inner, "CallToRetKeepLocal", this, CallSite, RetSite);
@@ -200,14 +200,13 @@ FeasibilityAnalysis::getNormalEdgeFunction(n_t curr, d_t currNode, n_t succ, d_t
         return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
     }
 
-    // We only care about branch conditions for pruning; everything else is identity.
+    // We only care about branch conditions for pruning everything else is identity.
     auto *br = llvm::dyn_cast<llvm::BranchInst>(curr);
     if (!br) {
         return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
     }
 
-    // Unconditional branch: no constraint. Still, phi substitution will be applied
-    // later when constraints are built (in successor), so nothing to add here.
+    // Unconditional branch no constraint.
     if (!br->isConditional()) {
         return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
     }

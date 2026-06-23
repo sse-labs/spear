@@ -385,7 +385,6 @@ std::string Hasher::typeToString(const llvm::Type *type) {
 std::string Hasher::apIntToString(const llvm::APInt &value) {
     llvm::SmallVector<char, 32> buffer;
 
-    // Convert APInt to string (base 10, signed)
     value.toString(buffer, 10, true);
 
     return std::string(buffer.begin(), buffer.end());

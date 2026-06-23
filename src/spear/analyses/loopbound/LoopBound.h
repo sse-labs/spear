@@ -137,7 +137,6 @@ class LoopBoundIDEAnalysis final  : public psr::IDETabulationProblem<LoopBoundDo
 
     /**
      * Check if the given Fact stores any information other than the ZeroValue.
-     * This method is rather useful if you want to check, if the given fact is the initial seeded value
      * @param Fact Fact to be analyzed
      * @return True if the fact is the ZeroValue, false otherwise
      */

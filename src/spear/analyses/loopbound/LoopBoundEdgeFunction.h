@@ -6,10 +6,8 @@
 /**
  * LoopBoundEdgeFunction
  *
-*  The edge functions form a small lattice that describes how loop-step
+*  The edge functions form a lattice that describes how loop-step
  * information is transformed along control-flow paths.
- *
- *
  *
  */
 
@@ -298,8 +296,7 @@ struct DeltaIntervalIdentity {
  * Top edge function for the edge-function lattice.
  *
  * Represents "unknown" transformation. When applied it yields the top element
- * of the value lattice (unless source is bottom/unreachable, depending on the
- * DeltaInterval semantics).
+ * of the value lattice
  */
 struct DeltaIntervalTop {
     using l_t = LoopBound::l_t;

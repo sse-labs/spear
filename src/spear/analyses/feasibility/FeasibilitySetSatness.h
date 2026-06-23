@@ -68,12 +68,12 @@ struct SetSatnessKeyInfo : llvm::DenseMapInfo<SetSatnessKey> {
     }
 
     /**
-     * Returns a tombstone key for SetSatnessKey, which is a special value that is used to represent a deleted slot
-     * in the DenseMap. The tombstone key is defined as a SetSatnessKey with the manager pointer set to a special
+     * Returns a key for SetSatnessKey, which is a special value that is used to represent a deleted slot
+     * in the DenseMap. The key is defined as a SetSatnessKey with the manager pointer set to a special
      * invalid value (e.g., ~1) and the vector of AST IDs containing a
-     * @return SetSatnessKey representing the tombstone key for DenseMap
+     * @return SetSatnessKey representing the key for DenseMap
      */
-    static inline SetSatnessKey getTombstoneKey() {
+    static inline SetSatnessKey getKey() {
         SetSatnessKey K;
         K.Mgr = reinterpret_cast<const Feasibility::FeasibilityAnalysisManager*>(~uintptr_t(1));
         K.AstIds.push_back(~0u);

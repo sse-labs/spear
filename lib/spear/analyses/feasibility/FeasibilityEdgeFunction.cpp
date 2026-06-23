@@ -78,12 +78,10 @@ l_t FeasibilityAllBottomEF::computeTarget(const l_t &source) const {
 }
 
 EF FeasibilityAllBottomEF::compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF>, const EF & /*second*/) {
-  // Bottom ∘ g = Bottom
   return EF(std::in_place_type<FeasibilityAllBottomEF>);
 }
 
 EF FeasibilityAllBottomEF::join(psr::EdgeFunctionRef<FeasibilityAllBottomEF>, const psr::EdgeFunction<l_t> &otherFunc) {
-  // Bottom ⊔ g = Bottom
   return EF(std::in_place_type<FeasibilityAllBottomEF>);
 }
 
@@ -137,8 +135,6 @@ l_t FeasibilityAddAtomsEF::computeTarget(const l_t &source) const {
 }
 
 EF FeasibilityAddAtomsEF::compose(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisFunc, const EF &secondFunction) {
-  // this ∘ g: apply g first, then apply this
-
   // ignore identity
   if (Util::isIdEF(secondFunction)) {
     return EF(thisFunc);
@@ -149,11 +145,10 @@ EF FeasibilityAddAtomsEF::compose(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> th
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
   }
 
-  // AddAtoms ∘ AddAtoms = AddAtoms(concat atoms)
   if (auto *g = secondFunction.template dyn_cast<FeasibilityAddAtomsEF>()) {
     // Concat the two vectors
     auto merged = concatDedup<LazyAtom, 4>(g->atoms, thisFunc->atoms);
-    // Check if the resulting vector is empty, which means the resulting function is Identity (adds no atoms)
+    // Check if the resulting vector is empty, which means the resulting function is Identity
     if (merged.empty()) {
       // This can only happen if both this and g have empty atom lists, which means they are both Identity functions.
       return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
@@ -164,7 +159,6 @@ EF FeasibilityAddAtomsEF::compose(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> th
   }
 
   // Unknown EF type:
-  // Returning Identity is the safe "adds nothing" fallback.
   return EF(std::in_place_type<psr::EdgeIdentity<l_t>>);
 }
 
@@ -180,7 +174,6 @@ EF FeasibilityAddAtomsEF::join(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisF
     return EF(std::in_place_type<FeasibilityAllBottomEF>);
   }
 
-  // AddAtoms ⊔ AddAtoms = AddAtoms(intersection of atoms)
   if (auto *g = otherFunc.template dyn_cast<FeasibilityAddAtomsEF>()) {
     // Calculate intersection of sets
     auto inter = intersectVec<LazyAtom, 4>(thisFunc->atoms, g->atoms);

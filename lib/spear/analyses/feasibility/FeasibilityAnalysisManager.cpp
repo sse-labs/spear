@@ -54,8 +54,6 @@ uint32_t FeasibilityAnalysisManager::internSet(const ExprSet &set) {
     // Otherwise calculate the key
     const SetKey key = makeSetKey(set);
 
-    std::lock_guard<std::mutex> lock(SetsMutex);
-
     // Query the cache for the bucket containing candidates with the same hash
     auto existing = CanonicalSetCache.find(key);
     if (existing != CanonicalSetCache.end()) {

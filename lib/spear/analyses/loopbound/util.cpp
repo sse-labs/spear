@@ -116,7 +116,6 @@ const llvm::Value *getUnderlyingObject(const llvm::Value *pointer) {
     while (currentValue) {
         currentValue = currentValue->stripPointerCasts();
 
-        // Peel GEPs (instruction + operator forms)
         if (auto *gepInst = llvm::dyn_cast<llvm::GetElementPtrInst>(currentValue)) {
             currentValue = gepInst->getPointerOperand();
             continue;
@@ -171,7 +170,7 @@ const llvm::ConstantInt *tryEvalToConstInt(const llvm::Value *value) {
         return llvm::ConstantInt::get(castInst->getType()->getContext(), constValue);
     }
 
-    // Fold simple binops of constant ints (recursively)
+    // Fold simple binops of constant ints
     auto *binOp = llvm::dyn_cast<llvm::BinaryOperator>(value);
     if (!binOp) {
         return nullptr;
@@ -267,13 +266,11 @@ const llvm::StoreInst *findDominatingStoreToObject(const llvm::LoadInst *loadIns
                 continue;
             }
 
-            // Prefer a later dominating store if dominance-ordered
             if (dominatorTree.dominates(bestStore, storeInst)) {
                 bestStore = storeInst;
                 continue;
             }
 
-            // Same block: pick whichever appears later before the load
             if (storeInst->getParent() == loadInst->getParent() && bestStore->getParent() == loadInst->getParent()) {
                 const llvm::BasicBlock *block = loadInst->getParent();
                 const llvm::StoreInst *lastSeenStore = nullptr;
@@ -358,9 +355,6 @@ std::optional<int64_t> tryDeduceConstFromLoad(
     if (!object)
         return std::nullopt;
 
-    // If Obj is written in any loop that can affect this load, do not treat it as const.
-    // In particular: if there is a store to Obj in any loop that contains this load
-    // (or any parent loop), it's loop-variant.
     llvm::Loop *currentLoop = loopInfo.getLoopFor(loadInst->getParent());
     if (currentLoop) {
         for (llvm::Loop *loopLevel = currentLoop; loopLevel != nullptr; loopLevel = loopLevel->getParentLoop()) {
@@ -508,13 +502,11 @@ bool loopIsUniform(llvm::Loop *loop, llvm::DominatorTree &dominatorTree) {
     if (!loop)
         return false;
 
-    // Still important for your init/inc inference
     llvm::BasicBlock *preheader = loop->getLoopPreheader();
     llvm::BasicBlock *latchBlock = loop->getLoopLatch();
     if (!preheader || !latchBlock)
         return false;
 
-    // We need at least one "main" exiting condition that bounds the backedge.
     auto *latchBranch = llvm::dyn_cast<llvm::BranchInst>(latchBlock->getTerminator());
     if (latchBranch && latchBranch->isConditional()) {
         if (LoopBound::Util::peelToICmp(latchBranch->getCondition())) {
@@ -522,8 +514,6 @@ bool loopIsUniform(llvm::Loop *loop, llvm::DominatorTree &dominatorTree) {
         }
     }
 
-    // Otherwise: find an exiting block whose terminator condition is an ICmp
-    // and which dominates the latch (so it constrains the backedge count).
     llvm::SmallVector<llvm::BasicBlock *, 8> exitingBlocks;
     loop->getExitingBlocks(exitingBlocks);
 
@@ -552,14 +542,12 @@ static const llvm::LoadInst *getDirectLoadFromRoot(const llvm::Value *value,
 
     value = LoopBound::Util::stripCasts(value);
 
-    // Accept add/sub with 0 around the load (common noise)
     if (auto *binOp = llvm::dyn_cast<llvm::BinaryOperator>(value)) {
         auto opcode = binOp->getOpcode();
         if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::Sub) {
             const llvm::Value *operandLeft = LoopBound::Util::stripCasts(binOp->getOperand(0));
             const llvm::Value *operandRight = LoopBound::Util::stripCasts(binOp->getOperand(1));
 
-            // x + 0 or x - 0
             if (auto *constInt = llvm::dyn_cast<llvm::ConstantInt>(operandRight)) {
                 if (constInt->isZero()) {
                     value = operandLeft;
@@ -679,7 +667,7 @@ void collectMemRootsFromScalarExpr(const llvm::Value *val, llvm::SmallPtrSetImpl
             continue;
         }
 
-        // If it's a load, its root is the pointer operand.
+        // If its a load, its root is the pointer operand.
         if (auto *LI = llvm::dyn_cast<llvm::LoadInst>(Cur)) {
             // Get the pointer and add it to the root list
             const llvm::Value *Ptr = LoopBound::Util::stripCasts(LI->getPointerOperand());

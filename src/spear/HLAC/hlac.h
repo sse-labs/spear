@@ -299,6 +299,10 @@ class Node : public GenericNode {
      */
     double getEnergy() override;
 
+    /**
+     * Calculate a hash for the node
+     * @return Hash of the node
+     */
     std::string calculateHash() override;
 };
 
@@ -521,7 +525,7 @@ class FunctionNode : public GenericNode {
 
     /**
      * Mapping of node index in the internal nodes vector to the energy of the corresponding node.
-     * This is used to precalculate the energy of all nodes in the function and to access it in O(1) time during
+     * This is used to precalculate the energy of all nodes in the function and to access it in linear time during
      * ILP construction.
      */
     std::vector<double> baseNodeEnergy;

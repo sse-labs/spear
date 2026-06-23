@@ -171,8 +171,6 @@ std::string Util::shortenStdStreamOps(std::string s) {
     replace_all("operator>>", "operator >>");
     replace_all("operator|",  "operator |");
 
-    // Collapse the extremely common ostream signatures
-    // Return type + namespace prefixes vary, so we match loosely.
     static const std::regex ostreamNoise(
         R"(std::basic_ostream<char,\s*std::char_traits<char>\s*>\s*&\s*)");
     s = std::regex_replace(s, ostreamNoise, "ostream& ");
@@ -181,7 +179,6 @@ std::string Util::shortenStdStreamOps(std::string s) {
         R"(std::basic_istream<char,\s*std::char_traits<char>\s*>\s*&\s*)");
     s = std::regex_replace(s, istreamNoise, "istream& ");
 
-    // Also shorten parameter occurrences of those types
     s = std::regex_replace(s, ostreamNoise, "ostream& ");
     s = std::regex_replace(s, istreamNoise, "istream& ");
 

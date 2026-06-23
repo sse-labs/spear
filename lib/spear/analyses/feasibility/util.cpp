@@ -223,7 +223,7 @@ z3::expr Util::createConstraintFromICmp(FeasibilityAnalysisManager *manager,
             cmp = (*c0 <= *c1);
             break;
         default:
-            // If we encounter an unsupported predicate, we return a default formula (true) that
+            // If we encounter an unsupported predicate, we return a default formula that
             // does not constrain the analysis.
             cmp = manager->getContext().bool_val(true);
             break;

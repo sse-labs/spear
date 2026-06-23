@@ -105,7 +105,7 @@ class FeasibilityElement {
 
   /**
    * Bottom is not represented by a formula set, but directly by the Kind::Bottom.
-   * However, we reserve an ID in the manager's formula storage for it as well (bottomId),
+   * However, we reserve an ID in the manager's formula storage for it as well,
    * which is not used in our representation but can be used as a placeholder if needed.
    */
   static constexpr uint32_t bottomId = 1;

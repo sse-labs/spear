@@ -460,7 +460,7 @@ std::vector<double> CPUProfiler::_measureFile(const std::string& file, uint64_t 
 
     for (uint64_t it = 0; it < iters; /* manual increment inside */) {
         std::vector<pid_t> pids(number_of_cores);
-        bool validIteration = true;  // assume good; flip to false on invalid diff
+        bool validIteration = true;
 
         // Launch processes: one on each core
         for (int core = 0; core < number_of_cores; core++) {

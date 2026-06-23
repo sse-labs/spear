@@ -42,14 +42,14 @@ struct FeasibilityAllBottomEF {
     [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAllBottomEF>, const EF &secondFunction);
 
     /**
-     * Combines two EFs using the join operation h(x) = f(x) ⊔ g(x). f(x) being this function
+     * Combines two EFs using the join operation h(x) = f(x) u g(x). f(x) being this function
      * @param otherFunc g(x)
      * @return h(x)
      */
     [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAllBottomEF>, const psr::EdgeFunction<l_t> &otherFunc);
 
     /**
-     * Compare this EF with another one for equality. Since this EF is a singleton, we can just check the type.
+     * Compare this EF with another one for equality.
      * @return true if equal, false otherwise
      */
     bool operator==(const FeasibilityAllBottomEF &) const = default;
@@ -124,7 +124,7 @@ struct FeasibilityAddAtomsEF {
     [[nodiscard]] static EF compose(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisFunc, const EF &secondFunction);
 
     /**
-     * Compare this EF with another one for equality. Since this EF is a singleton, we can just check the type.
+     * Compare this EF with another one for equality.
      * @return true if equal, false otherwise
      */
     [[nodiscard]] static EF join(psr::EdgeFunctionRef<FeasibilityAddAtomsEF> thisFunc,
@@ -138,7 +138,7 @@ struct FeasibilityAddAtomsEF {
 
     /**
      * Constant EFs are those that always return the same value regardless of the input.
-     * Since the values represented by this EF change depending on the input (the source lattice element),
+     * Since the values represented by this EF change depending on the input
      * it is not a constant EF.
      * @return true as this is a constant EF.
      */

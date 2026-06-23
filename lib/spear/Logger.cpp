@@ -10,7 +10,7 @@
 #include <string>
 
 Logger& Logger::getInstance() {
-    static Logger instance;  // Thread-safe since C++11
+    static Logger instance;
     return instance;
 }
 

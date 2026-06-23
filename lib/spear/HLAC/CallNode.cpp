@@ -76,7 +76,7 @@ void CallNode::collapseCalls(Node *belongingNode, std::vector<std::unique_ptr<Ge
             }
             // Store the targets that need to be connected to our CallNode
             targets.push_back(e->destination);
-            it = edgeList.erase(it);  // Remove the connection belongingNode -> target
+            it = edgeList.erase(it);
             continue;
         }
 
@@ -138,13 +138,10 @@ void CallNode::printDotRepresentation(std::ostream &os) {
        << "fontname=\"Courier\","
        << "label=\"{";
 
-    // First row
     os << "call";
 
-    // Second row: function name
     os << " | " << escapedLabel;
 
-    // Third row: flags
     os << " | {"
        << "LINKERFUNC=" << isLinkerFunction << " | "
        << "DEBUGFUNC=" << isDebugFunction << " | "

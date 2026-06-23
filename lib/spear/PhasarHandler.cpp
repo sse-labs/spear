@@ -179,7 +179,6 @@ Feasibility::BlockFeasibilityMap PhasarHandlerPass::queryFeasibilityOfFunction(l
   SatCache.reserve(128);
 
   // At all blocks to the visited set with default entries to ensure we don't revisit them.
-  // We will fill in the actual feasibility info in the next loop.
   for (auto &BB : *Func) {
     const std::string BBName = blockName(BB);
     // Initialize each entry
@@ -203,8 +202,7 @@ Feasibility::BlockFeasibilityMap PhasarHandlerPass::queryFeasibilityOfFunction(l
     // Mark this block as visited
     visited[BB].visited = true;
 
-    // Query feasibility at the last instruction of the block (terminator),
-    // which is the most stable point to query for block entry feasibility.
+    // Query feasibility
     if (const llvm::Instruction *Term = BB->getTerminator()) {
       // Query the analysis result for the terminator instruction and check if it contains an entry for the zero value.
       auto res = FeasibilityResult->resultsAt(Term);

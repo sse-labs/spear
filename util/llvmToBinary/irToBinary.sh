@@ -51,19 +51,15 @@ function compileFile() {
 
 input="$1"
 
-# --- Argument handling: directory, file, or filename ---
 if [[ -d "$input" ]]; then
-  # Input is a directory → compile all .ll files
   for f in "$input"/*.ll; do
     compileFile "$f"
   done
 
 elif [[ -f "$input" ]]; then
-  # Input is an actual file path → compile this .ll file
   compileFile "$input"
 
 elif [[ -f "$input.ll" ]]; then
-  # Input is a bare filename (like "select") → compile select.ll
   compileFile "$input.ll"
 
 else
