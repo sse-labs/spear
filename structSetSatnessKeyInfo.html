@@ -88,8 +88,8 @@ Inheritance diagram for SetSatnessKeyInfo:</div>
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a3aabe29b0452a02c3df14a5222d285bd" id="r_a3aabe29b0452a02c3df14a5222d285bd"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSetSatnessKeyInfo.html#a3aabe29b0452a02c3df14a5222d285bd">getEmptyKey</a> ()</td></tr>
 <tr class="separator:a3aabe29b0452a02c3df14a5222d285bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af3eb6c56aff3e29480ba94f594d35a3a" id="r_af3eb6c56aff3e29480ba94f594d35a3a"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSetSatnessKeyInfo.html#af3eb6c56aff3e29480ba94f594d35a3a">getTombstoneKey</a> ()</td></tr>
-<tr class="separator:af3eb6c56aff3e29480ba94f594d35a3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a296f32ccb386a0d37e661a5edf9813f9" id="r_a296f32ccb386a0d37e661a5edf9813f9"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSetSatnessKeyInfo.html#a296f32ccb386a0d37e661a5edf9813f9">getKey</a> ()</td></tr>
+<tr class="separator:a296f32ccb386a0d37e661a5edf9813f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3fd512762045e9c3200e04d71e68639a" id="r_a3fd512762045e9c3200e04d71e68639a"><td class="memItemLeft" align="right" valign="top">static unsigned&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSetSatnessKeyInfo.html#a3fd512762045e9c3200e04d71e68639a">getHashValue</a> (const <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> &amp;K)</td></tr>
 <tr class="separator:a3fd512762045e9c3200e04d71e68639a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a59cd79c7021c9fcae8f48ac9e6bc4696" id="r_a59cd79c7021c9fcae8f48ac9e6bc4696"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSetSatnessKeyInfo.html#a59cd79c7021c9fcae8f48ac9e6bc4696">isEqual</a> (const <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> &amp;L, const <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> &amp;R)</td></tr>
@@ -157,8 +157,8 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="af3eb6c56aff3e29480ba94f594d35a3a" name="af3eb6c56aff3e29480ba94f594d35a3a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af3eb6c56aff3e29480ba94f594d35a3a">&#9670;&#160;</a></span>getTombstoneKey()</h2>
+<a id="a296f32ccb386a0d37e661a5edf9813f9" name="a296f32ccb386a0d37e661a5edf9813f9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a296f32ccb386a0d37e661a5edf9813f9">&#9670;&#160;</a></span>getKey()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -167,7 +167,7 @@ Static Public Member Functions</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">static <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> SetSatnessKeyInfo::getTombstoneKey </td>
+          <td class="memname">static <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> SetSatnessKeyInfo::getKey </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -179,7 +179,7 @@ Static Public Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Returns a tombstone key for <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a>, which is a special value that is used to represent a deleted slot in the DenseMap. The tombstone key is defined as a <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> with the manager pointer set to a special invalid value (e.g., ~1) and the vector of AST IDs containing a </p><dl class="section return"><dt>Returns</dt><dd><a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> representing the tombstone key for DenseMap </dd></dl>
+<p>Returns a key for <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a>, which is a special value that is used to represent a deleted slot in the DenseMap. The key is defined as a <a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> with the manager pointer set to a special invalid value (e.g., ~1) and the vector of AST IDs containing a </p><dl class="section return"><dt>Returns</dt><dd><a class="el" href="structSetSatnessKey.html">SetSatnessKey</a> representing the key for DenseMap </dd></dl>
 
 </div>
 </div>
