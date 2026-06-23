@@ -55,7 +55,7 @@ class Generator:
                     f.write('  ret i32 0\n')
                     f.write('}\n')
 
-                continue  # IMPORTANT: skip normal codegen path
+                continue
 
             if opcode == "switch":
                 with open(filename, "w") as f:
@@ -103,19 +103,17 @@ class Generator:
                     f.write('define i32 @main() #0 {\n')
                     f.write('entry:\n')
 
-                    # Emit N+1 frem operations, each with fresh volatile loads
                     for i in range(0, self.repetitions + 1):
                         f.write(f'  %x{i} = load volatile {ty}, {ty}* @c42\n')
                         f.write(f'  %y{i} = load volatile {ty}, {ty}* @c3\n')
                         f.write(f'  %r{i} = frem {ty} %x{i}, %y{i}\n')
                         f.write(f'  call void asm sideeffect "", "x"({ty} %r{i})\n\n')
 
-                    # Optional: store result to avoid DCE (not needed, but harmless)
                     f.write(f'  store volatile {ty} %r0, {ty}* @c42\n')
                     f.write('  ret i32 0\n')
                     f.write('}\n')
 
-                continue  # IMPORTANT: skip normal codegen path
+                continue
 
             # -----------------------------------------------------------------
             # NORMAL BEHAVIOR FOR OTHER OPCODES
